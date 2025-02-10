@@ -1,7 +1,10 @@
 import { INVALID_MOVE } from "boardgame.io/core";
+import { Board } from "./objects/board";
 
 export const KBC = {
-    setup: () => ({ cells: Array(9).fill(null) }),
+    setup: () => ({
+        board: setupBoard()
+    }),
 
     // KBC setup
     // 1. select 4 (of 8) game board sections and assemble into
@@ -38,4 +41,8 @@ export const KBC = {
     // End of game
     // Score castles and each goal card
     // High score wins - ties share victory
-  };
+};
+
+function setupBoard() {
+    return new Board().data;
+};
