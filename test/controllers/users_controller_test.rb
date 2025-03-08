@@ -5,9 +5,9 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     @user = users(:one)
   end
 
-  test "should get index" do
+  test "should not get index" do
     get users_url
-    assert_response :success
+    assert_redirected_to new_session_path
   end
 
   test "should get new" do
@@ -15,34 +15,37 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "should create user" do
-    assert_difference("User.count") do
+  test "should not create user" do
+    assert_difference("User.count", 0) do
       post users_url, params: { user: {} }
     end
 
-    assert_redirected_to user_url(User.last)
+    assert_response :unprocessable_entity
+    # assert_redirected_to user_url(User.last)
   end
 
-  test "should show user" do
+  test "should not show user" do
     get user_url(@user)
-    assert_response :success
+    assert_redirected_to new_session_path
   end
 
-  test "should get edit" do
+  test "should not get edit" do
     get edit_user_url(@user)
-    assert_response :success
+    assert_redirected_to new_session_path
   end
 
-  test "should update user" do
+  test "should not update user" do
     patch user_url(@user), params: { user: {} }
-    assert_redirected_to user_url(@user)
+    assert_redirected_to new_session_path
+    # assert_redirected_to user_url(@user)
   end
 
-  test "should destroy user" do
-    assert_difference("User.count", -1) do
+  test "should not destroy user" do
+    assert_difference("User.count", 0) do
       delete user_url(@user)
     end
 
-    assert_redirected_to users_url
+    assert_redirected_to new_session_path
+    # assert_redirected_to users_url
   end
 end

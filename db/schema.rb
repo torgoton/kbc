@@ -27,6 +27,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_02_24_224123) do
     t.datetime "updated_at", null: false
     t.string "handle", null: false
     t.boolean "active"
+    t.boolean "approved", default: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.index ["handle"], name: "index_users_on_handle", unique: true
   end
