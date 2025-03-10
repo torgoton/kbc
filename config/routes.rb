@@ -1,6 +1,12 @@
 Rails.application.routes.draw do
-  resources :users
+  resources :users, only: [ :new, :create, :show ] do
+    collection do
+      get :unapproved
+    end
+  end
   get "home/index"
+  get "dashboard", to: "dashboard#index"
+
   resource :session
   resources :passwords, param: :token
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
