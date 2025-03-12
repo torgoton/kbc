@@ -10,7 +10,32 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_02_24_224123) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_10_180023) do
+  create_table "game_players", force: :cascade do |t|
+    t.integer "game_id"
+    t.integer "user_id"
+    t.json "hand"
+    t.json "supply"
+    t.json "tiles"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["game_id"], name: "index_game_players_on_game_id"
+    t.index ["user_id"], name: "index_game_players_on_user_id"
+  end
+
+  create_table "games", force: :cascade do |t|
+    t.json "boards"
+    t.json "board_contents"
+    t.json "scores"
+    t.json "deck"
+    t.json "goals"
+    t.string "state"
+    t.integer "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_games_on_user_id"
+  end
+
   create_table "sessions", force: :cascade do |t|
     t.integer "user_id", null: false
     t.string "ip_address"
