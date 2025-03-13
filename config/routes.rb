@@ -4,6 +4,7 @@ Rails.application.routes.draw do
       get :unapproved
     end
   end
+  resources :games
   get "home/index"
   get "dashboard", to: "dashboard#index"
 
