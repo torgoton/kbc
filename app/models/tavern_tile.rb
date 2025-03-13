@@ -1,0 +1,2 @@
+class TavernTile < Tile
+end

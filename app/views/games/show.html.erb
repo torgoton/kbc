@@ -1,0 +1,11 @@
+<h1>Game show</h1>
+<h2>Board</h2>
+<%= @game.board_objects.inspect %>
+<table>
+  <% 20.times do |row| %>
+    <tr>
+    <% 20.times do |column| %>
+      <td><%= @game.board_objects.terrain_at(row, column) %></td>
+    <% end %>
+    </tr>
+  <% end %>
