@@ -1,39 +1,23 @@
 class OasisBoard < BoardSection
-  MAP = [
-    "FDDMMDDCCC",
-    "FFDDDMMCCC",
-    "FFFFFFFMMM",
-    "WWFSGGTTMM",
-    "FFWWGGGTTC",
-    "FCCWGTTCCC",
-    "DFLCWTTLCG",
-    "DDCWTTGGGG",
-    "DDDWTTTGGG",
-    "DDWWTTTGGG"
-  ]
-
-  def initialize(flipped)
-    if flipped == 0
-      @terrain = MAP
-      @content = [
-        [ 6, 2, [ tiles ] ],
-        [ 6, 7, [ tiles ] ]
-      ]
-    else
-      @terrain = MAP.reverse.map(&:reverse)
-      @content = [
-        [ 3, 2, [ tiles ] ],
-        [ 3, 7, [ tiles ] ]
-      ]
-    end
+  def map
+    [
+      "DDCWWTTGGG",
+      "DCWFFTTTGG",
+      "DDWFFTTLFG",
+      "WWWFGTGGGG",
+      "WWWWGGGGFF",
+      "WTTWGGCCDC",
+      "WTCTWGCCDC",
+      "WSCFWLDDCW",
+      "WWCFWWWDDW",
+      "WWWWWWWWWW"
+    ]
   end
 
-  private
-
-  def tiles
+  def tile_locations
     [
-      TavernTile.new,
-      TavernTile.new
+      [ 2, 7 ],
+      [ 7, 5 ]
     ]
   end
 end

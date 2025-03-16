@@ -1,39 +1,23 @@
 class PaddockBoard < BoardSection
-  MAP = [
-    "DDCWWTTGGG",
-    "DCWFFTTTGG",
-    "DDWFFTTLFG",
-    "WWWFGTFFFF",
-    "WWWWGGGGFF",
-    "WTTWGGCCDC",
-    "WTCTWGCCDC",
-    "WSCFWLDDCW",
-    "WWCFWWWDDW",
-    "WWWWWWWWWW"
-  ]
-
-  def initialize(flipped)
-    if flipped == 0
-      @terrain = MAP
-      @content = [
-        [ 2, 7, [ tiles ] ],
-        [ 7, 5, [ tiles ] ]
-      ]
-    else
-      @terrain = MAP.reverse.map(&:reverse)
-      @content = [
-        [ 2, 4, [ tiles ] ],
-        [ 7, 2, [ tiles ] ]
-      ]
-    end
+  def map
+    [
+      "CCCDDWDDDD",
+      "MMCDDWDDDD",
+      "MMCMMWDDLF",
+      "MCMMWMDFFF",
+      "CCTTWMMCFF",
+      "CTTWCCCMFF",
+      "CLTTWFFFFF",
+      "GGTWGSGFGT",
+      "GGTTWGGGGT",
+      "GGTTWGGGTT"
+    ]
   end
 
-  private
-
-  def tiles
+  def tile_locations
     [
-      TavernTile.new,
-      TavernTile.new
+      [ 2, 8 ],
+      [ 6, 1 ]
     ]
   end
 end

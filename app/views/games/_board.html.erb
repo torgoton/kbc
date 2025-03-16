@@ -1,0 +1,22 @@
+<div id="board">
+  <div id="map-container">
+    <ul class="hex-map-container">
+      <!-- board sections -->
+      <li id="map-top-left" class="quadrant quadrant-7"></li>
+      <li id="map-top-right" class="quadrant quadrant-6"></li>
+      <li id="map-bottom-left" class="quadrant quadrant-5"></li>
+      <li id="map-bottom-right" class="quadrant quadrant-1"></li>
+      <!-- hexes -->
+      <% 20.times do |row| %>
+        <% 20.times do |col| %>
+          <%= content_tag :li, nil,
+            id: "map-cell-#{row}-#{col}",
+            class: "grid-item",
+            style: "grid-area: #{row * 3 + 1} / #{col * 2 + 1 + row % 2} / span 4 / span 2;"
+          %>
+          </li>
+        <% end %>
+      <% end %>
+    </ul>
+  </div>
+</div>

@@ -34,18 +34,30 @@ class Game < ApplicationRecord
   end
 
   def instantiate
-    @board_objects = Board.new(JSON.parse(boards))
-    @content_objects = Content.new(board_contents)
+    @board_objects ||= Board.new(JSON.parse(boards))
+    @content_objects ||= Content.new(board_contents)
   end
 
   private
 
+  # for console use during development
+  def unplay
+    update(state: "waiting", contents: "[]", boards: "[]")
+    players.where(user_id: Current.user.id).destroy
+  end
+
+  # MVP: Always boards from "First Game"
   def select_boards
     self.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ].to_json
     save
   end
 
   def populate_boards
+    @board_contents = "[]"
+    instantiate
+    board_objects.each do |section|
+      section.add_tiles
+    end
   end
 
   def shuffle_terrain_deck

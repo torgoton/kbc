@@ -1,39 +1,23 @@
 class FarmBoard < BoardSection
-  MAP = [
-    "DDCWWTTTGG",
-    "DSCWTTTLGG",
-    "CCCFFFTCFF",
-    "CCFFWDDCCF",
-    "CGGWFFDDCC",
-    "GGLFWFWDDC",
-    "GGGTFFWWDD",
-    "GGTTMWWWDW",
-    "GMTTWWWWWW",
-    "TTTWWWWWWW"
-  ]
-
-  def initialize(flipped)
-    if flipped == 0
-      @terrain = MAP
-      @content = [
-        [ 1, 7, [ tiles ] ],
-        [ 5, 2, [ tiles ] ]
-      ]
-    else
-      @terrain = MAP.reverse.map(&:reverse)
-      @content = [
-        [ 4, 7, [ tiles ] ],
-        [ 8, 2, [ tiles ] ]
-      ]
-    end
+  def map
+    [
+      "DDCWWTTTGG",
+      "DSCWTTTLGG",
+      "CCCFFFTCFF",
+      "CCFFWDDCCF",
+      "CGGWFFDDCC",
+      "GGLFWFWDDC",
+      "GGGTFFWWDD",
+      "GGTTMWWWDW",
+      "GMTTWWWWWW",
+      "TTTWWWWWWW"
+    ]
   end
 
-  private
-
-  def tiles
+  def tile_locations
     [
-      TavernTile.new,
-      TavernTile.new
+      [ 1, 7 ],
+      [ 5, 2 ]
     ]
   end
 end

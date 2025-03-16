@@ -1,39 +1,27 @@
 class TavernBoard < BoardSection
-  MAP = [
-    "FDDMMDDCCC",
-    "FFDDDMMCCC",
-    "FFFFFFFMMM",
-    "WWFSGGTTMM",
-    "FFWWGGGTTC",
-    "FCCWGTTCCC",
-    "DFLCWTTLCG",
-    "DDCWTTGGGG",
-    "DDDWTTTGGG",
-    "DDWWTTTGGG"
-  ]
-
-  def initialize(flipped)
-    if flipped == 0
-      @terrain = MAP
-      @content = [
-        [ 6, 2, [ tiles ] ],
-        [ 6, 7, [ tiles ] ]
-      ]
-    else
-      @terrain = MAP.reverse.map(&:reverse)
-      @content = [
-        [ 3, 2, [ tiles ] ],
-        [ 3, 7, [ tiles ] ]
-      ]
-    end
+  def map
+    [
+      "FDDMMDDCCC",
+      "FFDDDMMCCC",
+      "FFFFFFFMMM",
+      "WWFSGGTTMM",
+      "FFWWGGGTTC",
+      "FCCWGTTCCC",
+      "DFLCWTTLCG",
+      "DDCWTTGGGG",
+      "DDDWTTTGGG",
+      "DDWWTTTGGG"
+    ]
   end
 
-  private
-
-  def tiles
+  def tile_locations
     [
-      TavernTile.new,
-      TavernTile.new
+      [ 6, 2 ],
+      [ 6, 7 ]
     ]
+  end
+
+  def tile_class
+    TavernTile
   end
 end
