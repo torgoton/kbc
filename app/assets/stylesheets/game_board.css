@@ -52,6 +52,9 @@
     grid-row-start: 31;
 }
 
+.quadrant.flipped {
+    transform: rotate(180deg);
+}
 .quadrant.quadrant-0 {
     background-position:0 0
 }
@@ -85,6 +88,104 @@
     padding-bottom: 115.7%;
     position: relative;
     z-index: 5;
+}
+
+.tile-counter {
+    background-color: orange;
+    border: 1px solid black;
+    border-radius: 50%;
+    font-size: 0.9em;
+    height: 0;
+    left: 25%;
+    padding-bottom: 40%;
+    position: absolute;
+    text-align: center;
+    top: -18%;
+    width: 40%;
+}
+/* .grid-item.terrain-c {
+    background-color: brown;
+}
+
+.grid-item.terrain-d {
+    background-color: gold;
+}
+
+.grid-item.terrain-f {
+    background-color: darkorchid;
+}
+
+.grid-item.terrain-g {
+    background-color: rgb(0,255,5,0.2);
+}
+
+.grid-item.terrain-l {
+    background-color: goldenrod;
+}
+
+.grid-item.terrain-m {
+    background-color: #444;
+}
+
+.grid-item.terrain-s {
+    background-color: silver;
+}
+
+.grid-item.terrain-t {
+    background-color: forestgreen;
+}
+
+.grid-item.terrain-w {
+    background-color: royalblue;
+} */
+
+.hex-map-image {
+    background-image: url("locations.png");
+    background-size: 300% 450%;
+    content: "";
+    display: block;
+    height: 0;
+    margin-top: 0;
+}
+
+.castle-hex {
+    background-position: 0 0;
+}
+
+.tavern-hex {
+    background-position: 0 25%;
+}
+
+.paddock-hex {
+    background-position: 0 50%;
+}
+
+.oasis-hex {
+    background-position: 50% 48%;
+}
+
+.farm-hex {
+    background-position: 100% 0;
+}
+
+.map-cell-content.castle {
+    background-position: 0 0;
+}
+
+.map-cell-content.tavern {
+    background-position: 0 20%;
+}
+
+.map-cell-content.paddock {
+    background-position: 0 40%;
+}
+
+.map-cell-content.oasis {
+    background-position: 33.33% 40%;
+}
+
+.map-cell-content.farm {
+    background-position: 66.67% 0;
 }
 
 .li {

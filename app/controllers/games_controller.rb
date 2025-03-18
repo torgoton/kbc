@@ -20,6 +20,7 @@ class GamesController < ApplicationController
   def show
     @game = Game.find(params[:id])
     @game.instantiate
+    # Rails.logger.info("GAME CONTENT: #{@game.content_objects.inspect}")
   end
 
   def join

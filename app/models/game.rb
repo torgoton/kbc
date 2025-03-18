@@ -1,5 +1,6 @@
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
+  OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
 
   has_many :game_players
   has_many :players, through: :game_players
@@ -7,7 +8,7 @@ class Game < ApplicationRecord
 
   validates :state, inclusion: { in: STATES }
 
-  attr_accessor :board_objects, :content_objects
+  attr_accessor :board
 
   after_find do |_game|
     update(state: "waiting") unless state
@@ -34,30 +35,36 @@ class Game < ApplicationRecord
   end
 
   def instantiate
-    @board_objects ||= Board.new(JSON.parse(boards))
-    @content_objects ||= Content.new(board_contents)
+    instantiate_boards
+    instantiate_content
+  end
+
+  def instantiate_boards
+    @board ||= Boards::Board.new(self)
+  end
+
+  def instantiate_content
   end
 
   private
 
-  # for console use during development
-  def unplay
-    update(state: "waiting", contents: "[]", boards: "[]")
-    players.where(user_id: Current.user.id).destroy
-  end
-
   # MVP: Always boards from "First Game"
   def select_boards
-    self.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ].to_json
+    self.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
     save
   end
 
   def populate_boards
-    @board_contents = "[]"
-    instantiate
-    board_objects.each do |section|
-      section.add_tiles
+    contents = {}
+    instantiate_boards
+    @board.map.each_with_index do |board, i|
+      board.location_hexes.each do |loc|
+        contents[overall_location(i, loc[:r], loc[:c])] = { klass: loc[:k], qty: 2 }
+      end
     end
+    self.board_contents = contents
+    save
+    Rails.logger.info("CONTENT AT START: #{self.board_contents}")
   end
 
   def shuffle_terrain_deck
@@ -73,5 +80,15 @@ class Game < ApplicationRecord
   end
 
   def choose_start_player
+  end
+
+  def overall_location(board, row, col)
+    [ OFFSETS[board][0]+ row, OFFSETS[board][1] + col ]
+  end
+
+  # for console use during development
+  def unplay
+    # update(state: "waiting", board_contents: "[]", boards: "[]")
+    # game_players.last.destroy
   end
 end

@@ -1,0 +1,2 @@
+class LocationHex < SpecialHex
+end

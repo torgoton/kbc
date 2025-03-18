@@ -1,0 +1,2 @@
+class CastleHex < SpecialHex
+end
