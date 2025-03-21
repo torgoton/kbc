@@ -21,7 +21,7 @@
 
 .quadrant {
     background-color: cadetblue;
-    background-image: url("border.jpg"), url("board.jpg");
+    background-image: url("border.png"), url("board.jpg");
     background-position: 50%, 50%;
     background-size: 100%, 300% 400%;
     grid-column-end: span 21;
