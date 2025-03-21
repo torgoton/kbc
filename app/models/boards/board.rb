@@ -11,7 +11,7 @@ module Boards
       @content = Array.new(20) { Array.new(20) }
       game.board_contents.each do |k, v|
         coords = JSON.parse k
-        @content[coords[0]][coords[1]] = "Tiles::#{v['klass']}Tile".constantize.new(2)
+        @content[coords[0]][coords[1]] = "Tiles::#{v['klass']}Tile".constantize.new(v["qty"])
         Rails.logger.info " from #{k}, #{v}"
         # Rails.logger.info "  at #{coords[0]},#{coords[1]}, added #{v:klass}Tile"
       end

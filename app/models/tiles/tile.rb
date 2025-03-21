@@ -1,6 +1,6 @@
 module Tiles
   class Tile
-    attr_reader :qty
+    attr_accessor :qty
 
     def initialize(qty)
       @qty = qty

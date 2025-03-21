@@ -14,6 +14,7 @@
           class: "grid-item terrain-#{terrain} #{t}",
           style: "grid-area: #{row * 3 + 1} / #{col * 2 + 1 + row % 2} / span 4 / span 2;" do
             if @game.board.content_at(row, col)
+              Rails.logger.info " at #{row},#{col} found #{@game.board.content_at(row,col).qty} of #{@game.board.content_at(row,col).class}"
               content_tag :div, @game.board.content_at(row,col).qty, class: "tile-counter"
             end
           end
