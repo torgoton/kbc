@@ -1,10 +1,10 @@
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
   OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
+  DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
 
   has_many :game_players
   has_many :players, through: :game_players
-  has_one :first_player
 
   validates :state, inclusion: { in: STATES }
 
@@ -68,18 +68,32 @@ class Game < ApplicationRecord
   end
 
   def shuffle_terrain_deck
+    self.deck = DECK.chars.shuffle
+    save
   end
 
   def select_goals
+    self.goals = [ "Fishermen", "Knights", "Merchants" ]
+    save
   end
 
   def populate_player_supplies
+    game_players.each do |p|
+      p.update(:supply, { settlements: 40 })
+    end
+    # save no change to the game object
   end
 
   def deal_terrain_cards
+    game_players.each do |p|
+      p.update(:hand, deck.shift)
+    end
+    save # update the deck
   end
 
   def choose_start_player
+    game_players.shuffle.each_with_index { |p, n| p.update(order: n + 1) }
+    update(:current_player, first_player)
   end
 
   def overall_location(board, row, col)
@@ -90,5 +104,11 @@ class Game < ApplicationRecord
   def unplay
     # update(state: "waiting", board_contents: "[]", boards: "[]")
     # game_players.last.destroy
+  end
+
+  private
+
+  def first_player
+    game_players.where(order: 1)
   end
 end

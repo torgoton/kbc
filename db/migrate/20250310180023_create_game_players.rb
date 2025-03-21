@@ -6,6 +6,7 @@ class CreateGamePlayers < ActiveRecord::Migration[8.0]
       t.json :hand
       t.json :supply
       t.json :tiles
+      t.integer :order
       t.timestamps
     end
   end
