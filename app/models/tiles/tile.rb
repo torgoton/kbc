@@ -5,5 +5,9 @@ module Tiles
     def initialize(qty)
       @qty = qty
     end
+
+    def location_index
+      0
+    end
   end
 end

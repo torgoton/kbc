@@ -79,7 +79,7 @@
 .quadrant.quadrant-7 {
     background-position:50% 66.666666%
 }
-  
+
 .grid-item {
     border-style: solid;
     border: black;
@@ -88,6 +88,41 @@
     padding-bottom: 115.7%;
     position: relative;
     z-index: 5;
+}
+
+.tile {
+    background-image: url("tiles.png");
+    background-repeat: no-repeat;
+    background-size: 300% 400%;
+}
+
+.tile-container {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+}
+
+.tile-container .tile {
+    height: 100%;
+    width: 100%;
+    position: absolute;
+}
+
+.tile-container div:nth-child(1) {
+    z-index: 4;
+}
+
+.tile-container div:nth-child(2) {
+    z-index: 1;
+}
+
+.tile-container div:nth-child(3) {
+    left: -3px;
+    top: -3px;
+    z-index: 2;
+}
+.tile.location-13 {
+    background-position: 100% 33.333%;
 }
 
 .tile-counter {
