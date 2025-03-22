@@ -17,6 +17,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_10_180023) do
     t.json "hand"
     t.json "supply"
     t.json "tiles"
+    t.integer "order"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["game_id"], name: "index_game_players_on_game_id"
@@ -29,11 +30,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_10_180023) do
     t.json "scores"
     t.json "deck"
     t.json "goals"
+    t.integer "current_player_id"
     t.string "state"
-    t.integer "user_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["user_id"], name: "index_games_on_user_id"
+    t.index ["current_player_id"], name: "index_games_on_current_player_id"
   end
 
   create_table "sessions", force: :cascade do |t|

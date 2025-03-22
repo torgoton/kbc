@@ -5,6 +5,7 @@ class Game < ApplicationRecord
 
   has_many :game_players
   has_many :players, through: :game_players
+  belongs_to :current_player, class_name: "GamePlayer", optional: true
 
   validates :state, inclusion: { in: STATES }
 
@@ -79,36 +80,30 @@ class Game < ApplicationRecord
 
   def populate_player_supplies
     game_players.each do |p|
-      p.update(:supply, { settlements: 40 })
+      p.update(supply: { settlements: 40 })
     end
     # save no change to the game object
   end
 
   def deal_terrain_cards
     game_players.each do |p|
-      p.update(:hand, deck.shift)
+      p.update(hand: deck.shift)
     end
     save # update the deck
   end
 
   def choose_start_player
     game_players.shuffle.each_with_index { |p, n| p.update(order: n + 1) }
-    update(:current_player, first_player)
+    update(current_player: first_player)
   end
 
   def overall_location(board, row, col)
     [ OFFSETS[board][0]+ row, OFFSETS[board][1] + col ]
   end
 
-  # for console use during development
-  def unplay
-    # update(state: "waiting", board_contents: "[]", boards: "[]")
-    # game_players.last.destroy
-  end
-
   private
 
   def first_player
-    game_players.where(order: 1)
+    game_players.where(order: 1).first
   end
 end

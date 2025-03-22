@@ -9,7 +9,7 @@
             <%= content_tag :div, content.qty, class: "tile-counter" %>
         <% end %>
         <% content.qty.times do |n| %>
-            <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.location_index}" %>
+            <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
         <% end %>
     <% end %>
 <% end %>

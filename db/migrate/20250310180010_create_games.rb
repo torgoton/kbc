@@ -6,7 +6,7 @@ class CreateGames < ActiveRecord::Migration[8.0]
       t.json :scores
       t.json :deck
       t.json :goals
-      t.belongs_to :current_player, foreign_key: :game_player_id, class_name: "GamePlayer"
+      t.references :current_player
       t.string :state
       t.timestamps
     end

@@ -121,8 +121,37 @@
     top: -3px;
     z-index: 2;
 }
-.tile.location-13 {
+
+.tile.location-barn {
+    background-position: 15% 15%;
+}
+
+.tile.location-farm {
+    background-position: 50% 0;
+}
+
+.tile.location-harbor {
+    background-position: 15% 15%;
+}
+
+.tile.location-oasis {
+    background-position: 0 66.667%;
+}
+
+.tile.location-oracle {
+    background-position: 15% 15%;
+}
+
+.tile.location-paddock {
     background-position: 100% 33.333%;
+}
+
+.tile.location-tavern {
+    background-position: 100% 0;
+}
+
+.tile.location-tower {
+    background-position: 15% 15%;
 }
 
 .tile-counter {
