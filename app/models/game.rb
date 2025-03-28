@@ -47,6 +47,10 @@ class Game < ApplicationRecord
   def instantiate_content
   end
 
+  def player_index_for(user)
+    game_players.find { |p| p = user }.order
+  end
+
   private
 
   # MVP: Always boards from "First Game"
@@ -74,6 +78,7 @@ class Game < ApplicationRecord
   end
 
   def select_goals
+    # MVP always these 3
     self.goals = [ "Fishermen", "Knights", "Merchants" ]
     save
   end

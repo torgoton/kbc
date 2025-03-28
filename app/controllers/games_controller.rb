@@ -29,13 +29,14 @@ class GamesController < ApplicationController
       redirect_to dashboard_path, notice: "Game not found"
       return
     end
-    # Join and start the game
+    # Join the game
     @game.add_player(Current.user)
     unless @game.save
       redirect_to dashboard_path, error: "Unable to join game"
       Rails.logger.warn "ERROR saving game: #{@game.errors.inspect}"
       return
     end
+    # MVP: 2 players every game, so just start it now
     @game.start
     redirect_to game_path(@game)
   end

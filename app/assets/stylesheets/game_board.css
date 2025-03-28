@@ -1,8 +1,25 @@
+html{
+    background-image: url("green-felt.jpg");
+}
+
+#game-area {
+    display: grid;
+    grid-template-areas: 
+        "turn-state players-area"
+        "goals players-area"
+        "board players-area";
+    grid-template-columns: 75% auto;
+}
+
 #map-container {
     content: "";
     display: block;
     position: relative;
-    width: 100%;
+    grid-area: board;
+}
+
+aside {
+    grid-area: players;
 }
 
 .hex-map-container {
@@ -254,4 +271,68 @@
 
 .li {
     list-style: none;
+}
+
+#goals {
+    background-color: bisque;
+    grid-area: goals;
+}
+
+#goals > ul {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    list-style-type: none;
+    text-align: center;
+}
+
+#goals .card-text {
+    display: none;
+}
+
+#turn-state {
+    background-color: white;
+    text-align: center;
+    grid-area: turn-state;
+}
+
+#players-area {
+    grid-area: players;
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.player-area {
+    background-color: khaki;
+}
+
+.player-area .player-card {
+    background-image: url("terrains.png");
+    background-size: 600%;
+    width: 80px;
+    height: 116px;
+}
+
+.player-card.card-B {
+    background-position: 0;
+}
+
+.player-card.card-G {
+    background-position: 20%;
+}
+
+.player-card.card-C {
+    background-position: 40%;
+}
+
+.player-card.card-D {
+    background-position: 60%;
+}
+
+.player-card.card-F {
+    background-position: 80%;
+}
+
+.player-card.card-T {
+    background-position: 100%;
 }

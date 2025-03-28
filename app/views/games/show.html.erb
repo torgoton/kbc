@@ -1,4 +1,10 @@
-<h1>Game show</h1>
-<h2>Board</h2>
-<%= render "board" %>
-<%= render "content" %>
+<div id="game-area">
+    <main>
+        <%= render "turn_state" %>
+        <%= render "goals" %>
+        <%= render "board" %>
+    </main>
+    <aside>
+        <%= render "players" %>
+    </aside>
+</div>

@@ -1,0 +1,15 @@
+<div id="players-area">
+    <% players = @game.game_players.sort_by(&:order) %>
+    <% offset = players.find { |p| p.player == current_user }.order %>
+    <% players.size.times do |n| %>
+        <% # Always display current user first %>
+        <% index = (n + offset) % players.size %>
+        <% player = players[index] %>
+        <div class="player-area">
+            <%= player.player.handle %>
+            <%= content_tag :div, nil, class: "player-card card-#{player.hand}" %>
+            <%= "Supply: #{player.supply.inspect}" %>
+            <%= "Tiles: #{player.tiles.inspect}" %>
+        </div>
+    <% end %>
+</div>

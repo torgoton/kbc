@@ -5,6 +5,7 @@
     <li id="map-top-right" class="quadrant quadrant-6<%= @game.board.map[1].flipped > 0 ? " flipped" : "" %>"></li>
     <li id="map-bottom-left" class="quadrant quadrant-5<%= @game.board.map[2].flipped > 0 ? " flipped" : "" %>"></li>
     <li id="map-bottom-right" class="quadrant quadrant-1<%= @game.board.map[3].flipped > 0 ? " flipped" : "" %>"></li>
+    <!-- cell content -->
     <% 20.times do |row| %>
       <% 20.times do |col| %>
         <% terrain = @game.board.terrain_at(row, col).downcase %>
