@@ -20,7 +20,25 @@ class GamesController < ApplicationController
   def show
     @game = Game.find(params[:id])
     @game.instantiate
-    # Rails.logger.info("GAME CONTENT: #{@game.content_objects.inspect}")
+    @game_players = @game.game_players
+    Rails.logger.info("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
+    @my_turn = (@game.current_player.player == Current.user)
+    @available = @my_turn ? @game.available_list(@game.current_player.order, @game.current_player.hand) : []
+  end
+
+  # BUILD action - move a piece from my supply to the board
+  def build
+    Rails.logger.info("BUILD PARAMS: #{build_params.inspect}")
+    @game = Current.user.games.find(build_params[0])
+    unless @game
+      render json: { message: "Cannot find game" }, status: 404
+      return
+    end
+    target = build_params[1]
+    row = target.match(/-\d*-/).to_s[1..-2].to_i
+    col = target.match(/-\d*\z/).to_s[1..-1].to_i
+    result = @game.build_settlement(Current.user, row, col)
+    render json: { message: result }
   end
 
   def join
@@ -42,6 +60,10 @@ class GamesController < ApplicationController
   end
 
   private
+
+  def build_params
+    params.expect(:id, :target)
+  end
 
   def create_game_params
     { state: "waiting" }

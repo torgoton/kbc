@@ -3,11 +3,14 @@
     <% offset = players.find { |p| p.player == current_user }.order %>
     <% players.size.times do |n| %>
         <% # Always display current user first %>
-        <% index = (n + offset) % players.size %>
+        <% index = (n - 1 + offset) % players.size %>
         <% player = players[index] %>
         <div class="player-area">
-            <%= player.player.handle %>
-            <%= content_tag :div, nil, class: "player-card card-#{player.hand}" %>
+            <%= content_tag :span,
+                player.player.handle,
+                class: "handle#{ @my_turn ? ' my-turn' : '' }"
+            %>
+            <%= content_tag :div, player.hand, class: "player-card card-#{player.hand}" %>
             <%= "Supply: #{player.supply.inspect}" %>
             <%= "Tiles: #{player.tiles.inspect}" %>
         </div>

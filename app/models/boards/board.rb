@@ -12,13 +12,21 @@ module Boards
       if game.board_contents
         game.board_contents.each do |k, v|
           coords = JSON.parse k
-          @content[coords[0]][coords[1]] = "Tiles::#{v['klass']}Tile".constantize.new(v["qty"])
+          case v["klass"]
+          when /Tile\z/
+            @content[coords[0]][coords[1]] = "Tiles::#{v['klass']}".constantize.new(v["qty"])
+          when "Settlement"
+            @content[coords[0]][coords[1]] = Settlement.new(v["player"])
+          else
+            raise "Unknown board content type"
+          end
         end
       end
     end
 
     def terrain_at(row, col)
       section = 2 * (row / 10) + col / 10
+      return nil unless (0..4).include? section
       @map[section].terrain_at(row % 10, col % 10)
     end
 

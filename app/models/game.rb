@@ -1,7 +1,12 @@
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
-  OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
+  SECTION_OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
+  ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
+                  [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ]
+
+  # 10-10 adjacent to [[10,9], [10,11], [9,9], [9,10], [11,9], [11,10]]
+  #  9-10 adjacent to [[9,9], [9,11], [8,10], [8,11], [10,10], [10,11]]
 
   has_many :game_players
   has_many :players, through: :game_players
@@ -51,7 +56,63 @@ class Game < ApplicationRecord
     game_players.find { |p| p = user }.order
   end
 
+  def available_list(order, terrain)
+    available = Array.new(20) { Array.new(20, false) }
+    20.times do |row|
+      20.times do |col|
+        # Do I have a piece here?
+        if board.content_at(row, col).try(:player) == order
+          # mark the adjacent spots as available
+          ADJACENCIES[row % 2].each do |r, c|
+            if ((0..19).include?(row+r) && (0..19).include?(col+c)) && # spot is on the map
+              board.content_at(row + r, col + c) == nil && # spot is empty
+              board.terrain_at(row+r, col+c) == terrain # spot is of the correct terrain
+              available[row+r][col+c] = true
+            end
+          end
+        end
+      end
+    end
+    available
+  end
+
+  def available?(order, terrain, row, col)
+    list = available_list(order, terrain)
+    list.any? ? list[row][col] : true
+  end
+
+  def build_settlement(user, row, col)
+    log("Attempt to build at #{row}, #{col}")
+    instantiate
+    # bail if no pieces left
+    game_player = game_players.find { |p| p.player == user }
+    settlements = game_player.supply["settlements"]
+    log(" I have #{settlements} settlements remaining")
+    return "No settlements left" if settlements < 1
+    # bail if occupied
+    return "Occupied" if board_contents["[#{row}, #{col}]"]
+    # bail unless terrain matches card
+    card_terrain = game_player.hand
+    cell_terrain = board.terrain_at(row, col)
+    log(" Terrain card is #{card_terrain}")
+    log(" Terrain of cell is #{cell_terrain}")
+    "Incorrect terrain" unless card_terrain == cell_terrain
+    # FIXING: check if available
+    return "Not adjacent" unless available?(game_player.order, card_terrain, row, col)
+    # actually build here
+    game_player.supply["settlements"] -= 1
+    board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    ActiveRecord::Base.transaction do
+      game_player.save
+      save
+    end
+  end
+
   private
+
+  def log(msg)
+    Rails.logger.info msg
+  end
 
   # MVP: Always boards from "First Game"
   def select_boards
@@ -103,10 +164,8 @@ class Game < ApplicationRecord
   end
 
   def overall_location(board, row, col)
-    [ OFFSETS[board][0]+ row, OFFSETS[board][1] + col ]
+    [ SECTION_OFFSETS[board][0]+ row, SECTION_OFFSETS[board][1] + col ]
   end
-
-  private
 
   def first_player
     game_players.where(order: 1).first

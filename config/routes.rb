@@ -4,11 +4,15 @@ Rails.application.routes.draw do
       get :unapproved
     end
   end
+
   resources :games do
     member do
       post :join
+      post :build
+      # post :move
     end
   end
+
   get "home/index"
   get "dashboard", to: "dashboard#index"
 
