@@ -9,6 +9,7 @@ Rails.application.routes.draw do
     member do
       post :join
       post :build
+      post :end_turn
       # post :move
     end
   end

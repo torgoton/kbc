@@ -10,10 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_10_180023) do
+ActiveRecord::Schema[8.0].define(version: 2025_03_29_234456) do
   create_table "game_players", force: :cascade do |t|
-    t.integer "game_id"
-    t.integer "user_id"
+    t.integer "game_id", null: false
+    t.integer "user_id", null: false
     t.json "hand"
     t.json "supply"
     t.json "tiles"
@@ -29,12 +29,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_10_180023) do
     t.json "board_contents"
     t.json "scores"
     t.json "deck"
+    t.json "discard"
     t.json "goals"
     t.integer "current_player_id"
+    t.integer "mandatory_count"
     t.string "state"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["current_player_id"], name: "index_games_on_current_player_id"
+  end
+
+  create_table "moves", force: :cascade do |t|
+    t.integer "game_id", null: false
+    t.integer "order"
+    t.integer "player"
+    t.json "detail"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["game_id"], name: "index_moves_on_game_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -57,5 +69,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_10_180023) do
     t.index ["handle"], name: "index_users_on_handle", unique: true
   end
 
+  add_foreign_key "game_players", "games"
+  add_foreign_key "game_players", "users"
+  add_foreign_key "moves", "games"
   add_foreign_key "sessions", "users"
 end

@@ -23,7 +23,11 @@ class GamesController < ApplicationController
     @game_players = @game.game_players
     Rails.logger.info("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
     @my_turn = (@game.current_player.player == Current.user)
-    @available = @my_turn ? @game.available_list(@game.current_player.order, @game.current_player.hand) : []
+    @available = if @my_turn && (@game.mandatory_count > 0)
+      @game.available_list(@game.current_player.order, @game.current_player.hand)
+    else
+      Array.new(20) { Array.new(20, false) }
+    end
   end
 
   # BUILD action - move a piece from my supply to the board
@@ -34,11 +38,21 @@ class GamesController < ApplicationController
       render json: { message: "Cannot find game" }, status: 404
       return
     end
+    unless @game.mandatory_count > 0
+      render json: { message: "No moves left" }
+      return
+    end
     target = build_params[1]
     row = target.match(/-\d*-/).to_s[1..-2].to_i
     col = target.match(/-\d*\z/).to_s[1..-1].to_i
-    result = @game.build_settlement(Current.user, row, col)
+    result = @game.build_settlement(row, col)
     render json: { message: result }
+  end
+
+  def end_turn
+    Rails.logger.info("END TURN action")
+    @game = Current.user.games.find(params.expect[:id].first)
+    @game.end_turn
   end
 
   def join

@@ -19,7 +19,7 @@ html{
 }
 
 aside {
-    grid-area: players;
+    width: 100%;
 }
 
 .hex-map-container {
@@ -332,22 +332,49 @@ aside {
 }
 
 #players-area {
-    grid-area: players;
     display: flex;
+    font-family: monospace;
+    font-weight: 600;
     flex-direction: column;
     gap: 1em;
+    width: 100%;
+    margin: 8px;
 }
 
 .player-area {
     background-color: khaki;
+    padding: 4px;
 }
 
-.player-area .player-card {
+.handle {
+    font-size: larger;
+}
+
+.settlement-icon {
+    display: inline-block;
+    background-image: url("settlements.svg");
+    background-repeat: no-repeat;
+    background-size: 1100%;
+    width: 44px;
+    height: 46px;
+}
+
+.settlement-count {
+    display: inline-block;
+    font-size: 24px;
+}
+
+.player-tiles {
+
+}
+
+.player-card {
     background-image: url("terrains.png");
     background-size: 600%;
     width: 80px;
     height: 116px;
     color: transparent;
+    display: inline-block;
 }
 
 .player-card.card-B {

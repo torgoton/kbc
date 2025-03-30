@@ -31,7 +31,7 @@ class Game < ApplicationRecord
   def start
     select_boards
     populate_boards
-    shuffle_terrain_deck
+    initialize_terrain_deck
     select_goals
     populate_player_supplies
     deal_terrain_cards
@@ -58,6 +58,7 @@ class Game < ApplicationRecord
 
   def available_list(order, terrain)
     available = Array.new(20) { Array.new(20, false) }
+    any = false
     20.times do |row|
       20.times do |col|
         # Do I have a piece here?
@@ -67,25 +68,40 @@ class Game < ApplicationRecord
             if ((0..19).include?(row+r) && (0..19).include?(col+c)) && # spot is on the map
               board.content_at(row + r, col + c) == nil && # spot is empty
               board.terrain_at(row+r, col+c) == terrain # spot is of the correct terrain
-              available[row+r][col+c] = true
+              any = available[row+r][col+c] = true
             end
           end
         end
       end
     end
+    return available if any
+    20.times do |row|
+      20.times do |col|
+        if board.terrain_at(row, col) == terrain
+          available[row][col] = true
+        end
+      end
+    end
+    # 20.times do |r|
+    #   m = ""
+    #   20.times do |c|
+    #     m += (available[r][c] ? "*" : "-")
+    #   end
+    #   Rails.logger.info(m)
+    # end
     available
   end
 
   def available?(order, terrain, row, col)
-    list = available_list(order, terrain)
-    list.any? ? list[row][col] : true
+    @list ||= available_list(order, terrain)
+    @list.any? ? @list[row][col] : true
   end
 
-  def build_settlement(user, row, col)
+  def build_settlement(row, col)
     log("Attempt to build at #{row}, #{col}")
     instantiate
     # bail if no pieces left
-    game_player = game_players.find { |p| p.player == user }
+    game_player = current_player
     settlements = game_player.supply["settlements"]
     log(" I have #{settlements} settlements remaining")
     return "No settlements left" if settlements < 1
@@ -102,6 +118,21 @@ class Game < ApplicationRecord
     # actually build here
     game_player.supply["settlements"] -= 1
     board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    self.mandatory_count -= 1
+    ActiveRecord::Base.transaction do
+      game_player.save
+      save
+    end
+  end
+
+  def end_turn
+    Rails.logger.info("END TURN REQUESTED")
+    return
+    game_player = game_players.find { |p|p.player.order == current_player }
+    discard += game_player.hand
+    game_player.hand = next_card
+    self.mandatory_count = 3
+    current_player = (current_player + 1) % game_players.count
     ActiveRecord::Base.transaction do
       game_player.save
       save
@@ -133,9 +164,14 @@ class Game < ApplicationRecord
     Rails.logger.info("CONTENT AT START: #{self.board_contents}")
   end
 
-  def shuffle_terrain_deck
+  def initialize_terrain_deck
     self.deck = DECK.chars.shuffle
+    self.discard = []
     save
+  end
+
+  def shuffle_terrain_deck
+    self.deck = discard.shuffle
   end
 
   def select_goals
@@ -153,7 +189,7 @@ class Game < ApplicationRecord
 
   def deal_terrain_cards
     game_players.each do |p|
-      p.update(hand: deck.shift)
+      p.update(hand: next_card)
     end
     save # update the deck
   end
@@ -161,6 +197,7 @@ class Game < ApplicationRecord
   def choose_start_player
     game_players.shuffle.each_with_index { |p, n| p.update(order: n + 1) }
     update(current_player: first_player)
+    update(mandatory_count: 3)
   end
 
   def overall_location(board, row, col)
@@ -169,5 +206,10 @@ class Game < ApplicationRecord
 
   def first_player
     game_players.where(order: 1).first
+  end
+
+  def next_card
+    shuffle_terrain_deck if deck.size < 1
+    deck.shift
   end
 end
