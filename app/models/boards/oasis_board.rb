@@ -5,7 +5,7 @@ module Boards
         "DDCWWTTGGG",
         "DCWFFTTTGG",
         "DDWFFTTLFG",
-        "WWWFGTGGGG",
+        "WWWFGTFFFF",
         "WWWWGGGGFF",
         "WTTWGGCCDC",
         "WTCTWGCCDC",

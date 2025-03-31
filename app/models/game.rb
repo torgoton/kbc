@@ -8,8 +8,8 @@ class Game < ApplicationRecord
   # 10-10 adjacent to [[10,9], [10,11], [9,9], [9,10], [11,9], [11,10]]
   #  9-10 adjacent to [[9,9], [9,11], [8,10], [8,11], [10,10], [10,11]]
 
-  has_many :game_players
-  has_many :players, through: :game_players
+  has_many :game_players, dependent: :destroy
+  has_many :players, through: :game_players, dependent: :delete_all
   belongs_to :current_player, class_name: "GamePlayer", optional: true
 
   validates :state, inclusion: { in: STATES }
@@ -78,7 +78,7 @@ class Game < ApplicationRecord
     20.times do |row|
       20.times do |col|
         if board.terrain_at(row, col) == terrain
-          available[row][col] = true
+          available[row][col] = true unless board.content_at(row, col)
         end
       end
     end
@@ -126,13 +126,16 @@ class Game < ApplicationRecord
   end
 
   def end_turn
-    Rails.logger.info("END TURN REQUESTED")
-    return
-    game_player = game_players.find { |p|p.player.order == current_player }
-    discard += game_player.hand
+    Rails.logger.info("END TURN REQUESTED on GAME #{id}")
+    Rails.logger.info(" - current player #{current_player.inspect}")
+    game_player = current_player
+    self.discard.push(game_player.hand)
     game_player.hand = next_card
     self.mandatory_count = 3
-    current_player = (current_player + 1) % game_players.count
+    next_order = (current_player.order + 1) % game_players.count
+    Rails.logger.info(" - next in order #{next_order}")
+    self.current_player = game_players.find { |p| p.order == next_order }
+    Rails.logger.info(" - next player #{current_player.inspect}")
     ActiveRecord::Base.transaction do
       game_player.save
       save
@@ -195,7 +198,7 @@ class Game < ApplicationRecord
   end
 
   def choose_start_player
-    game_players.shuffle.each_with_index { |p, n| p.update(order: n + 1) }
+    game_players.shuffle.each_with_index { |p, n| p.update(order: n) }
     update(current_player: first_player)
     update(mandatory_count: 3)
   end

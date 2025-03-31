@@ -301,11 +301,11 @@ aside {
     z-index: 10;
 }
 
-.hex-settlement.player-1 {
+.player-0 {
     background-position: 30%;
 }
 
-.hex-settlement.player-2 {
+.player-1 {
     background-position: 20%;
 }
 

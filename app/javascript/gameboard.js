@@ -1,4 +1,4 @@
-let gameId = null;
+var gameId = null;
 
 function sayHey() {
   console.log("Hey!");

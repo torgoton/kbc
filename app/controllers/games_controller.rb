@@ -51,8 +51,9 @@ class GamesController < ApplicationController
 
   def end_turn
     Rails.logger.info("END TURN action")
-    @game = Current.user.games.find(params.expect[:id].first)
-    @game.end_turn
+    @game = Current.user.games.find(params["id"].first)
+    @game.end_turn if @game.mandatory_count == 0
+    redirect_to @game
   end
 
   def join
