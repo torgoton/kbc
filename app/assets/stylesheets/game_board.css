@@ -1,5 +1,6 @@
 html{
     background-image: url("green-felt.jpg");
+    background-size: cover;
 }
 
 #game-area {
