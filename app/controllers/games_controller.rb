@@ -35,18 +35,28 @@ class GamesController < ApplicationController
     Rails.logger.info("BUILD PARAMS: #{build_params.inspect}")
     @game = Current.user.games.find(build_params[0])
     unless @game
-      render json: { message: "Cannot find game" }, status: 404
+      respond_to do |format|
+        format.json { render json: { message: "Cannot find game" } }
+      end
       return
     end
     unless @game.mandatory_count > 0
-      render json: { message: "No moves left" }
+      respond_to do |format|
+        format.json { render json: { message: "No moves left" } }
+      end
       return
     end
+
     target = build_params[1]
     row = target.match(/-\d*-/).to_s[1..-2].to_i
     col = target.match(/-\d*\z/).to_s[1..-1].to_i
-    result = @game.build_settlement(row, col)
-    render json: { message: result }
+    # result = @game.build_settlement(row, col)
+    # render : { message: result }
+    @game.build_settlement(row, col)
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { nil }
+    end
   end
 
   def end_turn
@@ -77,7 +87,7 @@ class GamesController < ApplicationController
   private
 
   def build_params
-    params.expect(:id, :target)
+    params.expect(:id, :build_cell)
   end
 
   def create_game_params

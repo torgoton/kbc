@@ -26,23 +26,29 @@ function enableClicks() {
         console.log("click not OK here");
         return;
       }
-      setGameId();
-      const cellId = e.target.id;
-      console.log("Click target: " + cellId);
+      console.log("Click target: " + e.target.id);
       e.preventDefault();
-      const promise = fetch(
-        "/games/" + gameId + "/build.json",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-TOKEN": document.querySelector("meta[name='csrf-token']").content
-          },
-          body: JSON.stringify({ target: cellId })
-        }
-      ).then(response => response.json())
-        .then(result => handleBuildResult(result))
-        .catch(error => console.log("BUILD ERROR: " + JSON.stringify(error)));
+      document.getElementById("build_cell").value = e.target.id;
+      document.getElementById("build_form").submit();
+
+
+      // setGameId();
+      // const cellId = e.target.id;
+      // console.log("Click target: " + cellId);
+      // e.preventDefault();
+      // const promise = fetch(
+      //   "/games/" + gameId + "/build.json",
+      //   {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //       "X-CSRF-TOKEN": document.querySelector("meta[name='csrf-token']").content
+      //     },
+      //     body: JSON.stringify({ target: cellId })
+      //   }
+      // ).then(response => response.json())
+      //   .then(result => handleBuildResult(result))
+      //   .catch(error => console.log("BUILD ERROR: " + JSON.stringify(error)));
     });
 }
 

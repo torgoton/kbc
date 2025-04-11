@@ -1,20 +1,33 @@
-<div id="players-area">
-    <% players = @game.game_players.sort_by(&:order) %>
-    <% offset = players.find { |p| p.player == current_user }.order %>
-    <% players.size.times do |n| %>
-        <% # Always display current user first %>
-        <% index = (n + offset) % players.size %>
-        <% player = players[index] %>
-        <div class="player-area">
-            <%= content_tag :div,
-                player.player.handle,
-                class: "handle#{ @my_turn ? ' my-turn' : '' }"
-            %>
-            <%= button_to("End turn", end_turn_game_path(@game)) if n == 0 && @my_turn %>
-            <%= content_tag :span, player.hand, class: "player-card card-#{player.hand}" %>
-            <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
-            <%= content_tag :span, "x#{player.supply["settlements"]}", class: "settlement-count" %>
-            <%= render "tiles" %>
+<%= turbo_frame_tag("players") do %>
+    <div id="players-area">
+        <div id="moves-area">
+            <%= form_with url: build_game_path(@game), id: :build_form do |f| %>
+                <%= f.text_field :build_cell, placeholder: "Build cell" %>
+                <%= f.submit "Build", id: "build_submit" %>
+            <% end %>
+            <%= form_with url: build_game_path(@game) do |f| %>
+                <%= f.text_field :move_source, placeholder: "Move from" %>
+                <%= f.text_field :move_destination, placeholder: "Move to" %>
+                <%= f.submit "Move", id: "move_submit" %>
+            <% end %>
         </div>
-    <% end %>
-</div>
+        <% players = @game.game_players.sort_by(&:order) %>
+        <% offset = players.find { |p| p.player == current_user }.order %>
+        <% players.size.times do |n| %>
+            <% # Always display current user first %>
+            <% index = (n + offset) % players.size %>
+            <% player = players[index] %>
+            <div class="player-area">
+                <%= content_tag :div,
+                    player.player.handle,
+                    class: "handle#{ @my_turn ? ' my-turn' : '' }"
+                %>
+                <%= button_to("End turn", end_turn_game_path(@game)) if n == 0 && @my_turn && @game.turn_endable? %>
+                <%= content_tag :span, player.hand, class: "player-card card-#{player.hand}" %>
+                <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
+                <%= content_tag :span, "x#{player.supply["settlements"]}", class: "settlement-count" %>
+                <%= render "tiles" %>
+            </div>
+        <% end %>
+    </div>
+<% end %>

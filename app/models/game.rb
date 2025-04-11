@@ -125,6 +125,13 @@ class Game < ApplicationRecord
     end
   end
 
+  def turn_endable?
+    if (mandatory_count == 0) || current_player.supply["settlements"] == 0
+      return true
+    end
+    false
+  end
+
   def end_turn
     Rails.logger.info("END TURN REQUESTED on GAME #{id}")
     Rails.logger.info(" - current player #{current_player.inspect}")
