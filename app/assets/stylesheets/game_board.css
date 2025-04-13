@@ -46,7 +46,11 @@ html{
     width: 100%;
     height: 100%;
     transform: skewY(-30deg) rotate(60deg);
-    /* overflow: hidden; */
+    font-size: 0.75rem;
+    color: white;
+    text-shadow: 1px 1px 2px black;
+    text-align: center;
+    vertical-align: middle;
 }
 
 #map-grid li.odd:nth-child(20n-19) {
@@ -234,16 +238,32 @@ aside {
     background-color: #444;
 }
 
-#map-grid li.terrain-s .hexagon.grid-item {
-    background-color: silver;
-}
-
 #map-grid li.terrain-t .hexagon.grid-item {
     background-color: forestgreen;
 }
 
 #map-grid li.terrain-w .hexagon.grid-item {
     background-color: royalblue;
+}
+
+#map-grid li.terrain-castlehex .hexagon.grid-item {
+    background-color: silver;
+}
+
+#map-grid li.terrain-tavernhex .hexagon.grid-item {
+    background-color: goldenrod;
+}
+
+#map-grid li.terrain-paddockhex .hexagon.grid-item {
+    background-color: goldenrod;
+}
+
+#map-grid li.terrain-oasishex .hexagon.grid-item {
+    background-color: goldenrod;
+}
+
+#map-grid li.terrain-farmhex .hexagon.grid-item {
+    background-color: goldenrod;
 }
 
 .hex-map-image {

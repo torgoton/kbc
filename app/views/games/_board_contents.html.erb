@@ -10,7 +10,11 @@
           "terrain-#{terrain}",
           icon,
           row.even? ? "even" : "odd"].join(" ") do %>
-        <div class="hexagon grid-item"></div>
+        <div class="hexagon grid-item">
+          <% if terrain.length > 1 %>
+            <p><%= terrain[0..-4].capitalize %></p>
+          <% end %>
+        </div>
         <% if content %>
           <% Rails.logger.info " at #{row},#{col} found #{content.qty rescue 'NA'} of #{content.class}" %>
           <%= render partial: "cell_content", locals: {content: content} %>
