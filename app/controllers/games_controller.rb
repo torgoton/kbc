@@ -22,6 +22,7 @@ class GamesController < ApplicationController
     @game.instantiate
     @game_players = @game.game_players
     Rails.logger.info("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
+    @terrain_card = Boards::Board::TERRAIN_NAMES[@game.current_player.hand]
     @my_turn = (@game.current_player.player == Current.user)
     @available = if @my_turn && (@game.mandatory_count > 0)
       @game.available_list(@game.current_player.order, @game.current_player.hand)

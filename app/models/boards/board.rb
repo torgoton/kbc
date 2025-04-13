@@ -3,6 +3,18 @@ module Boards
     attr_reader :map
     attr_reader :content
 
+    TERRAIN_NAMES = {
+      "C" => "Canyon",
+      "D" => "Desert",
+      "F" => "Flowers",
+      "G" => "Grass",
+      "T" => "Timberland",
+      "W" => "Water",
+      "M" => "Mountain",
+      "S" => "Silver",
+      "L" => "Location"
+    }
+
     def initialize(game)
       @map = []
       game.boards.each do |section|
