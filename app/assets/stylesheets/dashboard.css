@@ -2,7 +2,7 @@
     background-color: var(--bg-color);
     color: var(--color);
     border-radius: 15px;
-    filter: drop-shadow(-20px 20px 20px black);
+    box-shadow: 0px 0px 20px black inset;
     width: 80%;
     margin: 0 auto;
     padding: 2rem;
