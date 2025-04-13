@@ -32,9 +32,9 @@ module Boards
       (silver_hexes + location_hexes).each do |hex|
         Rails.logger.info " - adding #{hex.inspect}"
         if @flipped == 0
-          @terrain[hex[:r]][hex[:c]] = hex[:k]
+          @terrain[hex[:r]][hex[:c]] = "#{hex[:k]}Hex"
         else
-          @terrain[9 - hex[:r]][9 - hex[:c]] = hex[:k]
+          @terrain[9 - hex[:r]][9 - hex[:c]] = "#{hex[:k]}Hex"
         end
       end
     end

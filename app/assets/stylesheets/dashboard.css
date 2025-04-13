@@ -1,0 +1,14 @@
+.dashboard-backdrop {
+    background-color: var(--bg-color);
+    color: var(--color);
+    border-radius: 15px;
+    filter: drop-shadow(-20px 20px 20px black);
+    width: 80%;
+    margin: 0 auto;
+    padding: 2rem;
+    font-size: 120%;
+}
+
+.dashboard-backdrop a {
+    color: var(--color);
+}

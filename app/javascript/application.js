@@ -2,9 +2,10 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 
-window.onload = () => {
+function fancy_dance() {
   const fancy = document.getElementById('fancy-background');
 
+  console.log('onpageshow', fancy);
   if (fancy) {
     const colors = ['#3e713a', '#7fac46', '#5083a9', '#f4c935', '#d386d5', '#76675b', '#222'];
 
@@ -19,3 +20,5 @@ window.onload = () => {
     , 100);
   }
 }
+
+window.addEventListener('pageshow', fancy_dance);

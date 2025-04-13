@@ -1,0 +1,19 @@
+.display-box {
+    display: block;
+    width: 50%;
+    margin: 30px auto;
+    background: darkgreen;
+    color: white;
+    text-align: center;
+    padding: 30px;
+    filter: drop-shadow(-20px 20px 20px black);
+    font-size: 250%
+}
+
+.display-box a {
+    color: white;
+}
+
+.display-box h1 {
+    margin: 0;
+}

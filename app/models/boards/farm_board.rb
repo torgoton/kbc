@@ -23,8 +23,8 @@ module Boards
 
     def location_hexes
       [
-        { r: 1, c: 7, k: "FarmTile" },
-        { r: 5, c: 2, k: "FarmTile" }
+        { r: 1, c: 7, k: "Farm" },
+        { r: 5, c: 2, k: "Farm" }
       ]
     end
   end

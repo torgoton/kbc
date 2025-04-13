@@ -9,9 +9,14 @@
  * Consider organizing styles into separate files for maintainability.
  */
 
+ :root {
+    --bg-color: darkgreen;
+    --color: white
+ }
+
  * { box-sizing: border-box; }
 
- #fancy-background {
+#fancy-background {
     position: fixed;
     display: flex;
     width: 120vw;
@@ -47,5 +52,5 @@
     font-size: initial;
     clip-path: polygon(0 25%, 0 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0);
     margin-bottom: calc(var(--m) - var(--s) * 0.2886);
-    background-color: lightgray;
+    background-color: gray;
 }

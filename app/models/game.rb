@@ -166,7 +166,7 @@ class Game < ApplicationRecord
     instantiate_boards
     @board.map.each_with_index do |board, i|
       board.location_hexes.each do |loc|
-        contents[overall_location(i, loc[:r], loc[:c])] = { klass: loc[:k], qty: 2 }
+        contents[overall_location(i, loc[:r], loc[:c])] = { klass: "#{loc[:k]}Tile", qty: 2 }
       end
     end
     self.board_contents = contents
