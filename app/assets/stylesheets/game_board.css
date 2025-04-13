@@ -7,8 +7,8 @@ html{
     display: grid;
     grid-template-areas:
         "turn-state players-area"
-        "goals players-area"
-        "board players-area";
+        "goals      players-area"
+        "board      players-area";
     grid-template-columns: 75% auto;
 }
 
@@ -17,6 +17,52 @@ html{
     display: block;
     position: relative;
     grid-area: board;
+}
+
+#map-grid {
+    position: relative;
+    padding: 0;
+}
+
+#map-grid li {
+    --cell-width: 4.75%;
+    --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
+    list-style-type: none;
+    position: relative;
+    float: left;
+    width: var(--cell-width);
+    padding: 0 0 var(--cell-padding) 0;
+    margin: -0.67% 0.035%;
+    transform: rotate(-60deg) skewY(30deg);
+    background: #fd005f;
+    overflow: hidden;
+    visibility: hidden;
+}
+
+#map-grid li .hexagon {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: skewY(-30deg) rotate(60deg);
+    /* overflow: hidden; */
+}
+
+#map-grid li.odd:nth-child(20n-19) {
+    margin-left: 2.5%;
+}
+
+#map-grid li:nth-child(20n) .hexagon {
+    background: red;
+}
+
+#map-grid li * {
+    visibility: visible;
+}
+
+.grid-item {
+    color: blue;
 }
 
 aside {
@@ -164,39 +210,39 @@ aside {
     width: 40%;
 }
 
-.grid-item.terrain-c {
+#map-grid li.terrain-c .hexagon.grid-item {
     background-color: #a52a2ac0;
 }
 
-.grid-item.terrain-d {
+#map-grid li.terrain-d .hexagon.grid-item {
     background-color: #ffd700;
 }
 
-.grid-item.terrain-f {
+#map-grid li.terrain-f .hexagon.grid-item {
     background-color: darkorchid;
 }
 
-.grid-item.terrain-g {
+#map-grid li.terrain-g .hexagon.grid-item {
     background-color: rgb(0,255,5,0.8);
 }
 
-.grid-item.terrain-l {
+#map-grid li.terrain-l .hexagon.grid-item {
     background-color: goldenrod;
 }
 
-.grid-item.terrain-m {
+#map-grid li.terrain-m .hexagon.grid-item {
     background-color: #444;
 }
 
-.grid-item.terrain-s {
+#map-grid li.terrain-s .hexagon.grid-item {
     background-color: silver;
 }
 
-.grid-item.terrain-t {
+#map-grid li.terrain-t .hexagon.grid-item {
     background-color: forestgreen;
 }
 
-.grid-item.terrain-w {
+#map-grid li.terrain-w .hexagon.grid-item {
     background-color: royalblue;
 }
 

@@ -9,7 +9,7 @@
         <li class="quadrant quadrant-1<%= @game.board.map[3].flipped > 0 ? " flipped" : "" %>"></li>
         <!-- cell content -->
       </ol>
+      <%= render "board_contents" %>
     </div>
-    <%= render "board_contents" %>
   </div>
 <% end %>

@@ -1,17 +1,21 @@
-<% 20.times do |row| %>
+<ul id="map-grid">
+  <% 20.times do |row| %>
     <% 20.times do |col| %>
-    <% terrain = @game.board.terrain_at(row, col).downcase %>
-    <% icon = terrain.length > 1 ? "hex-map-image #{terrain}-hex" : "" %>
-    <% content = @game.board.content_at(row, col) %>
-    <% selectable = @available[row][col] ? "selectable" : nil %>
-    <%= content_tag :li,
+      <% terrain = @game.board.terrain_at(row, col).downcase %>
+      <% icon = terrain.length > 1 ? "hex-map-image #{terrain}-hex" : "" %>
+      <% content = @game.board.content_at(row, col) %>
+      <%= content_tag :li,
         id: "map-cell-#{row}-#{col}",
-        class: ["grid-item", "terrain-#{terrain}", icon, selectable].join(" "),
-        style: "grid-area: #{row * 3 + 1} / #{col * 2 + 1 + row % 2} / span 4 / span 2;" do %>
+        class: [
+          "terrain-#{terrain}",
+          icon,
+          row.even? ? "even" : "odd"].join(" ") do %>
+        <div class="hexagon grid-item"></div>
         <% if content %>
-            <% Rails.logger.info " at #{row},#{col} found #{content.qty rescue 'NA'} of #{content.class}" %>
-            <%= render partial: "cell_content", locals: {content: content} %>
+          <% Rails.logger.info " at #{row},#{col} found #{content.qty rescue 'NA'} of #{content.class}" %>
+          <%= render partial: "cell_content", locals: {content: content} %>
         <% end %>
+      <% end %>
     <% end %>
-    <% end %>
-<% end %>
+  <% end %>
+</ul>
