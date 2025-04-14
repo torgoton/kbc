@@ -19,11 +19,17 @@
             <% player = players[index] %>
             <div class="player-area">
                 <%= content_tag :div,
-                    player.player.handle,
-                    class: "handle#{ @my_turn ? ' my-turn' : '' }"
-                %>
+                    class: "handle#{ @my_turn ? ' my-turn' : '' }" do %>
+                    <% if player.id == @game.current_player.id %>
+                        <%= content_tag :span, class: "player-spinner" do %>
+                            <%= image_tag "tape-reel.svg" %>
+                        <% end %>
+                    <% end %>
+                    <%= player.player.handle %>
+                <% end %>
                 <%= button_to("End turn", end_turn_game_path(@game)) if n == 0 && @my_turn && @game.turn_endable? %>
-                <%= content_tag :span, player.hand, class: "player-card card-#{player.hand}" %>
+                <%= content_tag :span, player.hand,
+                    class: "player-card card-#{(n == 0 || (@game.current_player_id == player.id)) ? player.hand : 'B'}" %>
                 <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
                 <%= content_tag :span, "x#{player.supply["settlements"]}", class: "settlement-count" %>
                 <%= render "tiles" %>

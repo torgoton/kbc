@@ -393,6 +393,20 @@ ul li .grid-item:hover {
     flex: 1 0 auto;
 }
 
+.player-spinner {
+    /* background-image: url("tape-reel.svg"); */
+    animation: playspin 1s infinite linear;
+    display: inline-block;
+    width: 40px;
+    transform-origin: 20px 20px;
+}
+
+@keyframes playspin {
+    to {
+        transform: rotate(-360deg);
+    }
+}
+
 .handle {
     font-size: larger;
 }
@@ -411,33 +425,34 @@ ul li .grid-item:hover {
 }
 
 .player-card {
-    background-size: 600%;
+    background-size: 100%;
     width: 80px;
-    height: 116px;
+    height: 80px;
     color: transparent;
     display: inline-block;
 }
 
 .player-card.card-B {
-    background-position: 0;
+    background-image: url("silver/castle.svg");
 }
 
 .player-card.card-G {
+    background-image: url("grass.svg");
     background-position: 20%;
 }
 
 .player-card.card-C {
-    background-position: 40%;
+    background-image: url("canyon.svg");
 }
 
 .player-card.card-D {
-    background-position: 60%;
+    background-image: url("desert.svg");
 }
 
 .player-card.card-F {
-    background-position: 80%;
+    background-image: url("flowers.svg");
 }
 
 .player-card.card-T {
-    background-position: 100%;
+    background-image: url("timberland.svg");
 }
