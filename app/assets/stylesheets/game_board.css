@@ -413,8 +413,9 @@ ul li .grid-item:hover {
 
 .settlement-icon {
     display: inline-block;
+    background-image: url("settlement.svg");
     background-repeat: no-repeat;
-    background-size: 1100%;
+    background-size: 200%;
     width: 44px;
     height: 46px;
 }
