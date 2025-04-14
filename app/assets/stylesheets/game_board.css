@@ -53,9 +53,15 @@ html{
     vertical-align: middle;
 }
 
+/* #map-grid li .hexagon.grid-item.row-bump { */
 #map-grid li.odd:nth-child(20n-19) {
     margin-left: 2.5%;
 }
+
+/* Draft attempt to show quadrant edges */
+/* #map-grid li:nth-child(20n+11) {
+    margin-left: 3px;
+} */
 
 #map-grid li * {
     visibility: visible;
@@ -106,10 +112,8 @@ html{
     grid-row-start: 31;
 }
 
-.grid-item {
-    padding-bottom: 115.7%;
-    position: relative;
-    clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+ul li .grid-item:hover {
+    background-color: #fd005f;
 }
 
 .selectable {

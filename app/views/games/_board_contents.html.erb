@@ -2,7 +2,6 @@
   <% 20.times do |row| %>
     <% 20.times do |col| %>
       <% terrain = @game.board.terrain_at(row, col).downcase %>
-      <% icon = terrain.length > 1 ? "hex-map-image" : "" %>
       <% content = @game.board.content_at(row, col) %>
       <%= content_tag :li,
         id: "map-cell-#{row}-#{col}",
@@ -12,10 +11,8 @@
             "hexagon",
             "grid-item",
             "terrain-#{terrain}",
-            icon].join(" ") do %>
-          <% if terrain.length > 1 %>
-            <p><%= " " || terrain[0..-4].capitalize %></p>
-          <% end %>
+            terrain.length > 1 ? "hex-map-image" : nil,
+            row.odd? && col == 0 ? "row-bump" : nil].compact.join(" ") do %>
         <% end %>
         <% if content %>
           <% Rails.logger.info " at #{row},#{col} found #{content.qty rescue 'NA'} of #{content.class}" %>
