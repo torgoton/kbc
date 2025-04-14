@@ -2,19 +2,21 @@
   <% 20.times do |row| %>
     <% 20.times do |col| %>
       <% terrain = @game.board.terrain_at(row, col).downcase %>
-      <% icon = terrain.length > 1 ? "hex-map-image #{terrain}-hex" : "" %>
+      <% icon = terrain.length > 1 ? "hex-map-image" : "" %>
       <% content = @game.board.content_at(row, col) %>
       <%= content_tag :li,
         id: "map-cell-#{row}-#{col}",
-        class: [
-          "terrain-#{terrain}",
-          icon,
-          row.even? ? "even" : "odd"].join(" ") do %>
-        <div class="hexagon grid-item">
+        class: row.even? ? "even" : "odd" do %>
+        <%= content_tag :div,
+          class: [
+            "hexagon",
+            "grid-item",
+            "terrain-#{terrain}",
+            icon].join(" ") do %>
           <% if terrain.length > 1 %>
-            <p><%= terrain[0..-4].capitalize %></p>
+            <p><%= " " || terrain[0..-4].capitalize %></p>
           <% end %>
-        </div>
+        <% end %>
         <% if content %>
           <% Rails.logger.info " at #{row},#{col} found #{content.qty rescue 'NA'} of #{content.class}" %>
           <%= render partial: "cell_content", locals: {content: content} %>

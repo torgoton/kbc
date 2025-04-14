@@ -57,20 +57,8 @@ html{
     margin-left: 2.5%;
 }
 
-#map-grid li:nth-child(20n) .hexagon {
-    background: red;
-}
-
 #map-grid li * {
     visibility: visible;
-}
-
-.grid-item {
-    color: blue;
-}
-
-aside {
-    width: 100%;
 }
 
 .hex-map-container {
@@ -201,69 +189,90 @@ aside {
 }
 
 .tile-counter {
+    position: absolute;
+    top: -7%;
+    left: 68%;
     background-color: orange;
     border: 1px solid black;
     border-radius: 50%;
     font-size: 0.9em;
     height: 0;
-    left: 25%;
     padding-bottom: 40%;
-    position: absolute;
     text-align: center;
-    top: -18%;
     width: 40%;
+    transform: skewY(-30deg) rotate(60deg);
 }
 
-#map-grid li.terrain-c .hexagon.grid-item {
+.grid-item.terrain-c {
     background-color: #a52a2ac0;
 }
 
-#map-grid li.terrain-d .hexagon.grid-item {
+.grid-item.terrain-d {
     background-color: #ffd700;
 }
 
-#map-grid li.terrain-f .hexagon.grid-item {
+.grid-item.terrain-f {
     background-color: darkorchid;
 }
 
-#map-grid li.terrain-g .hexagon.grid-item {
+.grid-item.terrain-g {
     background-color: rgb(0,255,5,0.8);
 }
 
-#map-grid li.terrain-l .hexagon.grid-item {
+.grid-item.terrain-l {
     background-color: goldenrod;
 }
 
-#map-grid li.terrain-m .hexagon.grid-item {
+.grid-item.terrain-m {
     background-color: #444;
 }
 
-#map-grid li.terrain-t .hexagon.grid-item {
+.grid-item.terrain-t {
     background-color: forestgreen;
 }
 
-#map-grid li.terrain-w .hexagon.grid-item {
+.grid-item.terrain-w {
     background-color: royalblue;
 }
 
-#map-grid li.terrain-castlehex .hexagon.grid-item {
+.grid-item.terrain-castlehex {
     background-color: silver;
+    background-image: url("silver/castle.svg");
+    background-size: 89%;
+    background-repeat: no-repeat;
+    background-position: center 25%;
 }
 
-#map-grid li.terrain-tavernhex .hexagon.grid-item {
+.grid-item.terrain-tavernhex {
     background-color: goldenrod;
+    background-image: url("gold/tavern.svg");
+    background-size: 85%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
 }
 
-#map-grid li.terrain-paddockhex .hexagon.grid-item {
+.grid-item.terrain-paddockhex {
     background-color: goldenrod;
+    background-image: url("gold/paddock.svg");
+    background-size: 81%;
+    background-repeat: no-repeat;
+    background-position: center 65%;
 }
 
-#map-grid li.terrain-oasishex .hexagon.grid-item {
+.grid-item.terrain-oasishex {
     background-color: goldenrod;
+    background-image: url("gold/oasis.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
 }
 
-#map-grid li.terrain-farmhex .hexagon.grid-item {
+.grid-item.terrain-farmhex {
     background-color: goldenrod;
+    background-image: url("gold/farm.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
 }
 
 .hex-map-image {
@@ -319,23 +328,23 @@ aside {
 }
 
 .hex-settlement {
+    background-image: url("settlement.svg");
     background-repeat: no-repeat;
-    background-size: 1100%;
-    display: block;
-    height: 60%;
-    left: 20%;
+    background-size: 200%;
     position: absolute;
-    top: 20%;
-    width: 60%;
-    z-index: 10;
+    top: 14%;
+    left: 21%;
+    width: 66%;
+    height: 66%;
+    transform: skewY(-30deg) rotate(60deg);
 }
 
 .player-0 {
-    background-position: 30%;
+    background-position: 0%;
 }
 
 .player-1 {
-    background-position: 20%;
+    background-position: 100%;
 }
 
 #goals {

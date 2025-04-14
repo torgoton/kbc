@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   version="1.0"
+   id="Layer_1"
+   width="1600"
+   height="800"
+   viewBox="0 0 128 64"
+   enable-background="new 0 0 64 64"
+   xml:space="preserve"
+   sodipodi:docname="settlement.svg"
+   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs1">
+	
+	
+</defs><sodipodi:namedview
+   id="namedview1"
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1.0"
+   inkscape:showpageshadow="2"
+   inkscape:pageopacity="0.0"
+   inkscape:pagecheckerboard="0"
+   inkscape:deskcolor="#d1d1d1"
+   inkscape:zoom="0.644375"
+   inkscape:cx="800"
+   inkscape:cy="400.38797"
+   inkscape:window-width="1920"
+   inkscape:window-height="1011"
+   inkscape:window-x="0"
+   inkscape:window-y="0"
+   inkscape:window-maximized="1"
+   inkscape:current-layer="Layer_1" />
+<path
+   fill="#000000"
+   d="m 62.79,29.172 -28,-28 C 34.009,0.391 32.985,0 31.962,0 30.939,0 29.915,0.391 29.134,1.172 l -28,28 c -1.562,1.566 -1.484,4.016 0.078,5.578 1.566,1.57 3.855,1.801 5.422,0.234 L 8,33.617 V 60 c 0,2.211 1.789,4 4,4 h 40 c 2.211,0 4,-1.789 4,-4 V 33.695 l 1.195,1.195 c 1.562,1.562 3.949,1.422 5.516,-0.141 1.563,-1.561 1.645,-4.015 0.079,-5.577 z M 48.001,56 h -12 V 44 h -8 V 56 H 16 V 25.617 L 31.962,9.66 48.001,25.695 Z"
+   id="path1" /><polygon
+   fill="#f9ebb2"
+   points="36.001,44 28.001,44 28.001,56 16,56 16,25.617 31.962,9.66 48.001,25.695 48.001,56 36.001,56 "
+   id="polygon1"
+   style="fill:#ffcc00" />
+<path
+   fill="#000000"
+   d="m 126.79,29.172 -28,-28 C 98.009,0.391 96.985,0 95.962,0 94.939,0 93.915,0.391 93.134,1.172 l -28,28 c -1.562,1.566 -1.484,4.016 0.078,5.578 1.566,1.57 3.855,1.801 5.422,0.234 L 72,33.617 V 60 c 0,2.211 1.789,4 4,4 h 40 c 2.211,0 4,-1.789 4,-4 V 33.695 l 1.195,1.195 c 1.562,1.562 3.949,1.422 5.516,-0.141 1.563,-1.561 1.645,-4.015 0.079,-5.577 z M 112.001,56 h -12 V 44 h -8 V 56 H 80 V 25.617 L 95.962,9.66 112.001,25.695 Z"
+   id="path2" /><polygon
+   fill="#f9ebb2"
+   points="28.001,44 28.001,56 16,56 16,25.617 31.962,9.66 48.001,25.695 48.001,56 36.001,56 36.001,44 "
+   id="polygon2"
+   style="fill:#0055d4"
+   transform="translate(64)" /></svg>
