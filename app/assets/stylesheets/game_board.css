@@ -1,3 +1,7 @@
+:root {
+    --cell-width: 4.75%;
+}
+
 html{
     background-image: url("green-felt.jpg");
     background-size: cover;
@@ -25,7 +29,6 @@ html{
 }
 
 #map-grid li {
-    --cell-width: 4.75%;
     --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
     list-style-type: none;
     position: relative;
@@ -55,7 +58,7 @@ html{
 
 /* #map-grid li .hexagon.grid-item.row-bump { */
 #map-grid li.odd:nth-child(20n-19) {
-    margin-left: 2.5%;
+    margin-left: calc(var(--cell-width) / 2);
 }
 
 /* Draft attempt to show quadrant edges */
@@ -116,13 +119,14 @@ ul li .grid-item:hover {
     background-color: #fd005f;
 }
 
-.selectable {
-    border-width: 4px;
+#board #map-container .cell-content.selectable {
     cursor: pointer;
-    background-size: 1200%;
+    background-image: url("hex-outlines.svg");
+    width: 115%;
+    height: 110%;
     background-repeat: no-repeat;
-    background-position: 0;
-    opacity: 0.5;
+    background-position: -4px 0;
+    background-color: hsla(0,0%,100%,.5);
 }
 
 .selectable:hover {
@@ -194,8 +198,8 @@ ul li .grid-item:hover {
 
 .tile-counter {
     position: absolute;
-    top: -7%;
-    left: 68%;
+    top: -5%;
+    left: 29%;
     background-color: orange;
     border: 1px solid black;
     border-radius: 50%;
@@ -204,7 +208,6 @@ ul li .grid-item:hover {
     padding-bottom: 40%;
     text-align: center;
     width: 40%;
-    transform: skewY(-30deg) rotate(60deg);
 }
 
 .grid-item.terrain-c {
@@ -340,7 +343,6 @@ ul li .grid-item:hover {
     left: 21%;
     width: 66%;
     height: 66%;
-    transform: skewY(-30deg) rotate(60deg);
 }
 
 .player-0 {
@@ -409,6 +411,10 @@ ul li .grid-item:hover {
 
 .handle {
     font-size: larger;
+}
+
+.player-order {
+    display: none;
 }
 
 .settlement-icon {

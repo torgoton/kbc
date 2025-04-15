@@ -13,10 +13,7 @@
             "terrain-#{terrain}",
             terrain.length > 1 ? "hex-map-image" : nil,
             row.odd? && col == 0 ? "row-bump" : nil].compact.join(" ") do %>
-        <% end %>
-        <% if content %>
-          <% Rails.logger.info " at #{row},#{col} found #{content.qty rescue 'NA'} of #{content.class}" %>
-          <%= render partial: "cell_content", locals: {content: content} %>
+            <%= render partial: "cell_content", locals: {content: content} %>
         <% end %>
       <% end %>
     <% end %>

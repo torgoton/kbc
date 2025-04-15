@@ -26,14 +26,22 @@
                         <% end %>
                     <% end %>
                     <%= player.player.handle %>
+                    <span class="player-order"><%= n %></>
                 <% end %>
                 <%= button_to("End turn", end_turn_game_path(@game)) if n == 0 && @my_turn && @game.turn_endable? %>
                 <%= content_tag :span, player.hand,
                     class: "player-card card-#{(n == 0 || (@game.current_player_id == player.id)) ? player.hand : 'B'}" %>
                 <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
-                <%= content_tag :span, "x#{player.supply["settlements"]}", class: "settlement-count" %>
+                x
+                <%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
                 <%= render "tiles" %>
             </div>
         <% end %>
+        <div id="common-resources">
+            <div class="player-area">
+                <div>Deck: <%= @game.deck.size %> cards left</div>
+                <div>Discard: <%= @game.discard.size %> cards</div>
+            </div>
+        </div>
     </div>
 <% end %>

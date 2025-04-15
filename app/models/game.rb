@@ -82,13 +82,6 @@ class Game < ApplicationRecord
         end
       end
     end
-    # 20.times do |r|
-    #   m = ""
-    #   20.times do |c|
-    #     m += (available[r][c] ? "*" : "-")
-    #   end
-    #   Rails.logger.info(m)
-    # end
     available
   end
 
