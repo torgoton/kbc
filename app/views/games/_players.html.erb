@@ -26,7 +26,7 @@
                         <% end %>
                     <% end %>
                     <%= player.player.handle %>
-                    <span class="player-order"><%= n %></>
+                    <span class="player-order"><%= index %></>
                 <% end %>
                 <%= button_to("End turn", end_turn_game_path(@game)) if n == 0 && @my_turn && @game.turn_endable? %>
                 <%= content_tag :span, player.hand,
