@@ -62,24 +62,17 @@ function mark_available_cells() {
   });
   card = document.querySelector("span.player-card").innerText.toLowerCase();
   player_no = Number(document.querySelector(".handle .player-order").innerText);
+  mandatory_count = Number(document.querySelector("span.mandatory-count").innerText);
+  any_near_me = false;
   // mark the available cells
   // if it's my turn - it always is
   // and I have any settlements left
   // and I have any moves left
-  if (settlements_left() > 0) {
+  if (settlements_left() > 0 && mandatory_count > 0) {
     // find all my settlements
     my_settlements = document.querySelectorAll(".hex-settlement.player-" + player_no);
-    // If I have none on the board
-    if (my_settlements.length === 0) {
-      // find all cells with the terrain type of the card
-      document.querySelectorAll(".terrain-" + card).forEach(c => {
-        // if it does not have a settlement
-        if (!c.querySelector(".hex-settlement")) {
-          // mark it selectable
-          c.querySelector(".cell-content").classList.add("selectable");
-        }
-      });
-    } else {
+    // If I have any on the board
+    if (my_settlements.length != 0)  {
       // I do have some settlements
       // mark cells selectable
       // if they are adjacent to my settlements
@@ -98,9 +91,20 @@ function mark_available_cells() {
             if (c.querySelector(".terrain-" + card)) {
               // mark it selectable
               c.querySelector(".cell-content").classList.add("selectable");
+              any_near_me = true;
             }
           }
         });
+      });
+    }
+    if (!any_near_me) {
+      // find all cells with the terrain type of the card
+      document.querySelectorAll(".terrain-" + card).forEach(c => {
+        // if it does not have a settlement
+        if (!c.querySelector(".hex-settlement")) {
+          // mark it selectable
+          c.querySelector(".cell-content").classList.add("selectable");
+        }
       });
     }
   }
