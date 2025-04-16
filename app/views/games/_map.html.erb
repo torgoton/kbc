@@ -11,7 +11,6 @@
         <% terrain = @game.board.terrain_at(row, col).downcase %>
         <% icon = terrain.length > 1 ? "hex-map-image #{terrain}-hex" : "" %>
         <% content = @game.board.content_at(row, col) %>
-        <% selectable = @available[row][col] ? "selectable" : nil %>
         <%= content_tag :li,
           id: "map-cell-#{row}-#{col}",
           class: ["grid-item", "terrain-#{terrain}", icon, selectable].join(" "),

@@ -24,11 +24,6 @@ class GamesController < ApplicationController
     Rails.logger.info("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
     @terrain_card = Boards::Board::TERRAIN_NAMES[@game.current_player.hand]
     @my_turn = (@game.current_player.player == Current.user)
-    @available = if @my_turn && (@game.mandatory_count > 0)
-      @game.available_list(@game.current_player.order, @game.current_player.hand)
-    else
-      Array.new(20) { Array.new(20, false) }
-    end
   end
 
   # BUILD action - move a piece from my supply to the board
@@ -51,13 +46,8 @@ class GamesController < ApplicationController
     target = build_params[1]
     row = target.match(/-\d*-/).to_s[1..-2].to_i
     col = target.match(/-\d*\z/).to_s[1..-1].to_i
-    # result = @game.build_settlement(row, col)
-    # render : { message: result }
     @game.build_settlement(row, col)
-    respond_to do |format|
-      format.html { redirect_to @game }
-      format.turbo_stream { nil }
-    end
+    redirect_to @game
   end
 
   def end_turn
