@@ -4,6 +4,7 @@ class Game < ApplicationRecord
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
   ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
                   [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ]
+  MANDATORY_COUNT = 3
 
   # 10-10 adjacent to [[10,9], [10,11], [9,9], [9,10], [11,9], [11,10]]
   #  9-10 adjacent to [[9,9], [9,11], [8,10], [8,11], [10,10], [10,11]]
@@ -36,20 +37,17 @@ class Game < ApplicationRecord
     populate_player_supplies
     deal_terrain_cards
     choose_start_player
+    self.state = "playing"
     save
-    update(state: "playing")
   end
 
   def instantiate
+    # Create objects from the serialized game state
     instantiate_boards
-    instantiate_content
   end
 
   def instantiate_boards
     @board ||= Boards::Board.new(self)
-  end
-
-  def instantiate_content
   end
 
   def player_index_for(user)
@@ -106,8 +104,7 @@ class Game < ApplicationRecord
     log(" Terrain card is #{card_terrain}")
     log(" Terrain of cell is #{cell_terrain}")
     "Incorrect terrain" unless card_terrain == cell_terrain
-    # FIXING: check if available
-    return "Not adjacent" unless available?(game_player.order, card_terrain, row, col)
+    return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
     game_player.supply["settlements"] -= 1
     board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
@@ -126,16 +123,16 @@ class Game < ApplicationRecord
   end
 
   def end_turn
-    Rails.logger.info("END TURN REQUESTED on GAME #{id}")
-    Rails.logger.info(" - current player #{current_player.inspect}")
+    Rails.logger.debug("END TURN REQUESTED on GAME #{id}")
+    Rails.logger.debug(" - current player #{current_player.inspect}")
     game_player = current_player
     self.discard.push(game_player.hand)
     game_player.hand = next_card
-    self.mandatory_count = 3
+    self.mandatory_count = MANDATORY_COUNT
     next_order = (current_player.order + 1) % game_players.count
-    Rails.logger.info(" - next in order #{next_order}")
+    Rails.logger.debug(" - next in order #{next_order}")
     self.current_player = game_players.find { |p| p.order == next_order }
-    Rails.logger.info(" - next player #{current_player.inspect}")
+    Rails.logger.debug(" - next player #{current_player.inspect}")
     ActiveRecord::Base.transaction do
       game_player.save
       save
@@ -145,7 +142,7 @@ class Game < ApplicationRecord
   private
 
   def log(msg)
-    Rails.logger.info msg
+    Rails.logger.debug msg
   end
 
   # MVP: Always boards from "First Game"
@@ -159,12 +156,13 @@ class Game < ApplicationRecord
     instantiate_boards
     @board.map.each_with_index do |board, i|
       board.location_hexes.each do |loc|
+        # MVP (and base game) always have 2 tiles per location
         contents[overall_location(i, loc[:r], loc[:c])] = { klass: "#{loc[:k]}Tile", qty: 2 }
       end
     end
     self.board_contents = contents
     save
-    Rails.logger.info("CONTENT AT START: #{self.board_contents}")
+    Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
   end
 
   def initialize_terrain_deck
@@ -178,7 +176,7 @@ class Game < ApplicationRecord
   end
 
   def select_goals
-    # MVP always these 3
+    # MVP always these goals
     self.goals = [ "Fishermen", "Knights", "Merchants" ]
     save
   end
@@ -200,7 +198,7 @@ class Game < ApplicationRecord
   def choose_start_player
     game_players.shuffle.each_with_index { |p, n| p.update(order: n) }
     update(current_player: first_player)
-    update(mandatory_count: 3)
+    update(mandatory_count: MANDATORY_COUNT)
   end
 
   def overall_location(board, row, col)

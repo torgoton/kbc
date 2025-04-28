@@ -61,8 +61,8 @@ function mark_available_cells() {
     c.classList.remove("selectable");
   });
   card = document.querySelector("span.player-card").innerText.toLowerCase();
-  player_no = Number(document.querySelector(".handle .player-order").innerText);
-  mandatory_count = Number(document.querySelector("span.mandatory-count").innerText);
+  player_no = parseInt(document.querySelector(".handle .player-order").innerText);
+  mandatory_count = parseInt(document.querySelector("span.mandatory-count").innerText);
   any_near_me = false;
   // mark the available cells
   // if it's my turn - it always is

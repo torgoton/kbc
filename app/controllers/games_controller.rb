@@ -21,14 +21,14 @@ class GamesController < ApplicationController
     @game = Game.find(params[:id])
     @game.instantiate
     @game_players = @game.game_players
-    Rails.logger.info("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
+    Rails.logger.debug("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
     @terrain_card = Boards::Board::TERRAIN_NAMES[@game.current_player.hand]
     @my_turn = (@game.current_player.player == Current.user)
   end
 
   # BUILD action - move a piece from my supply to the board
   def build
-    Rails.logger.info("BUILD PARAMS: #{build_params.inspect}")
+    Rails.logger.debug("BUILD PARAMS: #{build_params.inspect}")
     @game = Current.user.games.find(build_params[0])
     unless @game
       respond_to do |format|
@@ -51,7 +51,7 @@ class GamesController < ApplicationController
   end
 
   def end_turn
-    Rails.logger.info("END TURN action")
+    Rails.logger.debug("END TURN action")
     @game = Current.user.games.find(params["id"].first)
     @game.end_turn if @game.mandatory_count == 0
     redirect_to @game

@@ -4,18 +4,18 @@
     <!-- show the pieces on top of the board -->
     <% case content %>
     <% when Tiles::Tile %>
-        <% Rails.logger.info " - it's a TILE!" %>
+        <% Rails.logger.debug " - it's a TILE!" %>
         <%= content_tag :div, nil, class: "tile-container" do %>
             <!-- show quantity if any -->
             <% if content.respond_to? :qty %>
                 <%= content_tag :div, content.qty, class: "tile-counter" %>
-            <% end %>
-            <% content.qty.times do |n| %>
-                <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
+                <% content.qty.times do |n| %>
+                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
+                <% end %>
             <% end %>
         <% end %>
     <% when Settlement %>
-        <% Rails.logger.info " - it's a SETTLEMENT" %>
+        <% Rails.logger.debug " - it's a SETTLEMENT" %>
         <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
     <% end %>
 <% end %>

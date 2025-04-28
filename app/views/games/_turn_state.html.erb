@@ -1,8 +1,10 @@
 <div id="turn-state">
-    <span class="mandatory-count"><%= @game.mandatory_count %></span>
-    <% if @game.mandatory_count > 0 && @game.current_player.supply["settlements"] > 0 %>
-        <%= "#{@game.current_player.player.handle} must build on #{@terrain_card} (#{4 - @game.mandatory_count} / 3)" %>
-    <% else %>
-        <%= "#{@game.current_player.player.handle} must end their turn" %>
-    <% end %>
+  <% if @game.mandatory_count > 0 && @game.current_player.supply["settlements"] > 0 %>
+    <%= "#{@game.current_player.player.handle} must build" %>
+    <span class="mandatory-count">
+      <%= "#{pluralize(@game.mandatory_count, "settlement")} on #{@terrain_card}" %>
+    </span>
+  <% else %>
+    <%= "#{@game.current_player.player.handle} must end their turn" %>
+  <% end %>
 </div>
