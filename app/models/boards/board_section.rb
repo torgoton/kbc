@@ -30,7 +30,7 @@ module Boards
         end
       end
       (silver_hexes + location_hexes).each do |hex|
-        Rails.logger.debug " - adding #{hex.inspect}"
+        # Rails.logger.debug " - adding #{hex.inspect}"
         if @flipped == 0
           @terrain[hex[:r]][hex[:c]] = "#{hex[:k]}Hex"
         else

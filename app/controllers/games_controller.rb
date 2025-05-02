@@ -21,40 +21,45 @@ class GamesController < ApplicationController
     @game = Game.find(params[:id])
     @game.instantiate
     @game_players = @game.game_players
-    Rails.logger.debug("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
+    # Rails.logger.debug("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
     @terrain_card = Boards::Board::TERRAIN_NAMES[@game.current_player.hand]
     @my_turn = (@game.current_player.player == Current.user)
+    # Rails.logger.debug "#{__FILE__}:#{__LINE__} - @game: #{@game}"
+    render :show, locals: { game: @game, my_turn: @my_turn }
   end
 
-  # BUILD action - move a piece from my supply to the board
-  def build
-    Rails.logger.debug("BUILD PARAMS: #{build_params.inspect}")
-    @game = Current.user.games.find(build_params[0])
+  # ACTION - do a part of a turn by a player. Either
+  # 1. move a piece from the board to my supply as part of the mandatory action
+  # 2. use a tile that I have to build a settlement on the board
+  # 3. use a tile that I have to move a piece on the board
+  def action
+    Rails.logger.debug("TURN ACTION PARAMS: #{action_params.inspect}")
+    @game = Current.user.games.find(action_params[0])
     unless @game
       respond_to do |format|
         format.json { render json: { message: "Cannot find game" } }
       end
       return
     end
-    unless @game.mandatory_count > 0
-      respond_to do |format|
-        format.json { render json: { message: "No moves left" } }
-      end
-      return
-    end
 
-    target = build_params[1]
+    target = action_params[1]
     row = target.match(/-\d*-/).to_s[1..-2].to_i
     col = target.match(/-\d*\z/).to_s[1..-1].to_i
     @game.build_settlement(row, col)
-    redirect_to @game
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { render :show, locals: { game: @game }, status: :ok, formats: :html }
+    end
   end
 
   def end_turn
     Rails.logger.debug("END TURN action")
     @game = Current.user.games.find(params["id"].first)
     @game.end_turn if @game.mandatory_count == 0
-    redirect_to @game
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { render :show, locals: { game: @game }, status: :ok, formats: :html }
+    end
   end
 
   def join
@@ -77,7 +82,7 @@ class GamesController < ApplicationController
 
   private
 
-  def build_params
+  def action_params
     params.expect(:id, :build_cell)
   end
 

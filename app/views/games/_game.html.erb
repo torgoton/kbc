@@ -1,0 +1,11 @@
+<div id="game-area">
+    <main>
+        <%= render partial: "games/turn_state", locals: { game: game } %>
+        <%= render partial: "games/goals", locals: { game: game } %>
+        <%= render partial: "games/board", locals: { game: game } %>
+    </main>
+    <aside>
+      <% my_turn ||= Current.user && (Current.user.id == game.current_player.player.id) %>
+        <%= render partial: "games/players", locals: { game: game, my_turn: my_turn } %>
+    </aside>
+</div>

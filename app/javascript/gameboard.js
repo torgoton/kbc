@@ -25,7 +25,7 @@ function enableClicks() {
       console.log("Click target: " + e.target.id);
       e.preventDefault();
       document.getElementById("build_cell").value = e.target.parentElement.parentElement.id;
-      document.getElementById("build_form").submit();
+      document.getElementById("action_submit").click();
     });
 }
 
@@ -62,7 +62,13 @@ function mark_available_cells() {
   });
   card = document.querySelector("span.player-card").innerText.toLowerCase();
   player_no = parseInt(document.querySelector(".handle .player-order").innerText);
-  mandatory_count = parseInt(document.querySelector("span.mandatory-count").innerText);
+  mandatory_element = document.querySelector("span.mandatory-count");
+  if (mandatory_element) {
+    mandatory_count = parseInt(mandatory_element.innerText);
+  } else {
+    mandatory_count = 0;
+  }
+  // mandatory_count = parseInt(document.querySelector("span.mandatory-count").innerText);
   any_near_me = false;
   // mark the available cells
   // if it's my turn - it always is

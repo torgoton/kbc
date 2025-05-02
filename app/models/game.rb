@@ -21,6 +21,8 @@ class Game < ApplicationRecord
     update(state: "waiting") unless state
   end
 
+  after_update_commit :broadcast_game_update
+
   def add_player(user)
     players << user
   end
@@ -125,6 +127,7 @@ class Game < ApplicationRecord
   def end_turn
     Rails.logger.debug("END TURN REQUESTED on GAME #{id}")
     Rails.logger.debug(" - current player #{current_player.inspect}")
+    instantiate
     game_player = current_player
     self.discard.push(game_player.hand)
     game_player.hand = next_card
@@ -140,6 +143,15 @@ class Game < ApplicationRecord
   end
 
   private
+
+  def broadcast_game_update
+    broadcast_replace_to(
+      "game_#{id}",
+      target: "game_#{id}",
+      partial: "games/game",
+      locals: { game: self }
+    )
+  end
 
   def log(msg)
     Rails.logger.debug msg

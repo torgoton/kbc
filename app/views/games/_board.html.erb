@@ -2,12 +2,12 @@
   <div id="map-container">
     <ol class="hex-map-container">
       <!-- board sections -->
-      <li class="quadrant quadrant-7<%= @game.board.map[0].flipped > 0 ? " flipped" : "" %>"></li>
-      <li class="quadrant quadrant-6<%= @game.board.map[1].flipped > 0 ? " flipped" : "" %>"></li>
-      <li class="quadrant quadrant-5<%= @game.board.map[2].flipped > 0 ? " flipped" : "" %>"></li>
-      <li class="quadrant quadrant-1<%= @game.board.map[3].flipped > 0 ? " flipped" : "" %>"></li>
+      <li class="quadrant quadrant-7<%= game.board.map[0].flipped > 0 ? " flipped" : "" %>"></li>
+      <li class="quadrant quadrant-6<%= game.board.map[1].flipped > 0 ? " flipped" : "" %>"></li>
+      <li class="quadrant quadrant-5<%= game.board.map[2].flipped > 0 ? " flipped" : "" %>"></li>
+      <li class="quadrant quadrant-1<%= game.board.map[3].flipped > 0 ? " flipped" : "" %>"></li>
       <!-- cell content -->
     </ol>
-    <%= render "board_contents" %>
+    <%= render partial: "games/board_contents", locals: { game: game } %>
   </div>
 </div>

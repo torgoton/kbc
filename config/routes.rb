@@ -8,9 +8,8 @@ Rails.application.routes.draw do
   resources :games do
     member do
       post :join
-      post :build
+      post :action
       post :end_turn
-      # post :move
     end
   end
 

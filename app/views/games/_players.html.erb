@@ -1,16 +1,17 @@
 <div id="players-area">
   <div id="moves-area">
-    <%= form_with url: build_game_path(@game), id: :build_form do |f| %>
+    <%= turbo_frame_tag ["action-form", game.id] do %>
+      <%= form_with url: action_game_path(game),
+        id: :action_form do |f| %>
+        <%= f.text_field :tile %>
         <%= f.text_field :build_cell, placeholder: "Build cell" %>
-        <%= f.submit "Build", id: "build_submit" %>
-    <% end %>
-    <%= form_with url: build_game_path(@game) do |f| %>
         <%= f.text_field :move_source, placeholder: "Move from" %>
         <%= f.text_field :move_destination, placeholder: "Move to" %>
-        <%= f.submit "Move", id: "move_submit" %>
+        <%= f.submit "Action", id: "action_submit" %>
+      <% end %>
     <% end %>
   </div>
-  <% players = @game.game_players.sort_by(&:order) %>
+  <% players = game.game_players.sort_by(&:order) %>
   <% offset = players.find { |p| p.player == current_user }.order %>
   <% players.size.times do |n| %>
     <% # Always display current user first %>
@@ -18,8 +19,8 @@
     <% player = players[index] %>
     <div class="player-area">
       <%= content_tag :div,
-        class: "handle#{ @my_turn ? ' my-turn' : '' }" do %>
-        <% if player.id == @game.current_player.id %>
+        class: "handle#{ my_turn ? ' my-turn' : '' }" do %>
+        <% if player.id == game.current_player.id %>
           <%= content_tag :span, class: "player-spinner" do %>
             <%= image_tag "tape-reel.svg" %>
           <% end %>
@@ -27,19 +28,19 @@
         <%= player.player.handle %>
         <span class="player-order"><%= index %></>
       <% end %>
-      <%= button_to("End turn", end_turn_game_path(@game)) if n == 0 && @my_turn && @game.turn_endable? %>
+      <%= button_to("End turn", end_turn_game_path(game)) if n == 0 && my_turn && game.turn_endable? %>
       <%= content_tag :span, player.hand,
-        class: "player-card card-#{(n == 0 || (@game.current_player_id == player.id)) ? player.hand : 'B'}" %>
+        class: "player-card card-#{(n == 0 || (game.current_player_id == player.id)) ? player.hand : 'B'}" %>
       <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
       x
       <%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
-      <%= render "tiles" %>
+      <%= render "games/tiles", locals: {game: game} %>
     </div>
   <% end %>
   <div id="common-resources">
     <div class="player-area">
-      <div>Deck: <%= @game.deck.size %> cards left</div>
-      <div>Discard: <%= @game.discard.size %> cards</div>
+      <div>Deck: <%= game.deck.size %> cards left</div>
+      <div>Discard: <%= game.discard.size %> cards</div>
     </div>
   </div>
 </div>

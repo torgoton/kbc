@@ -1,8 +1,8 @@
 <ul id="map-grid">
   <% 20.times do |row| %>
     <% 20.times do |col| %>
-      <% terrain = @game.board.terrain_at(row, col).downcase %>
-      <% content = @game.board.content_at(row, col) %>
+      <% terrain = game.board.terrain_at(row, col).downcase %>
+      <% content = game.board.content_at(row, col) %>
       <%= content_tag :li,
         id: "map-cell-#{row}-#{col}",
         class: row.even? ? "even" : "odd" do %>
@@ -13,7 +13,27 @@
             "terrain-#{terrain}",
             terrain.length > 1 ? "hex-map-image" : nil,
             row.odd? && col == 0 ? "row-bump" : nil].compact.join(" ") do %>
-            <%= render partial: "cell_content", locals: {content: content} %>
+
+            <!-- place a div for highlighting and placing content into -->
+            <%= content_tag :div,
+                class: "cell-content" do %>
+                <!-- show the pieces on top of the board -->
+                <% case content %>
+                <% when Tiles::Tile %>
+                    <%= content_tag :div, nil, class: "tile-container" do %>
+                        <!-- show quantity if any -->
+                        <% if content.respond_to? :qty %>
+                            <%= content_tag :div, content.qty, class: "tile-counter" %>
+                            <% content.qty.times do |n| %>
+                                <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
+                            <% end %>
+                        <% end %>
+                    <% end %>
+                <% when Settlement %>
+                    <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
+                <% end %>
+            <% end %>
+
         <% end %>
       <% end %>
     <% end %>
