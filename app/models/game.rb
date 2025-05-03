@@ -147,7 +147,6 @@ class Game < ApplicationRecord
   def broadcast_game_update
     broadcast_replace_to(
       "game_#{id}",
-      target: "game_#{id}",
       partial: "games/game",
       locals: { game: self }
     )

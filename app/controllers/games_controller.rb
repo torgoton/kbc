@@ -48,7 +48,7 @@ class GamesController < ApplicationController
     @game.build_settlement(row, col)
     respond_to do |format|
       format.html { redirect_to @game }
-      format.turbo_stream { render :show, locals: { game: @game }, status: :ok, formats: :html }
+      format.turbo_stream { head :no_content }
     end
   end
 
@@ -58,7 +58,7 @@ class GamesController < ApplicationController
     @game.end_turn if @game.mandatory_count == 0
     respond_to do |format|
       format.html { redirect_to @game }
-      format.turbo_stream { render :show, locals: { game: @game }, status: :ok, formats: :html }
+      format.turbo_stream { render nil, status: :ok, formats: :html }
     end
   end
 
