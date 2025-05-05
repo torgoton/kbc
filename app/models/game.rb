@@ -145,8 +145,10 @@ class Game < ApplicationRecord
   private
 
   def broadcast_game_update
+    instantiate
     broadcast_replace_to(
       "game_#{id}",
+      target: "game_area",
       partial: "games/game",
       locals: { game: self }
     )

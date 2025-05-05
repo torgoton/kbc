@@ -26,6 +26,7 @@ class GamesController < ApplicationController
     @my_turn = (@game.current_player.player == Current.user)
     # Rails.logger.debug "#{__FILE__}:#{__LINE__} - @game: #{@game}"
     render :show, locals: { game: @game, my_turn: @my_turn }
+    # console
   end
 
   # ACTION - do a part of a turn by a player. Either
@@ -58,7 +59,7 @@ class GamesController < ApplicationController
     @game.end_turn if @game.mandatory_count == 0
     respond_to do |format|
       format.html { redirect_to @game }
-      format.turbo_stream { render nil, status: :ok, formats: :html }
+      format.turbo_stream { head :no_content }
     end
   end
 

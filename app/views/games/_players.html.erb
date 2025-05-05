@@ -12,7 +12,8 @@
     <% end %>
   </div>
   <% players = game.game_players.sort_by(&:order) %>
-  <% offset = players.find { |p| p.player == current_user }.order %>
+  <% Rails.logger.debug "CU: #{current_user.inspect}" %>
+  <% offset = current_user ? players.find { |p| p.player == current_user }.order : 0 %>
   <% players.size.times do |n| %>
     <% # Always display current user first %>
     <% index = (n + offset) % players.size %>

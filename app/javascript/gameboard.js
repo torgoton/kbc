@@ -68,7 +68,6 @@ function mark_available_cells() {
   } else {
     mandatory_count = 0;
   }
-  // mandatory_count = parseInt(document.querySelector("span.mandatory-count").innerText);
   any_near_me = false;
   // mark the available cells
   // if it's my turn - it always is
