@@ -8,7 +8,7 @@ the chance
 - WOULD CHANGE: Tiles go back onto the spot they came from
 - CLARIFICATION: Tiles know which location they came from if they ever need to
 - WOULD CHANGE: If the terrain of your card is full, instead of drawing a new card, place on any space eligible for building, and adjacent if possible
-- CLARIFICATION: If ever during your turn, the terrain of your card is full - explicitly after your mandatory action - draw a new card.
+- CLARIFICATION: If ever during your turn, the terrain of your card is full (explicitly after your mandatory action) draw a new card.
 
 ## Base Game
 - Miners: Pieces ON Mountains do not score for Miners, no matter how they get there
