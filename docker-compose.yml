@@ -9,6 +9,8 @@ services:
       - 3000:3000
     volumes:
       - .:/usr/src/app
+    environment:
+      - RAILS_ENV=production
     command: rails server --binding=0.0.0.0
 
 # Database for developer setup is sqlite3

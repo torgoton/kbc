@@ -1,4 +1,4 @@
-FROM ruby:3.4.2
+FROM ruby:3.4
 
 WORKDIR /usr/src/app
 
@@ -6,3 +6,11 @@ COPY Gemfile* .
 RUN bundle install
 
 COPY . .
+
+# Expose the port the app runs on
+EXPOSE 3000
+# Set the environment variable for Rails
+ENV RAILS_ENV=development
+
+# To start the app with just this file, uncomment the next line
+# CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
