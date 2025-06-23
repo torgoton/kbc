@@ -21,7 +21,7 @@ class Game < ApplicationRecord
     update(state: "waiting") unless state
   end
 
-  after_update_commit :broadcast_game_update
+  # after_update_commit :broadcast_game_update
 
   def add_player(user)
     players << user
@@ -144,15 +144,15 @@ class Game < ApplicationRecord
 
   private
 
-  def broadcast_game_update
-    instantiate
-    broadcast_replace_to(
-      "game_#{id}",
-      target: "game_area",
-      partial: "games/game",
-      locals: { game: self }
-    )
-  end
+  # def broadcast_game_update
+  #   instantiate
+  #   broadcast_replace_to(
+  #     "game_#{id}",
+  #     target: "game_area",
+  #     partial: "games/game",
+  #     locals: { game: self }
+  #   )
+  # end
 
   def log(msg)
     Rails.logger.debug msg

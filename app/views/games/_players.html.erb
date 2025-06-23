@@ -1,6 +1,6 @@
 <div id="players-area">
   <div id="moves-area">
-    <%= turbo_frame_tag ["action-form", game.id] do %>
+    <%# <%= turbo_frame_tag ["action-form", game.id] do %>
       <%= form_with url: action_game_path(game),
         id: :action_form do |f| %>
         <%= f.text_field :tile %>
@@ -9,7 +9,7 @@
         <%= f.text_field :move_destination, placeholder: "Move to" %>
         <%= f.submit "Action", id: "action_submit" %>
       <% end %>
-    <% end %>
+    <%# <% end %> %>
   </div>
   <% players = game.game_players.sort_by(&:order) %>
   <% Rails.logger.debug "CU: #{current_user.inspect}" %>
