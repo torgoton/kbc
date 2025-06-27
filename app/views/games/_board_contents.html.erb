@@ -1,3 +1,4 @@
+<div id="board-contents">
 <ul id="map-grid">
   <% 20.times do |row| %>
     <% 20.times do |col| %>
@@ -14,14 +15,14 @@
             terrain.length > 1 ? "hex-map-image" : nil,
             row.odd? && col == 0 ? "row-bump" : nil].compact.join(" ") do %>
 
-            <!-- place a div for highlighting and placing content into -->
+            <%# place a div for highlighting and placing content into %>
             <%= content_tag :div,
                 class: "cell-content" do %>
-                <!-- show the pieces on top of the board -->
+                <%# show the pieces on top of the board %>
                 <% case content %>
                 <% when Tiles::Tile %>
                     <%= content_tag :div, nil, class: "tile-container" do %>
-                        <!-- show quantity if any -->
+                        <%# show quantity if any %>
                         <% if content.respond_to? :qty %>
                             <%= content_tag :div, content.qty, class: "tile-counter" %>
                             <% content.qty.times do |n| %>
@@ -39,3 +40,4 @@
     <% end %>
   <% end %>
 </ul>
+</div>

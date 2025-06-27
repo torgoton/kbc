@@ -21,7 +21,7 @@ class Game < ApplicationRecord
     update(state: "waiting") unless state
   end
 
-  # after_update_commit :broadcast_game_update
+  after_update_commit :broadcast_game_update
 
   def add_player(user)
     players << user
@@ -118,7 +118,7 @@ class Game < ApplicationRecord
   end
 
   def turn_endable?
-    if (mandatory_count == 0) || current_player.supply["settlements"] == 0
+    if (mandatory_count <= 0) || current_player.supply["settlements"] == 0
       return true
     end
     false
@@ -144,15 +144,51 @@ class Game < ApplicationRecord
 
   private
 
-  # def broadcast_game_update
-  #   instantiate
-  #   broadcast_replace_to(
-  #     "game_#{id}",
-  #     target: "game_area",
-  #     partial: "games/game",
-  #     locals: { game: self }
-  #   )
-  # end
+  def broadcast_game_update
+    @board = nil # reset the board so we can re-construct it from the game state
+    instantiate
+    # public stuff
+    # - turn state
+    broadcast_replace_to( # first param is CHANNEL
+      "game_#{id}",
+      target: "turn-state",
+      partial: "games/turn_state",
+      locals: { game: self }
+    )
+    # - resources
+    broadcast_replace_to(
+      "game_#{id}",
+      target: "common-resources",
+      partial: "games/common_resources",
+      locals: { game: self }
+    )
+    # - board/map
+    broadcast_replace_to(
+      "game_#{id}",
+      target: "board-contents",
+      partial: "games/board_contents",
+      locals: { game: self }
+    )
+    # - each player
+    game_players.each do |gp|
+      broadcast_replace_to(
+        "game_#{id}",
+        target: "game_player_#{gp.id}",
+        partial: "games/game_player",
+        locals: { game: self, player: gp, n: 1 }
+      )
+    end
+
+    # private stuff - each player
+    game_players.each do |gp|
+      broadcast_replace_to(
+        "game_player_#{gp.id}_private", # player's private channel
+        target: "game_player_#{gp.id}",
+        partial: "games/game_player",
+        locals: { game: self, player: gp, n: 0 }
+      )
+    end
+  end
 
   def log(msg)
     Rails.logger.debug msg

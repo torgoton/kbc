@@ -1,5 +1,3 @@
-<% Rails.logger.debug "#{__FILE__}:#{__LINE__} - @game: #{@game}" %>
-<% Rails.logger.debug "#{__FILE__}:#{__LINE__} - game: #{game}" %>
 <div id="turn-state">
   <% if game.mandatory_count > 0 && game.current_player.supply["settlements"] > 0 %>
     <%= "#{game.current_player.player.handle} must build" %>

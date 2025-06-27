@@ -1,4 +1,7 @@
 # Rules of play
+
+A collection of rules from official rule books
+
 ## Equipment
 * Each player has 40 settlements
 * There are 25 terrain cards - 5 of each suitable type
@@ -17,15 +20,18 @@
 * Display player's terrain card
 * Mandatory action
     * Build 3 settlements
+        * or as many as you have, if less than 3
         * From their supply
         * On unoccupied spaces
         * On the terrain shown on their terrain card
         * Following building rules
+        * If at any time during your turn, there are no vacant spaces of the terrain of your card, remove the card from play and draw another card, repeating as needed
 * Extra action
     * Location tiles grant extra actions
     * Each can be used once per turn
     * Each can be performed before or after the mandatory action
 * Discard terrain card
+    * Discard pile is face up and not searchable
 * Draw terrain card
 * Shuffle the discard pile into a new deck when the deck is exhausted
 #### Building Rules

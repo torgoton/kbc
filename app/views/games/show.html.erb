@@ -1,2 +1,3 @@
-<%= render partial: "games/game", locals: { game: game } %>
+<%= turbo_stream_from "game_#{game.id}" %>
+<%= render partial: "games/game", locals: { game:, my_player: } %>
 <%= javascript_include_tag "gameboard" %>

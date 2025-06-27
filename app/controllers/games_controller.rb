@@ -20,13 +20,8 @@ class GamesController < ApplicationController
   def show
     @game = Game.find(params[:id])
     @game.instantiate
-    @game_players = @game.game_players
-    # Rails.logger.debug("Me: #{Current.user.id}, CP:#{@game.current_player.player.id}")
-    @terrain_card = Boards::Board::TERRAIN_NAMES[@game.current_player.hand]
-    @my_turn = (@game.current_player.player == Current.user)
-    # Rails.logger.debug "#{__FILE__}:#{__LINE__} - @game: #{@game}"
-    render :show, locals: { game: @game, my_turn: @my_turn }
-    # console
+    @my_player = @game.game_players.find { |gp| gp.player == Current.user }
+    render :show, locals: { game: @game, my_player: @my_player }
   end
 
   # ACTION - do a part of a turn by a player. Either
@@ -56,7 +51,7 @@ class GamesController < ApplicationController
   def end_turn
     Rails.logger.debug("END TURN action")
     @game = Current.user.games.find(params["id"].first)
-    @game.end_turn if @game.mandatory_count == 0
+    @game.end_turn if @game.mandatory_count <= 0
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }

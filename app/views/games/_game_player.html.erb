@@ -1,0 +1,19 @@
+<% my_turn = n == 0 && player.id == game.current_player.id %>
+<%= content_tag :div, id: "game_player_#{player.id}" do %>
+  <%= content_tag :div, class: "handle #{' my-turn' if my_turn }" do %>
+    <% if player.id == game.current_player.id %>
+      <%= content_tag :span, class: "player-spinner" do %>
+        <%= image_tag "tape-reel.svg" %>
+      <% end %>
+    <% end %>
+    <%= player.player.handle %>
+    <span class="player-order"><%= player.order %></span>
+  <% end %>
+  <%= button_to("End turn", end_turn_game_path(game)) if my_turn && game.turn_endable? %>
+  <%= content_tag :span, player.hand,
+    class: "player-card card-#{(n == 0 || (game.current_player_id == player.id)) ? player.hand : 'B'}" %>
+  <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
+  x
+  <%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
+  <%#= render "games/tiles", locals: {game: game} %>
+<% end %>
