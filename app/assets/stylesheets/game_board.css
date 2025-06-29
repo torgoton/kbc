@@ -385,6 +385,10 @@ ul li .grid-item:hover {
     height: 97vh;
 }
 
+#last-updated-at {
+    display: none;
+}
+
 #moves-area {
     display: block;
 }

@@ -29,10 +29,6 @@ function enableClicks() {
     });
 }
 
-function handleBuildResult(result) {
-  location.reload();
-}
-
 function settlements_left() {
   return Number(document.querySelector("span.settlement-count").innerText);
 }
@@ -55,11 +51,14 @@ function adjacent_list(cell_id) {
   return candidates;
 }
 
-function mark_available_cells() {
+function unmarkAvailableCells() {
   // remove all selectable classes
   document.querySelectorAll(".cell-content").forEach(c => {
     c.classList.remove("selectable");
   });
+};
+
+function markAvailableCells() {
   card = document.querySelector("span.player-card").innerText.toLowerCase();
   player_no = parseInt(document.querySelector(".handle .player-order").innerText);
   mandatory_element = document.querySelector("span.mandatory-count");
@@ -115,9 +114,42 @@ function mark_available_cells() {
   }
 }
 
-function loaded() {
+function observerSetup() {
+  var lastEventTime = 0;
+  console.log("Setting up MutationObserver");
+  var board = document.querySelector("#players-area");
+  console.log("Board element: ", board);
+  var observer = new MutationObserver(function (mutations) {
+    console.log("MutationObserver triggered at: " + new Date().toLocaleTimeString());
+    mutations.forEach(function (mutation) {
+      console.log("Mutation detected: " + mutation.type);
+      console.log(" - Details: " + mutation);
+    });
+    if (Date.now() - lastEventTime < 1000) {
+      console.log(" - Delaying rapid events");
+      setTimeout(() => observerAction(), 1000);
+    } else {
+      console.log(" - Processing event immediately");
+      setTimeout(() => observerAction(), 250);
+    };
+    lastEventTime = Date.now();
+  });
+  console.log("Observer created: ", observer);
+  observer.observe(board, {
+    attributes: true,
+    // childList: true, // detect new or removed child nodes
+    subtree: true
+  });
+}
+
+function observerAction() {
+  prepForMove();
+}
+
+function prepForMove() {
   // is it my turn?
   console.log("Is it my turn?");
+  unmarkAvailableCells();
   if (!document.querySelector(".handle.my-turn")) {
     // no, quit
     console.log(" - nope");
@@ -125,9 +157,12 @@ function loaded() {
   };
   console.log("It's my turn!");
   // show selectable cells
-  mark_available_cells();
-  // set up click event
-  enableClicks();
+  markAvailableCells();
 }
 
-loaded();
+// set up observer to watch for each move
+observerSetup();
+// prepare for the first move
+prepForMove();
+// set up click event
+enableClicks();

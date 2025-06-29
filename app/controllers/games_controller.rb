@@ -43,7 +43,7 @@ class GamesController < ApplicationController
     col = target.match(/-\d*\z/).to_s[1..-1].to_i
     @game.build_settlement(row, col)
     respond_to do |format|
-      format.html { redirect_to @game }
+      format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
   end

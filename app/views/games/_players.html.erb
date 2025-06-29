@@ -1,4 +1,5 @@
 <div id="players-area">
+  <%= content_tag :span, Time.zone.now.to_i, id: "last-updated-at" %>
   <div id="moves-area">
     <%= form_with url: action_game_path(game),
       id: :action_form do |f| %>
@@ -19,8 +20,8 @@
     <% player = players[index] %>
     <% if n == 0 && current_user == player.player %>
       <%= turbo_stream_from "game_player_#{player.id}_private" %>
-    <% else %>
-      <%= turbo_stream_from "game_player_#{player.id}" %>
+    <%# else %>
+      <%# = turbo_stream_from "game_player_#{player.id}" %>
     <% end %>
     <div class="player-area">
       <%= render partial: "games/game_player", locals: { game:, player:, n: } %>
