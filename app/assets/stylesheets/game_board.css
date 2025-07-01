@@ -386,7 +386,8 @@ ul li .grid-item:hover {
 }
 
 #last-updated-at {
-    display: none;
+    /* display: none; */
+    color: white;
 }
 
 #moves-area {

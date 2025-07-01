@@ -31,7 +31,23 @@ class Game < ApplicationRecord
     state.to_s == "playing"
   end
 
-  def start
+  def waiting?
+    state.to_s == "waiting"
+  end
+
+  def start(safe = true)
+    if safe
+      # Ensure we have at least 2 players
+      if game_players.count < 2
+        Rails.logger.warn "Cannot start game with less than 2 players"
+        return false
+      end
+      # Ensure we have a valid state to start from
+      if !waiting?
+        Rails.logger.warn "Cannot start game in state #{state}"
+        return false
+      end
+    end
     select_boards
     populate_boards
     initialize_terrain_deck
@@ -40,6 +56,8 @@ class Game < ApplicationRecord
     deal_terrain_cards
     choose_start_player
     self.state = "playing"
+    self.move_count = 0
+    self.mandatory_count = MANDATORY_COUNT
     save
   end
 
@@ -111,6 +129,8 @@ class Game < ApplicationRecord
     game_player.supply["settlements"] -= 1
     board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
     self.mandatory_count -= 1
+    self.move_count += 1
+    log("Building settlement at #{row}, #{col} for player #{game_player.order}")
     ActiveRecord::Base.transaction do
       game_player.save
       save
@@ -136,6 +156,7 @@ class Game < ApplicationRecord
     Rails.logger.debug(" - next in order #{next_order}")
     self.current_player = game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{current_player.inspect}")
+    self.move_count += 1
     ActiveRecord::Base.transaction do
       game_player.save
       save
@@ -147,6 +168,7 @@ class Game < ApplicationRecord
   def broadcast_game_update
     @board = nil # reset the board so we can re-construct it from the game state
     instantiate
+
     # public stuff
     # - turn state
     broadcast_replace_to( # first param is CHANNEL
@@ -181,6 +203,7 @@ class Game < ApplicationRecord
 
     # private stuff - each player
     game_players.each do |gp|
+      gp.reload
       broadcast_replace_to(
         "game_player_#{gp.id}_private", # player's private channel
         target: "game_player_#{gp.id}",
@@ -188,6 +211,14 @@ class Game < ApplicationRecord
         locals: { game: self, player: gp, n: 0 }
       )
     end
+
+    # - timestamp - MUST be last change
+    broadcast_replace_later_to(
+      "game_#{id}",
+      target: "last-updated-at",
+      partial: "games/last_updated_at",
+      locals: { move_count: move_count }
+    )
   end
 
   def log(msg)
@@ -247,7 +278,6 @@ class Game < ApplicationRecord
   def choose_start_player
     game_players.shuffle.each_with_index { |p, n| p.update(order: n) }
     update(current_player: first_player)
-    update(mandatory_count: MANDATORY_COUNT)
   end
 
   def overall_location(board, row, col)
@@ -255,11 +285,14 @@ class Game < ApplicationRecord
   end
 
   def first_player
-    game_players.where(order: 1).first
+    game_players.where(order: 0).first
   end
 
   def next_card
-    shuffle_terrain_deck if deck.size < 1
+    if deck.size < 1
+      shuffle_terrain_deck
+      discard.clear
+    end
     deck.shift
   end
 end

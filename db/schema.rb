@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_03_29_234456) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_01_124443) do
   create_table "game_players", force: :cascade do |t|
     t.integer "game_id", null: false
     t.integer "user_id", null: false
@@ -36,6 +36,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_03_29_234456) do
     t.string "state"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "move_count"
     t.index ["current_player_id"], name: "index_games_on_current_player_id"
   end
 

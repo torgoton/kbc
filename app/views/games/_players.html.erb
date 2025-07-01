@@ -1,5 +1,5 @@
 <div id="players-area">
-  <%= content_tag :span, Time.zone.now.to_i, id: "last-updated-at" %>
+  <%= render partial: "games/last_updated_at", locals: { move_count: game.move_count } %>
   <div id="moves-area">
     <%= form_with url: action_game_path(game),
       id: :action_form do |f| %>
@@ -27,7 +27,7 @@
       <%= render partial: "games/game_player", locals: { game:, player:, n: } %>
     </div>
   <% end %>
-  <div id="common-resources">
+  <div class="player-area">
     <%= render partial: "games/common_resources", locals: { game: game } %>
   </div>
 </div>

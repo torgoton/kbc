@@ -1,4 +1,5 @@
 var gameId = null;
+var myLastUpdatedAt = null;
 
 function setGameId() {
   href = location.href;
@@ -19,7 +20,7 @@ function enableClicks() {
     addEventListener("click", function (e) {
       const selectable = e.target.classList.contains("selectable");
       if (!selectable) {
-        console.log("click not OK here");
+        // console.log("click not OK here");
         return;
       }
       console.log("Click target: " + e.target.id);
@@ -114,36 +115,19 @@ function markAvailableCells() {
   }
 }
 
-function observerSetup() {
-  var lastEventTime = 0;
-  console.log("Setting up MutationObserver");
-  var board = document.querySelector("#players-area");
-  console.log("Board element: ", board);
-  var observer = new MutationObserver(function (mutations) {
-    console.log("MutationObserver triggered at: " + new Date().toLocaleTimeString());
-    mutations.forEach(function (mutation) {
-      console.log("Mutation detected: " + mutation.type);
-      console.log(" - Details: " + mutation);
-    });
-    if (Date.now() - lastEventTime < 1000) {
-      console.log(" - Delaying rapid events");
-      setTimeout(() => observerAction(), 1000);
-    } else {
-      console.log(" - Processing event immediately");
-      setTimeout(() => observerAction(), 250);
-    };
-    lastEventTime = Date.now();
-  });
-  console.log("Observer created: ", observer);
-  observer.observe(board, {
-    attributes: true,
-    // childList: true, // detect new or removed child nodes
-    subtree: true
-  });
-}
-
-function observerAction() {
-  prepForMove();
+function setupPolling() {
+  // set up polling for updates
+  setInterval(function () {
+    // get the last updated at time
+    const last_updated_at = document.querySelector("#last-updated-at").innerText;
+    // if it's not the same as mine
+    if (myLastUpdatedAt != last_updated_at) {
+      // update my last updated at time
+      myLastUpdatedAt = last_updated_at;
+      console.log("UPDATE CHECK " + last_updated_at + " change detected");
+      prepForMove();
+    }
+  }, 1000);
 }
 
 function prepForMove() {
@@ -160,9 +144,9 @@ function prepForMove() {
   markAvailableCells();
 }
 
-// set up observer to watch for each move
-observerSetup();
+// set up polling for updates
+setupPolling();
 // prepare for the first move
 prepForMove();
-// set up click event
+// set up click targets
 enableClicks();
