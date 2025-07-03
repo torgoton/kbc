@@ -38,7 +38,8 @@ module Boards
 
     def terrain_at(row, col)
       section = 2 * (row / 10) + col / 10
-      return nil unless (0..4).include? section
+      return "" unless (0..4).include? section
+      return "" unless @map[section] # some tests have no boards
       @map[section].terrain_at(row % 10, col % 10)
     end
 

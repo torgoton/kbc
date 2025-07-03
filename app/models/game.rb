@@ -289,10 +289,11 @@ class Game < ApplicationRecord
   end
 
   def next_card
+    card = deck.shift
     if deck.size < 1
       shuffle_terrain_deck
       discard.clear
     end
-    deck.shift
+    card
   end
 end
