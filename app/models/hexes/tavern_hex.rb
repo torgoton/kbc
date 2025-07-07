@@ -1,2 +1,4 @@
-class TavernHex < LocationHex
+module Hexes
+  class TavernHex < LocationHex
+  end
 end
