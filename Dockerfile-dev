@@ -1,6 +1,7 @@
+# Dockerfile is used to generate a Docker image
 FROM ruby:3.4
 
-WORKDIR /usr/src/app
+WORKDIR /rails
 
 COPY Gemfile* .
 RUN bundle install
@@ -13,4 +14,4 @@ EXPOSE 3000
 ENV RAILS_ENV=development
 
 # To start the app with just this file, uncomment the next line
-# CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]

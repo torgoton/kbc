@@ -1,19 +1,44 @@
+# docker-compose.yml
+# This file is used to define and run multi-container Docker applications.
+# It specifies the services, networks, and volumes required for the application.
+
+name: kbc
+
+networks:
+  kbc-net:
+    external: true
+    # driver: bridge
+
 services:
   web:
     build:
       context: ./
       dockerfile: Dockerfile-dev
-    # depends_on:
-    #   - db
+    depends_on:
+      - db
+    networks:
+      - kbc-net
     ports:
       - 3000:3000
     volumes:
-      - .:/usr/src/app
+      - .:/rails
     environment:
       - RAILS_ENV=production
-    command: rails server --binding=0.0.0.0
+    command: rails server --binding=0.0.0.0 --port=3000
 
 # Database for developer setup is sqlite3
+  db:
+    image: postgres:17.5
+    container_name: kbc-db
+    restart: always
+    shm_size: 128mb
+    environment:
+      - POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./storage:/storage
+    networks:
+      - kbc-net
+
   # This is a try at configuring for postgresql
   # db:
   #   container_name: kbc-db
