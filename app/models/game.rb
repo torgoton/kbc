@@ -11,6 +11,7 @@ class Game < ApplicationRecord
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
+  has_many :moves, dependent: :destroy
   belongs_to :current_player, class_name: "GamePlayer", optional: true
 
   validates :state, inclusion: { in: STATES }
@@ -21,7 +22,8 @@ class Game < ApplicationRecord
     update(state: "waiting") unless state
   end
 
-  after_update_commit :broadcast_game_update
+  # Remove this so updates are explicit
+  # after_update_commit :broadcast_game_update
 
   def add_player(user)
     players << user
