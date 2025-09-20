@@ -24,13 +24,69 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
       } }
     end
 
-    # assert_response :unprocessable_entity
+    # assert_response :unprocessable_content
     assert_redirected_to unapproved_users_path
   end
 
   test "should not show user" do
     get user_url(@user)
     assert_redirected_to new_session_path
+  end
+
+  test "missing handle does not save" do
+    assert_difference("User.count", 0) do
+      post users_url, params: { user: {
+        email_address: "brubble@example.com",
+        password: "abc123"
+      } }
+    end
+    assert_response :unprocessable_content
+  end
+
+  test "missing email does not save" do
+    assert_difference("User.count", 0) do
+      post users_url, params: { user: {
+        handle: "Barney",
+        password: "abc123"
+      } }
+    end
+    assert_response :unprocessable_content
+  end
+
+  test "missing password does not save" do
+    assert_difference("User.count", 0) do
+      post users_url, params: { user: {
+        handle: "Barney",
+        email_address: "brubble@example.com"
+      } }
+    end
+    assert_response :unprocessable_content
+  end
+
+  test "duplicate handle does not save" do
+    assert_difference("User.count", 0) do
+      post users_url, params: { user: {
+        handle: @user.handle,
+        email_address: "unique@example.com",
+        password: "abc123"
+      } }
+    end
+    assert_response :unprocessable_content
+  end
+
+  test "new users are not approved" do
+    assert_difference("User.count", 1) do
+      post users_url, params: { user: {
+        handle: "Barney",
+        email_address: "brubble@example.com",
+        password: "abc123"
+      } }
+    end
+    assert_response :redirect
+    follow_redirect!
+    assert_select "div.wordy", /not yet been approved/
+    user = User.find_by(handle: "Barney")
+    assert_not user.approved
   end
 
   # test "should not get edit" do

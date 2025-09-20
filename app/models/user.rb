@@ -23,4 +23,8 @@ class User < ApplicationRecord
 
   has_many :game_players
   has_many :games, through: :game_players
+
+  validates :email_address, presence: true
+  validates :handle, presence: true, uniqueness: true
+  validates :password, presence: true, on: :create
 end

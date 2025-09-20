@@ -18,7 +18,24 @@
 require "test_helper"
 
 class UserTest < ActiveSupport::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  test "save without email address raises exception" do
+    user = User.new(handle: "testuser", password: "password123")
+    assert_raises(ActiveRecord::NotNullViolation) {
+      user.save!(validate: false)
+    }
+  end
+
+  test "save without password raises exception" do
+    user = User.new(email_address: "test@example.com", handle: "testuser")
+    assert_raises(ActiveRecord::NotNullViolation) {
+      user.save!(validate: false)
+    }
+  end
+
+  test "save without handle raises exception" do
+    user = User.new(email_address: "test@example.com", password: "password123")
+    assert_raises(ActiveRecord::NotNullViolation) {
+      user.save!(validate: false)
+    }
+  end
 end

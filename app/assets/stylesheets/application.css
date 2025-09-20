@@ -16,6 +16,15 @@
 
  * { box-sizing: border-box; }
 
+ body {
+    margin: 0;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    color: var(--color);
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
 #fancy-background {
     position: fixed;
     display: flex;
