@@ -21,4 +21,4 @@ function fancy_dance() {
   }
 }
 
-window.addEventListener('pageshow', fancy_dance);
+document.addEventListener('turbo:load', fancy_dance);
