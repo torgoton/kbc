@@ -1,5 +1,11 @@
 # README
 
+## Database Setup
+
+In PostgreSQL, create a kbc_dev user and add the SUPERUSER role.
+
+## The following is from the Rails template
+
 This README would normally document whatever steps are necessary to get the
 application up and running.
 
