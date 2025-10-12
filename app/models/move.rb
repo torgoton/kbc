@@ -2,7 +2,7 @@
 #
 # Table name: moves
 #
-#  id         :integer          not null, primary key
+#  id         :bigint           not null, primary key
 #  detail     :json
 #  order      :integer
 #  player     :integer
@@ -16,7 +16,7 @@
 #
 # Foreign Keys
 #
-#  game_id  (game_id => games.id)
+#  fk_rails_...  (game_id => games.id)
 #
 class Move < ApplicationRecord
   belongs_to :game

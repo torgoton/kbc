@@ -2,7 +2,7 @@
 #
 # Table name: games
 #
-#  id                :integer          not null, primary key
+#  id                :bigint           not null, primary key
 #  board_contents    :json
 #  boards            :json
 #  deck              :json

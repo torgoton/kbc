@@ -2,7 +2,7 @@
 #
 # Table name: users
 #
-#  id              :integer          not null, primary key
+#  id              :bigint           not null, primary key
 #  approved        :boolean          default(FALSE)
 #  email_address   :string           not null
 #  handle          :string           not null

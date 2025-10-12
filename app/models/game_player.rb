@@ -2,7 +2,7 @@
 #
 # Table name: game_players
 #
-#  id         :integer          not null, primary key
+#  id         :bigint           not null, primary key
 #  hand       :json
 #  order      :integer
 #  supply     :json
@@ -19,8 +19,8 @@
 #
 # Foreign Keys
 #
-#  game_id  (game_id => games.id)
-#  user_id  (user_id => users.id)
+#  fk_rails_...  (game_id => games.id)
+#  fk_rails_...  (user_id => users.id)
 #
 class GamePlayer < ApplicationRecord
   belongs_to :game
