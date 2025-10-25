@@ -1,6 +1,6 @@
 <%= render "fancy" %>
 
-<div class="dashboard-backdrop">
+<div class="dashboard-box">
   <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete %></div>
   <h2><%= "Games for #{current_user.handle}" %></h2>
   <table>

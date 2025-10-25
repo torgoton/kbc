@@ -10,8 +10,9 @@
  */
 
  :root {
-    --bg-color: darkgreen;
-    --color: white
+    --clr-ds-table: #004d00;
+    --clr-ds-text: white;
+    --clr-ds-link: #00aaff;
  }
 
  * { box-sizing: border-box; }
@@ -19,47 +20,12 @@
  body {
     margin: 0;
     font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-    color: var(--color);
+    background-color: var(--clr-ds-table);
+    color: var(--clr-ds-text);
     min-height: 100vh;
-    position: relative;
     overflow-x: hidden;
 }
 
-#fancy-background {
-    position: fixed;
-    display: flex;
-    width: 120vw;
-    height: 120vh;
-    --s: 100px;
-    --m: 1px;
-    --f: calc(1.732 * var(--s) + 4 * var(--m) - 1px);
-    top: calc(var(--s) * -0.5);
-    left: calc(var(--s) * -0.5);
-    z-index: -1;
-}
-
-.fancy-container {
-    font-size: 0;
-}
-
-.fancy-container::before {
-    content: "";
-    float: left;
-    width: calc(var(--s)/2 + var(--m));
-    height: 120%;
-    shape-outside: repeating-linear-gradient(
-        #0000 0 calc(var(--f) - 3px),
-        #000 0 var(--f)
-    );
-}
-
-.fancy-container div {
-    width: var(--s);
-    margin: var(--m);
-    height: calc(var(--s) * 1.1547);
-    display: inline-block;
-    font-size: initial;
-    clip-path: polygon(0 25%, 0 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0);
-    margin-bottom: calc(var(--m) - var(--s) * 0.2886);
-    background-color: gray;
+a {
+    color: var(--clr-ds-link);
 }

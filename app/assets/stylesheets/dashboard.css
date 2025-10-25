@@ -1,14 +1,9 @@
-.dashboard-backdrop {
-    background-color: var(--bg-color);
-    color: var(--color);
+.dashboard-box {
+    background-color: inherit;
     border-radius: 15px;
-    box-shadow: 0px 0px 20px black inset;
+    filter: drop-shadow(-20px 20px 20px black);
     width: 80%;
-    margin: 0 auto;
+    margin: 20px auto;
     padding: 2rem;
     font-size: 120%;
-}
-
-.dashboard-backdrop a {
-    color: var(--color);
 }
