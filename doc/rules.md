@@ -1,11 +1,11 @@
-# Rules of play
+# Kingdom Builder Rules of Play
 
 A collection of rules from official rule books
 
 ## Equipment
 * Each player has 40 settlements
 * There are 25 terrain cards - 5 of each suitable type
-* There are 10 (9) goal cards
+* There are 10 (9 good) goal cards
 ## Setup
 * Choose 4 game board sections and orientations
 * Place location tiles on location hexes
@@ -51,7 +51,7 @@ A collection of rules from official rule books
 ### Castle Hex
 * Each castle a player has a settlement next to scores that player 3 points
 ## Ending the Game
-* End of game is triggered by a player has emptied their supply
+* End of game is triggered when a player has emptied their supply
 * Game continues to the end of round
 ## Scoring
 * B - 3 goal cards specify point conditions
@@ -67,7 +67,7 @@ A collection of rules from official rule books
 * Discoverers
     * 1 point for each horizontal line on which you have at least 1 settlement
 * Farmers
-    * 1 point for each of your own settlements on the board section with the fewest such settlements
+    * 3 points for each of your own settlements on the board section with the fewest such settlements
 * Fishermen
     * 1 point for each of your own settlements adjacent to, but not on, any water hex
 * Hermits
@@ -75,7 +75,9 @@ A collection of rules from official rule books
 * Knights
     * 2 points for each of your own settlements on the horizontal line with the most of your own settlements
 * Lords
-    * Lords are not used, as they have a powerful advantage to the last player
+    * Lords are not to be used, as they have a powerful advantage to the last player
+    * for each sector, 12 points to the player with the most settlements, 6 to 2nd place
+    * tied players each get all the points (12, 12, 6, 0 is the example)
 * Merchants
     * 4 points for each silver or gold space linked contiguously by your own settlements to one or more similar spaces
 * Miners
@@ -85,6 +87,7 @@ A collection of rules from official rule books
 ### Nomads - scored during play
 * Ambassadors
     * 1 point for each of your settlements built adjacent to at least one settlement of another player
+    * The warrior, wagon, and ship DO count when placed, but not when moved
 * Families
     * 2 points if the 3 settlements built in your mandatory action are in a straight line
 * Shepherds
@@ -98,6 +101,7 @@ A collection of rules from official rule books
     * 6 points if you have 1 settlement surrounded by 6 of your own settlements
 * Home Country
     * 5 points if you have filled a terrain area with your own settlements
+    * water and mountain ARE eligible for this
 * Place of Refuge
     * 8 points for a special location surrounded by 6 of your on settlements
 * Road
@@ -106,7 +110,7 @@ A collection of rules from official rule books
 * Captains
     * 1 point for each settlement next to at least 3 of your settlements
 * Geologists
-    * 2 points for each mountain that is connected with another mountain by your settlements
+    * 2 points for each mountain area that is connected with another mountain by your settlements
 * Messengers
     * 2 points for each hex in the shortest path between your two connected, most distant settlements
 * Noblewomen
@@ -181,4 +185,5 @@ A collection of rules from official rule books
     * Extra action: Use one tile of the player on the right, except Nomad or Bonus
 * Volcano
     * Setup: One mountain hex gets the volcano
-    * Before scoring, each player, in turn order, removes 1/3 rounding up of their settlements on the board section with the volcano
+    * Before scoring, each player, in turn order, removes 1/3 rounding up of their settlements on the board section (quadrant) with the volcano
+
