@@ -12,7 +12,7 @@
  :root {
     --clr-ds-table: #004d00;
     --clr-ds-text: white;
-    --clr-ds-link: #00aaff;
+    --clr-ds-link: #cccc00;
  }
 
  * { box-sizing: border-box; }

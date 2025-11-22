@@ -1,7 +1,33 @@
 <%= render "fancy" %>
 
-<div class="display-box">
+<div class="fancy-box">
   <h1>KBC</h1>
-  <h2><%= link_to("Sign in", new_session_path) %></h2>
-  <h3><%= link_to("Request an account", new_user_path) %></h3>
+  <div class="fancy-section">
+    <%= tag.div(flash[:alert], class: "flash-alert") if flash[:alert] %>
+    <%= tag.div(flash[:notice], class: "flash-notice") if flash[:notice] %>
+    <h2>Sign in</h2>
+    <%= form_with url: session_path do |form| %>
+      <%= form.email_field :email_address,
+        required: true,
+        autofocus: true,
+        autocomplete: "username",
+        placeholder: "Enter your email address",
+        value: params[:email_address]
+      %><br>
+      <%= form.password_field :password,
+        required: true,
+        autocomplete: "current-password",
+        placeholder: "Enter your password",
+        maxlength: 24
+      %><br>
+      <%= form.submit "Sign in" %>
+    <% end %>
+  <br>
+
+  <%= link_to "Forgot password?", new_password_path %>
+  </div>
+  <div class="fancy-section">
+    <h3><%= link_to("Request an account", new_user_path) %></h3>
+  </div>
 </div>
+

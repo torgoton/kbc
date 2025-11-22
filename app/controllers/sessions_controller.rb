@@ -15,7 +15,7 @@ class SessionsController < ApplicationController
         redirect_to after_authentication_url
       end
     else
-      redirect_to new_session_path, alert: "Try another email address or password."
+      redirect_to root_path, alert: "Invalid credentials. Please try another email address or password."
     end
   end
 

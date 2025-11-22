@@ -9,7 +9,7 @@ function fancy_dance() {
   if (fancy) {
     const colors = ['#3e713a', '#7fac46', '#5083a9', '#f4c935', '#d386d5', '#76675b', '#222'];
 
-    let cells = document.querySelectorAll('.fancy-container div');
+    let cells = document.querySelectorAll('.fancy-hexfield div');
     cells.forEach((cell, index) => {
       cell.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
     });

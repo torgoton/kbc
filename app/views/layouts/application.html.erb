@@ -22,7 +22,7 @@
     <%= javascript_importmap_tags %>
   </head>
 
-  <body>
+  <%= tag.body(class: content_for?(:body_class) ? yield(:body_class) : "default") do %>
     <%= yield %>
-  </body>
+  <% end %>
 </html>

@@ -1,20 +1,23 @@
-<%= form_with(model: user, data: { turbo: false }) do |form| %>
-  <% if user.errors.any? %>
-    <div style="color: red">
-      <h2><%= pluralize(user.errors.count, "error") %> prohibited this user from being saved:</h2>
+<div class="fancy-section">
+  <%= form_with(model: user, data: { turbo: false }) do |form| %>
+    <% if user.errors.any? %>
+      <div style="color: red">
+        <h2><%= pluralize(user.errors.count, "error") %> prohibited this user from being saved:</h2>
 
-      <ul>
-        <% user.errors.each do |error| %>
-          <li><%= error.full_message %></li>
-        <% end %>
-      </ul>
+        <ul>
+          <% user.errors.each do |error| %>
+            <li><%= error.full_message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div>
+      <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "email_address", placeholder: "Enter your email address", value: params[:email_address] %><br>
+      <%= form.text_field :handle, required: true, placeholder: "Enter your desired handle", value: params[:handle] %><br>
+      <%= form.password_field :password, required: true, placeholder: "Create a password", value: params[:password] %><br>
+      <%= form.submit %>
     </div>
   <% end %>
+</div>
 
-  <div>
-    <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "email_address", placeholder: "Enter your email address", value: params[:email_address] %><br>
-    <%= form.text_field :handle, required: true, placeholder: "Enter your desired handle", value: params[:handle] %><br>
-    <%= form.password_field :password, required: true, placeholder: "Create a password", value: params[:password] %><br>
-    <%= form.submit %>
-  </div>
-<% end %>

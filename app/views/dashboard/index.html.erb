@@ -1,28 +1,36 @@
 <%= render "fancy" %>
 
 <div class="dashboard-box">
+  <h1>KBC Dashboard</h1>
   <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete %></div>
-  <h2><%= "Games for #{current_user.handle}" %></h2>
-  <table>
-    <% current_user.games.each do |game| %>
+  <div class="fancy-section">
+    <h2><%= "Games for #{current_user.handle}" %></h2>
+    <table>
+      <% current_user.games.each do |game| %>
+          <tr>
+            <td><%= "Game #{game.id} - #{game.state}" %></td>
+            <% if game.playing? %>
+              <td><%= link_to("Play", game) %></td>
+            <% else %>
+              <td>Waiting for players</td>
+            <% end %>
+          </tr>
+      <% end %>
+    </table>
+  </div>
+  <div class="fancy-section">
+    <h2>Tables awaiting players</h2>
+    <table>
+      <% @open_games.each do |game| %>
         <tr>
-          <td><%= "Game #{game.id} - #{game.state}" %></td>
-          <% if game.playing? %>
-            <td><%= link_to("Play", game) %></td>
-          <% else %>
-            <td>Waiting for players</td>
-          <% end %>
+          <td><%= game.id %></td>
+          <td><%= button_to("Join", join_game_path(game)) %></td>
         </tr>
-    <% end %>
-  </table>
-  <h2>Tables awaiting players</h2>
-  <table>
-    <% @open_games.each do |game| %>
-      <tr>
-        <td><%= game.id %></td>
-        <td><%= button_to("Join", join_game_path(game)) %></td>
-      </tr>
-    <% end %>
-  </table>
-  <h2><%= link_to("Open a new table", new_game_path)%></h2>
+      <% end %>
+    </table>
+  </div>
+  <div class="fancy-section">
+    <h2><%= link_to("Open a new table", new_game_path)%></h2>
+  </div>
 </div>
+

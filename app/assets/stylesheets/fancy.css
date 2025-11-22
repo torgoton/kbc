@@ -1,37 +1,77 @@
+/******************************************************************************
+  fancy.css
+  This stylesheet provides styles for a fancy hexagonal background
+  and a styled box for content display.
+  There should be only one fancy-box per page to reduce clutter.
+******************************************************************************/
 #fancy-background {
-    position: fixed;
-    display: flex;
-    width: 120vw;
-    height: 120vh;
-    --s: 100px;
-    --m: 2px;
-    --f: calc(1.732 * var(--s) + 4 * var(--m) - 1px);
-    top: calc(var(--s) * -0.5);
-    left: calc(var(--s) * -0.5);
+  position: fixed;
+  display: flex;
+  width: 120vw;
+  height: 120vh;
+  --s: 100px;
+  --m: 2px;
+  --f: calc(1.732 * var(--s) + 4 * var(--m) - 1px);
+  top: calc(var(--s) * -0.5);
+  left: calc(var(--s) * -0.5);
 }
 
-.fancy-container {
-    font-size: 0;
+.fancy-box {
+  background-color: inherit;
+  border-radius: 15px;
+  filter: drop-shadow(-20px 20px 20px black);
+  width: 80%;
+  margin: 20px auto;
+  padding: 2rem;
+  font-family: "Atkinson Hyperlegible Next", sans-serif, system-ui;
+  font-size: 120%;
 }
 
-.fancy-container::before {
-    content: "";
-    float: left;
-    width: calc(var(--s)/2 + var(--m));
-    height: 120%;
-    shape-outside: repeating-linear-gradient(
-        #0000 0 calc(var(--f) - 3px),
-        #000 0 var(--f)
-    );
+.fancy-box .flash-alert {
+  font-weight: 900;
+  color: #ff4444;
 }
 
-.fancy-container div {
-    width: var(--s);
-    margin: var(--m);
-    height: calc(var(--s) * 1.1547);
-    display: inline-block;
-    /* font-size: initial; */
-    clip-path: polygon(0 25%, 0 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0);
-    margin-bottom: calc(var(--m) - var(--s) * 0.2886);
-    background-color: gray;
+.fancy-box .flash-notice {
+  font-weight: 900;
+  color: chartreuse;
 }
+
+.fancy-box h1, .fancy-box h2, .fancy-box h3, .fancy-box h4, .fancy-box h5, .fancy-box h6 {
+  margin: 0;
+}
+
+.fancy-hexfield {
+  font-size: 0;
+}
+
+.fancy-hexfield::before {
+  content: "";
+  float: left;
+  width: calc(var(--s)/2 + var(--m));
+  height: 120%;
+  shape-outside: repeating-linear-gradient(
+    #0000 0 calc(var(--f) - 3px),
+    #000 0 var(--f)
+  );
+}
+
+.fancy-hexfield div {
+  width: var(--s);
+  margin: var(--m);
+  height: calc(var(--s) * 1.1547);
+  display: inline-block;
+  /* font-size: initial; */
+  clip-path: polygon(0 25%, 0 75%, 50% 100%, 100% 75%, 100% 25%, 50% 0);
+  margin-bottom: calc(var(--m) - var(--s) * 0.2886);
+  background-color: gray;
+}
+
+.fancy-section {
+  border: black 2px solid;
+  border-radius: 10px;
+  margin: 1rem;
+  padding: 1rem;
+  width: auto;
+}
+

@@ -8,6 +8,10 @@ I began it for a few reasons:
 * To learn current technologies and best practices in the current versions of Ruby and Rails
 * To learn JavaScript more thoroughly
 
+# Uncategorized notes
+## Font
+* Atkinson Hyperlegible https://fonts.google.com/specimen/Atkinson+Hyperlegible
+
 # Screens
 ## Login
 * MVP
@@ -178,3 +182,4 @@ I began it for a few reasons:
     * Capitols
     * Ferry tile
     * Volcano tile
+
