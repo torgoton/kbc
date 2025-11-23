@@ -24,12 +24,13 @@ class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
   SECTION_OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
-  ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
-                  [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ]
   MANDATORY_COUNT = 3
+  SETTLEMENTS_PER_PLAYER = 40
 
   # 10-10 adjacent to [[10,9], [10,11], [9,9], [9,10], [11,9], [11,10]]
   #  9-10 adjacent to [[9,9], [9,11], [8,10], [8,11], [10,10], [10,11]]
+  ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
+                  [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ]
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -43,9 +44,6 @@ class Game < ApplicationRecord
   after_find do |_game|
     update(state: "waiting") unless state
   end
-
-  # Remove this so updates are explicit
-  # after_update_commit :broadcast_game_update
 
   def add_player(user)
     players << user
@@ -72,6 +70,10 @@ class Game < ApplicationRecord
         return false
       end
     end
+    self.moves.destroy_all
+    self.state = "playing"
+    self.move_count = 0
+    self.mandatory_count = MANDATORY_COUNT
     select_boards
     populate_boards
     initialize_terrain_deck
@@ -79,18 +81,15 @@ class Game < ApplicationRecord
     populate_player_supplies
     deal_terrain_cards
     choose_start_player
-    self.state = "playing"
-    self.move_count = 0
-    self.mandatory_count = MANDATORY_COUNT
     save
   end
 
   def instantiate
     # Create objects from the serialized game state
-    instantiate_boards
+    instantiate_board
   end
 
-  def instantiate_boards
+  def instantiate_board
     @board ||= Boards::Board.new(self)
   end
 
@@ -98,13 +97,16 @@ class Game < ApplicationRecord
     game_players.find { |p| p = user }.order
   end
 
-  def available_list(order, terrain)
+  def available_list(active_player, terrain)
+    return nil unless playing?
     available = Array.new(20) { Array.new(20, false) }
+
+    # first pass: look for pieces belonging to active player
     any = false
     20.times do |row|
       20.times do |col|
         # Do I have a piece here?
-        if board.content_at(row, col).try(:player) == order
+        if board.content_at(row, col).try(:player) == active_player
           # mark the adjacent spots as available
           ADJACENCIES[row % 2].each do |r, c|
             if ((0..19).include?(row+r) && (0..19).include?(col+c)) && # spot is on the map
@@ -117,6 +119,8 @@ class Game < ApplicationRecord
       end
     end
     return available if any
+
+    # second pass: no pieces found, so look for any matching terrain
     20.times do |row|
       20.times do |col|
         if board.terrain_at(row, col) == terrain
@@ -141,13 +145,14 @@ class Game < ApplicationRecord
     log(" I have #{settlements} settlements remaining")
     return "No settlements left" if settlements < 1
     # bail if occupied
-    return "Occupied" if board_contents["[#{row}, #{col}]"]
+    # return "Occupied" if board_contents["[#{row}, #{col}]"]
     # bail unless terrain matches card
-    card_terrain = game_player.hand
-    cell_terrain = board.terrain_at(row, col)
-    log(" Terrain card is #{card_terrain}")
-    log(" Terrain of cell is #{cell_terrain}")
-    "Incorrect terrain" unless card_terrain == cell_terrain
+    # card_terrain = game_player.hand
+    # cell_terrain = board.terrain_at(row, col)
+    # log(" Terrain card is #{card_terrain}")
+    # log(" Terrain of cell is #{cell_terrain}")
+    # "Incorrect terrain" unless card_terrain == cell_terrain
+    # bail unless available
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
     game_player.supply["settlements"] -= 1
@@ -166,6 +171,16 @@ class Game < ApplicationRecord
       return true
     end
     false
+  end
+
+  def turn_state
+    if mandatory_count > 0 && current_player.supply["settlements"] > 0
+      "#{current_player.player.handle} must build " \
+      "#{ActionController::Base.helpers.pluralize(mandatory_count, "settlement")} on " \
+      "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}"
+    else
+      "#{current_player.player.handle} must end their turn"
+    end
   end
 
   def end_turn
@@ -257,7 +272,7 @@ class Game < ApplicationRecord
 
   def populate_boards
     contents = {}
-    instantiate_boards
+    instantiate_board
     @board.map.each_with_index do |board, i|
       board.location_hexes.each do |loc|
         # MVP (and base game) always have 2 tiles per location
@@ -270,13 +285,14 @@ class Game < ApplicationRecord
   end
 
   def initialize_terrain_deck
-    self.deck = DECK.chars.shuffle
-    self.discard = []
-    save
+    self.discard = DECK
+    shuffle_terrain_deck
   end
 
   def shuffle_terrain_deck
     self.deck = discard.shuffle
+    self.discard = []
+    save
   end
 
   def select_goals
@@ -287,7 +303,7 @@ class Game < ApplicationRecord
 
   def populate_player_supplies
     game_players.each do |p|
-      p.update(supply: { settlements: 40 })
+      p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
     end
     # save no change to the game object
   end
@@ -318,6 +334,7 @@ class Game < ApplicationRecord
       shuffle_terrain_deck
       discard.clear
     end
+    save
     card
   end
 end

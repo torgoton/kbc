@@ -23,11 +23,11 @@
     <%# else %>
       <%# = turbo_stream_from "game_player_#{player.id}" %>
     <% end %>
-    <div class="player-area">
+    <div class="player-area game-section">
       <%= render partial: "games/game_player", locals: { game:, player:, n: } %>
     </div>
   <% end %>
-  <div class="player-area">
+  <div class="player-area game-section">
     <%= render partial: "games/common_resources", locals: { game: game } %>
   </div>
 </div>

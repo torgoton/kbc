@@ -1,10 +1,4 @@
-<div id="turn-state">
-  <% if game.mandatory_count > 0 && game.current_player.supply["settlements"] > 0 %>
-    <%= "#{game.current_player.player.handle} must build" %>
-    <span class="mandatory-count">
-      <%= "#{pluralize(game.mandatory_count, "settlement")} on #{Boards::Board::TERRAIN_NAMES[game.current_player.hand]}" %>
-    </span>
-  <% else %>
-    <%= "#{game.current_player.player.handle} must end their turn" %>
-  <% end %>
+<div id="turn-state" class="game-section">
+  <%= game.turn_state %>
 </div>
+

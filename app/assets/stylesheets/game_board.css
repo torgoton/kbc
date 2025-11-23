@@ -1,11 +1,15 @@
 :root {
     --cell-width: 4.75%;
-    --color: black;
+    --clr-g-bkg: #003300;
+    --clr-g-text: white;
+    --clr-g-link: #cccc00;
 }
 
 html{
     background-image: url("green-felt.jpg");
     background-size: cover;
+    background-color: var(--clr-g-bkg);
+    color: var(--clr-g-text);
 }
 
 #game-area {
@@ -15,6 +19,14 @@ html{
         "goals      players-area"
         "board      players-area";
     grid-template-columns: 75% auto;
+}
+
+.game-section {
+    background-color: var(--clr-g-bkg);
+    border: 0;
+    margin: 2px;
+    padding: 0 2px;
+    border-radius: 4px;
 }
 
 #map-container {
@@ -355,7 +367,6 @@ ul li .grid-item:hover {
 }
 
 #goals {
-    background-color: bisque;
     grid-area: goals;
 }
 
@@ -371,7 +382,6 @@ ul li .grid-item:hover {
 }
 
 #turn-state {
-    background-color: white;
     text-align: center;
     grid-area: turn-state;
 }
@@ -396,8 +406,6 @@ ul li .grid-item:hover {
 }
 
 .player-area {
-    background-color: khaki;
-    padding: 4px;
     flex: 1 0 auto;
 }
 
