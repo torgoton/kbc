@@ -169,6 +169,16 @@ class Game < ApplicationRecord
     false
   end
 
+  def turn_state
+    if mandatory_count > 0 && current_player.supply["settlements"] > 0
+      "#{current_player.player.handle} must build " \
+      "#{ActionController::Base.helpers.pluralize(mandatory_count, "settlement")} on " \
+      "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}"
+    else
+      "#{current_player.player.handle} must end their turn"
+    end
+  end
+
   def end_turn
     Rails.logger.debug("END TURN REQUESTED on GAME #{id}")
     Rails.logger.debug(" - current player #{current_player.inspect}")
