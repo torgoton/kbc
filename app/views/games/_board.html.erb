@@ -1,46 +1,9 @@
 <div id="board">
-  <% 20.times do |row| %>
-    <% if row.odd? %>
-      <div class="spacer"></div>
-    <% end %>
-    <% 20.times do |col| %>
-      <% terrain = game.board.terrain_at(row, col).downcase %>
-      <% content = game.board.content_at(row, col) %>
-      <%# div for the hex %>
-      <%= content_tag :div,
-        id: "map-cell-#{row}-#{col}",
-        class: [
-          "hex",
-          "terrain-#{terrain}",
-          row.even? ? "even" : "odd",
-          col < 10 ? "left" : "right",
-          ].compact.join(" ") do %>
-        <% if content %>
-          <%# div for the hex content %>
-          <%= content_tag :div, class: "cell-content" do %>
-            <%# show the pieces on top of the board %>
-            <% case content %>
-            <% when Tiles::Tile %>
-              <%= content_tag :div, nil, class: "tile-container" do %>
-                <%# show quantity if any %>
-                <% if content.respond_to? :qty %>
-                  <%= content_tag :div, content.qty, class: "tile-counter" %>
-                  <% content.qty.times do |n| %>
-                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
-                  <% end %>
-                <% end %>
-              <% end %>
-            <% when Settlement %>
-              <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
-            <% end %>
-          <% end %>
-        <% end %>
-      <% end %>
-    <% end %>
-    <div class="marker"></div>
-    <% if row.even? %>
-      <div class="spacer"></div>
-    <% end %>
-  <% end %>
+  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[0], index: 0 } %>
+  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[1], index: 1 } %>
+  <div> <!-- for Mayor markers --></div>
+  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[2], index: 2 } %>
+  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[3], index: 3 } %>
+  <div> <!-- for Mayor markers --></div>
 </div>
 
