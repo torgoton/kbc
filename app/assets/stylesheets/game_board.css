@@ -40,18 +40,28 @@ main {
 }
 
 #board {
-    grid-area: board;
     display: grid;
-    grid-template-columns: repeat(43, 1fr);
-    grid-template-rows: repeat(20, 1fr);
+    grid-template-columns: 10fr 10fr 1fr;
     height: 60vw;
-    row-gap: 10px;
+}
+
+.quadrant {
+    display: grid;
+    grid-template-columns: repeat(21, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+}
+
+.quadrant.right {
+    margin-left: -14px;
+}
+
+.quadrant.bottom {
+    margin-top: 2px;
 }
 
 .hex, .marker {
     grid-column: span 2;
     position: relative;
-    margin-bottom: -10px;
 }
 
 .hex {

@@ -43,10 +43,6 @@ module Boards
       @terrain[row][column]
     end
 
-    # def content_at(row, column)
-    #   @content[row][column]
-    # end
-
     # def add_tiles
     #   tile_locations.each do |loc|
     #     if @flipped == 0
