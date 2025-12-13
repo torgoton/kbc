@@ -144,10 +144,11 @@ class Game < ApplicationRecord
     return "Occupied" if board_contents["[#{row}, #{col}]"]
     # bail unless terrain matches card
     card_terrain = game_player.hand
-    cell_terrain = board.terrain_at(row, col)
-    log(" Terrain card is #{card_terrain}")
-    log(" Terrain of cell is #{cell_terrain}")
-    "Incorrect terrain" unless card_terrain == cell_terrain
+    # cell_terrain = board.terrain_at(row, col)
+    # log(" Terrain card is #{card_terrain}")
+    # log(" Terrain of cell is #{cell_terrain}")
+    # "Incorrect terrain" unless card_terrain == cell_terrain
+    # bail unless available
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
     game_player.supply["settlements"] -= 1
@@ -270,9 +271,8 @@ class Game < ApplicationRecord
   end
 
   def initialize_terrain_deck
-    self.deck = DECK.chars.shuffle
-    self.discard = []
-    save
+    self.discard = DECK.chars
+    shuffle_terrain_deck
   end
 
   def shuffle_terrain_deck

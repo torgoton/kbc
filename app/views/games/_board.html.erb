@@ -1,13 +1,46 @@
 <div id="board">
-  <div id="map-container">
-    <ol class="hex-map-container">
-      <!-- board sections -->
-      <li class="quadrant quadrant-7<%= game.board.map[0].flipped > 0 ? " flipped" : "" %>"></li>
-      <li class="quadrant quadrant-6<%= game.board.map[1].flipped > 0 ? " flipped" : "" %>"></li>
-      <li class="quadrant quadrant-5<%= game.board.map[2].flipped > 0 ? " flipped" : "" %>"></li>
-      <li class="quadrant quadrant-1<%= game.board.map[3].flipped > 0 ? " flipped" : "" %>"></li>
-      <!-- cell content -->
-    </ol>
-    <%= render partial: "games/board_contents", locals: { game: game } %>
-  </div>
+  <% 20.times do |row| %>
+    <% if row.odd? %>
+      <div class="spacer"></div>
+    <% end %>
+    <% 20.times do |col| %>
+      <% terrain = game.board.terrain_at(row, col).downcase %>
+      <% content = game.board.content_at(row, col) %>
+      <%# div for the hex %>
+      <%= content_tag :div,
+        id: "map-cell-#{row}-#{col}",
+        class: [
+          "hex",
+          "terrain-#{terrain}",
+          row.even? ? "even" : "odd",
+          col < 10 ? "left" : "right",
+          ].compact.join(" ") do %>
+        <% if content %>
+          <%# div for the hex content %>
+          <%= content_tag :div, class: "cell-content" do %>
+            <%# show the pieces on top of the board %>
+            <% case content %>
+            <% when Tiles::Tile %>
+              <%= content_tag :div, nil, class: "tile-container" do %>
+                <%# show quantity if any %>
+                <% if content.respond_to? :qty %>
+                  <%= content_tag :div, content.qty, class: "tile-counter" %>
+                  <% content.qty.times do |n| %>
+                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% when Settlement %>
+              <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <div class="marker"></div>
+    <% if row.even? %>
+      <div class="spacer"></div>
+    <% end %>
+  <% end %>
 </div>
+
