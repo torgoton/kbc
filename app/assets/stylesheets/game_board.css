@@ -45,6 +45,7 @@ main {
     display: grid;
     grid-template-columns: 10fr 10fr 1fr;
     height: 60vw;
+    margin-left: 5px;
 }
 
 .quadrant {
@@ -58,7 +59,7 @@ main {
 }
 
 .quadrant.bottom {
-    margin-top: 2px;
+    margin-top: 3px;
 }
 
 .hex, .marker {
@@ -68,7 +69,7 @@ main {
 
 .hex {
     --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
-    /* clip-path: polygon(-50% 50%,50% 100%,150% 50%,50% 0); */
+    border-radius: 5px;
     position: relative;
     background: #00fd00;
     border: 1px solid black;
@@ -94,17 +95,44 @@ ul li .hex:hover {
 
 #board .selectable {
     cursor: pointer;
-    /* background-image: url("hex-outlines.svg"); */
-    /* width: 115%; */
-    /* height: 110%; */
-    /* background-repeat: no-repeat; */
-    /* background-position: -4px 0; */
-    background-color: hsla(0,0%,100%,.65);
-    border: 2px solid black;
+    width: 95%;
+    height: 95%;
+    position: relative;
 }
 
-.selectable:hover {
-    opacity: 0.25;
+#board .selectable:hover {
+    box-shadow: 0 0 10px 5px white;
+}
+
+@property --angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+.selectable::after {
+    --angle: 0deg;
+    content: "";
+    position: absolute;
+    border-radius: 5px;
+    height: 100%;
+    width: 100%;
+    background-image: conic-gradient(from var(--angle), black, white, black, white, black);
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    z-index: -1;
+    padding: 3px;
+    animation: 3s spin linear infinite;
+}
+
+@keyframes spin {
+    from {
+        --angle: 0deg;
+    }
+    to {
+        --angle: 360deg;
+    }
 }
 
 .tile {
