@@ -8,11 +8,13 @@
       <div class="spacer"></div>
     <% end %>
     <% 10.times do |col| %>
+      <% board_row = row + 10 * (index / 2) %>
+      <% board_col = col + 10 * (index % 2) %>
       <% terrain = quadrant.terrain_at(row, col).downcase %>
-      <% content = game.board.content_at(row + 10 * (index / 2), col + 10 * (index % 2)) %>
+      <% content = game.board.content_at(board_row, board_col) %>
       <%# div for the hex %>
       <%= content_tag :div,
-        id: "map-cell-#{row}-#{col}",
+        id: "map-cell-#{board_row}-#{board_col}",
         class: [
           "hex",
           "terrain-#{terrain}",
