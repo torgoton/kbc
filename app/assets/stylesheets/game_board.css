@@ -4,6 +4,9 @@
     --clr-g-text: white;
     --clr-g-link: #cccc00;
     --clr-hex-border: #000000;
+
+    --fx-hex-transparency: 10%;
+    --fx-loc-transparency: 15%;
 }
 
 html{
@@ -67,9 +70,8 @@ main {
 
 .hex {
     --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
-    border-radius: 5px;
+    border-radius: 15%;
     position: relative;
-    background: #00fd00;
     border: 1px solid black;
 }
 
@@ -95,7 +97,7 @@ ul li .hex:hover {
     cursor: pointer;
     width: 95%;
     height: 95%;
-    position: relative;
+    margin: auto;
 }
 
 #board .selectable:hover {
@@ -210,40 +212,76 @@ ul li .hex:hover {
     width: 40%;
 }
 
+/* Terrains suitable for building */
+/* canyon */
 .hex.terrain-c {
-    background-color: #a52a2ac0;
+    background-color: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
 }
 
+/* desert */
 .hex.terrain-d {
-    background-color: #ffd700;
+    background-color: color-mix(in srgb, #ffd700, transparent var(--fx-hex-transparency));
 }
 
+/* flower field */
 .hex.terrain-f {
-    background-color: darkorchid;
+    background-color: color-mix(in srgb, darkorchid, transparent var(--fx-hex-transparency));
 }
 
+/* grassland */
 .hex.terrain-g {
-    background-color: rgb(0,255,5,0.8);
+    background-color: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
 }
 
-.hex.terrain-l {
-    background-color: goldenrod;
-}
-
-.hex.terrain-m {
-    background-color: #444;
-}
-
+/* timberland (forest) */
 .hex.terrain-t {
-    background-color: forestgreen;
+    background-color: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
 }
 
+/* Terrains normally not suitable for building */
+/* mountain */
+.hex.terrain-m {
+    background-color: color-mix(in srgb, #444, transparent var(--fx-hex-transparency));
+}
+
+/* water */
 .hex.terrain-w {
-    background-color: royalblue;
+    background-color: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
+}
+
+/* Special terrains */
+.hex.terrain-l, .hex.terrain-s {
+    width: 95%;
+    height: 95%;
+    margin: auto;
+}
+
+/* location (tiles, nomads) */
+.hex.terrain-l {
+    background-color: color-mix(in srgb, goldenrod, transparent var(--fx-loc-transparency));
+}
+
+/* silver (castle, palace, etc) */
+.hex.terrain-s {
+    background-color: color-mix(in srgb, silver, transparent var(--fx-loc-transparency));
+}
+
+.hex.terrain-s:before, .hex.terrain-l:before {
+    content: "";
+    position: absolute;
+    border-radius: 5px;
+    height: 100%;
+    width: 100%;
+    background-image: conic-gradient(from var(--angle), black, white, black, white, black);
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    padding: 3px;
+    z-index: -1;
 }
 
 .hex.terrain-castlehex {
-    background-color: silver;
+    background-color: color-mix(in srgb, silver, transparent var(--fx-transparency));
     background-image: url("silver/castle.svg");
     background-size: 89%;
     background-repeat: no-repeat;
@@ -251,7 +289,6 @@ ul li .hex:hover {
 }
 
 .hex.terrain-tavernhex {
-    background-color: goldenrod;
     background-image: url("gold/tavern.svg");
     background-size: 85%;
     background-repeat: no-repeat;
@@ -259,7 +296,6 @@ ul li .hex:hover {
 }
 
 .hex.terrain-paddockhex {
-    background-color: goldenrod;
     background-image: url("gold/paddock.svg");
     background-size: 81%;
     background-repeat: no-repeat;
@@ -267,7 +303,6 @@ ul li .hex:hover {
 }
 
 .hex.terrain-oasishex {
-    background-color: goldenrod;
     background-image: url("gold/oasis.svg");
     background-size: 70%;
     background-repeat: no-repeat;
@@ -275,7 +310,6 @@ ul li .hex:hover {
 }
 
 .hex.terrain-farmhex {
-    background-color: goldenrod;
     background-image: url("gold/farm.svg");
     background-size: 70%;
     background-repeat: no-repeat;

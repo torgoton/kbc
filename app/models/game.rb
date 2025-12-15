@@ -198,8 +198,6 @@ class Game < ApplicationRecord
     end
   end
 
-  private
-
   def broadcast_game_update
     @board = nil # reset the board so we can re-construct it from the game state
     instantiate
@@ -222,8 +220,8 @@ class Game < ApplicationRecord
     # - board/map
     broadcast_replace_to(
       "game_#{id}",
-      target: "board-contents",
-      partial: "games/board_contents",
+      target: "board",
+      partial: "games/board",
       locals: { game: self }
     )
     # - each player
@@ -255,6 +253,8 @@ class Game < ApplicationRecord
       locals: { move_count: move_count }
     )
   end
+
+  private
 
   def log(msg)
     Rails.logger.debug msg
