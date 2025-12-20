@@ -125,7 +125,7 @@ ul li .hex:hover {
     translate: -50% -50%;
     z-index: -1;
     padding: 3px;
-    animation: 3s spin linear infinite;
+    animation: 5s spin linear infinite;
 }
 
 @keyframes spin {
@@ -282,36 +282,45 @@ ul li .hex:hover {
     z-index: -1;
 }
 
-.hex.terrain-castlehex {
-    background-color: color-mix(in srgb, silver, transparent var(--fx-transparency));
+.hex .terrain-castlehex {
+    height: inherit;
+    width: inherit;
     background-image: url("silver/castle.svg");
-    background-size: 89%;
+    background-size: 100%;
     background-repeat: no-repeat;
-    background-position: center 25%;
+    background-position: 1px 3px;
 }
 
-.hex.terrain-tavernhex {
+.tile-container.tavern {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/tavern.svg");
-    background-size: 85%;
+    background-size: contain;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
 
-.hex.terrain-paddockhex {
+.tile-container.paddock {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/paddock.svg");
     background-size: 81%;
     background-repeat: no-repeat;
     background-position: center 65%;
 }
 
-.hex.terrain-oasishex {
+.tile-container.oasis {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/oasis.svg");
     background-size: 70%;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
 
-.hex.terrain-farmhex {
+.tile-container.farm {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/farm.svg");
     background-size: 70%;
     background-repeat: no-repeat;
