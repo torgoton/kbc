@@ -19,20 +19,24 @@
           "hex",
           "terrain-#{terrain}",
           row.even? ? "even" : "odd",
-          col < 10 ? "left" : "right",
+          board_col < 10 ? "left" : "right",
           ].compact.join(" ") do %>
+        <% if terrain == "s" %>
+          <%= content_tag :div, nil, class: "terrain-castlehex" %>
+        <% end %>
         <% if content %>
           <%# div for the hex content %>
           <%= content_tag :div, class: "cell-content" do %>
             <%# show the pieces on top of the board %>
             <% case content %>
             <% when Tiles::Tile %>
-              <%= content_tag :div, nil, class: "tile-container" do %>
+              <% content_class = content.class.to_s[7..-5].downcase %>
+              <%= content_tag :div, nil, class: "tile-container #{content_class}" do %>
                 <%# show quantity if any %>
                 <% if content.respond_to? :qty %>
                   <%= content_tag :div, content.qty, class: "tile-counter" %>
                   <% content.qty.times do |n| %>
-                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content.class.to_s[7..-5].downcase}" %>
+                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content_class}" %>
                   <% end %>
                 <% end %>
               <% end %>
