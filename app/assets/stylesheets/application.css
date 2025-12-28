@@ -20,7 +20,6 @@
  body {
     margin: 0;
     font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
-    background-color: var(--clr-ds-table);
     color: var(--clr-ds-text);
     min-height: 100vh;
     overflow-x: hidden;
