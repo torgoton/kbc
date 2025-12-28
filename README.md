@@ -1,3 +1,9 @@
+# KBC
+
+## Developer Notes
+
+- until containerized, ensure Valkey or Redis server is running
+
 # README
 
 ## Database Setup

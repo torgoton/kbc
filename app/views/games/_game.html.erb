@@ -1,10 +1,20 @@
 <div id="game-area">
     <main>
+      <div id="turn-state" class="game-section">
         <%= render partial: "games/turn_state", locals: { game: } %>
+      </div>
+      <div id="goals" class="game-section">
         <%= render partial: "games/goals", locals: { game: } %>
+      </div>
+      <div id="board">
         <%= render partial: "games/board", locals: { game: } %>
+      </div>
     </main>
     <aside>
       <%= render partial: "games/players", locals: { game: } %>
     </aside>
+    <section id="log">
+      <%= render partial: "games/log", locals: { game: } %>
+    </section>
 </div>
+

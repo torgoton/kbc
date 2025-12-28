@@ -29,23 +29,20 @@ module Boards
           @terrain[r][c] = line[c]
         end
       end
-      (silver_hexes + location_hexes).each do |hex|
-        # Rails.logger.debug " - adding #{hex.inspect}"
-        if @flipped == 0
-          @terrain[hex[:r]][hex[:c]] = "#{hex[:k]}Hex"
-        else
-          @terrain[9 - hex[:r]][9 - hex[:c]] = "#{hex[:k]}Hex"
-        end
-      end
+      # Leave terrain as S or L for now; tiles will be added later
+      # (silver_hexes + location_hexes).each do |hex|
+      #   # Rails.logger.debug " - adding #{hex.inspect}"
+      #   if @flipped == 0
+      #     @terrain[hex[:r]][hex[:c]] = "#{hex[:k]}Hex"
+      #   else
+      #     @terrain[9 - hex[:r]][9 - hex[:c]] = "#{hex[:k]}Hex"
+      #   end
+      # end
     end
 
     def terrain_at(row, column)
       @terrain[row][column]
     end
-
-    # def content_at(row, column)
-    #   @content[row][column]
-    # end
 
     # def add_tiles
     #   tile_locations.each do |loc|

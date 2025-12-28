@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+.hex-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  width: 400px;
+}
+
+.hex {
+  width: 60px;
+  height: 52px;
+  background: #4CAF50;
+  clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  margin: 4px 0;
+}
+
+.hex:nth-child(even) {
+  margin-top: 30px;
+}
+
+.hex:hover {
+  background: #45a049;
+}
+</style>
+</head>
+<body>
+<div class="hex-grid">
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+  <div class="hex"></div>
+</div>
+</body>
+</html>

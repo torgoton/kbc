@@ -1,0 +1,55 @@
+<%= content_tag :div,
+  class: ["quadrant",
+    index.odd? ? "right" : "left",
+    index >=2 ? "bottom" : "top"
+    ].compact.join(" ") do %>
+  <% 10.times do |row| %>
+    <% if row.odd? %>
+      <div class="spacer"></div>
+    <% end %>
+    <% 10.times do |col| %>
+      <% board_row = row + 10 * (index / 2) %>
+      <% board_col = col + 10 * (index % 2) %>
+      <% terrain = quadrant.terrain_at(row, col).downcase %>
+      <% content = game.board.content_at(board_row, board_col) %>
+      <%# div for the hex %>
+      <%= content_tag :div,
+        id: "map-cell-#{board_row}-#{board_col}",
+        class: [
+          "hex",
+          "terrain-#{terrain}",
+          row.even? ? "even" : "odd",
+          board_col < 10 ? "left" : "right",
+          ].compact.join(" ") do %>
+        <% if terrain == "s" %>
+          <%= content_tag :div, nil, class: "terrain-castlehex" %>
+        <% end %>
+        <% if content %>
+          <%# div for the hex content %>
+          <%= content_tag :div, class: "cell-content" do %>
+            <%# show the pieces on top of the board %>
+            <% case content %>
+            <% when Tiles::Tile %>
+              <% content_class = content.class.to_s[7..-5].downcase %>
+              <%= content_tag :div, nil, class: "tile-container #{content_class}" do %>
+                <%# show quantity if any %>
+                <% if content.respond_to? :qty %>
+                  <%= content_tag :div, content.qty, class: "tile-counter" %>
+                  <% content.qty.times do |n| %>
+                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content_class}" %>
+                  <% end %>
+                <% end %>
+              <% end %>
+            <% when Settlement %>
+              <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
+            <% end %>
+          <% end %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% if row.even? %>
+      <div class="spacer"></div>
+    <% end %>
+  <% end %>
+<% end %>
+

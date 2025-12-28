@@ -3,6 +3,10 @@
     --clr-g-bkg: #003300;
     --clr-g-text: white;
     --clr-g-link: #cccc00;
+    --clr-hex-border: #000000;
+
+    --fx-hex-transparency: 10%;
+    --fx-loc-transparency: 15%;
 }
 
 html{
@@ -15,135 +19,123 @@ html{
 #game-area {
     display: grid;
     grid-template-areas:
-        "turn-state players-area"
-        "goals      players-area"
-        "board      players-area";
-    grid-template-columns: 75% auto;
+        "main players-area game-log";
+    grid-template-columns: 5fr 2fr 2fr;
+}
+
+main {
+    grid-area: main;
 }
 
 .game-section {
     background-color: var(--clr-g-bkg);
     border: 0;
     margin: 2px;
-    padding: 0 2px;
-    border-radius: 4px;
+    padding: 1px 2px;
+    border-radius: 8px;
 }
 
-#map-container {
-    content: "";
-    display: block;
-    position: relative;
-    grid-area: board;
+.mandatory-count {
+    display: none;
 }
 
-#map-grid {
-    position: relative;
-    padding: 0;
+#goals ul {
+    padding: inherit;
+    margin: inherit;
 }
 
-#map-grid li {
-    --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
-    list-style-type: none;
-    position: relative;
-    float: left;
-    width: var(--cell-width);
-    padding: 0 0 var(--cell-padding) 0;
-    margin: -0.67% 0.035%;
-    transform: rotate(-60deg) skewY(30deg);
-    background: #fd005f;
-    overflow: hidden;
-    visibility: hidden;
-}
-
-#map-grid li .hexagon {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    transform: skewY(-30deg) rotate(60deg);
-    font-size: 0.75rem;
-    color: white;
-    text-shadow: 1px 1px 2px black;
-    text-align: center;
-    vertical-align: middle;
-}
-
-/* #map-grid li .hexagon.grid-item.row-bump { */
-#map-grid li.odd:nth-child(20n-19) {
-    margin-left: calc(var(--cell-width) / 2);
-}
-
-/* Draft attempt to show quadrant edges */
-/* #map-grid li:nth-child(20n+11) {
-    margin-left: 3px;
-} */
-
-#map-grid li * {
-    visibility: visible;
-}
-
-.hex-map-container {
+#board {
     display: grid;
-    grid-template-columns: repeat(41 1fr);
-    grid-template-rows: repeat(61 1fr);
-    height: 100%;
-    width: 100%;
-    left: 0;
-    top: 0;
-    margin: 0;
-    padding: 0;
-    list-style-type: none;
-    position: absolute;
+    grid-template-columns: 10fr 10fr 1fr;
+    height: 60vw;
+    margin-left: 5px;
 }
 
 .quadrant {
-    background-color: white;
-    background-image: url("border.png");
-    background-position: 50%, 50%;
-    background-size: 100%, 300% 400%;
-    grid-column-end: span 21;
-    grid-row-end: span 31;
-    z-index: 0;
-    clip-path:polygon(0 3.23%,4.76% 0,9.52% 3.23%,14.29% 0,19.05% 3.23%,23.81% 0,28.57% 3.23%,33.33% 0,38.1% 3.23%,42.86% 0,47.62% 3.23%,52.38% 0,57.14% 3.23%,61.9% 0,66.67% 3.23%,71.43% 0,76.19% 3.23%,80.95% 0,85.71% 3.23%,90.48% 0,95.24% 3.23%,95.24% 3.23%,95.24% 9.68%,100% 12.9%,100% 19.35%,95.24% 22.58%,95.24% 29.03%,100% 32.26%,100% 38.71%,95.24% 41.94%,95.24% 48.39%,100% 51.61%,100% 58.06%,95.24% 61.29%,95.24% 67.74%,100% 70.97%,100% 77.42%,95.24% 80.65%,95.24% 87.1%,100% 90.32%,100% 96.77%,95.24% 100%,95.24% 100%,90.48% 96.77%,85.71% 100%,80.95% 96.77%,76.19% 100%,71.43% 96.77%,66.67% 100%,61.9% 96.77%,57.14% 100%,52.38% 96.77%,47.62% 100%,42.86% 96.77%,38.1% 100%,33.33% 96.77%,28.57% 100%,23.81% 96.77%,19.05% 100%,14.29% 96.77%,9.52% 100%,4.76% 96.77%,4.76% 90.32%,0 87.1%,0 80.65%,4.76% 77.42%,4.76% 70.97%,0 67.74%,0 61.29%,4.76% 58.06%,4.76% 51.61%,0 48.39%,0 41.94%,4.76% 38.71%,4.76% 32.26%,0 29.03%,0 22.58%,4.76% 19.35%,4.76% 12.9%,0 9.68%,0 3.23%,4.76% 0);
+    display: grid;
+    grid-template-columns: repeat(21, 1fr);
+    grid-template-rows: repeat(10, 1fr);
 }
 
-#map-top-left {
-    grid-column-start: 1;
-    grid-row-start: 1;
+.quadrant.right {
+    margin-left: -14px;
 }
 
-#map-top-right {
-    grid-column-start: 21;
-    grid-row-start: 1;
+.quadrant.bottom {
+    margin-top: 3px;
 }
 
-#map-bottom-left {
-    grid-column-start: 1;
-    grid-row-start: 31;
+.hex, .marker {
+    grid-column: span 2;
+    position: relative;
 }
 
-#map-bottom-right {
-    grid-column-start: 21;
-    grid-row-start: 31;
+.hex {
+    --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
+    border-radius: 15%;
+    position: relative;
+    border: 1px solid #0004;
+    margin: 0.25px;
 }
 
-ul li .grid-item:hover {
+.hex > .hex-outline {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+svg {
+    width: 100%;
+    height: 102%;
+}
+
+ul li .hex:hover {
     background-color: #fd005f;
 }
 
-#board #map-container .cell-content.selectable {
+#board .selectable {
     cursor: pointer;
-    background-image: url("hex-outlines.svg");
-    width: 115%;
-    height: 110%;
-    background-repeat: no-repeat;
-    background-position: -4px 0;
-    background-color: hsla(0,0%,100%,.5);
+    width: 95%;
+    height: 95%;
+    margin: auto;
 }
 
-.selectable:hover {
-    opacity: 0.25;
+#board .selectable:hover {
+    box-shadow: 0 0 10px 5px white;
+}
+
+@property --angle {
+    syntax: "<angle>";
+    inherits: false;
+    initial-value: 0deg;
+}
+
+.selectable::after {
+    --angle: 0deg;
+    content: "";
+    position: absolute;
+    border-radius: 5px;
+    height: 100%;
+    width: 100%;
+    background-image: conic-gradient(from var(--angle), black, white, black, white, black);
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    z-index: -1;
+    padding: 3px;
+    animation: 5s spin linear infinite;
+}
+
+@keyframes spin {
+    from {
+        --angle: 0deg;
+    }
+    to {
+        --angle: 360deg;
+    }
 }
 
 .tile {
@@ -223,72 +215,113 @@ ul li .grid-item:hover {
     width: 40%;
 }
 
-.grid-item.terrain-c {
-    background-color: #a52a2ac0;
+/* Terrains suitable for building */
+/* canyon */
+.hex.terrain-c {
+    background-color: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-d {
-    background-color: #ffd700;
+/* desert */
+.hex.terrain-d {
+    background-color: color-mix(in srgb, #ffd700, transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-f {
-    background-color: darkorchid;
+/* flower field */
+.hex.terrain-f {
+    background-color: color-mix(in srgb, darkorchid, transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-g {
-    background-color: rgb(0,255,5,0.8);
+/* grassland */
+.hex.terrain-g {
+    background-color: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-l {
-    background-color: goldenrod;
+/* timberland (forest) */
+.hex.terrain-t {
+    background-color: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-m {
-    background-color: #444;
+/* Terrains normally not suitable for building */
+/* mountain */
+.hex.terrain-m {
+    background-color: color-mix(in srgb, #444, transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-t {
-    background-color: forestgreen;
+/* water */
+.hex.terrain-w {
+    background-color: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
 }
 
-.grid-item.terrain-w {
-    background-color: royalblue;
+/* Special terrains */
+.hex.terrain-l, .hex.terrain-s {
+    width: 95%;
+    height: 95%;
+    margin: auto;
 }
 
-.grid-item.terrain-castlehex {
-    background-color: silver;
+/* location (tiles, nomads) */
+.hex.terrain-l {
+    background-color: color-mix(in srgb, goldenrod, transparent var(--fx-loc-transparency));
+}
+
+/* silver (castle, palace, etc) */
+.hex.terrain-s {
+    background-color: color-mix(in srgb, silver, transparent var(--fx-loc-transparency));
+}
+
+.hex.terrain-s:before, .hex.terrain-l:before {
+    content: "";
+    position: absolute;
+    border-radius: 5px;
+    height: 100%;
+    width: 100%;
+    background-image: conic-gradient(from var(--angle), black, white, black, white, black);
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    padding: 3px;
+    z-index: -1;
+}
+
+.hex .terrain-castlehex {
+    height: inherit;
+    width: inherit;
     background-image: url("silver/castle.svg");
-    background-size: 89%;
+    background-size: 100%;
     background-repeat: no-repeat;
-    background-position: center 25%;
+    background-position: 1px 3px;
 }
 
-.grid-item.terrain-tavernhex {
-    background-color: goldenrod;
+.tile-container.tavern {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/tavern.svg");
-    background-size: 85%;
+    background-size: contain;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
 
-.grid-item.terrain-paddockhex {
-    background-color: goldenrod;
+.tile-container.paddock {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/paddock.svg");
     background-size: 81%;
     background-repeat: no-repeat;
     background-position: center 65%;
 }
 
-.grid-item.terrain-oasishex {
-    background-color: goldenrod;
+.tile-container.oasis {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/oasis.svg");
     background-size: 70%;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
 
-.grid-item.terrain-farmhex {
-    background-color: goldenrod;
+.tile-container.farm {
+    height: 100%;
+    width: 100%;
     background-image: url("gold/farm.svg");
     background-size: 70%;
     background-repeat: no-repeat;
@@ -367,7 +400,7 @@ ul li .grid-item:hover {
 }
 
 #goals {
-    grid-area: goals;
+    background-color: black;
 }
 
 #goals ul {
@@ -382,8 +415,8 @@ ul li .grid-item:hover {
 }
 
 #turn-state {
+    background-color: black;
     text-align: center;
-    grid-area: turn-state;
 }
 
 #players-area {
@@ -406,12 +439,14 @@ ul li .grid-item:hover {
 }
 
 .player-area {
+    background-color: brown;
+    padding: 4px;
     flex: 1 0 auto;
 }
 
 .player-spinner {
     /* background-image: url("tape-reel.svg"); */
-    animation: playspin 1s infinite linear;
+    animation: playspin 3s infinite linear;
     display: inline-block;
     width: 40px;
     transform-origin: 20px 20px;

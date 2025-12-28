@@ -22,7 +22,6 @@
 #
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
-  SECTION_OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
@@ -147,7 +146,7 @@ class Game < ApplicationRecord
     # bail if occupied
     # return "Occupied" if board_contents["[#{row}, #{col}]"]
     # bail unless terrain matches card
-    # card_terrain = game_player.hand
+    card_terrain = game_player.hand
     # cell_terrain = board.terrain_at(row, col)
     # log(" Terrain card is #{card_terrain}")
     # log(" Terrain of cell is #{cell_terrain}")
@@ -202,37 +201,35 @@ class Game < ApplicationRecord
     end
   end
 
-  private
-
   def broadcast_game_update
     @board = nil # reset the board so we can re-construct it from the game state
     instantiate
 
     # public stuff
     # - turn state
-    broadcast_replace_to( # first param is CHANNEL
+    broadcast_update_to( # first param is CHANNEL
       "game_#{id}",
       target: "turn-state",
       partial: "games/turn_state",
       locals: { game: self }
     )
     # - resources
-    broadcast_replace_to(
+    broadcast_update_to(
       "game_#{id}",
       target: "common-resources",
       partial: "games/common_resources",
       locals: { game: self }
     )
     # - board/map
-    broadcast_replace_to(
+    broadcast_update_to(
       "game_#{id}",
-      target: "board-contents",
-      partial: "games/board_contents",
+      target: "board",
+      partial: "games/board",
       locals: { game: self }
     )
     # - each player
     game_players.each do |gp|
-      broadcast_replace_to(
+      broadcast_update_to(
         "game_#{id}",
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
@@ -243,7 +240,7 @@ class Game < ApplicationRecord
     # private stuff - each player
     game_players.each do |gp|
       gp.reload
-      broadcast_replace_to(
+      broadcast_update_to(
         "game_player_#{gp.id}_private", # player's private channel
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
@@ -252,13 +249,15 @@ class Game < ApplicationRecord
     end
 
     # - timestamp - MUST be last change
-    broadcast_replace_later_to(
+    broadcast_update_later_to(
       "game_#{id}",
       target: "last-updated-at",
       partial: "games/last_updated_at",
       locals: { move_count: move_count }
     )
   end
+
+  private
 
   def log(msg)
     Rails.logger.debug msg
@@ -285,13 +284,13 @@ class Game < ApplicationRecord
   end
 
   def initialize_terrain_deck
-    self.discard = DECK
+    self.discard = DECK.chars
     shuffle_terrain_deck
   end
 
   def shuffle_terrain_deck
     self.deck = discard.shuffle
-    self.discard = []
+    discard.clear
     save
   end
 
@@ -321,7 +320,7 @@ class Game < ApplicationRecord
   end
 
   def overall_location(board, row, col)
-    [ SECTION_OFFSETS[board][0]+ row, SECTION_OFFSETS[board][1] + col ]
+    [ board / 2 * 10 + row, (board % 2) * 10 + col ]
   end
 
   def first_player
