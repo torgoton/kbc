@@ -14,5 +14,9 @@ up:
 
 down:
 	@echo "Stopping the application..."
-	@pkill -f 'rails/server.rb'
+	@pkill -f 'puma'
+
+tail:
+	@echo "Tailing the application logs..."
+	tail -f log/*.log
 
