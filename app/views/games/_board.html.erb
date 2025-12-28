@@ -1,9 +1,7 @@
-<div id="board">
-  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[0], index: 0 } %>
-  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[1], index: 1 } %>
-  <div> <!-- for Mayor markers --></div>
-  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[2], index: 2 } %>
-  <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[3], index: 3 } %>
-  <div> <!-- for Mayor markers --></div>
-</div>
+<%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[0], index: 0 } %>
+<%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[1], index: 1 } %>
+<div> <!-- for Mayor markers --></div>
+<%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[2], index: 2 } %>
+<%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[3], index: 3 } %>
+<div> <!-- for Mayor markers --></div>
 

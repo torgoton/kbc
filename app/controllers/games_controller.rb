@@ -46,6 +46,7 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
+    @game.broadcast_game_update
   end
 
   def end_turn
@@ -56,6 +57,7 @@ class GamesController < ApplicationController
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
     end
+    @game.broadcast_game_update
   end
 
   def join

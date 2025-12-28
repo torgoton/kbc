@@ -1,8 +1,14 @@
 <div id="game-area">
     <main>
-      <%= render partial: "games/turn_state", locals: { game: } %>
-      <%= render partial: "games/goals", locals: { game: } %>
-      <%= render partial: "games/board", locals: { game: } %>
+      <div id="turn-state" class="game-section">
+        <%= render partial: "games/turn_state", locals: { game: } %>
+      </div>
+      <div id="goals" class="game-section">
+        <%= render partial: "games/goals", locals: { game: } %>
+      </div>
+      <div id="board">
+        <%= render partial: "games/board", locals: { game: } %>
+      </div>
     </main>
     <aside>
       <%= render partial: "games/players", locals: { game: } %>

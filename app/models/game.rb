@@ -22,7 +22,6 @@
 #
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
-  SECTION_OFFSETS = [ [ 0, 0 ], [ 0, 10 ], [ 10, 0 ], [ 10, 10 ] ]
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
@@ -208,21 +207,21 @@ class Game < ApplicationRecord
 
     # public stuff
     # - turn state
-    broadcast_replace_to( # first param is CHANNEL
+    broadcast_update_to( # first param is CHANNEL
       "game_#{id}",
       target: "turn-state",
       partial: "games/turn_state",
       locals: { game: self }
     )
     # - resources
-    broadcast_replace_to(
+    broadcast_update_to(
       "game_#{id}",
       target: "common-resources",
       partial: "games/common_resources",
       locals: { game: self }
     )
     # - board/map
-    broadcast_replace_to(
+    broadcast_update_to(
       "game_#{id}",
       target: "board",
       partial: "games/board",
@@ -230,7 +229,7 @@ class Game < ApplicationRecord
     )
     # - each player
     game_players.each do |gp|
-      broadcast_replace_to(
+      broadcast_update_to(
         "game_#{id}",
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
@@ -241,7 +240,7 @@ class Game < ApplicationRecord
     # private stuff - each player
     game_players.each do |gp|
       gp.reload
-      broadcast_replace_to(
+      broadcast_update_to(
         "game_player_#{gp.id}_private", # player's private channel
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
@@ -250,7 +249,7 @@ class Game < ApplicationRecord
     end
 
     # - timestamp - MUST be last change
-    broadcast_replace_later_to(
+    broadcast_update_later_to(
       "game_#{id}",
       target: "last-updated-at",
       partial: "games/last_updated_at",
@@ -321,7 +320,7 @@ class Game < ApplicationRecord
   end
 
   def overall_location(board, row, col)
-    [ SECTION_OFFSETS[board][0]+ row, SECTION_OFFSETS[board][1] + col ]
+    [ board / 2 * 10 + row, (board % 2) * 10 + col ]
   end
 
   def first_player
