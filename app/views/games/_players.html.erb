@@ -23,14 +23,6 @@
     <%# else %>
       <%# = turbo_stream_from "game_player_#{player.id}" %>
     <% end %>
-<<<<<<< HEAD
-    <div class="player-area game-section">
-      <%= render partial: "games/game_player", locals: { game:, player:, n: } %>
-    </div>
-  <% end %>
-  <div class="player-area game-section">
-    <%= render partial: "games/common_resources", locals: { game: game } %>
-=======
     <div class="player-area">
       <%= content_tag :div, id: "game_player_#{player.id}" do %>
         <%= render partial: "games/game_player", locals: { game:, player:, n: } %>
@@ -41,6 +33,5 @@
     <div id="common-resources">
       <%= render partial: "games/common_resources", locals: { game: game } %>
     </div>
->>>>>>> 2c241c2 (Checkpoint live updates fully working again)
   </div>
 </div>
