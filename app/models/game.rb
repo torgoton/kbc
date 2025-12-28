@@ -147,7 +147,7 @@ class Game < ApplicationRecord
     # bail if occupied
     # return "Occupied" if board_contents["[#{row}, #{col}]"]
     # bail unless terrain matches card
-    # card_terrain = game_player.hand
+    card_terrain = game_player.hand
     # cell_terrain = board.terrain_at(row, col)
     # log(" Terrain card is #{card_terrain}")
     # log(" Terrain of cell is #{cell_terrain}")
@@ -285,7 +285,7 @@ class Game < ApplicationRecord
   end
 
   def initialize_terrain_deck
-    self.discard = DECK
+    self.discard = DECK.chars
     shuffle_terrain_deck
   end
 

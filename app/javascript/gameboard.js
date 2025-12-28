@@ -7,7 +7,7 @@ function setGameId() {
 }
 
 function highlightTerrain(card) {
-  document.querySelectorAll(".grid-item").forEach(c => {
+  document.querySelectorAll(".hex").forEach(c => {
     c.classList.remove("selectable");
   });
   document.querySelectorAll(".terrain-" + card).forEach(c => {
@@ -25,7 +25,7 @@ function enableClicks() {
       }
       console.log("Click target: " + e.target.id);
       e.preventDefault();
-      document.getElementById("build_cell").value = e.target.parentElement.parentElement.id;
+      document.getElementById("build_cell").value = e.target.id;
       document.getElementById("action_submit").click();
     });
 }
@@ -85,7 +85,7 @@ function markAvailableCells() {
       // and have the terrain type of the card
       my_settlements.forEach(s => {
         // get the cell id of the settlement
-        const cell_id = s.parentElement.parentElement.parentElement.id;
+        const cell_id = s.parentElement.parentElement.id;
         // get the adjacent cells
         const adjacents = adjacent_list(cell_id);
         adjacents.forEach(a => {
@@ -93,9 +93,9 @@ function markAvailableCells() {
           // if it does not have a settlement
           if (!c.querySelector(".hex-settlement")) {
             // and has the terrain type of the card
-            if (c.querySelector(".terrain-" + card)) {
+            if (c.classList.contains("terrain-" + card)) {
               // mark it selectable
-              c.querySelector(".cell-content").classList.add("selectable");
+              c.classList.add("selectable");
               any_near_me = true;
             }
           }
@@ -108,7 +108,7 @@ function markAvailableCells() {
         // if it does not have a settlement
         if (!c.querySelector(".hex-settlement")) {
           // mark it selectable
-          c.querySelector(".cell-content").classList.add("selectable");
+          c.classList.add("selectable");
         }
       });
     }
