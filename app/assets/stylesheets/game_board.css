@@ -318,6 +318,7 @@ ul li .hex:hover {
 }
 
 #goals {
+    background-color: black;
     grid-area: goals;
 }
 
@@ -333,8 +334,8 @@ ul li .hex:hover {
 }
 
 #turn-state {
+    background-color: black;
     text-align: center;
-    grid-area: turn-state;
 }
 
 #players-area {
@@ -357,6 +358,8 @@ ul li .hex:hover {
 }
 
 .player-area {
+    background-color: brown;
+    padding: 4px;
     flex: 1 0 auto;
 }
 
