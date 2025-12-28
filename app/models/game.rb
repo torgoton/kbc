@@ -287,6 +287,8 @@ class Game < ApplicationRecord
 
   def shuffle_terrain_deck
     self.deck = discard.shuffle
+    discard.clear
+    save
   end
 
   def select_goals
