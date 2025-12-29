@@ -159,6 +159,13 @@ class Game < ApplicationRecord
     self.mandatory_count -= 1
     self.move_count += 1
     log("Building settlement at #{row}, #{col} for player #{game_player.order}")
+    moves.build(
+      player: game_player.player,
+      row: row,
+      col: col,
+      action: "build_settlement",
+      terrain: card_terrain
+    )
     ActiveRecord::Base.transaction do
       game_player.save
       save

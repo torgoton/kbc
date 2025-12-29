@@ -63,6 +63,7 @@ I began it for a few reasons:
 
 ## Boards
 * POC
+    * Mandatory (build 3)
     * Tavern (build)
     * Paddock (move)
     * Oasis (build)
@@ -78,7 +79,7 @@ I began it for a few reasons:
         * Caravan (move)
         * Village (build)
         * Garden (build)
-        * Nomad tiles
+        * Nomad tiles (use once)
             * Donation (build)
             * Resettlement (move)
             * Outpost (alter)
@@ -89,12 +90,12 @@ I began it for a few reasons:
         * Forester's Lodge (build)
         * Barracks (nomad Warrior)
         * Crossroads (handsize)
-        * City Hall (build)
+        * City Hall (use once) (build)
         * Fort (build)
         * Monastery (build)
         * Wagon (nomad Wagon)
     * Marshlands
-        * Temple (remove)
+        * Temple (remove, save, modifies mandatory)
         * Refuge (move)
         * Canoe (build)
         * Fountain (build)
@@ -102,7 +103,7 @@ I began it for a few reasons:
         * Bazaar (repeat)
         * Water Mill (build)
         * Mountain Station (build)
-        * Scout Cabin (place)
+        * Scout Cabin (place temporarily)
         * Cathedral (build)
         * Watchtower (build)
         * University (build)
