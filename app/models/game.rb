@@ -154,22 +154,25 @@ class Game < ApplicationRecord
     # bail unless available
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
-    game_player.supply["settlements"] -= 1
-    board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
-    self.mandatory_count -= 1
     self.move_count += 1
-    log("Building settlement at #{row}, #{col} for player #{game_player.order}")
-    moves.build(
-      player: game_player.player,
-      row: row,
-      col: col,
-      action: "build_settlement",
-      terrain: card_terrain
+    # - create a Move record
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      action: "build",
+      from: "supply",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[card_terrain]}"
     )
-    ActiveRecord::Base.transaction do
-      game_player.save
-      save
-    end
+    # - update supply
+    game_player.supply["settlements"] -= 1
+    # - update board_contents
+    self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    self.mandatory_count -= 1
+    log("Building settlement at #{row}, #{col} for player #{game_player.order}")
+    game_player.save
+    save
   end
 
   def turn_endable?
@@ -202,6 +205,14 @@ class Game < ApplicationRecord
     self.current_player = game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{current_player.inspect}")
     self.move_count += 1
+    # - create a Move record
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      action: "end_turn",
+      reversible: false,
+      message: "#{game_player.player.handle} ended their turn"
+    )
     ActiveRecord::Base.transaction do
       game_player.save
       save
@@ -232,6 +243,13 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "board",
       partial: "games/board",
+      locals: { game: self }
+    )
+    # - game log
+    broadcast_update_to(
+      "game_#{id}",
+      target: "log",
+      partial: "games/log",
       locals: { game: self }
     )
     # - each player
@@ -297,7 +315,7 @@ class Game < ApplicationRecord
 
   def shuffle_terrain_deck
     self.deck = discard.shuffle
-    discard.clear
+    self.discard.clear
     save
   end
 

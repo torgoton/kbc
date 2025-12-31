@@ -46,6 +46,8 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
+    animate_build_settlement(@game, @game.current_player, row, col)
+    # update all clients
     @game.broadcast_game_update
   end
 
