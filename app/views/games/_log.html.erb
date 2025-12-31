@@ -1,3 +1,7 @@
 <h1>Game Log</h1>
-Find me in app/views/games/_log.html.erb
+<% game.moves.order(created_at: :desc).each do |move| %>
+  <div class="move">
+    <p><strong>Move <%= move.order %>:</strong> <%= move.message %></p>
+  </div>
+<% end %>
 

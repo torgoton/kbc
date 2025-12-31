@@ -46,6 +46,8 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
+    animate_build_settlement(@game, @game.current_player, row, col)
+    # update all clients
     @game.broadcast_game_update
   end
 
@@ -76,6 +78,19 @@ class GamesController < ApplicationController
     # MVP: 2 players every game, so just start it now
     @game.start
     redirect_to game_path(@game)
+  end
+
+  def undo_move
+    Rails.logger.debug("UNDO MOVE action")
+    @game = Current.user.games.find(params["id"].first)
+    if @game.undo_allowed?
+      @game.undo_last_move
+    end
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
   end
 
   private

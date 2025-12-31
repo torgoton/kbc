@@ -154,15 +154,26 @@ class Game < ApplicationRecord
     # bail unless available
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
-    game_player.supply["settlements"] -= 1
-    board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
-    self.mandatory_count -= 1
     self.move_count += 1
+    # - create a Move record
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "build",
+      from: "supply",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[card_terrain]}"
+    )
+    # - update supply
+    game_player.supply["settlements"] -= 1
+    # - update board_contents
+    self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    self.mandatory_count -= 1
     log("Building settlement at #{row}, #{col} for player #{game_player.order}")
-    ActiveRecord::Base.transaction do
-      game_player.save
-      save
-    end
+    game_player.save
+    save
   end
 
   def turn_endable?
@@ -170,6 +181,12 @@ class Game < ApplicationRecord
       return true
     end
     false
+  end
+
+  def undo_allowed?
+    last_move = moves.where(deliberate: true).order(order: :desc).first
+    return false unless last_move
+    last_move.reversible
   end
 
   def turn_state
@@ -195,8 +212,36 @@ class Game < ApplicationRecord
     self.current_player = game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{current_player.inspect}")
     self.move_count += 1
+    # - create a Move record
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "end_turn",
+      reversible: false,
+      message: "#{game_player.player.handle} ended their turn"
+    )
     ActiveRecord::Base.transaction do
       game_player.save
+      save
+    end
+  end
+
+  def undo_last_move
+    last_move = moves.where(deliberate: true).order(order: :desc).first
+    return unless last_move
+    Rails.logger.debug("UNDOING last move #{last_move.inspect}")
+    instantiate
+    case last_move.action
+    when "build"
+      self.move_count -= 1
+      self.mandatory_count += 1
+      # - update board_contents
+      self.board_contents.delete(last_move.to)
+      # - update supply
+      last_move.game_player.supply["settlements"] += 1
+      last_move.game_player.save
+      last_move.destroy
       save
     end
   end
@@ -225,6 +270,13 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "board",
       partial: "games/board",
+      locals: { game: self }
+    )
+    # - game log
+    broadcast_update_to(
+      "game_#{id}",
+      target: "log",
+      partial: "games/log",
       locals: { game: self }
     )
     # - each player
@@ -290,7 +342,7 @@ class Game < ApplicationRecord
 
   def shuffle_terrain_deck
     self.deck = discard.shuffle
-    discard.clear
+    self.discard.clear
     save
   end
 

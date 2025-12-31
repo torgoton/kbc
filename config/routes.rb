@@ -75,6 +75,7 @@ Rails.application.routes.draw do
       post :join
       post :action
       post :end_turn
+      post :undo_move
     end
   end
 
