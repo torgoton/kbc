@@ -4,6 +4,7 @@ class CreateMoves < ActiveRecord::Migration[8.0]
       t.belongs_to :game, null: false, foreign_key: true
       t.belongs_to :game_player, null: false, foreign_key: true
       t.integer :order
+      t.boolean :deliberate
       t.string :action
       t.string :from
       t.string :to

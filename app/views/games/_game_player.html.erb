@@ -8,7 +8,10 @@
   <%= player.player.handle %>
   <span class="player-order"><%= player.order %></span>
 <% end %>
-<%= button_to("End turn", end_turn_game_path(game)) if my_turn && game.turn_endable? %>
+<% if n == 0 %>
+  <%= button_to("End turn", end_turn_game_path(game), disabled: !game.turn_endable?) %>
+  <%= button_to("Undo", undo_move_game_path(game), disabled: !game.undo_allowed?) %>
+<% end %>
 <% display_card = (n == 0 || (game.current_player_id == player.id)) ? player.hand : "B" %>
 <%= content_tag :span, display_card,
   class: "player-card card-#{display_card}" %>

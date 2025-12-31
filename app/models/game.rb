@@ -159,6 +159,7 @@ class Game < ApplicationRecord
     self.moves.create(
       order: move_count,
       game_player: game_player,
+      deliberate: true,
       action: "build",
       from: "supply",
       to: "[#{row}, #{col}]",
@@ -180,6 +181,12 @@ class Game < ApplicationRecord
       return true
     end
     false
+  end
+
+  def undo_allowed?
+    last_move = moves.where(deliberate: true).order(order: :desc).first
+    return false unless last_move
+    last_move.reversible
   end
 
   def turn_state
@@ -209,12 +216,32 @@ class Game < ApplicationRecord
     self.moves.create(
       order: move_count,
       game_player: game_player,
+      deliberate: true,
       action: "end_turn",
       reversible: false,
       message: "#{game_player.player.handle} ended their turn"
     )
     ActiveRecord::Base.transaction do
       game_player.save
+      save
+    end
+  end
+
+  def undo_last_move
+    last_move = moves.where(deliberate: true).order(order: :desc).first
+    return unless last_move
+    Rails.logger.debug("UNDOING last move #{last_move.inspect}")
+    instantiate
+    case last_move.action
+    when "build"
+      self.move_count -= 1
+      self.mandatory_count += 1
+      # - update board_contents
+      self.board_contents.delete(last_move.to)
+      # - update supply
+      last_move.game_player.supply["settlements"] += 1
+      last_move.game_player.save
+      last_move.destroy
       save
     end
   end

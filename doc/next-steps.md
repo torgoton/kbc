@@ -1,5 +1,7 @@
 # Next Steps
 - Undo
+  First step: undo the 1 thing someone can actually do: build from the supply
+  - substep: redesign layout of player area to add undo button and make it prettier
   This is a big deal. You have to be able to undo several things:
   - build from supply
   - select an action

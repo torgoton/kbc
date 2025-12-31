@@ -4,6 +4,7 @@
 #
 #  id             :bigint           not null, primary key
 #  action         :string
+#  deliberate     :boolean
 #  from           :string
 #  message        :string
 #  order          :integer

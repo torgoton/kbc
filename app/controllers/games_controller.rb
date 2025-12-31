@@ -80,6 +80,19 @@ class GamesController < ApplicationController
     redirect_to game_path(@game)
   end
 
+  def undo_move
+    Rails.logger.debug("UNDO MOVE action")
+    @game = Current.user.games.find(params["id"].first)
+    if @game.undo_allowed?
+      @game.undo_last_move
+    end
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
   private
 
   def action_params
