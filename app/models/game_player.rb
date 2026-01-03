@@ -6,6 +6,7 @@
 #  hand       :json
 #  order      :integer
 #  supply     :json
+#  taken_from :json
 #  tiles      :json
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
@@ -29,4 +30,13 @@ class GamePlayer < ApplicationRecord
   has_many :moves, dependent: :destroy
 
   scope :in_player_order, -> { order(order: :asc) }
+
+  def has_taken_from?(r, c)
+    JSON.parse(taken_from || "[]").include?("#{r}, #{c}")
+  end
+
+  def take_from!(r, c)
+    return if has_taken_from?(r, c)
+    update(taken_from: (JSON.parse(taken_from || "[]") << "#{r}, #{c}").to_json)
+  end
 end

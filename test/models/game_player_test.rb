@@ -6,6 +6,7 @@
 #  hand       :json
 #  order      :integer
 #  supply     :json
+#  taken_from :json
 #  tiles      :json
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
