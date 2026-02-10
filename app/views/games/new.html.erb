@@ -1,11 +1,15 @@
 <%= render "fancy" %>
 
-<h1>New Game</h1>
+<div class="dashboard-box">
+  <h1>New Game</h1>
 
-<%= render "form", game: @game %>
+  <div class="fancy-section">
+    <%= render "form", game: @game %>
 
-<br>
+    <br>
 
-<div>
-  <%= link_to "Dashboard", dashboard_path %>
+    <div>
+      <%= link_to "Dashboard", dashboard_path %>
+    </div>
+  </div>
 </div>
