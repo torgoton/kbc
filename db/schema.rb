@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_02_180222) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_14_171251) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -32,6 +32,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_02_180222) do
     t.json "board_contents"
     t.json "boards"
     t.datetime "created_at", null: false
+    t.json "current_action", default: {"name" => "none"}
     t.integer "current_player_id"
     t.json "deck"
     t.json "discard"

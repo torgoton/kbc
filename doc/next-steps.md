@@ -1,14 +1,16 @@
 # Next Steps
 
 ## Bugs
+
+### Exising
+
 - Joining game shows no response
 - Dashboard isn't "live"
 - Map doesn't honor browser zoom
 
-## Tasks
+### Fixed bugs
 
-### Currently working
-- Pick up a tile and put it back on undo
+## Tasks
 
 ### To do
 - Add a way to get from a game to the dashboard
@@ -19,7 +21,7 @@
 - Tile actions: build, move
 - Animations for actions
 
-## Completed tasks
+### Completed tasks
 - Animate selectable cells
 - Make the divisions between board segments obvious
 - Undo build settlement
