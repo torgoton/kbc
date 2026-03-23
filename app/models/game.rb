@@ -243,44 +243,6 @@ class Game < ApplicationRecord
   def undo_last_move
     last_deliberate = moves.where(deliberate: true).order(order: :desc).first
     return unless last_deliberate
-<<<<<<< Updated upstream
-    Rails.logger.debug("UNDOING last move #{last_deliberate.inspect}")
-    instantiate
-    last_move = moves.last
-    # undo all the moves back to and including last_deliberate
-    while last_move && last_move.id > last_deliberate.id - 1
-      Rails.logger.debug(" Undoing move #{last_move.inspect}")
-      case last_move.action
-      when "pickup_tile"
-        from_coords = JSON.parse(last_move.from)
-        gp = last_move.game_player
-        # remove tile from player's supply
-        tile_class = board.content_at(from_coords[0], from_coords[1]).class
-        gp.update(tiles: (JSON.parse(gp.tiles) - [ tile_class.to_s ]).to_json)
-        # remove from list of taken_from
-        froms = JSON.parse(gp.taken_from)
-        froms.delete_at(froms.index(last_move.from[1..-2]))
-        gp.update(taken_from: froms.to_json)
-        # - add tile back to board
-        self.board_contents["[#{from_coords[0]}, #{from_coords[1]}]"]["qty"] += 1
-        gp.save
-        save
-      when "build"
-        self.move_count -= 1
-        self.mandatory_count += 1
-        # - update board_contents
-        self.board_contents.delete(last_deliberate.to)
-        # - update supply
-        last_deliberate.game_player.supply["settlements"] += 1
-        last_deliberate.game_player.save
-        last_deliberate.destroy
-        save
-      else
-        Rails.logger.warn(" Cannot undo action #{last_move.action}")
-      end
-      last_move.destroy
-      last_move = moves.last
-=======
     Rails.logger.debug("UNDOING back to deliberate move #{last_deliberate.inspect}")
     instantiate
     # Undo all moves since (and including) the last deliberate one, in reverse order
@@ -303,7 +265,6 @@ class Game < ApplicationRecord
         move.game_player.save
       end
       move.destroy
->>>>>>> Stashed changes
     end
     save
   end
