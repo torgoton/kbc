@@ -8,7 +8,7 @@
 
 ## Database Setup
 
-In PostgreSQL, create a kbc_dev user and add the SUPERUSER role.
+In PostgreSQL, create a kbcdev user and add the SUPERUSER role.
 
 ## The following is from the Rails template
 

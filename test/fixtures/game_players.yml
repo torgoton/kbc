@@ -7,6 +7,7 @@
 #  hand       :json
 #  order      :integer
 #  supply     :json
+#  taken_from :json
 #  tiles      :json
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
@@ -28,7 +29,7 @@ chris:
   game: game2player
   hand: "T"
   supply: <%= { "settlements" => 40 }.to_json %>
-  tiles: nil
+  tiles: <%= [].to_json %>
   order: 0
 
 paula:
@@ -36,5 +37,5 @@ paula:
   game: game2player
   hand: "D"
   supply: <%= { "settlements" => 40 }.to_json %>
-  tiles: nil
+  tiles: <%= [].to_json %>
   order: 1

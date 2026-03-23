@@ -23,7 +23,7 @@ default: &default
   username: postgres
   password: postgres
   <% else %>
-  username: kbc_dev
+  username: kbcdev
   password: <%= ENV['KBC_DEV_DATABASE_PASSWORD'] %>
   <% end %>
 

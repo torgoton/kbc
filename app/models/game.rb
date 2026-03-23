@@ -48,6 +48,12 @@ class Game < ApplicationRecord
     players << user
   end
 
+  def reset_players
+    game_players.each do |gp|
+      gp.update(order: nil, hand: nil, supply: nil, tiles: nil, taken_from: nil)
+    end
+  end
+
   def playing?
     state.to_s == "playing"
   end
@@ -68,6 +74,9 @@ class Game < ApplicationRecord
         Rails.logger.warn "Cannot start game in state #{state}"
         return false
       end
+    else
+      Rails.logger.debug "FORCING start of game #{id} in state #{state}"
+      reset_players
     end
     self.moves.destroy_all
     self.state = "playing"
@@ -155,9 +164,9 @@ class Game < ApplicationRecord
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
     self.move_count += 1
-    # - create a Move record
+    # - create a Move record (deliberate)
     self.moves.create(
-      order: move_count,
+      order: self.move_count,
       game_player: game_player,
       deliberate: true,
       action: "build",
@@ -172,8 +181,12 @@ class Game < ApplicationRecord
     self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
     self.mandatory_count -= 1
     log("Building settlement at #{row}, #{col} for player #{game_player.order}")
+    # - apply consequential tile pickup if adjacent to a location hex with tiles
+    #   (this increments move_count and creates its own Move record)
+    apply_tile_pickup(game_player, row, col)
     game_player.save
     save
+    pickup_tile(row, col)
   end
 
   def turn_endable?
@@ -214,7 +227,7 @@ class Game < ApplicationRecord
     self.move_count += 1
     # - create a Move record
     self.moves.create(
-      order: move_count,
+      order: self.move_count,
       game_player: game_player,
       deliberate: true,
       action: "end_turn",
@@ -228,22 +241,32 @@ class Game < ApplicationRecord
   end
 
   def undo_last_move
-    last_move = moves.where(deliberate: true).order(order: :desc).first
-    return unless last_move
-    Rails.logger.debug("UNDOING last move #{last_move.inspect}")
+    last_deliberate = moves.where(deliberate: true).order(order: :desc).first
+    return unless last_deliberate
+    Rails.logger.debug("UNDOING back to deliberate move #{last_deliberate.inspect}")
     instantiate
-    case last_move.action
-    when "build"
+    # Undo all moves since (and including) the last deliberate one, in reverse order
+    moves.where("id >= ?", last_deliberate.id).order(id: :desc).each do |move|
+      Rails.logger.debug("  undoing #{move.action} (order #{move.order})")
       self.move_count -= 1
-      self.mandatory_count += 1
-      # - update board_contents
-      self.board_contents.delete(last_move.to)
-      # - update supply
-      last_move.game_player.supply["settlements"] += 1
-      last_move.game_player.save
-      last_move.destroy
-      save
+      case move.action
+      when "build"
+        self.mandatory_count += 1
+        self.board_contents.delete(move.to)
+        move.game_player.supply["settlements"] += 1
+        move.game_player.save
+      when "pick_up_tile"
+        # Return the tile to its location (qty was decremented, never deleted)
+        board_contents_will_change!
+        board_contents[move.from]["qty"] += 1
+        # Remove the tile from the player's collection
+        tiles = move.game_player.tiles || []
+        move.game_player.tiles = tiles.reject { |t| t["from"] == move.from }
+        move.game_player.save
+      end
+      move.destroy
     end
+    save
   end
 
   def broadcast_game_update
@@ -315,6 +338,47 @@ class Game < ApplicationRecord
     Rails.logger.debug msg
   end
 
+  # Check whether building at (row, col) should trigger a tile pickup.
+  # Returns { key:, klass: } if a tile is available at an adjacent location
+  # the player doesn't already hold, or nil otherwise.
+  def find_tile_pickup(game_player, row, col)
+    held_locations = (game_player.tiles || []).map { |t| t["from"] }.to_set
+    ADJACENCIES[row % 2].each do |r, c|
+      adj_r = row + r
+      adj_c = col + c
+      next unless (0..19).include?(adj_r) && (0..19).include?(adj_c)
+      tile_key = "[#{adj_r}, #{adj_c}]"
+      content = board_contents[tile_key]
+      next unless content && content["klass"]&.end_with?("Tile") && content["qty"].to_i > 0
+      next if held_locations.include?(tile_key)
+      return { key: tile_key, klass: content["klass"] }
+    end
+    nil
+  end
+
+  # Create a consequential "pick_up_tile" move and update state accordingly.
+  def apply_tile_pickup(game_player, row, col)
+    tile = find_tile_pickup(game_player, row, col)
+    return unless tile
+
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      deliberate: false,
+      action: "pick_up_tile",
+      from: tile[:key],
+      to: "player_#{game_player.order}",
+      reversible: true,
+      message: "#{game_player.player.handle} picked up a #{tile[:klass].delete_suffix('Tile')} tile"
+    )
+    # Decrement qty in place; entry remains even when qty reaches 0
+    board_contents_will_change!
+    board_contents[tile[:key]]["qty"] -= 1
+    # Add to player's tile collection, tracking which location it came from
+    game_player.tiles = (game_player.tiles || []) + [ { "klass" => tile[:klass], "from" => tile[:key] } ]
+  end
+
   # MVP: Always boards from "First Game"
   def select_boards
     self.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
@@ -330,8 +394,7 @@ class Game < ApplicationRecord
         contents[overall_location(i, loc[:r], loc[:c])] = { klass: "#{loc[:k]}Tile", qty: 2 }
       end
     end
-    self.board_contents = contents
-    save
+    update(board_contents: contents)
     Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
   end
 
@@ -355,6 +418,7 @@ class Game < ApplicationRecord
   def populate_player_supplies
     game_players.each do |p|
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
+      p.update(tiles: [ "mandatory" ].to_json)
     end
     # save no change to the game object
   end
@@ -381,11 +445,42 @@ class Game < ApplicationRecord
 
   def next_card
     card = deck.shift
-    if deck.size < 1
-      shuffle_terrain_deck
-      discard.clear
-    end
+    shuffle_terrain_deck if deck.size < 1
     save
     card
+  end
+
+  def pickup_tile(row, col)
+    Rails.logger.debug("PICKUP TILE around #{row}, #{col}")
+    ADJACENCIES[row % 2].each do |r, c|
+      # quit unless spot is on the map
+      next unless (0..19).include?(row+r) && (0..19).include?(col+c)
+      content = board.content_at(row + r, col + c)
+      # quit unless spot is a tile space
+      next unless content.is_a?(Tiles::Tile)
+      # quit unless there's a tile to pick up
+      next unless content.qty > 0
+      # quit if we have already picked up from here before
+      next if self.current_player.has_taken_from?(row + r, col + c)
+      # create the move record
+      self.move_count += 1
+      self.moves.create(
+        order: self.move_count,
+        game_player: self.current_player,
+        deliberate: false,
+        action: "pickup_tile",
+        from: "[#{row + r}, #{col + c}]",
+        to: "supply",
+        reversible: true,
+        message: "#{current_player.player.handle} picked up a tile"
+      )
+      # mark that we have taken from here
+      self.current_player.take_from!(row + r, col + c)
+      # remove tile from board
+      self.board_contents["[#{row + r}, #{col + c}]"]["qty"] -= 1
+      # add tile to player's supply
+      self.current_player.update(tiles: (JSON.parse(self.current_player.tiles) << content.class).to_json)
+      save
+    end
   end
 end
