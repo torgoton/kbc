@@ -18,9 +18,9 @@
 - Select a tile/action
 - Tile actions: build, move
 - Animations for actions
-- Undo results of builds
 
 ## Completed tasks
 - Animate selectable cells
 - Make the divisions between board segments obvious
 - Undo build settlement
+- Pick up a tile and put it back on undo

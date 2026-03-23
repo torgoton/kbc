@@ -164,7 +164,7 @@ class Game < ApplicationRecord
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     # actually build here
     self.move_count += 1
-    # - create a Move record
+    # - create a Move record (deliberate)
     self.moves.create(
       order: self.move_count,
       game_player: game_player,
@@ -181,6 +181,9 @@ class Game < ApplicationRecord
     self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
     self.mandatory_count -= 1
     log("Building settlement at #{row}, #{col} for player #{game_player.order}")
+    # - apply consequential tile pickup if adjacent to a location hex with tiles
+    #   (this increments move_count and creates its own Move record)
+    apply_tile_pickup(game_player, row, col)
     game_player.save
     save
     pickup_tile(row, col)
@@ -240,6 +243,7 @@ class Game < ApplicationRecord
   def undo_last_move
     last_deliberate = moves.where(deliberate: true).order(order: :desc).first
     return unless last_deliberate
+<<<<<<< Updated upstream
     Rails.logger.debug("UNDOING last move #{last_deliberate.inspect}")
     instantiate
     last_move = moves.last
@@ -276,7 +280,32 @@ class Game < ApplicationRecord
       end
       last_move.destroy
       last_move = moves.last
+=======
+    Rails.logger.debug("UNDOING back to deliberate move #{last_deliberate.inspect}")
+    instantiate
+    # Undo all moves since (and including) the last deliberate one, in reverse order
+    moves.where("id >= ?", last_deliberate.id).order(id: :desc).each do |move|
+      Rails.logger.debug("  undoing #{move.action} (order #{move.order})")
+      self.move_count -= 1
+      case move.action
+      when "build"
+        self.mandatory_count += 1
+        self.board_contents.delete(move.to)
+        move.game_player.supply["settlements"] += 1
+        move.game_player.save
+      when "pick_up_tile"
+        # Return the tile to its location (qty was decremented, never deleted)
+        board_contents_will_change!
+        board_contents[move.from]["qty"] += 1
+        # Remove the tile from the player's collection
+        tiles = move.game_player.tiles || []
+        move.game_player.tiles = tiles.reject { |t| t["from"] == move.from }
+        move.game_player.save
+      end
+      move.destroy
+>>>>>>> Stashed changes
     end
+    save
   end
 
   def broadcast_game_update
@@ -346,6 +375,47 @@ class Game < ApplicationRecord
 
   def log(msg)
     Rails.logger.debug msg
+  end
+
+  # Check whether building at (row, col) should trigger a tile pickup.
+  # Returns { key:, klass: } if a tile is available at an adjacent location
+  # the player doesn't already hold, or nil otherwise.
+  def find_tile_pickup(game_player, row, col)
+    held_locations = (game_player.tiles || []).map { |t| t["from"] }.to_set
+    ADJACENCIES[row % 2].each do |r, c|
+      adj_r = row + r
+      adj_c = col + c
+      next unless (0..19).include?(adj_r) && (0..19).include?(adj_c)
+      tile_key = "[#{adj_r}, #{adj_c}]"
+      content = board_contents[tile_key]
+      next unless content && content["klass"]&.end_with?("Tile") && content["qty"].to_i > 0
+      next if held_locations.include?(tile_key)
+      return { key: tile_key, klass: content["klass"] }
+    end
+    nil
+  end
+
+  # Create a consequential "pick_up_tile" move and update state accordingly.
+  def apply_tile_pickup(game_player, row, col)
+    tile = find_tile_pickup(game_player, row, col)
+    return unless tile
+
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      deliberate: false,
+      action: "pick_up_tile",
+      from: tile[:key],
+      to: "player_#{game_player.order}",
+      reversible: true,
+      message: "#{game_player.player.handle} picked up a #{tile[:klass].delete_suffix('Tile')} tile"
+    )
+    # Decrement qty in place; entry remains even when qty reaches 0
+    board_contents_will_change!
+    board_contents[tile[:key]]["qty"] -= 1
+    # Add to player's tile collection, tracking which location it came from
+    game_player.tiles = (game_player.tiles || []) + [ { "klass" => tile[:klass], "from" => tile[:key] } ]
   end
 
   # MVP: Always boards from "First Game"
