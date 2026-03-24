@@ -10,12 +10,12 @@ module Tiles
       origin_key = "[#{from_row}, #{from_col}]"
       # Collect direct neighbors
       direct = Game::ADJACENCIES[from_row % 2]
-        .map { |r, c| [from_row + r, from_col + c] }
+        .map { |r, c| [ from_row + r, from_col + c ] }
         .select { |r, c| (0..19).include?(r) && (0..19).include?(c) }
       # Collect neighbors-of-neighbors, excluding origin and direct neighbors
       excluded = direct.map { |r, c| "[#{r}, #{c}]" }.to_set << origin_key
       candidates = direct.flat_map do |r, c|
-        Game::ADJACENCIES[r % 2].map { |dr, dc| [r + dr, c + dc] }
+        Game::ADJACENCIES[r % 2].map { |dr, dc| [ r + dr, c + dc ] }
       end
       candidates.select! { |r, c| (0..19).include?(r) && (0..19).include?(c) }
       candidates.uniq!
@@ -33,7 +33,7 @@ module Tiles
         .keys
         .filter_map do |key|
           r, c = key.tr("[]", "").split(", ").map(&:to_i)
-          [r, c] if valid_destinations(r, c, board_contents: board_contents, board: board).any?
+          [ r, c ] if valid_destinations(r, c, board_contents: board_contents, board: board).any?
         end
     end
   end

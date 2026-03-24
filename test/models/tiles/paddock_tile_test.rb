@@ -8,7 +8,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   def setup_board(extra_contents = {})
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ ["Tavern", 0], ["Paddock", 0], ["Oasis", 0], ["Farm", 0] ]
+    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
     game.board_contents = {
       "[0, 14]" => { "klass" => "Settlement", "player" => chris.order }
     }.merge(extra_contents)
@@ -23,13 +23,13 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
     result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
 
-    assert_includes result, [0, 12], "C terrain 2 hops away"
-    assert_includes result, [1, 12], "C terrain 2 hops away"
-    assert_includes result, [0, 16], "D terrain 2 hops away"
-    assert_not_includes result, [0, 14], "origin excluded"
-    assert_not_includes result, [0, 13], "direct neighbor excluded"
-    assert_not_includes result, [2, 13], "M terrain excluded"
-    assert_not_includes result, [2, 15], "W terrain excluded"
+    assert_includes result, [ 0, 12 ], "C terrain 2 hops away"
+    assert_includes result, [ 1, 12 ], "C terrain 2 hops away"
+    assert_includes result, [ 0, 16 ], "D terrain 2 hops away"
+    assert_not_includes result, [ 0, 14 ], "origin excluded"
+    assert_not_includes result, [ 0, 13 ], "direct neighbor excluded"
+    assert_not_includes result, [ 2, 13 ], "M terrain excluded"
+    assert_not_includes result, [ 2, 15 ], "W terrain excluded"
   end
 
   test "valid_destinations excludes occupied cells" do
@@ -38,9 +38,9 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
     result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
 
-    assert_not_includes result, [0, 12], "occupied cell excluded"
-    assert_includes result, [1, 12]
-    assert_includes result, [0, 16]
+    assert_not_includes result, [ 0, 12 ], "occupied cell excluded"
+    assert_includes result, [ 1, 12 ]
+    assert_includes result, [ 0, 16 ]
   end
 
   test "selectable_settlements returns settlements with valid destinations" do
@@ -50,7 +50,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     result = tile.selectable_settlements(ctx[:chris].order,
       board_contents: ctx[:board_contents], board: ctx[:board])
 
-    assert_includes result, [0, 14]
+    assert_includes result, [ 0, 14 ]
   end
 
   test "selectable_settlements excludes settlements with no valid destinations" do
