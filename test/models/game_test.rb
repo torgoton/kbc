@@ -331,6 +331,52 @@ class GameTest < ActiveSupport::TestCase
     assert_includes chris.tiles, expected_tile, "tile must be restored with its original used state"
   end
 
+  test "move_settlement marks the first unused PaddockTile as used" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    # Settlement moves from [5, 5] to [5, 7]. Tile from-hexes [6, 7] and [6, 8]
+    # are both adjacent to [5, 7] (odd row) so they survive apply_tile_forfeit.
+    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    game.save
+    chris.tiles = [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "PaddockTile", "from" => "[6, 7]", "used" => false },
+      { "klass" => "PaddockTile", "from" => "[6, 8]", "used" => false }
+    ]
+    chris.save
+
+    game.move_settlement(5, 7)
+    chris.reload
+
+    paddock_tiles = chris.tiles.select { |t| t["klass"] == "PaddockTile" }
+    assert paddock_tiles.first["used"], "first PaddockTile must be marked used"
+    assert_not paddock_tiles.last["used"], "second PaddockTile must remain unused"
+  end
+
+  test "undo after move_settlement unmarks the first used PaddockTile" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    # Tile from-hex [6, 7] is adjacent to destination [5, 7] (odd row) so it
+    # survives apply_tile_forfeit and remains in the player's tiles after the move.
+    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    game.save
+    chris.tiles = [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "PaddockTile", "from" => "[6, 7]", "used" => false }
+    ]
+    chris.save
+
+    game.move_settlement(5, 7)
+    game.reload
+    game.undo_last_move
+    chris.reload
+
+    paddock_tile = chris.tiles.find { |t| t["klass"] == "PaddockTile" }
+    assert_not paddock_tile["used"], "PaddockTile must be unmarked after undo"
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile

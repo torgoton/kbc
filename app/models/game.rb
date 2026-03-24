@@ -237,6 +237,13 @@ class Game < ApplicationRecord
     board_contents.delete(from)
     board_contents["[#{row}, #{col}]"] = piece
     self.current_action = { "type" => "mandatory" }
+    tiles = current_player.tiles || []
+    idx = tiles.index { |t| t["klass"] == "PaddockTile" && t["used"] == false }
+    if idx
+      updated = tiles.dup
+      updated[idx] = updated[idx].merge("used" => true)
+      current_player.tiles = updated
+    end
     apply_tile_forfeit(current_player)
     current_player.save
     save
@@ -320,6 +327,14 @@ class Game < ApplicationRecord
         piece = board_contents.delete(move.to)
         board_contents[move.from] = piece
         self.current_action = { "type" => "paddock", "from" => move.from }
+        tiles = move.game_player.tiles || []
+        idx = tiles.index { |t| t["klass"] == "PaddockTile" && t["used"] == true }
+        if idx
+          updated = tiles.dup
+          updated[idx] = updated[idx].merge("used" => false)
+          move.game_player.tiles = updated
+          move.game_player.save
+        end
       when "select_action"
         self.current_action = { "type" => "mandatory" }
       when "select_settlement"
