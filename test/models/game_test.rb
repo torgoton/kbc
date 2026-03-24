@@ -118,6 +118,128 @@ class GameTest < ActiveSupport::TestCase
     assert_equal 1, game.board_contents["[2, 7]"]["qty"]
   end
 
+  # Paddock tile action tests
+  #
+  # Setup: Chris holds a Paddock tile. The Paddock action is a two-step deliberate
+  # move: first select the action (announces intent to use the tile), then select
+  # the destination settlement.
+
+  test "select_action with paddock tile sets current_action type" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "PaddockTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.select_action("paddock")
+    game.reload
+
+    assert_equal "paddock", game.current_action["type"]
+  end
+
+  test "select_settlement sets current_action from when in paddock action" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock" }
+    game.save
+
+    game.select_settlement(5, 5)
+    game.reload
+
+    assert_equal "paddock", game.current_action["type"]
+    assert_equal "[5, 5]", game.current_action["from"]
+  end
+
+  test "move_settlement moves the piece and resets current_action to mandatory" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    game.save
+
+    game.move_settlement(5, 7)
+    game.reload
+
+    assert_nil game.board_contents["[5, 5]"], "settlement must leave its old location"
+    assert_equal chris.order, game.board_contents["[5, 7]"]["player"], "settlement must arrive at new location"
+    assert_equal({ "type" => "mandatory" }, game.current_action)
+  end
+
+  test "move_settlement away from a tile location removes the tile from the player" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    # Chris has one settlement at [1,7], which is adjacent to tile location [2,7]
+    game.board_contents = { "[1, 7]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]" } ]
+    chris.save
+
+    # Move to [1,5] — a valid paddock hop, not adjacent to [2,7]
+    game.move_settlement(1, 5)
+
+    assert_empty game_players(:chris).reload.tiles
+  end
+
+  test "undo_last_move after move_settlement returns the piece and restores current_action" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    game.save
+
+    game.move_settlement(5, 7)
+    game.reload
+    game.undo_last_move
+    game.reload
+
+    assert_nil game.board_contents["[5, 7]"], "settlement must leave the destination"
+    assert_equal chris.order, game.board_contents["[5, 5]"]["player"], "settlement must be back at origin"
+    assert_equal "paddock", game.current_action["type"]
+    assert_equal "[5, 5]", game.current_action["from"]
+    assert_equal 0, game.moves.count
+  end
+
+  test "undo_last_move after select_action resets current_action to mandatory" do
+    game = games(:game2player)
+    game.select_action("paddock")
+    game.reload
+
+    game.undo_last_move
+    game.reload
+
+    assert_equal({ "type" => "mandatory" }, game.current_action)
+    assert_equal 0, game.moves.count
+  end
+
+  test "undo_last_move after select_settlement clears the from in current_action" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.current_action = { "type" => "paddock" }
+    game.save
+
+    game.select_settlement(5, 5)
+    game.reload
+    game.undo_last_move
+    game.reload
+
+    assert_equal "paddock", game.current_action["type"]
+    assert_nil game.current_action["from"]
+    assert_equal 0, game.moves.count
+  end
+
+  test "end_turn resets current_action to mandatory" do
+    game = games(:game2player)
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    game.save
+
+    game.end_turn
+    game.reload
+
+    assert_equal({ "type" => "mandatory" }, game.current_action)
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile

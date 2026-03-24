@@ -1,0 +1,8 @@
+<% (player.tiles || []).each do |tile| %>
+  <% type = tile["klass"].delete_suffix("Tile").downcase %>
+  <% used = tile["used"] %>
+  <div class="player-tile <%= type %> <%= used ? 'tile-used' : 'tile-available' %>">
+    <div class="tile location-<%= type %>"></div>
+    <span class="tile-name"><%= type.capitalize %></span>
+  </div>
+<% end %>

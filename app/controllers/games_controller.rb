@@ -51,6 +51,16 @@ class GamesController < ApplicationController
     @game.broadcast_game_update
   end
 
+  def select_action
+    @game = Current.user.games.find(params[:id])
+    @game.select_action(params[:action_type])
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
   def end_turn
     Rails.logger.debug("END TURN action")
     @game = Current.user.games.find(params["id"].first)

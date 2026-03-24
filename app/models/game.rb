@@ -187,7 +187,59 @@ class Game < ApplicationRecord
     apply_tile_pickup(game_player, row, col)
     game_player.save
     save
-    pickup_tile(row, col)
+  end
+
+  def select_action(type)
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: current_player,
+      deliberate: true,
+      action: "select_action",
+      to: type,
+      reversible: true,
+      message: "#{current_player.player.handle} selected the #{type} action"
+    )
+    self.current_action = { "type" => type }
+    save
+  end
+
+  def select_settlement(row, col)
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: current_player,
+      deliberate: true,
+      action: "select_settlement",
+      from: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{current_player.player.handle} selected a settlement at [#{row}, #{col}]"
+    )
+    self.current_action = current_action.merge("from" => "[#{row}, #{col}]")
+    save
+  end
+
+  def move_settlement(row, col)
+    from = current_action["from"]
+    piece = board_contents[from]
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: current_player,
+      deliberate: true,
+      action: "move_settlement",
+      from: from,
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{current_player.player.handle} moved a settlement to [#{row}, #{col}]"
+    )
+    board_contents_will_change!
+    board_contents.delete(from)
+    board_contents["[#{row}, #{col}]"] = piece
+    self.current_action = { "type" => "mandatory" }
+    apply_tile_forfeit(current_player)
+    current_player.save
+    save
   end
 
   def turn_endable?
@@ -221,6 +273,7 @@ class Game < ApplicationRecord
     self.discard.push(game_player.hand)
     game_player.hand = next_card
     self.mandatory_count = MANDATORY_COUNT
+    self.current_action = { "type" => "mandatory" }
     next_order = (current_player.order + 1) % game_players.count
     Rails.logger.debug(" - next in order #{next_order}")
     self.current_player = game_players.find { |p| p.order == next_order }
@@ -256,6 +309,16 @@ class Game < ApplicationRecord
         self.board_contents.delete(move.to)
         move.game_player.supply["settlements"] += 1
         move.game_player.save
+      when "move_settlement"
+        board_contents_will_change!
+        piece = board_contents.delete(move.to)
+        board_contents[move.from] = piece
+        self.current_action = { "type" => "paddock", "from" => move.from }
+      when "select_action"
+        self.current_action = { "type" => "mandatory" }
+      when "select_settlement"
+        current_action_will_change!
+        current_action.delete("from")
       when "pick_up_tile"
         # Return the tile to its location (qty was decremented, never deleted)
         board_contents_will_change!
@@ -337,6 +400,23 @@ class Game < ApplicationRecord
 
   def log(msg)
     Rails.logger.debug msg
+  end
+
+  # Remove any tiles the player holds whose location hex is no longer adjacent
+  # to any of their settlements (called after a Paddock move).
+  def apply_tile_forfeit(game_player)
+    return if (game_player.tiles || []).empty?
+    my_settlements = board_contents
+      .select { |_k, v| v["klass"] == "Settlement" && v["player"] == game_player.order }
+      .keys
+    game_player.tiles = game_player.tiles.reject do |tile|
+      loc = tile["from"]
+      next false unless loc
+      my_settlements.none? do |s_key|
+        s = s_key.tr("[]", "").split(", ").map(&:to_i)
+        ADJACENCIES[s[0] % 2].any? { |r, c| "[#{s[0] + r}, #{s[1] + c}]" == loc }
+      end
+    end
   end
 
   # Check whether building at (row, col) should trigger a tile pickup.
@@ -451,37 +531,4 @@ class Game < ApplicationRecord
     card
   end
 
-  def pickup_tile(row, col)
-    Rails.logger.debug("PICKUP TILE around #{row}, #{col}")
-    ADJACENCIES[row % 2].each do |r, c|
-      # quit unless spot is on the map
-      next unless (0..19).include?(row+r) && (0..19).include?(col+c)
-      content = board.content_at(row + r, col + c)
-      # quit unless spot is a tile space
-      next unless content.is_a?(Tiles::Tile)
-      # quit unless there's a tile to pick up
-      next unless content.qty > 0
-      # quit if we have already picked up from here before
-      next if self.current_player.has_taken_from?(row + r, col + c)
-      # create the move record
-      self.move_count += 1
-      self.moves.create(
-        order: self.move_count,
-        game_player: self.current_player,
-        deliberate: false,
-        action: "pickup_tile",
-        from: "[#{row + r}, #{col + c}]",
-        to: "supply",
-        reversible: true,
-        message: "#{current_player.player.handle} picked up a tile"
-      )
-      # mark that we have taken from here
-      self.current_player.take_from!(row + r, col + c)
-      # remove tile from board
-      self.board_contents["[#{row + r}, #{col + c}]"]["qty"] -= 1
-      # add tile to player's supply
-      self.current_player.update(tiles: (JSON.parse(self.current_player.tiles) << content.class).to_json)
-      save
-    end
-  end
 end

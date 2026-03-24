@@ -33,3 +33,5 @@ game2player:
   mandatory_count: 3
   state: "playing"
   move_count: 0
+  current_action:
+    type: "mandatory"
