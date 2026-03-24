@@ -333,6 +333,11 @@ class Game < ApplicationRecord
         tiles = move.game_player.tiles || []
         move.game_player.tiles = tiles.reject { |t| t["from"] == move.from }
         move.game_player.save
+      when "forfeit_tile"
+        klass = board_contents[move.from]["klass"]
+        tiles = move.game_player.tiles || []
+        move.game_player.tiles = tiles + [ { "klass" => klass, "from" => move.from, "used" => move.to == "true" } ]
+        move.game_player.save
       end
       move.destroy
     end
@@ -418,10 +423,25 @@ class Game < ApplicationRecord
     game_player.tiles = game_player.tiles.reject do |tile|
       loc = tile["from"]
       next false unless loc
-      my_settlements.none? do |s_key|
+      should_forfeit = my_settlements.none? do |s_key|
         s = s_key.tr("[]", "").split(", ").map(&:to_i)
         ADJACENCIES[s[0] % 2].any? { |r, c| "[#{s[0] + r}, #{s[1] + c}]" == loc }
       end
+      if should_forfeit && board_contents[loc]
+        klass = board_contents[loc]["klass"]
+        self.move_count += 1
+        self.moves.create(
+          order: move_count,
+          game_player: game_player,
+          deliberate: false,
+          action: "forfeit_tile",
+          reversible: true,
+          from: loc,
+          to: tile["used"].to_s,
+          message: "#{game_player.player.handle} forfeited a #{klass.delete_suffix('Tile').downcase} tile"
+        )
+      end
+      should_forfeit
     end
   end
 

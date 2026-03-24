@@ -283,6 +283,54 @@ class GameTest < ActiveSupport::TestCase
     assert game.tile_activatable?(tile)
   end
 
+  test "apply_tile_forfeit creates a forfeit_tile Move record for each forfeited tile" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    # Settlement moved to [1,5] — not adjacent to tile location [2,7]. Tile forfeited.
+    game.boards = [ ["Oasis", 0], ["Paddock", 0], ["Farm", 0], ["Tavern", 0] ]
+    game.board_contents = {
+      "[2, 7]" => { "klass" => "OasisTile", "qty" => 0 },
+      "[1, 7]" => { "klass" => "Settlement", "player" => chris.order }
+    }
+    game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.move_settlement(1, 5)
+
+    forfeit_move = game.moves.find_by(action: "forfeit_tile")
+    assert forfeit_move, "forfeit_tile Move must be created"
+    assert_equal false, forfeit_move.deliberate
+    assert_equal true, forfeit_move.reversible
+    assert_equal "[2, 7]", forfeit_move.from
+    assert_equal "false", forfeit_move.to
+    assert_equal chris, forfeit_move.game_player
+  end
+
+  test "undo after move_settlement that forfeits a tile restores the tile" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ ["Oasis", 0], ["Paddock", 0], ["Farm", 0], ["Tavern", 0] ]
+    game.board_contents = {
+      "[2, 7]" => { "klass" => "OasisTile", "qty" => 0 },
+      "[1, 7]" => { "klass" => "Settlement", "player" => chris.order }
+    }
+    game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.move_settlement(1, 5)
+    game.reload
+    game.undo_last_move
+    game.reload
+
+    chris.reload
+    expected_tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+    assert_includes chris.tiles, expected_tile, "tile must be restored with its original used state"
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile
