@@ -52,7 +52,7 @@ class GameTest < ActiveSupport::TestCase
 
     assert_equal 1, game.board_contents["[2, 7]"]["qty"]
     chris = game_players(:chris).reload
-    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]" } ], chris.tiles
+    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true } ], chris.tiles
     assert_equal 2, game.moves.count  # deliberate build + consequential pick_up_tile
     assert game.moves.exists?(action: "pick_up_tile", deliberate: false)
   end
@@ -238,6 +238,14 @@ class GameTest < ActiveSupport::TestCase
     game.reload
 
     assert_equal({ "type" => "mandatory" }, game.current_action)
+  end
+
+  test "populate_player_supplies initializes tiles with MandatoryTile hash" do
+    game = games(:game2player)
+    game.send(:populate_player_supplies)
+
+    chris = game_players(:chris).reload
+    assert_equal [{ "klass" => "MandatoryTile", "used" => true }], chris.tiles
   end
 
   private

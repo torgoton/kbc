@@ -8,7 +8,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "game show includes a tile element for the mandatory action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    chris.tiles = [ { "klass" => "Mandatory", "used" => false } ]
+    chris.tiles = [ { "klass" => "MandatoryTile", "used" => false } ]
     chris.save
 
     get game_url(game)

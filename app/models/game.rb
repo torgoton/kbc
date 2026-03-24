@@ -457,7 +457,7 @@ class Game < ApplicationRecord
     board_contents_will_change!
     board_contents[tile[:key]]["qty"] -= 1
     # Add to player's tile collection, tracking which location it came from
-    game_player.tiles = (game_player.tiles || []) + [ { "klass" => tile[:klass], "from" => tile[:key] } ]
+    game_player.tiles = (game_player.tiles || []) + [ { "klass" => tile[:klass], "from" => tile[:key], "used" => true } ]
   end
 
   # MVP: Always boards from "First Game"
@@ -499,7 +499,7 @@ class Game < ApplicationRecord
   def populate_player_supplies
     game_players.each do |p|
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
-      p.update(tiles: [ "mandatory" ].to_json)
+      p.update(tiles: [{ "klass" => "MandatoryTile", "used" => true }])
     end
     # save no change to the game object
   end
