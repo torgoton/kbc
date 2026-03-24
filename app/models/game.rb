@@ -242,6 +242,12 @@ class Game < ApplicationRecord
     save
   end
 
+  def tile_activatable?(tile)
+    return false if tile["used"]
+    mandatory_count == MANDATORY_COUNT || mandatory_count <= 0 ||
+      current_player.supply["settlements"] == 0
+  end
+
   def turn_endable?
     if (mandatory_count <= 0) || current_player.supply["settlements"] == 0
       return true

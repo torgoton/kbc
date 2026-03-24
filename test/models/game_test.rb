@@ -248,6 +248,41 @@ class GameTest < ActiveSupport::TestCase
     assert_equal [{ "klass" => "MandatoryTile", "used" => true }], chris.tiles
   end
 
+  test "tile_activatable? is false when tile is used" do
+    game = games(:game2player)
+    tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => true }
+    assert_not game.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? is true when tile is unused and mandatory_count equals MANDATORY_COUNT" do
+    game = games(:game2player)
+    # mandatory_count starts at 3 = MANDATORY_COUNT in fixture
+    tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
+    assert game.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? is false when mandatory_count is mid-build" do
+    game = games(:game2player)
+    game.mandatory_count = 1
+    tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
+    assert_not game.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? is true when mandatory_count is 0" do
+    game = games(:game2player)
+    game.mandatory_count = 0
+    tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
+    assert game.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? is true when supply is 0 regardless of mandatory_count" do
+    game = games(:game2player)
+    game.mandatory_count = 1
+    game.current_player.supply["settlements"] = 0
+    tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
+    assert game.tile_activatable?(tile)
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile
