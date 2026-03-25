@@ -1,29 +1,33 @@
 module Tiles
   class PaddockTile < Tiles::Tile
     BUILDABLE_TERRAIN = %w[C D F T G].freeze
+    # Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
+    STRAIGHT_LINES = [
+      [ [ 0, -1 ], [ 0, -1 ] ],   # W
+      [ [ 0,  1 ], [ 0,  1 ] ],   # E
+      [ [ -1, -1 ], [ -1, 0 ] ],  # NW
+      [ [ -1,  0 ], [ -1, 1 ] ],  # NE
+      [ [ 1, -1 ],  [ 1, 0 ] ],   # SW
+      [ [ 1,  0 ],  [ 1, 1 ] ]    # SE
+    ].freeze
 
     def location_index
       13
     end
 
     def valid_destinations(from_row, from_col, board_contents:, board:)
-      origin_key = "[#{from_row}, #{from_col}]"
-      # Collect direct neighbors
-      direct = Game::ADJACENCIES[from_row % 2]
-        .map { |r, c| [ from_row + r, from_col + c ] }
-        .select { |r, c| (0..19).include?(r) && (0..19).include?(c) }
-      # Collect neighbors-of-neighbors, excluding origin and direct neighbors
-      excluded = direct.map { |r, c| "[#{r}, #{c}]" }.to_set << origin_key
-      candidates = direct.flat_map do |r, c|
-        Game::ADJACENCIES[r % 2].map { |dr, dc| [ r + dr, c + dc ] }
-      end
-      candidates.select! { |r, c| (0..19).include?(r) && (0..19).include?(c) }
-      candidates.uniq!
-      candidates.reject! { |r, c| excluded.include?("[#{r}, #{c}]") }
-      # Filter: empty and buildable terrain
-      candidates.select do |r, c|
-        board_contents["[#{r}, #{c}]"].nil? &&
-          BUILDABLE_TERRAIN.include?(board.terrain_at(r, c))
+      STRAIGHT_LINES.filter_map do |steps|
+        dr1, dc1 = steps[from_row % 2]
+        r1 = from_row + dr1
+        c1 = from_col + dc1
+        next unless (0..19).cover?(r1) && (0..19).cover?(c1)
+        dr2, dc2 = steps[r1 % 2]
+        r2 = r1 + dr2
+        c2 = c1 + dc2
+        next unless (0..19).cover?(r2) && (0..19).cover?(c2)
+        next unless board_contents["[#{r2}, #{c2}]"].nil?
+        next unless BUILDABLE_TERRAIN.include?(board.terrain_at(r2, c2))
+        [ r2, c2 ]
       end
     end
 

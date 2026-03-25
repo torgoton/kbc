@@ -66,37 +66,32 @@ function cellKeyToCellId(key) {
 
 function paddockDestinations(cellId) {
   const BUILDABLE = ["terrain-c", "terrain-d", "terrain-f", "terrain-t", "terrain-g"];
-  const ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
-                        [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ];
+  // Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
+  const STRAIGHT_LINES = [
+    [ [0, -1], [0, -1] ],   // W
+    [ [0,  1], [0,  1] ],   // E
+    [ [-1, -1], [-1, 0] ],  // NW
+    [ [-1,  0], [-1, 1] ],  // NE
+    [ [1, -1],  [1, 0] ],   // SW
+    [ [1,  0],  [1, 1] ]    // SE
+  ];
   const row = Number(cellId.split("-")[2]);
   const col = Number(cellId.split("-")[3]);
-
-  const direct = new Set();
-  ADJACENCIES[row % 2].forEach(([dr, dc]) => {
-    const r = row + dr, c = col + dc;
-    if (r >= 0 && r <= 19 && c >= 0 && c <= 19) direct.add(`map-cell-${r}-${c}`);
-  });
-
-  const excluded = new Set([...direct, cellId]);
-  const candidates = new Map();
-  direct.forEach(nId => {
-    const nr = Number(nId.split("-")[2]);
-    const nc = Number(nId.split("-")[3]);
-    ADJACENCIES[nr % 2].forEach(([dr, dc]) => {
-      const r = nr + dr, c = nc + dc;
-      if (r >= 0 && r <= 19 && c >= 0 && c <= 19) {
-        const id = `map-cell-${r}-${c}`;
-        if (!excluded.has(id)) candidates.set(id, true);
-      }
-    });
-  });
-
-  return [...candidates.keys()].filter(id => {
+  const results = [];
+  STRAIGHT_LINES.forEach(steps => {
+    const [dr1, dc1] = steps[row % 2];
+    const r1 = row + dr1, c1 = col + dc1;
+    if (r1 < 0 || r1 > 19 || c1 < 0 || c1 > 19) return;
+    const [dr2, dc2] = steps[r1 % 2];
+    const r2 = r1 + dr2, c2 = c1 + dc2;
+    if (r2 < 0 || r2 > 19 || c2 < 0 || c2 > 19) return;
+    const id = `map-cell-${r2}-${c2}`;
     const cell = document.getElementById(id);
-    if (!cell) return false;
-    if (cell.querySelector(".hex-settlement")) return false;
-    return BUILDABLE.some(cls => cell.classList.contains(cls));
+    if (!cell) return;
+    if (cell.querySelector(".hex-settlement")) return;
+    if (BUILDABLE.some(cls => cell.classList.contains(cls))) results.push(id);
   });
+  return results;
 }
 
 function markSelectableSettlements() {

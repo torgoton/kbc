@@ -2,9 +2,10 @@ require "test_helper"
 
 class Tiles::PaddockTileTest < ActiveSupport::TestCase
   # Paddock board at index 1 of the default setup occupies cols 10–19, rows 0–9.
-  # A settlement at overall (0,14) = 'D' has buildable 2-hop destinations:
-  #   (0,12)=C, (1,12)=C, (0,16)=D
-  # Non-buildable 2-hops: (2,13)=M, (2,14)=M, (2,15)=W
+  # A settlement at overall (0,14) = 'D' has buildable straight-line 2-hop destinations:
+  #   (0,12)=C (W), (0,16)=D (E)
+  # SW lands on (2,13)=M and SE lands on (2,15)=W — excluded by terrain.
+  # NW/NE are out of bounds. (1,12) is reachable in 2 hops but NOT a straight line.
   def setup_board(extra_contents = {})
     game = games(:game2player)
     chris = game_players(:chris)
@@ -23,13 +24,13 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
     result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
 
-    assert_includes result, [ 0, 12 ], "C terrain 2 hops away"
-    assert_includes result, [ 1, 12 ], "C terrain 2 hops away"
-    assert_includes result, [ 0, 16 ], "D terrain 2 hops away"
+    assert_includes result, [ 0, 12 ], "C terrain straight W 2 hops away"
+    assert_includes result, [ 0, 16 ], "D terrain straight E 2 hops away"
     assert_not_includes result, [ 0, 14 ], "origin excluded"
     assert_not_includes result, [ 0, 13 ], "direct neighbor excluded"
     assert_not_includes result, [ 2, 13 ], "M terrain excluded"
     assert_not_includes result, [ 2, 15 ], "W terrain excluded"
+    assert_not_includes result, [ 1, 12 ], "not a straight-line destination"
   end
 
   test "valid_destinations excludes occupied cells" do
@@ -39,7 +40,6 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
 
     assert_not_includes result, [ 0, 12 ], "occupied cell excluded"
-    assert_includes result, [ 1, 12 ]
     assert_includes result, [ 0, 16 ]
   end
 
@@ -56,7 +56,6 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   test "selectable_settlements excludes settlements with no valid destinations" do
     ctx = setup_board(
       "[0, 12]" => { "klass" => "Settlement", "player" => 1 },
-      "[1, 12]" => { "klass" => "Settlement", "player" => 1 },
       "[0, 16]" => { "klass" => "Settlement", "player" => 1 }
     )
     tile = Tiles::PaddockTile.new(0)
