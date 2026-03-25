@@ -245,7 +245,7 @@ class GameTest < ActiveSupport::TestCase
     game.send(:populate_player_supplies)
 
     chris = game_players(:chris).reload
-    assert_equal [{ "klass" => "MandatoryTile", "used" => true }], chris.tiles
+    assert_equal [ { "klass" => "MandatoryTile", "used" => true } ], chris.tiles
   end
 
   test "tile_activatable? is false when tile is used" do
@@ -287,7 +287,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     # Settlement moved to [1,5] — not adjacent to tile location [2,7]. Tile forfeited.
-    game.boards = [ ["Oasis", 0], ["Paddock", 0], ["Farm", 0], ["Tavern", 0] ]
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
     game.board_contents = {
       "[2, 7]" => { "klass" => "OasisTile", "qty" => 0 },
       "[1, 7]" => { "klass" => "Settlement", "player" => chris.order }
@@ -311,7 +311,7 @@ class GameTest < ActiveSupport::TestCase
   test "undo after move_settlement that forfeits a tile restores the tile" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ ["Oasis", 0], ["Paddock", 0], ["Farm", 0], ["Tavern", 0] ]
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
     game.board_contents = {
       "[2, 7]" => { "klass" => "OasisTile", "qty" => 0 },
       "[1, 7]" => { "klass" => "Settlement", "player" => chris.order }

@@ -221,6 +221,7 @@ class Game < ApplicationRecord
   end
 
   def move_settlement(row, col)
+    instantiate
     from = current_action["from"]
     piece = board_contents[from]
     self.move_count += 1
@@ -548,7 +549,7 @@ class Game < ApplicationRecord
   def populate_player_supplies
     game_players.each do |p|
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
-      p.update(tiles: [{ "klass" => "MandatoryTile", "used" => true }])
+      p.update(tiles: [ { "klass" => "MandatoryTile", "used" => true } ])
     end
     # save no change to the game object
   end
@@ -579,5 +580,4 @@ class Game < ApplicationRecord
     save
     card
   end
-
 end
