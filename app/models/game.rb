@@ -90,6 +90,7 @@ class Game < ApplicationRecord
     populate_player_supplies
     deal_terrain_cards
     choose_start_player
+    self.current_action = { "type" => "mandatory" }
     save
   end
 
