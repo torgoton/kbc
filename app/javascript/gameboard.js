@@ -18,14 +18,14 @@ function highlightTerrain(card) {
 function enableClicks() {
   document.querySelector("#board").
     addEventListener("click", function (e) {
-      const selectable = e.target.classList.contains("selectable");
-      if (!selectable) {
+      const hex = e.target.closest(".hex");
+      if (!hex || !hex.classList.contains("selectable")) {
         // console.log("click not OK here");
         return;
       }
-      console.log("Click target: " + e.target.id);
+      console.log("Click target: " + hex.id);
       e.preventDefault();
-      document.getElementById("build_cell").value = e.target.id;
+      document.getElementById("build_cell").value = hex.id;
       document.getElementById("action_submit").click();
     });
 }
