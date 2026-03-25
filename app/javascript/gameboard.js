@@ -53,11 +53,71 @@ function adjacent_list(cell_id) {
 }
 
 function unmarkAvailableCells() {
-  // remove all selectable classes
-  document.querySelectorAll(".cell-content").forEach(c => {
+  document.querySelectorAll(".hex").forEach(c => {
     c.classList.remove("selectable");
+    c.classList.remove("selected");
   });
-};
+}
+
+function cellKeyToCellId(key) {
+  const parts = key.replace(/[\[\] ]/g, "").split(",");
+  return `map-cell-${parts[0]}-${parts[1]}`;
+}
+
+function paddockDestinations(cellId) {
+  const BUILDABLE = ["terrain-c", "terrain-d", "terrain-f", "terrain-t", "terrain-g"];
+  const ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
+                        [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ];
+  const row = Number(cellId.split("-")[2]);
+  const col = Number(cellId.split("-")[3]);
+
+  const direct = new Set();
+  ADJACENCIES[row % 2].forEach(([dr, dc]) => {
+    const r = row + dr, c = col + dc;
+    if (r >= 0 && r <= 19 && c >= 0 && c <= 19) direct.add(`map-cell-${r}-${c}`);
+  });
+
+  const excluded = new Set([...direct, cellId]);
+  const candidates = new Map();
+  direct.forEach(nId => {
+    const nr = Number(nId.split("-")[2]);
+    const nc = Number(nId.split("-")[3]);
+    ADJACENCIES[nr % 2].forEach(([dr, dc]) => {
+      const r = nr + dr, c = nc + dc;
+      if (r >= 0 && r <= 19 && c >= 0 && c <= 19) {
+        const id = `map-cell-${r}-${c}`;
+        if (!excluded.has(id)) candidates.set(id, true);
+      }
+    });
+  });
+
+  return [...candidates.keys()].filter(id => {
+    const cell = document.getElementById(id);
+    if (!cell) return false;
+    if (cell.querySelector(".hex-settlement")) return false;
+    return BUILDABLE.some(cls => cell.classList.contains(cls));
+  });
+}
+
+function markSelectableSettlements() {
+  const playerNo = parseInt(document.querySelector(".handle .player-order").innerText);
+  document.querySelectorAll(`.hex-settlement.player-${playerNo}`).forEach(s => {
+    const cell = s.closest(".hex");
+    if (!cell) return;
+    if (paddockDestinations(cell.id).length > 0) {
+      cell.classList.add("selectable");
+    }
+  });
+}
+
+function markPaddockDestinations(from) {
+  const fromCell = document.getElementById(from);
+  if (fromCell) fromCell.classList.add("selected");
+  paddockDestinations(from).forEach(id => {
+    const cell = document.getElementById(id);
+    if (cell) cell.classList.add("selectable");
+  });
+}
 
 function markAvailableCells() {
   card = document.querySelector("span.player-card").innerText.toLowerCase();
@@ -131,17 +191,26 @@ function setupPolling() {
 }
 
 function prepForMove() {
-  // is it my turn?
   console.log("Is it my turn?");
   unmarkAvailableCells();
   if (!document.querySelector(".handle.my-turn")) {
-    // no, quit
     console.log(" - nope");
     return;
-  };
+  }
   console.log("It's my turn!");
-  // show selectable cells
-  markAvailableCells();
+  const actionEl = document.getElementById("current-action");
+  const actionType = actionEl ? actionEl.dataset.type : "mandatory";
+  const actionFrom = actionEl ? actionEl.dataset.from : null;
+
+  if (actionType === "paddock") {
+    if (actionFrom) {
+      markPaddockDestinations(cellKeyToCellId(actionFrom));
+    } else {
+      markSelectableSettlements();
+    }
+  } else {
+    markAvailableCells();
+  }
 }
 
 // set up polling for updates
