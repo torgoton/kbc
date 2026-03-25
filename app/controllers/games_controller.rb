@@ -41,7 +41,16 @@ class GamesController < ApplicationController
     target = action_params[1]
     row = target.match(/-\d*-/).to_s[1..-2].to_i
     col = target.match(/-\d*\z/).to_s[1..-1].to_i
-    @game.build_settlement(row, col)
+    case @game.current_action["type"]
+    when "paddock"
+      if @game.current_action["from"]
+        @game.move_settlement(row, col)
+      else
+        @game.select_settlement(row, col)
+      end
+    else
+      @game.build_settlement(row, col)
+    end
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -64,7 +73,7 @@ class GamesController < ApplicationController
   def end_turn
     Rails.logger.debug("END TURN action")
     @game = Current.user.games.find(params["id"].first)
-    @game.end_turn if @game.mandatory_count <= 0
+    @game.end_turn if @game.turn_endable?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
