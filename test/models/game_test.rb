@@ -393,6 +393,48 @@ class GameTest < ActiveSupport::TestCase
       "all incoming player tiles must be reset to used: false"
   end
 
+  test "turn_endable? returns false when paddock action is in progress" do
+    game = games(:game2player)
+    game.mandatory_count = 0
+    game.current_action = { "type" => "paddock" }
+    assert_not game.turn_endable?
+  end
+
+  test "turn_endable? returns false when paddock action has from selected" do
+    game = games(:game2player)
+    game.mandatory_count = 0
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    assert_not game.turn_endable?
+  end
+
+  test "turn_endable? returns true when mandatory action is complete" do
+    game = games(:game2player)
+    game.mandatory_count = 0
+    game.current_action = { "type" => "mandatory" }
+    assert game.turn_endable?
+  end
+
+  test "turn_endable? returns true when supply is 0 and action is mandatory" do
+    game = games(:game2player)
+    game.current_action = { "type" => "mandatory" }
+    chris = game_players(:chris)
+    chris.supply = { "settlements" => 0 }
+    chris.save
+    assert game.turn_endable?
+  end
+
+  test "turn_state returns must move a settlement when paddock has no from" do
+    game = games(:game2player)
+    game.current_action = { "type" => "paddock" }
+    assert_match(/must move a settlement/, game.turn_state)
+  end
+
+  test "turn_state returns must move a settlement when paddock has from set" do
+    game = games(:game2player)
+    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
+    assert_match(/must move a settlement/, game.turn_state)
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile

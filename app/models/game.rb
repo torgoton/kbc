@@ -256,10 +256,8 @@ class Game < ApplicationRecord
   end
 
   def turn_endable?
-    if (mandatory_count <= 0) || current_player.supply["settlements"] == 0
-      return true
-    end
-    false
+    current_action["type"] == "mandatory" &&
+      (mandatory_count <= 0 || current_player.supply["settlements"] == 0)
   end
 
   def undo_allowed?
@@ -269,12 +267,17 @@ class Game < ApplicationRecord
   end
 
   def turn_state
-    if mandatory_count > 0 && current_player.supply["settlements"] > 0
-      "#{current_player.player.handle} must build " \
-      "#{ActionController::Base.helpers.pluralize(mandatory_count, "settlement")} on " \
-      "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}"
+    case current_action["type"]
+    when "paddock"
+      "#{current_player.player.handle} must move a settlement"
     else
-      "#{current_player.player.handle} must end their turn"
+      if mandatory_count > 0 && current_player.supply["settlements"] > 0
+        "#{current_player.player.handle} must build " \
+        "#{ActionController::Base.helpers.pluralize(mandatory_count, "settlement")} on " \
+        "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}"
+      else
+        "#{current_player.player.handle} must end their turn"
+      end
     end
   end
 
