@@ -291,6 +291,9 @@ class Game < ApplicationRecord
     Rails.logger.debug(" - next in order #{next_order}")
     self.current_player = game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{current_player.inspect}")
+    if current_player.tiles
+      current_player.tiles = current_player.tiles.map { |t| t.merge("used" => false) }
+    end
     self.move_count += 1
     # - create a Move record
     self.moves.create(
@@ -303,6 +306,7 @@ class Game < ApplicationRecord
     )
     ActiveRecord::Base.transaction do
       game_player.save
+      current_player.save
       save
     end
   end

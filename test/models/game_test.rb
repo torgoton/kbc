@@ -377,6 +377,22 @@ class GameTest < ActiveSupport::TestCase
     assert_not paddock_tile["used"], "PaddockTile must be unmarked after undo"
   end
 
+  test "end_turn resets all incoming player tiles to used false" do
+    game = games(:game2player)
+    paula = game_players(:paula)
+    paula.tiles = [
+      { "klass" => "MandatoryTile", "used" => true },
+      { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => true }
+    ]
+    paula.save
+
+    game.end_turn
+    paula.reload
+
+    assert paula.tiles.all? { |t| t["used"] == false },
+      "all incoming player tiles must be reset to used: false"
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile
