@@ -70,4 +70,38 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
     assert_equal 3, game.reload.mandatory_count
   end
+
+  test "game show renders a button for an activatable PaddockTile" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    chris.tiles = [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
+    ]
+    chris.save
+
+    get game_url(game)
+
+    assert_select "form[action='#{select_action_game_path(game)}'] button", minimum: 1
+  end
+
+  test "game show does not render a button for a used PaddockTile" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    chris.tiles = [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => true }
+    ]
+    chris.save
+
+    get game_url(game)
+
+    assert_select "form[action='#{select_action_game_path(game)}'] button", count: 0
+  end
+
+  test "game show includes current-action span with data attributes" do
+    game = games(:game2player)
+    get game_url(game)
+    assert_select "span#current-action[data-type='mandatory']"
+  end
 end
