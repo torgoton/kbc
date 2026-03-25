@@ -18,14 +18,14 @@ function highlightTerrain(card) {
 function enableClicks() {
   document.querySelector("#board").
     addEventListener("click", function (e) {
-      const selectable = e.target.classList.contains("selectable");
-      if (!selectable) {
+      const hex = e.target.closest(".hex");
+      if (!hex || !hex.classList.contains("selectable")) {
         // console.log("click not OK here");
         return;
       }
-      console.log("Click target: " + e.target.id);
+      console.log("Click target: " + hex.id);
       e.preventDefault();
-      document.getElementById("build_cell").value = e.target.id;
+      document.getElementById("build_cell").value = hex.id;
       document.getElementById("action_submit").click();
     });
 }
@@ -53,11 +53,66 @@ function adjacent_list(cell_id) {
 }
 
 function unmarkAvailableCells() {
-  // remove all selectable classes
-  document.querySelectorAll(".cell-content").forEach(c => {
+  document.querySelectorAll(".hex").forEach(c => {
     c.classList.remove("selectable");
+    c.classList.remove("selected");
   });
-};
+}
+
+function cellKeyToCellId(key) {
+  const parts = key.replace(/[\[\] ]/g, "").split(",");
+  return `map-cell-${parts[0]}-${parts[1]}`;
+}
+
+function paddockDestinations(cellId) {
+  const BUILDABLE = ["terrain-c", "terrain-d", "terrain-f", "terrain-t", "terrain-g"];
+  // Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
+  const STRAIGHT_LINES = [
+    [ [0, -1], [0, -1] ],   // W
+    [ [0,  1], [0,  1] ],   // E
+    [ [-1, -1], [-1, 0] ],  // NW
+    [ [-1,  0], [-1, 1] ],  // NE
+    [ [1, -1],  [1, 0] ],   // SW
+    [ [1,  0],  [1, 1] ]    // SE
+  ];
+  const row = Number(cellId.split("-")[2]);
+  const col = Number(cellId.split("-")[3]);
+  const results = [];
+  STRAIGHT_LINES.forEach(steps => {
+    const [dr1, dc1] = steps[row % 2];
+    const r1 = row + dr1, c1 = col + dc1;
+    if (r1 < 0 || r1 > 19 || c1 < 0 || c1 > 19) return;
+    const [dr2, dc2] = steps[r1 % 2];
+    const r2 = r1 + dr2, c2 = c1 + dc2;
+    if (r2 < 0 || r2 > 19 || c2 < 0 || c2 > 19) return;
+    const id = `map-cell-${r2}-${c2}`;
+    const cell = document.getElementById(id);
+    if (!cell) return;
+    if (cell.querySelector(".hex-settlement")) return;
+    if (BUILDABLE.some(cls => cell.classList.contains(cls))) results.push(id);
+  });
+  return results;
+}
+
+function markSelectableSettlements() {
+  const playerNo = parseInt(document.querySelector(".handle .player-order").innerText);
+  document.querySelectorAll(`.hex-settlement.player-${playerNo}`).forEach(s => {
+    const cell = s.closest(".hex");
+    if (!cell) return;
+    if (paddockDestinations(cell.id).length > 0) {
+      cell.classList.add("selectable");
+    }
+  });
+}
+
+function markPaddockDestinations(from) {
+  const fromCell = document.getElementById(from);
+  if (fromCell) fromCell.classList.add("selected");
+  paddockDestinations(from).forEach(id => {
+    const cell = document.getElementById(id);
+    if (cell) cell.classList.add("selectable");
+  });
+}
 
 function markAvailableCells() {
   card = document.querySelector("span.player-card").innerText.toLowerCase();
@@ -131,17 +186,26 @@ function setupPolling() {
 }
 
 function prepForMove() {
-  // is it my turn?
   console.log("Is it my turn?");
   unmarkAvailableCells();
   if (!document.querySelector(".handle.my-turn")) {
-    // no, quit
     console.log(" - nope");
     return;
-  };
+  }
   console.log("It's my turn!");
-  // show selectable cells
-  markAvailableCells();
+  const actionEl = document.getElementById("current-action");
+  const actionType = actionEl ? actionEl.dataset.type : "mandatory";
+  const actionFrom = actionEl ? actionEl.dataset.from : null;
+
+  if (actionType === "paddock") {
+    if (actionFrom) {
+      markPaddockDestinations(cellKeyToCellId(actionFrom));
+    } else {
+      markSelectableSettlements();
+    }
+  } else {
+    markAvailableCells();
+  }
 }
 
 // set up polling for updates

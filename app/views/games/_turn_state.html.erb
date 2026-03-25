@@ -1,3 +1,7 @@
 <%= game.turn_state %>
-<span class="mandatory-count"><%= game.mandatory_count %>
+<span class="mandatory-count"><%= game.mandatory_count %></span>
+<span id="current-action"
+  data-type="<%= game.current_action&.dig('type') %>"
+  data-from="<%= game.current_action&.dig('from') %>">
+</span>
 

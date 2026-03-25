@@ -18,5 +18,5 @@
 <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
 x
 <%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
-<%#= render "games/tiles", locals: {game: game} %>
+<%= render partial: "games/tiles", locals: { game:, player:, n: } %>
 
