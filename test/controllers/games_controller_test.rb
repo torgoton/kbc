@@ -28,7 +28,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game = games(:game2player)
     chris = game_players(:chris)
     game.current_action = { "type" => "paddock" }
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.save
 
     post action_game_url(game), params: { build_cell: "map-cell-5-5" }
@@ -40,15 +40,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action dispatches to move_settlement when paddock action has from set" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
 
     post action_game_url(game), params: { build_cell: "map-cell-5-7" }
 
     game.reload
-    assert_nil game.board_contents["[5, 5]"], "settlement must have moved"
-    assert_equal chris.order, game.board_contents["[5, 7]"]["player"]
+    assert game.board_contents.empty?(5, 5), "settlement must have moved"
+    assert_equal chris.order, game.board_contents.player_at(5, 7)
   end
 
   test "POST end_turn does not call end_turn when paddock action is in progress" do

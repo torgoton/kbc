@@ -50,7 +50,7 @@ class GameTest < ActiveSupport::TestCase
     game.build_settlement(1, 7)
     game.reload
 
-    assert_equal 1, game.board_contents["[2, 7]"]["qty"]
+    assert_equal 1, game.board_contents.tile_qty(2, 7)
     chris = game_players(:chris).reload
     assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true } ], chris.tiles
     assert_equal 2, game.moves.count  # deliberate build + consequential pick_up_tile
@@ -63,8 +63,8 @@ class GameTest < ActiveSupport::TestCase
     game.build_settlement(1, 7)
     game.reload
 
-    assert game.board_contents.key?("[2, 7]"), "entry must remain so the tile class is not lost"
-    assert_equal 0, game.board_contents["[2, 7]"]["qty"]
+    assert_not game.board_contents.empty?(2, 7), "entry must remain so the tile class is not lost"
+    assert_equal 0, game.board_contents.tile_qty(2, 7)
   end
 
   test "build_settlement does not pick up a tile the player already holds from that location" do
@@ -77,7 +77,7 @@ class GameTest < ActiveSupport::TestCase
     game.build_settlement(1, 7)
     game.reload
 
-    assert_equal 2, game.board_contents["[2, 7]"]["qty"], "tile qty must be unchanged"
+    assert_equal 2, game.board_contents.tile_qty(2, 7), "tile qty must be unchanged"
     assert_equal 1, game.moves.count, "only the deliberate build move should exist"
   end
 
@@ -87,7 +87,7 @@ class GameTest < ActiveSupport::TestCase
     game.build_settlement(1, 7)
     game.reload
 
-    assert_equal 0, game.board_contents["[2, 7]"]["qty"], "tile qty must stay at zero"
+    assert_equal 0, game.board_contents.tile_qty(2, 7), "tile qty must stay at zero"
     assert_empty game_players(:chris).reload.tiles, "player should receive no tile"
     assert_equal 1, game.moves.count, "only the deliberate build move should exist"
   end
@@ -100,7 +100,7 @@ class GameTest < ActiveSupport::TestCase
     game.undo_last_move
     game.reload
 
-    assert_equal 2, game.board_contents["[2, 7]"]["qty"], "tile qty must be restored"
+    assert_equal 2, game.board_contents.tile_qty(2, 7), "tile qty must be restored"
     chris = game_players(:chris).reload
     assert_empty chris.tiles, "player must no longer hold the tile"
     assert_equal 40, chris.supply["settlements"], "settlement must be returned to supply"
@@ -115,7 +115,7 @@ class GameTest < ActiveSupport::TestCase
     game.undo_last_move
     game.reload
 
-    assert_equal 1, game.board_contents["[2, 7]"]["qty"]
+    assert_equal 1, game.board_contents.tile_qty(2, 7)
   end
 
   # Paddock tile action tests
@@ -139,7 +139,7 @@ class GameTest < ActiveSupport::TestCase
   test "select_settlement sets current_action from when in paddock action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock" }
     game.save
 
@@ -153,15 +153,15 @@ class GameTest < ActiveSupport::TestCase
   test "move_settlement moves the piece and resets current_action to mandatory" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
 
     game.move_settlement(5, 7)
     game.reload
 
-    assert_nil game.board_contents["[5, 5]"], "settlement must leave its old location"
-    assert_equal chris.order, game.board_contents["[5, 7]"]["player"], "settlement must arrive at new location"
+    assert game.board_contents.empty?(5, 5), "settlement must leave its old location"
+    assert_equal chris.order, game.board_contents.player_at(5, 7), "settlement must arrive at new location"
     assert_equal({ "type" => "mandatory" }, game.current_action)
   end
 
@@ -169,7 +169,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     # Chris has one settlement at [1,7], which is adjacent to tile location [2,7]
-    game.board_contents = { "[1, 7]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(1, 7, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]" } ]
@@ -189,16 +189,16 @@ class GameTest < ActiveSupport::TestCase
   test "move_settlement adjacent to a tile location picks it up and decrements qty" do
     game = game_with_tile_at_2_7(qty: 2)
     chris = game_players(:chris)
-    game.board_contents = game.board_contents.merge(
-      "[1, 5]" => { "klass" => "Settlement", "player" => chris.order }
-    )
+    state = game.board_contents.dup
+    state.place_settlement(1, 5, chris.order)
+    game.board_contents = state
     game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
     game.save
 
     game.move_settlement(1, 7)
     game.reload
 
-    assert_equal 1, game.board_contents["[2, 7]"]["qty"]
+    assert_equal 1, game.board_contents.tile_qty(2, 7)
     chris = game_players(:chris).reload
     assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true } ], chris.tiles
   end
@@ -206,9 +206,9 @@ class GameTest < ActiveSupport::TestCase
   test "move_settlement does not pick up a tile the player already holds from that location" do
     game = game_with_tile_at_2_7(qty: 2)
     chris = game_players(:chris)
-    game.board_contents = game.board_contents.merge(
-      "[1, 5]" => { "klass" => "Settlement", "player" => chris.order }
-    )
+    state = game.board_contents.dup
+    state.place_settlement(1, 5, chris.order)
+    game.board_contents = state
     game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]" } ]
@@ -217,30 +217,30 @@ class GameTest < ActiveSupport::TestCase
     game.move_settlement(1, 7)
     game.reload
 
-    assert_equal 2, game.board_contents["[2, 7]"]["qty"], "tile qty must be unchanged"
+    assert_equal 2, game.board_contents.tile_qty(2, 7), "tile qty must be unchanged"
     assert_equal 1, game_players(:chris).reload.tiles.length, "player must still hold exactly one tile"
   end
 
   test "move_settlement does not pick up a tile whose qty is already zero" do
     game = game_with_tile_at_2_7(qty: 0)
     chris = game_players(:chris)
-    game.board_contents = game.board_contents.merge(
-      "[1, 5]" => { "klass" => "Settlement", "player" => chris.order }
-    )
+    state = game.board_contents.dup
+    state.place_settlement(1, 5, chris.order)
+    game.board_contents = state
     game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
     game.save
 
     game.move_settlement(1, 7)
     game.reload
 
-    assert_equal 0, game.board_contents["[2, 7]"]["qty"], "tile qty must stay at zero"
+    assert_equal 0, game.board_contents.tile_qty(2, 7), "tile qty must stay at zero"
     assert_empty game_players(:chris).reload.tiles, "player should receive no tile"
   end
 
   test "undo_last_move after move_settlement returns the piece and restores current_action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
 
@@ -249,8 +249,8 @@ class GameTest < ActiveSupport::TestCase
     game.undo_last_move
     game.reload
 
-    assert_nil game.board_contents["[5, 7]"], "settlement must leave the destination"
-    assert_equal chris.order, game.board_contents["[5, 5]"]["player"], "settlement must be back at origin"
+    assert game.board_contents.empty?(5, 7), "settlement must leave the destination"
+    assert_equal chris.order, game.board_contents.player_at(5, 5), "settlement must be back at origin"
     assert_equal "paddock", game.current_action["type"]
     assert_equal "[5, 5]", game.current_action["from"]
     assert_equal 0, game.moves.count
@@ -271,7 +271,7 @@ class GameTest < ActiveSupport::TestCase
   test "undo_last_move after select_settlement clears the from in current_action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock" }
     game.save
 
@@ -344,10 +344,10 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     # Settlement moved to [1,5] — not adjacent to tile location [2,7]. Tile forfeited.
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = {
-      "[2, 7]" => { "klass" => "OasisTile", "qty" => 0 },
-      "[1, 7]" => { "klass" => "Settlement", "player" => chris.order }
-    }
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(2, 7, "OasisTile", 0)
+      s.place_settlement(1, 7, chris.order)
+    end
     game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
@@ -368,10 +368,10 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = {
-      "[2, 7]" => { "klass" => "OasisTile", "qty" => 0 },
-      "[1, 7]" => { "klass" => "Settlement", "player" => chris.order }
-    }
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(2, 7, "OasisTile", 0)
+      s.place_settlement(1, 7, chris.order)
+    end
     game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
@@ -392,7 +392,7 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     # Settlement moves from [5, 5] to [5, 7]. Tile from-hexes [6, 7] and [6, 8]
     # are both adjacent to [5, 7] (odd row) so they survive apply_tile_forfeit.
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
     chris.tiles = [
@@ -415,7 +415,7 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     # Tile from-hex [6, 7] is adjacent to destination [5, 7] (odd row) so it
     # survives apply_tile_forfeit and remains in the player's tiles after the move.
-    game.board_contents = { "[5, 5]" => { "klass" => "Settlement", "player" => chris.order } }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
     chris.tiles = [
@@ -517,7 +517,7 @@ class GameTest < ActiveSupport::TestCase
     game.build_on_desert(0, 1)
     game.reload
 
-    assert_equal chris.order, game.board_contents["[0, 1]"]["player"]
+    assert_equal chris.order, game.board_contents.player_at(0, 1)
   end
 
   test "build_on_desert decrements the player supply by one" do
@@ -553,10 +553,10 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = {
-      "[7, 5]" => { "klass" => "OasisTile", "qty" => 2 },
-      "[7, 7]" => { "klass" => "Settlement", "player" => chris.order }
-    }
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(7, 5, "OasisTile", 2)
+      s.place_settlement(7, 7, chris.order)
+    end
     game.current_action = { "type" => "oasis" }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
@@ -566,7 +566,7 @@ class GameTest < ActiveSupport::TestCase
     game.reload
 
     assert game.moves.exists?(action: "pick_up_tile"), "tile pickup must be triggered"
-    assert_equal 1, game.board_contents["[7, 5]"]["qty"]
+    assert_equal 1, game.board_contents.tile_qty(7, 5)
   end
 
   test "undo_last_move after build_on_desert removes the settlement and restores supply" do
@@ -577,7 +577,7 @@ class GameTest < ActiveSupport::TestCase
     game.undo_last_move
     game.reload
 
-    assert_nil game.board_contents["[0, 1]"]
+    assert game.board_contents.empty?(0, 1)
     assert_equal 40, game_players(:chris).reload.supply["settlements"]
   end
 
@@ -621,7 +621,7 @@ class GameTest < ActiveSupport::TestCase
   test "tile_activatable? returns true for unused OasisTile when Desert hexes exist" do
     game = games(:game2player)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = {}
+    game.board_contents = BoardState.new
     game.save
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
     assert game.tile_activatable?(tile)
@@ -636,12 +636,11 @@ class GameTest < ActiveSupport::TestCase
       [13,5],[13,6],[14,6],[14,7],[15,7],[15,8],[16,8],[16,9],[16,10],
       [17,8],[17,10],[17,11],[18,10],[18,11],[18,12],[19,10],[19,11]
     ]
-    occupied = desert_hexes.each_with_object({}) do |(r, c), h|
-      h["[#{r}, #{c}]"] = { "klass" => "Settlement", "player" => 1 }
-    end
     game = games(:game2player)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = occupied
+    game.board_contents = BoardState.new.tap do |s|
+      desert_hexes.each { |r, c| s.place_settlement(r, c, 1) }
+    end
     game.save
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
     assert_not game.tile_activatable?(tile)
@@ -655,7 +654,7 @@ class GameTest < ActiveSupport::TestCase
   def game_with_tile_at_2_7(qty:)
     game = games(:game2player)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = { "[2, 7]" => { "klass" => "OasisTile", "qty" => qty } }
+    game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", qty) }
     game.save
     game
   end
@@ -667,9 +666,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = {
-      "[0, 2]" => { "klass" => "Settlement", "player" => chris.order }
-    }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
     game.current_action = { "type" => "oasis" }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]

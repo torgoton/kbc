@@ -21,16 +21,16 @@ module Boards
         @map << "Boards::#{section[0]}Board".constantize.new(section[1])
       end
       @content = Array.new(20) { Array.new(20) }
-      if game.board_contents
-        game.board_contents.each do |k, v|
-          coords = JSON.parse k
-          case v["klass"]
-          when /Tile\z/
-            @content[coords[0]][coords[1]] = "Tiles::#{v['klass']}".constantize.new(v["qty"])
-          when "Settlement"
-            @content[coords[0]][coords[1]] = Settlement.new(v["player"])
+      20.times do |row|
+        20.times do |col|
+          next if game.board_contents.empty?(row, col)
+          klass = game.board_contents.tile_klass(row, col)
+          if klass
+            @content[row][col] = "Tiles::#{klass}".constantize.new(game.board_contents.tile_qty(row, col))
+          elsif (player = game.board_contents.player_at(row, col))
+            @content[row][col] = Settlement.new(player)
           else
-            raise "Unknown board content type"
+            raise "Unknown board content type at [#{row}, #{col}]"
           end
         end
       end

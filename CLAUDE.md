@@ -33,7 +33,7 @@ The game uses a **20×20 hex grid** divided into four 10×10 quadrants, one per 
 - Boards 0 and 1 occupy rows 0–9 (columns 0–9 and 10–19 respectively)
 - Boards 2 and 3 occupy rows 10–19
 
-Hex adjacency uses offset-coordinate rules: even rows and odd rows have different neighbor offsets (`Game::ADJACENCIES`).
+Hex adjacency uses offset-coordinate rules: even rows and odd rows have different neighbor offsets (`BoardState::ADJACENCIES`).
 
 ### Game State
 
