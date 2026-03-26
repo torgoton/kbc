@@ -11,10 +11,6 @@ module Tiles
       [ [ 1,  0 ],  [ 1, 1 ] ]    # SE
     ].freeze
 
-    def location_index
-      13
-    end
-
     def valid_destinations(from_row, from_col, board_contents:, board:)
       STRAIGHT_LINES.filter_map do |steps|
         dr1, dc1 = steps[from_row % 2]

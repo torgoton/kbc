@@ -6,6 +6,11 @@
           select_action_game_path(game),
           params: { action_type: "paddock" },
           class: "player-tile #{type} tile-available" %>
+  <% elsif n == 0 && tile["klass"] == "OasisTile" && game.tile_activatable?(tile) %>
+    <%= button_to type.capitalize,
+          select_action_game_path(game),
+          params: { action_type: "oasis" },
+          class: "player-tile #{type} tile-available" %>
   <% else %>
     <div class="player-tile <%= type %> <%= used ? 'tile-used' : 'tile-available' %>">
       <div class="tile location-<%= type %>"></div>

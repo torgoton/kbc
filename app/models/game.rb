@@ -252,10 +252,55 @@ class Game < ApplicationRecord
     save
   end
 
+  def build_on_desert(row, col)
+    instantiate
+    game_player = current_player
+    return "No settlements left" if game_player.supply["settlements"] < 1
+    destinations = Tiles::OasisTile.new(0).valid_destinations(
+      board_contents: board_contents,
+      board: @board,
+      player_order: game_player.order
+    )
+    return "Not available" unless destinations.include?([ row, col ])
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "build_oasis",
+      from: "supply",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{game_player.player.handle} built a settlement on Desert"
+    )
+    game_player.supply["settlements"] -= 1
+    self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    self.current_action = { "type" => "mandatory" }
+    tiles = game_player.tiles || []
+    idx = tiles.index { |t| t["klass"] == "OasisTile" && t["used"] == false }
+    if idx
+      updated = tiles.dup
+      updated[idx] = updated[idx].merge("used" => true)
+      game_player.tiles = updated
+    end
+    apply_tile_pickup(game_player, row, col)
+    game_player.save
+    save
+  end
+
   def tile_activatable?(tile)
     return false if tile["used"]
-    mandatory_count == MANDATORY_COUNT || mandatory_count <= 0 ||
+    return false unless mandatory_count == MANDATORY_COUNT || mandatory_count <= 0 ||
       current_player.supply["settlements"] == 0
+    if tile["klass"] == "OasisTile"
+      instantiate
+      return Tiles::OasisTile.new(0).valid_destinations(
+        board_contents: board_contents,
+        board: @board,
+        player_order: current_player.order
+      ).any?
+    end
+    true
   end
 
   def turn_endable?
@@ -273,6 +318,8 @@ class Game < ApplicationRecord
     case current_action["type"]
     when "paddock"
       "#{current_player.player.handle} must move a settlement"
+    when "oasis"
+      "#{current_player.player.handle} must build on a Desert space"
     else
       if mandatory_count > 0 && current_player.supply["settlements"] > 0
         "#{current_player.player.handle} must build " \
@@ -332,6 +379,18 @@ class Game < ApplicationRecord
         self.board_contents.delete(move.to)
         move.game_player.supply["settlements"] += 1
         move.game_player.save
+      when "build_oasis"
+        self.board_contents.delete(move.to)
+        move.game_player.supply["settlements"] += 1
+        tiles = move.game_player.tiles || []
+        idx = tiles.index { |t| t["klass"] == "OasisTile" && t["used"] == true }
+        if idx
+          updated = tiles.dup
+          updated[idx] = updated[idx].merge("used" => false)
+          move.game_player.tiles = updated
+          move.game_player.save
+        end
+        self.current_action = { "type" => "oasis" }
       when "move_settlement"
         board_contents_will_change!
         piece = board_contents.delete(move.to)

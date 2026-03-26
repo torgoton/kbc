@@ -491,6 +491,162 @@ class GameTest < ActiveSupport::TestCase
     assert_match(/must move a settlement/, game.turn_state)
   end
 
+  # Oasis tile action tests
+  #
+  # Oasis board at index 0, rows 0-9, cols 0-9.
+  # (0,1) is Desert and adjacent to a settlement at (0,2). Used for the main build tests.
+  # (7,6) is Desert, adjacent to settlement at (7,7), and adjacent to tile location (7,5).
+  # This second scenario is used to test that build_on_desert triggers tile pickup.
+
+  test "select_action with oasis tile sets current_action type" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.select_action("oasis")
+    game.reload
+
+    assert_equal "oasis", game.current_action["type"]
+  end
+
+  test "build_on_desert places a settlement on the Desert hex" do
+    game = game_in_oasis_action
+    chris = game_players(:chris)
+
+    game.build_on_desert(0, 1)
+    game.reload
+
+    assert_equal chris.order, game.board_contents["[0, 1]"]["player"]
+  end
+
+  test "build_on_desert decrements the player supply by one" do
+    game = game_in_oasis_action
+
+    game.build_on_desert(0, 1)
+
+    assert_equal 39, game_players(:chris).reload.supply["settlements"]
+  end
+
+  test "build_on_desert marks the OasisTile as used" do
+    game = game_in_oasis_action
+
+    game.build_on_desert(0, 1)
+
+    oasis_tile = game_players(:chris).reload.tiles.find { |t| t["klass"] == "OasisTile" }
+    assert oasis_tile["used"]
+  end
+
+  test "build_on_desert resets current_action to mandatory" do
+    game = game_in_oasis_action
+
+    game.build_on_desert(0, 1)
+    game.reload
+
+    assert_equal({ "type" => "mandatory" }, game.current_action)
+  end
+
+  test "build_on_desert triggers tile pickup when the new settlement is adjacent to a tile location" do
+    # Oasis board at index 0: tile location at (7,5). (7,6) is Desert and adjacent to both
+    # the settlement at (7,7) and the location (7,5). Chris holds a tile from (2,7) only,
+    # so a second pickup from (7,5) is allowed.
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = {
+      "[7, 5]" => { "klass" => "OasisTile", "qty" => 2 },
+      "[7, 7]" => { "klass" => "Settlement", "player" => chris.order }
+    }
+    game.current_action = { "type" => "oasis" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.build_on_desert(7, 6)
+    game.reload
+
+    assert game.moves.exists?(action: "pick_up_tile"), "tile pickup must be triggered"
+    assert_equal 1, game.board_contents["[7, 5]"]["qty"]
+  end
+
+  test "undo_last_move after build_on_desert removes the settlement and restores supply" do
+    game = game_in_oasis_action
+
+    game.build_on_desert(0, 1)
+    game.reload
+    game.undo_last_move
+    game.reload
+
+    assert_nil game.board_contents["[0, 1]"]
+    assert_equal 40, game_players(:chris).reload.supply["settlements"]
+  end
+
+  test "undo_last_move after build_on_desert unmarks the OasisTile" do
+    game = game_in_oasis_action
+
+    game.build_on_desert(0, 1)
+    game.reload
+    game.undo_last_move
+    game.reload
+
+    oasis_tile = game_players(:chris).reload.tiles.find { |t| t["klass"] == "OasisTile" }
+    assert_not oasis_tile["used"]
+  end
+
+  test "undo_last_move after build_on_desert restores current_action to oasis" do
+    game = game_in_oasis_action
+
+    game.build_on_desert(0, 1)
+    game.reload
+    game.undo_last_move
+    game.reload
+
+    assert_equal "oasis", game.current_action["type"]
+    assert_equal 0, game.moves.count
+  end
+
+  test "turn_state returns must build on a Desert space when oasis action" do
+    game = games(:game2player)
+    game.current_action = { "type" => "oasis" }
+    assert_match(/must build on a Desert space/, game.turn_state)
+  end
+
+  test "turn_endable? returns false when oasis action is in progress" do
+    game = games(:game2player)
+    game.mandatory_count = 0
+    game.current_action = { "type" => "oasis" }
+    assert_not game.turn_endable?
+  end
+
+  test "tile_activatable? returns true for unused OasisTile when Desert hexes exist" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = {}
+    game.save
+    tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+    assert game.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? returns false for unused OasisTile when all Desert hexes are occupied" do
+    desert_hexes = [
+      [0,0],[0,1],[1,0],[2,0],[2,1],[5,8],[6,8],[7,6],[7,7],[8,7],[8,8],
+      [0,13],[0,14],[0,16],[0,17],[0,18],[0,19],[1,13],[1,14],[1,16],[1,17],[1,18],[1,19],
+      [2,16],[2,17],[3,16],
+      [10,0],[10,1],[10,11],[10,12],[10,15],[10,16],[11,0],[11,12],[11,13],[11,14],
+      [13,5],[13,6],[14,6],[14,7],[15,7],[15,8],[16,8],[16,9],[16,10],
+      [17,8],[17,10],[17,11],[18,10],[18,11],[18,12],[19,10],[19,11]
+    ]
+    occupied = desert_hexes.each_with_object({}) do |(r, c), h|
+      h["[#{r}, #{c}]"] = { "klass" => "Settlement", "player" => 1 }
+    end
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = occupied
+    game.save
+    tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+    assert_not game.tile_activatable?(tile)
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile
@@ -501,6 +657,23 @@ class GameTest < ActiveSupport::TestCase
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
     game.board_contents = { "[2, 7]" => { "klass" => "OasisTile", "qty" => qty } }
     game.save
+    game
+  end
+
+  # Returns a saved game ready for the Oasis tile action.
+  # Oasis board at index 0. Chris has a settlement at (0,2) making (0,1) an adjacent
+  # Desert destination. Chris holds an unused OasisTile.
+  def game_in_oasis_action
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = {
+      "[0, 2]" => { "klass" => "Settlement", "player" => chris.order }
+    }
+    game.current_action = { "type" => "oasis" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
     game
   end
 end
