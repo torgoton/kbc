@@ -30,7 +30,7 @@ class GamesController < ApplicationController
   # 3. use a tile that I have to move a piece on the board
   def action
     Rails.logger.debug("TURN ACTION PARAMS: #{action_params.inspect}")
-    @game = Current.user.games.find(action_params[0])
+    @game = Current.user.games.find(action_params[:id])
     unless @game
       respond_to do |format|
         format.json { render json: { message: "Cannot find game" } }
@@ -38,26 +38,24 @@ class GamesController < ApplicationController
       return
     end
 
-    target = action_params[1]
-    row = target.match(/-\d*-/).to_s[1..-2].to_i
-    col = target.match(/-\d*\z/).to_s[1..-1].to_i
+    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
     case @game.current_action["type"]
     when "paddock"
       if @game.current_action["from"]
-        @game.move_settlement(row, col)
+        @game.move_settlement(coord.row, coord.col)
       else
-        @game.select_settlement(row, col)
+        @game.select_settlement(coord.row, coord.col)
       end
     when "oasis"
-      @game.build_on_desert(row, col)
+      @game.build_on_desert(coord.row, coord.col)
     else
-      @game.build_settlement(row, col)
+      @game.build_settlement(coord.row, coord.col)
     end
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
-    animate_build_settlement(@game, @game.current_player, row, col)
+    animate_build_settlement(@game, @game.current_player, coord.row, coord.col)
     # update all clients
     @game.broadcast_game_update
   end
@@ -117,7 +115,7 @@ class GamesController < ApplicationController
   private
 
   def action_params
-    params.expect(:id, :build_cell)
+    params.permit(:id, :build_row, :build_col)
   end
 
   def create_game_params

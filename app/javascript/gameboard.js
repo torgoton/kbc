@@ -25,7 +25,9 @@ function enableClicks() {
       }
       console.log("Click target: " + hex.id);
       e.preventDefault();
-      document.getElementById("build_cell").value = hex.id;
+      const parts = hex.id.split("-");
+      document.getElementById("build_row").value = parts[2];
+      document.getElementById("build_col").value = parts[3];
       document.getElementById("action_submit").click();
     });
 }

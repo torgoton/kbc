@@ -31,7 +31,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.save
 
-    post action_game_url(game), params: { build_cell: "map-cell-5-5" }
+    post action_game_url(game), params: { build_row: 5, build_col: 5 }
 
     game.reload
     assert_equal "[5, 5]", game.current_action["from"], "select_settlement must have set from"
@@ -44,7 +44,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
 
-    post action_game_url(game), params: { build_cell: "map-cell-5-7" }
+    post action_game_url(game), params: { build_row: 5, build_col: 7 }
 
     game.reload
     assert game.board_contents.empty?(5, 5), "settlement must have moved"
