@@ -114,6 +114,32 @@ function markPaddockDestinations(from) {
   });
 }
 
+function markOasisDestinations() {
+  const playerNo = parseInt(document.querySelector(".handle .player-order").innerText);
+  let found = false;
+
+  document.querySelectorAll(`.hex-settlement.player-${playerNo}`).forEach(s => {
+    const cell = s.closest(".hex");
+    if (!cell) return;
+    adjacent_list(cell.id).forEach(adjId => {
+      const adjCell = document.getElementById(adjId);
+      if (!adjCell || adjCell.querySelector(".hex-settlement")) return;
+      if (adjCell.classList.contains("terrain-d")) {
+        adjCell.classList.add("selectable");
+        found = true;
+      }
+    });
+  });
+
+  if (found) return;
+
+  document.querySelectorAll(".terrain-d").forEach(c => {
+    if (!c.querySelector(".hex-settlement")) {
+      c.classList.add("selectable");
+    }
+  });
+}
+
 function markAvailableCells() {
   card = document.querySelector("span.player-card").innerText.toLowerCase();
   player_no = parseInt(document.querySelector(".handle .player-order").innerText);
@@ -203,6 +229,8 @@ function prepForMove() {
     } else {
       markSelectableSettlements();
     }
+  } else if (actionType === "oasis") {
+    markOasisDestinations();
   } else {
     markAvailableCells();
   }

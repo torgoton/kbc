@@ -48,6 +48,8 @@ class GamesController < ApplicationController
       else
         @game.select_settlement(row, col)
       end
+    when "oasis"
+      @game.build_on_desert(row, col)
     else
       @game.build_settlement(row, col)
     end
