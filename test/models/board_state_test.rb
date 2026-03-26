@@ -98,13 +98,6 @@ class BoardStateTest < ActiveSupport::TestCase
     assert_equal [ [9, 9] ], occupied
   end
 
-  test "key and parse_key are inverses" do
-    state = BoardState.new
-    assert_equal "[2, 7]", state.key(2, 7)
-    assert_equal [2, 7], BoardState.parse_key("[2, 7]")
-    assert_equal [2, 7], BoardState.parse_key(state.key(2, 7))
-  end
-
   test "locations_with_remaining_tiles returns coordinates of tiles with qty > 0" do
     state = BoardState.new
     state.place_tile(5, 3, "OasisTile", 2)

@@ -66,14 +66,6 @@ class BoardState
     state
   end
 
-  def self.parse_key(str)
-    str.tr("[]", "").split(", ").map(&:to_i)
-  end
-
-  def key(row, col)
-    "[#{row}, #{col}]"
-  end
-
   def neighbors(row, col)
     ADJACENCIES[row % 2].filter_map do |dr, dc|
       nr, nc = row + dr, col + dc

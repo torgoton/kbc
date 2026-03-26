@@ -4,7 +4,8 @@
     <%= form_with url: action_game_path(game),
       id: :action_form do |f| %>
       <%= f.text_field :tile %>
-      <%= f.text_field :build_cell, placeholder: "Build cell" %>
+      <%= f.hidden_field :build_row %>
+      <%= f.hidden_field :build_col %>
       <%= f.text_field :move_source, placeholder: "Move from" %>
       <%= f.text_field :move_destination, placeholder: "Move to" %>
       <%= f.submit "Action", id: "action_submit" %>
