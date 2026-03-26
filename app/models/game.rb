@@ -288,15 +288,9 @@ class Game < ApplicationRecord
     return false if tile["used"]
     return false unless mandatory_count == MANDATORY_COUNT || mandatory_count <= 0 ||
       current_player.supply["settlements"] == 0
-    if tile["klass"] == "OasisTile"
-      instantiate
-      return Tiles::OasisTile.new(0).valid_destinations(
-        board_contents: board_contents,
-        board: @board,
-        player_order: current_player.order
-      ).any?
-    end
-    true
+    instantiate
+    ctx = { player_order: current_player.order, board_contents: board_contents, board: @board }
+    Tiles::Tile.from_hash(tile).activatable?(**ctx)
   end
 
   def turn_endable?
