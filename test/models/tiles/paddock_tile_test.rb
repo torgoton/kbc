@@ -6,13 +6,13 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   #   (0,12)=C (W), (0,16)=D (E)
   # SW lands on (2,13)=M and SE lands on (2,15)=W — excluded by terrain.
   # NW/NE are out of bounds. (1,12) is reachable in 2 hops but NOT a straight line.
-  def setup_board(extra_contents = {})
+  def setup_board
     game = games(:game2player)
     chris = game_players(:chris)
     game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
-    game.board_contents = {
-      "[0, 14]" => { "klass" => "Settlement", "player" => chris.order }
-    }.merge(extra_contents)
+    state = BoardState.new.tap { |s| s.place_settlement(0, 14, chris.order) }
+    yield state if block_given?
+    game.board_contents = state
     game.save
     game.instantiate
     { board_contents: game.board_contents, board: game.board, chris: chris }
@@ -34,7 +34,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   end
 
   test "valid_destinations excludes occupied cells" do
-    ctx = setup_board("[0, 12]" => { "klass" => "Settlement", "player" => 1 })
+    ctx = setup_board { |s| s.place_settlement(0, 12, 1) }
     tile = Tiles::PaddockTile.new(0)
 
     result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
@@ -54,10 +54,10 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   end
 
   test "selectable_settlements excludes settlements with no valid destinations" do
-    ctx = setup_board(
-      "[0, 12]" => { "klass" => "Settlement", "player" => 1 },
-      "[0, 16]" => { "klass" => "Settlement", "player" => 1 }
-    )
+    ctx = setup_board do |s|
+      s.place_settlement(0, 12, 1)
+      s.place_settlement(0, 16, 1)
+    end
     tile = Tiles::PaddockTile.new(0)
 
     result = tile.selectable_settlements(ctx[:chris].order,
@@ -68,11 +68,11 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
   test "base Tile returns empty array for valid_destinations" do
     tile = Tiles::Tile.new(0)
-    assert_equal [], tile.valid_destinations(0, 0, board_contents: {}, board: nil)
+    assert_equal [], tile.valid_destinations(0, 0, board_contents: BoardState.new, board: nil)
   end
 
   test "base Tile returns empty array for selectable_settlements" do
     tile = Tiles::Tile.new(0)
-    assert_equal [], tile.selectable_settlements(0, board_contents: {}, board: nil)
+    assert_equal [], tile.selectable_settlements(0, board_contents: BoardState.new, board: nil)
   end
 end

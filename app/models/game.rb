@@ -27,15 +27,12 @@ class Game < ApplicationRecord
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
 
-  # 10-10 adjacent to [[10,9], [10,11], [9,9], [9,10], [11,9], [11,10]]
-  #  9-10 adjacent to [[9,9], [9,11], [8,10], [8,11], [10,10], [10,11]]
-  ADJACENCIES = [ [ [ 0, -1 ], [ 0, 1 ], [ -1, -1 ], [ -1, 0 ], [ 1, -1 ], [ 1, 0 ] ],
-                  [ [ 0, -1 ], [ 0, 1 ], [ -1,  0 ], [ -1, 1 ], [ 1,  0 ], [ 1, 1 ] ] ]
-
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
   has_many :moves, dependent: :destroy
   belongs_to :current_player, class_name: "GamePlayer", optional: true
+
+  serialize :board_contents, coder: BoardState
 
   validates :state, inclusion: { in: STATES }
 
@@ -118,11 +115,9 @@ class Game < ApplicationRecord
         # Do I have a piece here?
         if board.content_at(row, col).try(:player) == active_player
           # mark the adjacent spots as available
-          ADJACENCIES[row % 2].each do |r, c|
-            if ((0..19).include?(row+r) && (0..19).include?(col+c)) && # spot is on the map
-              board.content_at(row + r, col + c) == nil && # spot is empty
-              board.terrain_at(row+r, col+c) == terrain # spot is of the correct terrain
-              any = available[row+r][col+c] = true
+          board_contents.neighbors(row, col).each do |nr, nc|
+            if board.content_at(nr, nc) == nil && board.terrain_at(nr, nc) == terrain
+              any = available[nr][nc] = true
             end
           end
         end
@@ -180,7 +175,8 @@ class Game < ApplicationRecord
     # - update supply
     game_player.supply["settlements"] -= 1
     # - update board_contents
-    self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    board_contents_will_change!
+    board_contents.place_settlement(row, col, game_player.order)
     self.mandatory_count -= 1
     log("Building settlement at #{row}, #{col} for player #{game_player.order}")
     # - apply consequential tile pickup if adjacent to a location hex with tiles
@@ -223,7 +219,7 @@ class Game < ApplicationRecord
   def move_settlement(row, col)
     instantiate
     from = current_action["from"]
-    piece = board_contents[from]
+    from_row, from_col = BoardState.parse_key(from)
     self.move_count += 1
     self.moves.create(
       order: move_count,
@@ -231,13 +227,12 @@ class Game < ApplicationRecord
       deliberate: true,
       action: "move_settlement",
       from: from,
-      to: "[#{row}, #{col}]",
+      to: board_contents.key(row, col),
       reversible: true,
       message: "#{current_player.player.handle} moved a settlement to [#{row}, #{col}]"
     )
     board_contents_will_change!
-    board_contents.delete(from)
-    board_contents["[#{row}, #{col}]"] = piece
+    board_contents.move_settlement(from_row, from_col, row, col)
     self.current_action = { "type" => "mandatory" }
     tiles = current_player.tiles || []
     idx = tiles.index { |t| t["klass"] == "PaddockTile" && t["used"] == false }
@@ -274,7 +269,8 @@ class Game < ApplicationRecord
       message: "#{game_player.player.handle} built a settlement on Desert"
     )
     game_player.supply["settlements"] -= 1
-    self.board_contents["[#{row}, #{col}]"] = { "klass" => "Settlement", "player" => game_player.order }
+    board_contents_will_change!
+    board_contents.place_settlement(row, col, game_player.order)
     self.current_action = { "type" => "mandatory" }
     tiles = game_player.tiles || []
     idx = tiles.index { |t| t["klass"] == "OasisTile" && t["used"] == false }
@@ -376,11 +372,13 @@ class Game < ApplicationRecord
       case move.action
       when "build"
         self.mandatory_count += 1
-        self.board_contents.delete(move.to)
+        board_contents_will_change!
+        board_contents.remove(*BoardState.parse_key(move.to))
         move.game_player.supply["settlements"] += 1
         move.game_player.save
       when "build_oasis"
-        self.board_contents.delete(move.to)
+        board_contents_will_change!
+        board_contents.remove(*BoardState.parse_key(move.to))
         move.game_player.supply["settlements"] += 1
         tiles = move.game_player.tiles || []
         idx = tiles.index { |t| t["klass"] == "OasisTile" && t["used"] == true }
@@ -392,9 +390,10 @@ class Game < ApplicationRecord
         end
         self.current_action = { "type" => "oasis" }
       when "move_settlement"
+        to_row, to_col = BoardState.parse_key(move.to)
+        from_row, from_col = BoardState.parse_key(move.from)
         board_contents_will_change!
-        piece = board_contents.delete(move.to)
-        board_contents[move.from] = piece
+        board_contents.move_settlement(to_row, to_col, from_row, from_col)
         self.current_action = { "type" => "paddock", "from" => move.from }
         tiles = move.game_player.tiles || []
         idx = tiles.index { |t| t["klass"] == "PaddockTile" && t["used"] == true }
@@ -412,13 +411,13 @@ class Game < ApplicationRecord
       when "pick_up_tile"
         # Return the tile to its location (qty was decremented, never deleted)
         board_contents_will_change!
-        board_contents[move.from]["qty"] += 1
+        board_contents.increment_tile(*BoardState.parse_key(move.from))
         # Remove the tile from the player's collection
         tiles = move.game_player.tiles || []
         move.game_player.tiles = tiles.reject { |t| t["from"] == move.from }
         move.game_player.save
       when "forfeit_tile"
-        klass = board_contents[move.from]["klass"]
+        klass = board_contents.tile_klass(*BoardState.parse_key(move.from))
         tiles = move.game_player.tiles || []
         move.game_player.tiles = tiles + [ { "klass" => klass, "from" => move.from, "used" => move.to == "true" } ]
         move.game_player.save
@@ -501,18 +500,15 @@ class Game < ApplicationRecord
   # to any of their settlements (called after a Paddock move).
   def apply_tile_forfeit(game_player)
     return if (game_player.tiles || []).empty?
-    my_settlements = board_contents
-      .select { |_k, v| v["klass"] == "Settlement" && v["player"] == game_player.order }
-      .keys
     game_player.tiles = game_player.tiles.reject do |tile|
       loc = tile["from"]
       next false unless loc
-      should_forfeit = my_settlements.none? do |s_key|
-        s = s_key.tr("[]", "").split(", ").map(&:to_i)
-        ADJACENCIES[s[0] % 2].any? { |r, c| "[#{s[0] + r}, #{s[1] + c}]" == loc }
+      loc_row, loc_col = BoardState.parse_key(loc)
+      should_forfeit = board_contents.settlements_for(game_player.order).none? do |s_row, s_col|
+        board_contents.neighbors(s_row, s_col).any? { |nr, nc| board_contents.key(nr, nc) == loc }
       end
-      if should_forfeit && board_contents[loc]
-        klass = board_contents[loc]["klass"]
+      if should_forfeit && board_contents.tile_klass(loc_row, loc_col)
+        klass = board_contents.tile_klass(loc_row, loc_col)
         self.move_count += 1
         self.moves.create(
           order: move_count,
@@ -534,15 +530,12 @@ class Game < ApplicationRecord
   # the player doesn't already hold, or nil otherwise.
   def find_tile_pickup(game_player, row, col)
     held_locations = (game_player.tiles || []).map { |t| t["from"] }.to_set
-    ADJACENCIES[row % 2].each do |r, c|
-      adj_r = row + r
-      adj_c = col + c
-      next unless (0..19).include?(adj_r) && (0..19).include?(adj_c)
-      tile_key = "[#{adj_r}, #{adj_c}]"
-      content = board_contents[tile_key]
-      next unless content && content["klass"]&.end_with?("Tile") && content["qty"].to_i > 0
+    board_contents.neighbors(row, col).each do |adj_r, adj_c|
+      klass = board_contents.tile_klass(adj_r, adj_c)
+      next unless klass && board_contents.tile_qty(adj_r, adj_c) > 0
+      tile_key = board_contents.key(adj_r, adj_c)
       next if held_locations.include?(tile_key)
-      return { key: tile_key, klass: content["klass"] }
+      return { key: tile_key, klass: klass }
     end
     nil
   end
@@ -565,7 +558,7 @@ class Game < ApplicationRecord
     )
     # Decrement qty in place; entry remains even when qty reaches 0
     board_contents_will_change!
-    board_contents[tile[:key]]["qty"] -= 1
+    board_contents.decrement_tile(*BoardState.parse_key(tile[:key]))
     # Add to player's tile collection, tracking which location it came from
     game_player.tiles = (game_player.tiles || []) + [ { "klass" => tile[:klass], "from" => tile[:key], "used" => true } ]
   end
@@ -577,15 +570,16 @@ class Game < ApplicationRecord
   end
 
   def populate_boards
-    contents = {}
+    state = BoardState.new
     instantiate_board
     @board.map.each_with_index do |board, i|
       board.location_hexes.each do |loc|
         # MVP (and base game) always have 2 tiles per location
-        contents[overall_location(i, loc[:r], loc[:c])] = { klass: "#{loc[:k]}Tile", qty: 2 }
+        row, col = overall_location(i, loc[:r], loc[:c])
+        state.place_tile(row, col, "#{loc[:k]}Tile", 2)
       end
     end
-    update(board_contents: contents)
+    update(board_contents: state)
     Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
   end
 

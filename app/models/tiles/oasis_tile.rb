@@ -1,18 +1,9 @@
 module Tiles
   class OasisTile < Tiles::Tile
     def valid_destinations(board_contents:, board:, player_order:)
-      player_settlements = board_contents
-        .select { |_k, v| v["klass"] == "Settlement" && v["player"] == player_order }
-        .keys
-        .map { |k| k.tr("[]", "").split(", ").map(&:to_i) }
-
-      adjacent_desert = player_settlements.flat_map do |r, c|
-        Game::ADJACENCIES[r % 2].filter_map do |dr, dc|
-          nr, nc = r + dr, c + dc
-          next unless (0..19).cover?(nr) && (0..19).cover?(nc)
-          next unless board_contents["[#{nr}, #{nc}]"].nil?
-          next unless board.terrain_at(nr, nc) == "D"
-          [ nr, nc ]
+      adjacent_desert = board_contents.settlements_for(player_order).flat_map do |r, c|
+        board_contents.neighbors_where(r, c) do |nr, nc|
+          board_contents.empty?(nr, nc) && board.terrain_at(nr, nc) == "D"
         end
       end.uniq
 
@@ -20,9 +11,7 @@ module Tiles
 
       (0..19).flat_map do |r|
         (0..19).filter_map do |c|
-          next unless board_contents["[#{r}, #{c}]"].nil?
-          next unless board.terrain_at(r, c) == "D"
-          [ r, c ]
+          [ r, c ] if board_contents.empty?(r, c) && board.terrain_at(r, c) == "D"
         end
       end
     end

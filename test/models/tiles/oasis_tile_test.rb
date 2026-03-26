@@ -6,13 +6,13 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
   # Settlement at (0,2): adjacent Desert hex is (0,1). Row 0 is even.
   # Settlement at (4,0): all neighbors are W — no adjacent Desert; fallback applies.
 
-  def setup_board(extra_contents = {})
+  def setup_board
     game = games(:game2player)
     chris = game_players(:chris)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = {
-      "[0, 2]" => { "klass" => "Settlement", "player" => chris.order }
-    }.merge(extra_contents)
+    state = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
+    yield state if block_given?
+    game.board_contents = state
     game.save
     game.instantiate
     { board_contents: game.board_contents, board: game.board, chris: chris }
@@ -31,7 +31,7 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
   end
 
   test "valid_destinations excludes occupied Desert hexes" do
-    ctx = setup_board("[0, 1]" => { "klass" => "Settlement", "player" => 1 })
+    ctx = setup_board { |s| s.place_settlement(0, 1, 1) }
     tile = Tiles::OasisTile.new(0)
 
     result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
@@ -44,9 +44,7 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
     # Settlement at (4,0): all neighbors are W terrain
-    game.board_contents = {
-      "[4, 0]" => { "klass" => "Settlement", "player" => chris.order }
-    }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(4, 0, chris.order) }
     game.save
     game.instantiate
     tile = Tiles::OasisTile.new(0)
@@ -71,15 +69,13 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
       [13,5],[13,6],[14,6],[14,7],[15,7],[15,8],[16,8],[16,9],[16,10],
       [17,8],[17,10],[17,11],[18,10],[18,11],[18,12],[19,10],[19,11]
     ]
-    occupied = desert_hexes.each_with_object({}) do |(r, c), h|
-      h["[#{r}, #{c}]"] = { "klass" => "Settlement", "player" => 1 }
-    end
     game = games(:game2player)
     chris = game_players(:chris)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.board_contents = occupied.merge(
-      "[4, 0]" => { "klass" => "Settlement", "player" => chris.order }
-    )
+    game.board_contents = BoardState.new.tap do |s|
+      desert_hexes.each { |r, c| s.place_settlement(r, c, 1) }
+      s.place_settlement(4, 0, chris.order)
+    end
     game.save
     game.instantiate
     tile = Tiles::OasisTile.new(0)

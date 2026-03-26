@@ -21,20 +21,16 @@ module Tiles
         r2 = r1 + dr2
         c2 = c1 + dc2
         next unless (0..19).cover?(r2) && (0..19).cover?(c2)
-        next unless board_contents["[#{r2}, #{c2}]"].nil?
+        next unless board_contents.empty?(r2, c2)
         next unless BUILDABLE_TERRAIN.include?(board.terrain_at(r2, c2))
         [ r2, c2 ]
       end
     end
 
     def selectable_settlements(player_order, board_contents:, board:)
-      board_contents
-        .select { |_k, v| v["klass"] == "Settlement" && v["player"] == player_order }
-        .keys
-        .filter_map do |key|
-          r, c = key.tr("[]", "").split(", ").map(&:to_i)
-          [ r, c ] if valid_destinations(r, c, board_contents: board_contents, board: board).any?
-        end
+      board_contents.settlements_for(player_order).filter_map do |r, c|
+        [ r, c ] if valid_destinations(r, c, board_contents: board_contents, board: board).any?
+      end
     end
   end
 end
