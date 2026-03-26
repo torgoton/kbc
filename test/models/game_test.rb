@@ -181,6 +181,62 @@ class GameTest < ActiveSupport::TestCase
     assert_empty game_players(:chris).reload.tiles
   end
 
+  # When a settlement moves onto a cell adjacent to a tile location hex the same
+  # pickup rules apply as for building: decrement qty, give tile to player,
+  # skip if player already holds one from that location, skip if qty is zero.
+  # Setup: settlement at [1, 5] moves to [1, 7], which is adjacent to [2, 7].
+
+  test "move_settlement adjacent to a tile location picks it up and decrements qty" do
+    game = game_with_tile_at_2_7(qty: 2)
+    chris = game_players(:chris)
+    game.board_contents = game.board_contents.merge(
+      "[1, 5]" => { "klass" => "Settlement", "player" => chris.order }
+    )
+    game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
+    game.save
+
+    game.move_settlement(1, 7)
+    game.reload
+
+    assert_equal 1, game.board_contents["[2, 7]"]["qty"]
+    chris = game_players(:chris).reload
+    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true } ], chris.tiles
+  end
+
+  test "move_settlement does not pick up a tile the player already holds from that location" do
+    game = game_with_tile_at_2_7(qty: 2)
+    chris = game_players(:chris)
+    game.board_contents = game.board_contents.merge(
+      "[1, 5]" => { "klass" => "Settlement", "player" => chris.order }
+    )
+    game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]" } ]
+    chris.save
+
+    game.move_settlement(1, 7)
+    game.reload
+
+    assert_equal 2, game.board_contents["[2, 7]"]["qty"], "tile qty must be unchanged"
+    assert_equal 1, game_players(:chris).reload.tiles.length, "player must still hold exactly one tile"
+  end
+
+  test "move_settlement does not pick up a tile whose qty is already zero" do
+    game = game_with_tile_at_2_7(qty: 0)
+    chris = game_players(:chris)
+    game.board_contents = game.board_contents.merge(
+      "[1, 5]" => { "klass" => "Settlement", "player" => chris.order }
+    )
+    game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
+    game.save
+
+    game.move_settlement(1, 7)
+    game.reload
+
+    assert_equal 0, game.board_contents["[2, 7]"]["qty"], "tile qty must stay at zero"
+    assert_empty game_players(:chris).reload.tiles, "player should receive no tile"
+  end
+
   test "undo_last_move after move_settlement returns the piece and restores current_action" do
     game = games(:game2player)
     chris = game_players(:chris)

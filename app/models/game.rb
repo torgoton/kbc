@@ -247,6 +247,7 @@ class Game < ApplicationRecord
       current_player.tiles = updated
     end
     apply_tile_forfeit(current_player)
+    apply_tile_pickup(current_player, row, col)
     current_player.save
     save
   end
