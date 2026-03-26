@@ -1,6 +1,6 @@
 module Tiles
   class OasisTile < Tiles::Tile
-    def valid_destinations(board_contents:, board:, player_order:)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:)
       adjacent_desert = board_contents.settlements_for(player_order).flat_map do |r, c|
         board_contents.neighbors_where(r, c) do |nr, nc|
           board_contents.empty?(nr, nc) && board.terrain_at(nr, nc) == "D"
@@ -14,6 +14,10 @@ module Tiles
           [ r, c ] if board_contents.empty?(r, c) && board.terrain_at(r, c) == "D"
         end
       end
+    end
+
+    def activatable?(player_order:, board_contents:, board:)
+      valid_destinations(board_contents:, board:, player_order:).any?
     end
   end
 end

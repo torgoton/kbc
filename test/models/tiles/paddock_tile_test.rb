@@ -22,7 +22,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     ctx = setup_board
     tile = Tiles::PaddockTile.new(0)
 
-    result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
+    result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: ctx[:board_contents], board: ctx[:board])
 
     assert_includes result, [ 0, 12 ], "C terrain straight W 2 hops away"
     assert_includes result, [ 0, 16 ], "D terrain straight E 2 hops away"
@@ -37,7 +37,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(0, 12, 1) }
     tile = Tiles::PaddockTile.new(0)
 
-    result = tile.valid_destinations(0, 14, board_contents: ctx[:board_contents], board: ctx[:board])
+    result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: ctx[:board_contents], board: ctx[:board])
 
     assert_not_includes result, [ 0, 12 ], "occupied cell excluded"
     assert_includes result, [ 0, 16 ]
@@ -47,7 +47,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     ctx = setup_board
     tile = Tiles::PaddockTile.new(0)
 
-    result = tile.selectable_settlements(ctx[:chris].order,
+    result = tile.selectable_settlements(player_order: ctx[:chris].order,
       board_contents: ctx[:board_contents], board: ctx[:board])
 
     assert_includes result, [ 0, 14 ]
@@ -60,19 +60,15 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     end
     tile = Tiles::PaddockTile.new(0)
 
-    result = tile.selectable_settlements(ctx[:chris].order,
+    result = tile.selectable_settlements(player_order: ctx[:chris].order,
       board_contents: ctx[:board_contents], board: ctx[:board])
 
     assert_empty result
   end
 
-  test "base Tile returns empty array for valid_destinations" do
-    tile = Tiles::Tile.new(0)
-    assert_equal [], tile.valid_destinations(0, 0, board_contents: BoardState.new, board: nil)
-  end
+  # --- from_hash ---
 
-  test "base Tile returns empty array for selectable_settlements" do
-    tile = Tiles::Tile.new(0)
-    assert_equal [], tile.selectable_settlements(0, board_contents: BoardState.new, board: nil)
+  test "from_hash returns a PaddockTile" do
+    assert_instance_of Tiles::PaddockTile, Tiles::Tile.from_hash("klass" => "PaddockTile")
   end
 end
