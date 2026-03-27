@@ -497,7 +497,7 @@ class GameTest < ActiveSupport::TestCase
   # Oasis board at index 0, rows 0-9, cols 0-9.
   # (0,1) is Desert and adjacent to a settlement at (0,2). Used for the main build tests.
   # (7,6) is Desert, adjacent to settlement at (7,7), and adjacent to tile location (7,5).
-  # This second scenario is used to test that build_on_desert triggers tile pickup.
+  # This second scenario is used to test that build_on_terrain triggers tile pickup.
 
   test "select_action with oasis tile sets current_action type" do
     game = games(:game2player)
@@ -511,43 +511,43 @@ class GameTest < ActiveSupport::TestCase
     assert_equal "oasis", game.current_action["type"]
   end
 
-  test "build_on_desert places a settlement on the Desert hex" do
+  test "build_on_terrain places a settlement on the target terrain hex" do
     game = game_in_oasis_action
     chris = game_players(:chris)
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
     game.reload
 
     assert_equal chris.order, game.board_contents.player_at(0, 1)
   end
 
-  test "build_on_desert decrements the player supply by one" do
+  test "build_on_terrain decrements the player supply by one" do
     game = game_in_oasis_action
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
 
     assert_equal 39, game_players(:chris).reload.supply["settlements"]
   end
 
-  test "build_on_desert marks the OasisTile as used" do
+  test "build_on_terrain marks the activating tile as used" do
     game = game_in_oasis_action
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
 
     oasis_tile = game_players(:chris).reload.tiles.find { |t| t["klass"] == "OasisTile" }
     assert oasis_tile["used"]
   end
 
-  test "build_on_desert resets current_action to mandatory" do
+  test "build_on_terrain resets current_action to mandatory" do
     game = game_in_oasis_action
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
     game.reload
 
     assert_equal({ "type" => "mandatory" }, game.current_action)
   end
 
-  test "build_on_desert triggers tile pickup when the new settlement is adjacent to a tile location" do
+  test "build_on_terrain triggers tile pickup when the new settlement is adjacent to a tile location" do
     # Oasis board at index 0: tile location at (7,5). (7,6) is Desert and adjacent to both
     # the settlement at (7,7) and the location (7,5). Chris holds a tile from (2,7) only,
     # so a second pickup from (7,5) is allowed.
@@ -563,17 +563,17 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    game.build_on_desert(7, 6)
+    game.activate_tile_build(7, 6)
     game.reload
 
     assert game.moves.exists?(action: "pick_up_tile"), "tile pickup must be triggered"
     assert_equal 1, game.board_contents.tile_qty(7, 5)
   end
 
-  test "undo_last_move after build_on_desert removes the settlement and restores supply" do
+  test "undo_last_move after build_on_terrain removes the settlement and restores supply" do
     game = game_in_oasis_action
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
     game.reload
     game.undo_last_move
     game.reload
@@ -582,10 +582,10 @@ class GameTest < ActiveSupport::TestCase
     assert_equal 40, game_players(:chris).reload.supply["settlements"]
   end
 
-  test "undo_last_move after build_on_desert unmarks the OasisTile" do
+  test "undo_last_move after build_on_terrain unmarks the activating tile" do
     game = game_in_oasis_action
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
     game.reload
     game.undo_last_move
     game.reload
@@ -594,10 +594,10 @@ class GameTest < ActiveSupport::TestCase
     assert_not oasis_tile["used"]
   end
 
-  test "undo_last_move after build_on_desert restores current_action to oasis" do
+  test "undo_last_move after build_on_terrain restores current_action to the tile action type" do
     game = game_in_oasis_action
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
     game.reload
     game.undo_last_move
     game.reload
@@ -659,6 +659,17 @@ class GameTest < ActiveSupport::TestCase
 
     build_move = game.moves.find_by(action: "build")
     assert_equal "T", build_move.payload["card"]
+    assert_nil build_move.payload["tile_klass"], "mandatory build must not carry a tile_klass"
+  end
+
+  test "build_on_terrain stores terrain card and tile_klass in payload" do
+    game = game_in_oasis_action
+
+    game.activate_tile_build(0, 1)
+
+    build_move = game.moves.find_by(action: "build")
+    assert_equal "D", build_move.payload["card"]
+    assert_equal "OasisTile", build_move.payload["tile_klass"]
   end
 
   test "end_turn stores card_discarded and card_drawn in payload" do

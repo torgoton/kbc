@@ -47,7 +47,7 @@ class GamesController < ApplicationController
         @game.select_settlement(coord.row, coord.col)
       end
     when "oasis"
-      @game.build_on_desert(coord.row, coord.col)
+      @game.activate_tile_build(coord.row, coord.col)
     else
       @game.build_settlement(coord.row, coord.col)
     end

@@ -156,7 +156,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     assert_states_equal game.capture_snapshot, game.replayed_state
   end
 
-  test "replayed_state matches current state after build_on_desert (oasis action)" do
+  test "replayed_state matches current state after build_on_terrain (oasis action)" do
     game = game_with_known_state
     chris = game_players(:chris)
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
@@ -167,7 +167,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.reload   # clear association cache so capture_snapshot and current_player see fresh data
     game.update(base_snapshot: game.capture_snapshot)
 
-    game.build_on_desert(0, 1)
+    game.activate_tile_build(0, 1)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state

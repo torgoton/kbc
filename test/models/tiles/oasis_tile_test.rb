@@ -85,6 +85,12 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
     assert_empty result
   end
 
+  # --- build_terrain ---
+
+  test "build_terrain returns D" do
+    assert_equal "D", Tiles::OasisTile.new(0).build_terrain
+  end
+
   # --- from_hash ---
 
   test "from_hash returns an OasisTile" do
