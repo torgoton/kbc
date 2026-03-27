@@ -3,6 +3,7 @@
 # Table name: games
 #
 #  id                :bigint           not null, primary key
+#  base_snapshot     :jsonb
 #  board_contents    :json
 #  boards            :json
 #  current_action    :json
@@ -88,6 +89,7 @@ class Game < ApplicationRecord
     deal_terrain_cards
     choose_start_player
     self.current_action = { "type" => "mandatory" }
+    self.base_snapshot = capture_snapshot
     save
   end
 
@@ -486,6 +488,27 @@ class Game < ApplicationRecord
       partial: "games/last_updated_at",
       locals: { move_count: move_count }
     )
+  end
+
+  def capture_snapshot
+    {
+      "board_contents" => BoardState.dump(board_contents),
+      "boards" => boards.dup,
+      "deck" => deck.dup,
+      "discard" => discard.dup,
+      "goals" => goals&.dup,
+      "mandatory_count" => mandatory_count,
+      "current_action" => current_action.dup,
+      "current_player_order" => current_player.order,
+      "players" => game_players.map do |gp|
+        { "order" => gp.order, "hand" => gp.hand,
+          "supply" => gp.supply.dup, "tiles" => (gp.tiles || []).dup }
+      end
+    }
+  end
+
+  def replayed_state
+    GameReplayer.new(self).replay
   end
 
   private
