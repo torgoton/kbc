@@ -238,6 +238,8 @@ function prepForMove() {
   }
 }
 
+// Seed last-updated-at so the first poll tick doesn't trigger a spurious prepForMove
+myLastUpdatedAt = document.querySelector("#last-updated-at")?.innerText ?? null;
 // set up polling for updates
 setupPolling();
 // prepare for the first move

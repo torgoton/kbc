@@ -51,6 +51,25 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal chris.order, game.board_contents.player_at(5, 7)
   end
 
+  test "End turn button is disabled for non-current player even when turn is endable" do
+    game = games(:game2player)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    get game_url(game)
+
+    assert_select "button[disabled]", text: "End turn"
+  end
+
+  test "POST end_turn does nothing when the requesting player is not the current player" do
+    game = games(:game2player)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    post end_turn_game_url(game)
+
+    assert_equal 0, game.reload.mandatory_count, "turn must not have advanced"
+    assert_equal game_players(:chris).id, game.reload.current_player_id, "current player must not have changed"
+  end
+
   test "POST end_turn does not call end_turn when paddock action is in progress" do
     game = games(:game2player)
     game.mandatory_count = 0
@@ -64,7 +83,8 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "POST end_turn does not call end_turn when mandatory builds are incomplete" do
     game = games(:game2player)
-    # mandatory_count is 3 (from fixture), supply > 0
+    game.mandatory_count = 3
+    game.save
 
     post end_turn_game_url(game)
 

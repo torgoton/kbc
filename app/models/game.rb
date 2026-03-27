@@ -243,6 +243,7 @@ class Game < ApplicationRecord
 
   def tile_activatable?(tile)
     return false if tile["used"]
+    return false unless "Tiles::#{tile["klass"]}".safe_constantize
     return false unless mandatory_count == MANDATORY_COUNT || mandatory_count <= 0 ||
       current_player.supply["settlements"] == 0
     instantiate
@@ -268,12 +269,15 @@ class Game < ApplicationRecord
     when "oasis"
       "#{current_player.player.handle} must build on a Desert space"
     else
+      has_activatable = (current_player.tiles || []).any? { |t| tile_activatable?(t) }
       if mandatory_count > 0 && current_player.supply["settlements"] > 0
         "#{current_player.player.handle} must build " \
         "#{ActionController::Base.helpers.pluralize(mandatory_count, "settlement")} on " \
-        "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}"
+        "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}" \
+        "#{" or select a tile" if has_activatable}"
       else
-        "#{current_player.player.handle} must end their turn"
+        "#{current_player.player.handle} must end their turn" \
+        "#{" or select a tile" if has_activatable}"
       end
     end
   end
@@ -514,7 +518,10 @@ class Game < ApplicationRecord
           from: loc,
           to: tile["used"].to_s,
           payload: { "klass" => klass },
-          message: "#{game_player.player.handle} forfeited a #{klass.delete_suffix('Tile').downcase} tile"
+          message: (
+            tile_name = klass.delete_suffix('Tile').downcase
+            "#{game_player.player.handle} forfeited #{/\A[aeiou]/.match?(tile_name) ? "an" : "a"} #{tile_name} tile"
+          )
         )
       end
       should_forfeit
@@ -552,7 +559,7 @@ class Game < ApplicationRecord
       to: "player_#{game_player.order}",
       reversible: true,
       payload: { "klass" => tile[:klass], "qty_before" => qty_before },
-      message: "#{game_player.player.handle} picked up a #{tile[:klass].delete_suffix('Tile')} tile"
+      message: "#{game_player.player.handle} picked up #{/\A[AEIOU]/.match?(tile[:klass]) ? "an" : "a"} #{tile[:klass].delete_suffix('Tile')} tile"
     )
     # Decrement qty in place; entry remains even when qty reaches 0
     board_contents_will_change!

@@ -480,6 +480,38 @@ class GameTest < ActiveSupport::TestCase
     assert game.turn_endable?
   end
 
+  test "turn_state says 'must end their turn or select a tile' when mandatory done and tile is activatable" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.save
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+    game.reload
+
+    assert_match(/must end their turn or select a tile/, game.turn_state)
+  end
+
+  test "turn_state says 'must end their turn' without tile option when no activatable tiles" do
+    game = games(:game2player)
+
+    assert_match(/must end their turn/, game.turn_state)
+    assert_no_match(/or select a tile/, game.turn_state)
+  end
+
+  test "turn_state includes 'or select a tile' at start of turn when player has an activatable tile" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.mandatory_count = 3
+    game.save
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+    game.reload
+
+    assert_match(/or select a tile/, game.turn_state)
+  end
+
   test "turn_state returns must move a settlement when paddock has no from" do
     game = games(:game2player)
     game.current_action = { "type" => "paddock" }
@@ -717,6 +749,15 @@ class GameTest < ActiveSupport::TestCase
     assert_equal 2, pickup_move.payload["qty_before"]
   end
 
+  test "pick_up_tile message uses correct article for vowel-initial tile names" do
+    game = game_with_tile_at_2_7(qty: 2)
+
+    game.build_settlement(1, 7)
+
+    pickup_move = game.moves.find_by(action: "pick_up_tile")
+    assert_match(/picked up an Oasis tile/, pickup_move.message)
+  end
+
   test "forfeit_tile stores tile klass in payload" do
     game = games(:game2player)
     chris = game_players(:chris)
@@ -734,6 +775,25 @@ class GameTest < ActiveSupport::TestCase
 
     forfeit_move = game.moves.find_by(action: "forfeit_tile")
     assert_equal "OasisTile", forfeit_move.payload["klass"]
+  end
+
+  test "forfeit_tile message uses correct article for vowel-initial tile names" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(2, 7, "OasisTile", 0)
+      s.place_settlement(1, 7, chris.order)
+    end
+    game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.move_settlement(1, 5)
+
+    forfeit_move = game.moves.find_by(action: "forfeit_tile")
+    assert_match(/forfeited an oasis tile/, forfeit_move.message)
   end
 
   test "undo after forfeit_tile restores tile klass from payload not board state" do

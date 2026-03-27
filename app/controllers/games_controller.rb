@@ -72,8 +72,9 @@ class GamesController < ApplicationController
 
   def end_turn
     Rails.logger.debug("END TURN action")
-    @game = Current.user.games.find(params["id"].first)
-    @game.end_turn if @game.turn_endable?
+    @game = Current.user.games.find(params[:id])
+    current_gp = @game.game_players.find_by(player: Current.user)
+    @game.end_turn if current_gp == @game.current_player && @game.turn_endable?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -101,7 +102,7 @@ class GamesController < ApplicationController
 
   def undo_move
     Rails.logger.debug("UNDO MOVE action")
-    @game = Current.user.games.find(params["id"].first)
+    @game = Current.user.games.find(params[:id])
     if @game.undo_allowed?
       @game.undo_last_move
     end
