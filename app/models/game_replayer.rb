@@ -29,14 +29,13 @@ class GameReplayer
       to = Coordinate.from_key(move.to)
       @board.place_settlement(to.row, to.col, order)
       player["supply"]["settlements"] -= 1
-      @mandatory_count -= 1
-
-    when "build_oasis"
-      to = Coordinate.from_key(move.to)
-      @board.place_settlement(to.row, to.col, order)
-      player["supply"]["settlements"] -= 1
-      @current_action = { "type" => "mandatory" }
-      mark_tile_used(player, "OasisTile")
+      tile_klass = move.payload&.dig("tile_klass")
+      if tile_klass
+        @current_action = { "type" => "mandatory" }
+        mark_tile_used(player, tile_klass)
+      else
+        @mandatory_count -= 1
+      end
 
     when "end_turn"
       @discard.push(move.payload["card_discarded"])

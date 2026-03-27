@@ -146,45 +146,36 @@ class Game < ApplicationRecord
   def build_settlement(row, col)
     log("Attempt to build at #{row}, #{col}")
     instantiate
-    # bail if no pieces left
     game_player = current_player
-    settlements = game_player.supply["settlements"]
-    log(" I have #{settlements} settlements remaining")
-    return "No settlements left" if settlements < 1
-    # bail if occupied
-    # return "Occupied" if board_contents["[#{row}, #{col}]"]
-    # bail unless terrain matches card
+    log(" I have #{game_player.supply["settlements"]} settlements remaining")
+    return "No settlements left" if game_player.supply["settlements"] < 1
     card_terrain = game_player.hand
-    # cell_terrain = board.terrain_at(row, col)
-    # log(" Terrain card is #{card_terrain}")
-    # log(" Terrain of cell is #{cell_terrain}")
-    # "Incorrect terrain" unless card_terrain == cell_terrain
-    # bail unless available
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
-    # actually build here
-    self.move_count += 1
-    # - create a Move record (deliberate)
-    self.moves.create(
-      order: self.move_count,
-      game_player: game_player,
-      deliberate: true,
-      action: "build",
-      from: "supply",
-      to: "[#{row}, #{col}]",
-      reversible: true,
-      payload: { "card" => card_terrain },
-      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[card_terrain]}"
-    )
-    # - update supply
-    game_player.supply["settlements"] -= 1
-    # - update board_contents
-    board_contents_will_change!
-    board_contents.place_settlement(row, col, game_player.order)
+    build_on_terrain(card_terrain, row, col, game_player)
     self.mandatory_count -= 1
     log("Building settlement at #{row}, #{col} for player #{game_player.order}")
-    # - apply consequential tile pickup if adjacent to a location hex with tiles
-    #   (this increments move_count and creates its own Move record)
-    apply_tile_pickup(game_player, row, col)
+    game_player.save
+    save
+  end
+
+  def activate_tile_build(row, col)
+    instantiate
+    game_player = current_player
+    return "No settlements left" if game_player.supply["settlements"] < 1
+    tile_klass = "#{current_action["type"].capitalize}Tile"
+    tile_idx = game_player.tiles&.find_index { |t| t["klass"] == tile_klass && !t["used"] }
+    return "Not available" unless tile_idx
+    tile = game_player.tiles[tile_idx]
+    tile_obj = Tiles::Tile.from_hash(tile)
+    destinations = tile_obj.valid_destinations(
+      board_contents: board_contents, board: @board, player_order: game_player.order
+    )
+    return "Not available" unless destinations.include?([ row, col ])
+    updated = game_player.tiles.dup
+    updated[tile_idx] = updated[tile_idx].merge("used" => true)
+    game_player.tiles = updated
+    build_on_terrain(tile_obj.build_terrain, row, col, game_player, tile_klass: tile_klass)
+    self.current_action = { "type" => "mandatory" }
     game_player.save
     save
   end
@@ -247,43 +238,6 @@ class Game < ApplicationRecord
     apply_tile_forfeit(current_player)
     apply_tile_pickup(current_player, row, col)
     current_player.save
-    save
-  end
-
-  def build_on_desert(row, col)
-    instantiate
-    game_player = current_player
-    return "No settlements left" if game_player.supply["settlements"] < 1
-    destinations = Tiles::OasisTile.new(0).valid_destinations(
-      board_contents: board_contents,
-      board: @board,
-      player_order: game_player.order
-    )
-    return "Not available" unless destinations.include?([ row, col ])
-    self.move_count += 1
-    self.moves.create(
-      order: move_count,
-      game_player: game_player,
-      deliberate: true,
-      action: "build_oasis",
-      from: "supply",
-      to: "[#{row}, #{col}]",
-      reversible: true,
-      message: "#{game_player.player.handle} built a settlement on Desert"
-    )
-    game_player.supply["settlements"] -= 1
-    board_contents_will_change!
-    board_contents.place_settlement(row, col, game_player.order)
-    self.current_action = { "type" => "mandatory" }
-    tiles = game_player.tiles || []
-    idx = tiles.index { |t| t["klass"] == "OasisTile" && t["used"] == false }
-    if idx
-      updated = tiles.dup
-      updated[idx] = updated[idx].merge("used" => true)
-      game_player.tiles = updated
-    end
-    apply_tile_pickup(game_player, row, col)
-    game_player.save
     save
   end
 
@@ -373,24 +327,23 @@ class Game < ApplicationRecord
       self.move_count -= 1
       case move.action
       when "build"
-        self.mandatory_count += 1
         board_contents_will_change!
         board_contents.remove(*Coordinate.from_key(move.to))
         move.game_player.supply["settlements"] += 1
-        move.game_player.save
-      when "build_oasis"
-        board_contents_will_change!
-        board_contents.remove(*Coordinate.from_key(move.to))
-        move.game_player.supply["settlements"] += 1
-        tiles = move.game_player.tiles || []
-        idx = tiles.index { |t| t["klass"] == "OasisTile" && t["used"] == true }
-        if idx
-          updated = tiles.dup
-          updated[idx] = updated[idx].merge("used" => false)
-          move.game_player.tiles = updated
-          move.game_player.save
+        tile_klass = move.payload&.dig("tile_klass")
+        if tile_klass
+          tiles = move.game_player.tiles || []
+          idx = tiles.index { |t| t["klass"] == tile_klass && t["used"] == true }
+          if idx
+            updated = tiles.dup
+            updated[idx] = updated[idx].merge("used" => false)
+            move.game_player.tiles = updated
+          end
+          self.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase }
+        else
+          self.mandatory_count += 1
         end
-        self.current_action = { "type" => "oasis" }
+        move.game_player.save
       when "move_settlement"
         board_contents_will_change!
         board_contents.move_settlement(*Coordinate.from_key(move.to), *Coordinate.from_key(move.from))
@@ -515,6 +468,27 @@ class Game < ApplicationRecord
 
   def log(msg)
     Rails.logger.debug msg
+  end
+
+  def build_on_terrain(terrain, row, col, game_player, tile_klass: nil)
+    payload = { "card" => terrain }
+    payload["tile_klass"] = tile_klass if tile_klass
+    self.move_count += 1
+    self.moves.create(
+      order: move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "build",
+      from: "supply",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: payload,
+      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]}"
+    )
+    game_player.supply["settlements"] -= 1
+    board_contents_will_change!
+    board_contents.place_settlement(row, col, game_player.order)
+    apply_tile_pickup(game_player, row, col)
   end
 
   # Remove any tiles the player holds whose location hex is no longer adjacent
