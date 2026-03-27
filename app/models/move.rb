@@ -8,6 +8,7 @@
 #  from           :string
 #  message        :string
 #  order          :integer
+#  payload        :jsonb
 #  reversible     :boolean
 #  to             :string
 #  created_at     :datetime         not null

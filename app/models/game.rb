@@ -170,6 +170,7 @@ class Game < ApplicationRecord
       from: "supply",
       to: "[#{row}, #{col}]",
       reversible: true,
+      payload: { "card" => card_terrain },
       message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[card_terrain]}"
     )
     # - update supply
@@ -326,8 +327,11 @@ class Game < ApplicationRecord
     Rails.logger.debug(" - current player #{current_player.inspect}")
     instantiate
     game_player = current_player
+    card_discarded = game_player.hand
     self.discard.push(game_player.hand)
     game_player.hand = next_card
+    card_drawn = game_player.hand
+    reshuffled = self.discard.empty?
     self.mandatory_count = MANDATORY_COUNT
     self.current_action = { "type" => "mandatory" }
     next_order = (current_player.order + 1) % game_players.count
@@ -345,6 +349,8 @@ class Game < ApplicationRecord
       deliberate: true,
       action: "end_turn",
       reversible: false,
+      payload: { "card_discarded" => card_discarded, "card_drawn" => card_drawn,
+                 "reshuffled" => reshuffled, "deck_after" => self.deck.dup },
       message: "#{game_player.player.handle} ended their turn"
     )
     ActiveRecord::Base.transaction do
@@ -409,7 +415,7 @@ class Game < ApplicationRecord
         move.game_player.tiles = tiles.reject { |t| t["from"] == move.from }
         move.game_player.save
       when "forfeit_tile"
-        klass = board_contents.tile_klass(*Coordinate.from_key(move.from))
+        klass = move.payload["klass"]
         tiles = move.game_player.tiles || []
         move.game_player.tiles = tiles + [ { "klass" => klass, "from" => move.from, "used" => move.to == "true" } ]
         move.game_player.save
@@ -510,6 +516,7 @@ class Game < ApplicationRecord
           reversible: true,
           from: loc,
           to: tile["used"].to_s,
+          payload: { "klass" => klass },
           message: "#{game_player.player.handle} forfeited a #{klass.delete_suffix('Tile').downcase} tile"
         )
       end
@@ -537,6 +544,7 @@ class Game < ApplicationRecord
     tile = find_tile_pickup(game_player, row, col)
     return unless tile
 
+    qty_before = board_contents.tile_qty(*Coordinate.from_key(tile[:key]))
     self.move_count += 1
     self.moves.create(
       order: move_count,
@@ -546,6 +554,7 @@ class Game < ApplicationRecord
       from: tile[:key],
       to: "player_#{game_player.order}",
       reversible: true,
+      payload: { "klass" => tile[:klass], "qty_before" => qty_before },
       message: "#{game_player.player.handle} picked up a #{tile[:klass].delete_suffix('Tile')} tile"
     )
     # Decrement qty in place; entry remains even when qty reaches 0

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_14_171251) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_27_125644) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -54,6 +54,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_14_171251) do
     t.bigint "game_player_id", null: false
     t.string "message"
     t.integer "order"
+    t.jsonb "payload"
     t.boolean "reversible"
     t.string "to"
     t.datetime "updated_at", null: false

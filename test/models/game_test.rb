@@ -646,6 +646,115 @@ class GameTest < ActiveSupport::TestCase
     assert_not game.tile_activatable?(tile)
   end
 
+  # Move payload tests
+  #
+  # Each action type that has non-obvious or non-deterministic data stores a
+  # payload jsonb column on the Move record so events are self-describing.
+
+  test "build stores the terrain card played in payload" do
+    game = game_with_tile_at_2_7(qty: 0)  # Oasis board, Chris hand "T", build at (1,7)
+
+    game.build_settlement(1, 7)
+
+    build_move = game.moves.find_by(action: "build")
+    assert_equal "T", build_move.payload["card"]
+  end
+
+  test "end_turn stores card_discarded and card_drawn in payload" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    chris.hand = "G"
+    chris.save
+    game.deck = [ "C", "D", "F" ]
+    game.discard = []
+    game.save
+
+    game.end_turn
+
+    move = game.moves.find_by(action: "end_turn")
+    assert_equal "G", move.payload["card_discarded"]
+    assert_equal "C", move.payload["card_drawn"]
+    assert_equal false, move.payload["reshuffled"]
+  end
+
+  test "end_turn stores reshuffled true and deck_after when deck runs out mid-draw" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    chris.hand = "G"
+    chris.save
+    game.deck = [ "C" ]
+    game.discard = [ "D", "F", "T" ]
+    game.save
+
+    game.end_turn
+
+    move = game.moves.find_by(action: "end_turn")
+    assert_equal "G", move.payload["card_discarded"]
+    assert_equal "C", move.payload["card_drawn"]
+    assert_equal true, move.payload["reshuffled"]
+    assert_not_empty move.payload["deck_after"]
+  end
+
+  test "pick_up_tile stores tile klass and qty_before in payload" do
+    game = game_with_tile_at_2_7(qty: 2)
+
+    game.build_settlement(1, 7)
+
+    pickup_move = game.moves.find_by(action: "pick_up_tile")
+    assert_equal "OasisTile", pickup_move.payload["klass"]
+    assert_equal 2, pickup_move.payload["qty_before"]
+  end
+
+  test "forfeit_tile stores tile klass in payload" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(2, 7, "OasisTile", 0)
+      s.place_settlement(1, 7, chris.order)
+    end
+    game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.move_settlement(1, 5)
+
+    forfeit_move = game.moves.find_by(action: "forfeit_tile")
+    assert_equal "OasisTile", forfeit_move.payload["klass"]
+  end
+
+  test "undo after forfeit_tile restores tile klass from payload not board state" do
+    # If undo read klass from board_contents it would get nil here (qty:0 entry exists
+    # but we'll remove it to prove undo reads from payload instead).
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(2, 7, "OasisTile", 0)
+      s.place_settlement(1, 7, chris.order)
+    end
+    game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    game.move_settlement(1, 5)
+    game.reload
+
+    # Remove the tile entry from board_contents so undo cannot read klass from it
+    bc = game.board_contents
+    bc.instance_variable_get(:@cells).delete([ 2, 7 ])
+    game.board_contents = bc
+    game.save
+
+    game.undo_last_move
+    game.reload
+
+    restored = game_players(:chris).reload.tiles
+    assert_includes restored, { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+  end
+
   private
 
   # Returns a saved, in-progress game using the Oasis board with a single tile
