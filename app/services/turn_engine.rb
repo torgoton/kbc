@@ -128,8 +128,8 @@ class TurnEngine
   def tile_activatable?(tile)
     return false if tile["used"]
     return false unless "Tiles::#{tile["klass"]}".safe_constantize
-    return false unless @game.mandatory_count == Game::MANDATORY_COUNT ||
-      @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?
+    return false unless @game.current_action["type"] == "mandatory" &&
+      (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0)
     @game.instantiate
     ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board }
     Tiles::Tile.from_hash(tile).activatable?(**ctx)

@@ -246,7 +246,13 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(mandatory_count: 1)
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
 
-    # mandatory_count=1: not at MANDATORY_COUNT(3), not <= 0, settlements remaining → blocked
+    assert_not @engine.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? returns false when a tile action is already in progress" do
+    @game.update!(current_action: { "type" => "oasis" }, mandatory_count: 0)
+    tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+
     assert_not @engine.tile_activatable?(tile)
   end
 
