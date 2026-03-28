@@ -230,6 +230,19 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 0, @game.moves.count
   end
 
+  test "end_turn creates an end_game move when the last player ends and game is ending" do
+    paula = @game.game_players.find { |gp| gp.order == 1 }
+    @game.update!(current_player: paula, ending: true, mandatory_count: 0)
+
+    @engine.end_turn
+
+    end_game_move = @game.moves.find_by(action: "end_game")
+    assert end_game_move, "expected an end_game move to be created"
+    assert_not end_game_move.deliberate
+    assert_not end_game_move.reversible
+    assert_equal paula, end_game_move.game_player
+  end
+
   test "tile_activatable? returns false for a used tile" do
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true }
 
