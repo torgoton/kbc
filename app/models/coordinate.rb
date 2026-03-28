@@ -12,11 +12,11 @@ class Coordinate
   end
 
   def to_key = "[#{row}, #{col}]"
-  def to_a   = [row, col]
+  def to_a   = [ row, col ]
   def to_s   = inspect
   def inspect = "#<Coordinate [#{row}, #{col}]>"
 
   def ==(other)   = other.is_a?(Coordinate) && row == other.row && col == other.col
   def eql?(other) = self == other
-  def hash        = [row, col].hash
+  def hash        = [ row, col ].hash
 end

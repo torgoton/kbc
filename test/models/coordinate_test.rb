@@ -71,7 +71,7 @@ class CoordinateTest < ActiveSupport::TestCase
   # write board_contents.remove(*coord) without changing BoardState.
 
   test "to_a returns [row, col]" do
-    assert_equal [2, 7], Coordinate.new(2, 7).to_a
+    assert_equal [ 2, 7 ], Coordinate.new(2, 7).to_a
   end
 
   test "splat into a (row, col) method works" do
@@ -96,7 +96,7 @@ class CoordinateTest < ActiveSupport::TestCase
   end
 
   test "not equal to plain array with same values" do
-    assert_not_equal Coordinate.new(2, 7), [2, 7]
+    assert_not_equal Coordinate.new(2, 7), [ 2, 7 ]
   end
 
   test "usable as a Hash key" do
@@ -106,7 +106,7 @@ class CoordinateTest < ActiveSupport::TestCase
   end
 
   test "usable in Array#include?" do
-    destinations = [Coordinate.new(1, 2), Coordinate.new(3, 4)]
+    destinations = [ Coordinate.new(1, 2), Coordinate.new(3, 4) ]
     assert destinations.include?(Coordinate.new(1, 2))
     assert_not destinations.include?(Coordinate.new(9, 9))
   end

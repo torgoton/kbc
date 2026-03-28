@@ -64,7 +64,7 @@ class TurnEngine
     )
     return "Not available" unless destinations.include?([ row, col ])
     game_player.mark_tile_used!(tile_klass)
-    build_on_terrain(tile_obj.build_terrain, row, col, game_player, tile_klass: tile_klass)
+    build_on_terrain(@game.board.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
     @game.current_action = { "type" => "mandatory" }
     game_player.save
     @game.save
@@ -152,6 +152,10 @@ class TurnEngine
       "#{@game.current_player.player.handle} must move a settlement"
     when "oasis"
       "#{@game.current_player.player.handle} must build on a Desert space"
+    when "farm"
+      "#{@game.current_player.player.handle} must build on a Grass space"
+    when "tavern"
+      "#{@game.current_player.player.handle} must build at the end of a row"
     else
       has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
@@ -199,6 +203,8 @@ class TurnEngine
       @game.current_player.save
       @game.save
     end
+    max_order = @game.game_players.count - 1
+    @game.complete! if @game.ending? && game_player.order == max_order
   end
 
   def undo_last_move
@@ -214,6 +220,7 @@ class TurnEngine
         @game.board_contents_will_change!
         @game.board_contents.remove(*Coordinate.from_key(move.to))
         move.game_player.increment_supply!
+        @game.ending = false
         tile_klass = move.payload&.dig("tile_klass")
         if tile_klass
           move.game_player.mark_tile_unused!(tile_klass)
@@ -266,6 +273,7 @@ class TurnEngine
       message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]}"
     )
     game_player.decrement_supply!
+    @game.ending = true if game_player.settlements_remaining == 0
     @game.board_contents_will_change!
     @game.board_contents.place_settlement(row, col, game_player.order)
     apply_tile_pickup(game_player, row, col)

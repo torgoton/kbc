@@ -1,4 +1,7 @@
 <% content_for :title, "KBC Game #{game.id}" %>
 <%= turbo_stream_from "game_#{game.id}" %>
-<%= render partial: "games/game", locals: { game:, my_player:, engine: TurnEngine.new(game) } %>
+<%= render partial: "games/game", locals: { game:, my_player:, engine: TurnEngine.new(game), scores: game.live_scores } %>
+<% if game.state == "completed" %>
+  <%= render "games/end_game_modal", game:, scores: game.scores %>
+<% end %>
 <%= javascript_include_tag "gameboard" %>

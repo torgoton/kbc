@@ -9,6 +9,7 @@
 #  current_action    :json
 #  deck              :json
 #  discard           :json
+#  ending            :boolean          default(FALSE), not null
 #  goals             :json
 #  mandatory_count   :integer
 #  move_count        :integer
@@ -662,12 +663,12 @@ class GameTest < ActiveSupport::TestCase
 
   test "tile_activatable? returns false for unused OasisTile when all Desert hexes are occupied" do
     desert_hexes = [
-      [0,0],[0,1],[1,0],[2,0],[2,1],[5,8],[6,8],[7,6],[7,7],[8,7],[8,8],
-      [0,13],[0,14],[0,16],[0,17],[0,18],[0,19],[1,13],[1,14],[1,16],[1,17],[1,18],[1,19],
-      [2,16],[2,17],[3,16],
-      [10,0],[10,1],[10,11],[10,12],[10,15],[10,16],[11,0],[11,12],[11,13],[11,14],
-      [13,5],[13,6],[14,6],[14,7],[15,7],[15,8],[16,8],[16,9],[16,10],
-      [17,8],[17,10],[17,11],[18,10],[18,11],[18,12],[19,10],[19,11]
+      [ 0, 0 ], [ 0, 1 ], [ 1, 0 ], [ 2, 0 ], [ 2, 1 ], [ 5, 8 ], [ 6, 8 ], [ 7, 6 ], [ 7, 7 ], [ 8, 7 ], [ 8, 8 ],
+      [ 0, 13 ], [ 0, 14 ], [ 0, 16 ], [ 0, 17 ], [ 0, 18 ], [ 0, 19 ], [ 1, 13 ], [ 1, 14 ], [ 1, 16 ], [ 1, 17 ], [ 1, 18 ], [ 1, 19 ],
+      [ 2, 16 ], [ 2, 17 ], [ 3, 16 ],
+      [ 10, 0 ], [ 10, 1 ], [ 10, 11 ], [ 10, 12 ], [ 10, 15 ], [ 10, 16 ], [ 11, 0 ], [ 11, 12 ], [ 11, 13 ], [ 11, 14 ],
+      [ 13, 5 ], [ 13, 6 ], [ 14, 6 ], [ 14, 7 ], [ 15, 7 ], [ 15, 8 ], [ 16, 8 ], [ 16, 9 ], [ 16, 10 ],
+      [ 17, 8 ], [ 17, 10 ], [ 17, 11 ], [ 18, 10 ], [ 18, 11 ], [ 18, 12 ], [ 19, 10 ], [ 19, 11 ]
     ]
     game = games(:game2player)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
@@ -827,7 +828,148 @@ class GameTest < ActiveSupport::TestCase
     assert_includes restored, { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
   end
 
+  # ── End-game modal ───────────────────────────────────────────────────────────
+
+  test "winners returns the player(s) with the highest total score" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    game.scores = {
+      chris.order.to_s => { "total" => 10 },
+      paula.order.to_s => { "total" => 6 }
+    }
+    game.save
+
+    assert_equal [ chris ], game.winners
+  end
+
+  test "winners returns all tied players when scores are equal" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    game.scores = {
+      chris.order.to_s => { "total" => 8 },
+      paula.order.to_s => { "total" => 8 }
+    }
+    game.save
+
+    assert_equal [ chris, paula ].map(&:id).sort, game.winners.map(&:id).sort
+  end
+
+  test "winners returns empty when scores are not yet stored" do
+    game = games(:game2player)
+    assert_empty game.winners
+  end
+
+  # ── Live scores ──────────────────────────────────────────────────────────────
+
+  test "live_scores returns a hash keyed by player order with goal breakdowns and total" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.goals  = [ "fishermen", "knights", "merchants" ]
+    game.save
+
+    result = game.live_scores
+
+    assert result.key?(game_players(:chris).order.to_s)
+    assert result.key?(game_players(:paula).order.to_s)
+    chris_scores = result[game_players(:chris).order.to_s]
+    assert chris_scores.key?("castles")
+    assert chris_scores.key?("total")
+  end
+
+  # ── End-game detection ───────────────────────────────────────────────────────
+
+  test "build_settlement sets ending when the player places their last settlement" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.mandatory_count = 1
+    game.save
+    chris = game_players(:chris)
+    chris.update!(supply: { "settlements" => 1 }, hand: "G")
+
+    engine(game).build_settlement(0, 7)  # OasisBoard (0,7)=G
+    game.reload
+
+    assert game.ending, "ending must be set when last settlement is placed"
+  end
+
+  test "build_settlement does not set ending when supply remains above zero" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.mandatory_count = 1
+    game.save
+    chris = game_players(:chris)
+    chris.update!(supply: { "settlements" => 2 }, hand: "G")
+
+    engine(game).build_settlement(0, 7)
+    game.reload
+
+    assert_not game.ending, "ending must not be set when settlements remain"
+  end
+
+  test "end_turn keeps state playing when non-last-order player ends turn while ending" do
+    game = new_started_game
+    game.update!(ending: true, mandatory_count: 0)
+    last_player_order = game.game_players.count - 1
+    non_last = game.game_players.find { |gp| gp.order != last_player_order }
+    game.update!(current_player: non_last)
+
+    engine(game).end_turn
+    game.reload
+
+    assert_equal "playing", game.state
+  end
+
+  test "end_turn completes game when last-order player ends turn while ending" do
+    game = new_started_game
+    last_gp = game.game_players.max_by(&:order)
+    game.update!(ending: true, mandatory_count: 0, current_player: last_gp)
+
+    engine(game).end_turn
+    game.reload
+
+    assert_equal "completed", game.state
+  end
+
+  test "complete! sets state to completed and populates scores" do
+    game = new_started_game
+    game.complete!
+    game.reload
+
+    assert_equal "completed", game.state
+    assert_not_nil game.scores, "scores must be stored"
+    assert game.scores.key?(game.game_players.first.order.to_s), "scores keyed by player order"
+  end
+
+  test "undo_last_move after last settlement clears the ending flag" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.mandatory_count = 1
+    game.save
+    chris = game_players(:chris)
+    chris.update!(supply: { "settlements" => 1 }, hand: "G")
+
+    engine(game).build_settlement(0, 7)
+    game.reload
+    assert game.ending
+
+    engine(game).undo_last_move
+    game.reload
+
+    assert_not game.ending, "ending must be cleared after undoing the last-settlement build"
+  end
+
   private
+
+  def new_started_game
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+    game
+  end
 
   def engine(game)
     TurnEngine.new(game)

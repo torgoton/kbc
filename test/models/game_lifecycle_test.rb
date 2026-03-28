@@ -62,5 +62,4 @@ class GameLifecycleTest < ActiveSupport::TestCase
       assert_includes %w[C D F G T], gp.hand
     end
   end
-
 end

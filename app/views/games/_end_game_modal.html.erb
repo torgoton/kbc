@@ -1,0 +1,40 @@
+<dialog id="end-game-modal" open>
+  <h2>Game Over!</h2>
+  <% winners = game.winners %>
+  <p class="winner-declaration">
+    <% if winners.size == 1 %>
+      <%= winners.first.player.handle %> wins!
+    <% else %>
+      Tie: <%= winners.map { |w| w.player.handle }.to_sentence %> share the victory!
+    <% end %>
+  </p>
+  <% players = game.game_players.sort_by(&:order) %>
+  <% goal_keys = (scores.values.first&.keys || []) - ["total"] %>
+  <table class="score-table">
+    <thead>
+      <tr>
+        <th>Goal</th>
+        <% players.each do |player| %>
+          <th><%= player.player.handle %></th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% goal_keys.each do |goal| %>
+        <tr>
+          <td><%= goal.capitalize %></td>
+          <% players.each do |player| %>
+            <td><%= scores[player.order.to_s][goal]["score"] %></td>
+          <% end %>
+        </tr>
+      <% end %>
+      <tr class="score-total">
+        <td>Total</td>
+        <% players.each do |player| %>
+          <td><%= scores[player.order.to_s]["total"] %></td>
+        <% end %>
+      </tr>
+    </tbody>
+  </table>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
