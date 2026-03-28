@@ -1,12 +1,12 @@
 <% (player.tiles || []).each do |tile| %>
   <% type = tile["klass"].delete_suffix("Tile").downcase %>
   <% used = tile["used"] %>
-  <% if n == 0 && tile["klass"] == "PaddockTile" && game.tile_activatable?(tile) %>
+  <% if n == 0 && tile["klass"] == "PaddockTile" && engine.tile_activatable?(tile) %>
     <%= button_to type.capitalize,
           select_action_game_path(game),
           params: { action_type: "paddock" },
           class: "player-tile #{type} tile-available" %>
-  <% elsif n == 0 && tile["klass"] == "OasisTile" && game.tile_activatable?(tile) %>
+  <% elsif n == 0 && tile["klass"] == "OasisTile" && engine.tile_activatable?(tile) %>
     <%= button_to type.capitalize,
           select_action_game_path(game),
           params: { action_type: "oasis" },
