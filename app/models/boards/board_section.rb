@@ -8,7 +8,7 @@ module Boards
       raise "Map not implemented"
     end
 
-    def silver_hexes
+    def scoring_hexes
       []
     end
 
