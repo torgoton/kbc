@@ -36,6 +36,14 @@ class BoardTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { Boards::Board.new(game_with_boards("Swamp")) }
   end
 
+  test "Board.new creates a Tile object for a valid tile class in board contents" do
+    contents = BoardState.new
+    contents.place_tile(0, 0, "OasisTile", 2)
+    game = GameStub.new([], contents)
+    board = Boards::Board.new(game)
+    assert_instance_of Tiles::OasisTile, board.content_at(0, 0)
+  end
+
   test "Board.new raises ArgumentError for unknown tile class in board contents" do
     contents = BoardState.new
     contents.place_tile(0, 0, "GoblinTile", 2)
