@@ -86,13 +86,4 @@ class GamePlayer < ApplicationRecord
     updated[idx] = updated[idx].merge("used" => false)
     self.tiles = updated
   end
-
-  def has_taken_from?(r, c)
-    JSON.parse(taken_from || "[]").include?("#{r}, #{c}")
-  end
-
-  def take_from!(r, c)
-    return if has_taken_from?(r, c)
-    update(taken_from: (JSON.parse(taken_from || "[]") << "#{r}, #{c}").to_json)
-  end
 end

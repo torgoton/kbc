@@ -24,6 +24,23 @@ class GameLifecycleTest < ActiveSupport::TestCase
       "board.content_at should return a tile object, not nil"
   end
 
+  test "start returns false and leaves game in waiting when fewer than 2 players have joined" do
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+
+    result = game.start
+    game.reload
+
+    assert_equal false, result
+    assert_equal "waiting", game.state
+  end
+
+  test "start returns false when game is not in waiting state" do
+    result = @game.start  # @game is already playing from setup
+
+    assert_equal false, result
+  end
+
   test "start produces a playing game with boards, tiles, supplies, and dealt hands" do
     assert_equal "playing", @game.state
     assert_equal 4, @game.boards.size

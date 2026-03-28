@@ -1,18 +1,30 @@
 require "test_helper"
 
 class SessionsControllerTest < ActionDispatch::IntegrationTest
-  test "should get login screen" do
+  test "GET new renders the login form" do
     get new_session_url
     assert_response :success
   end
 
-  test "bad credentials should report" do
-    post new_session_url, params: { user: {} }
-    assert_response :not_found
+  test "POST create with valid approved credentials redirects" do
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+    assert_response :redirect
   end
 
-  test "bad credentials should redirect" do
-    post new_session_url, params: { user: {} }
-    assert_response :not_found
+  test "POST create with invalid credentials redirects to root with alert" do
+    post session_url, params: { email_address: "nobody@example.com", password: "wrong" }
+    assert_redirected_to root_path
+    assert_equal "Invalid credentials. Please try another email address or password.", flash[:alert]
+  end
+
+  test "POST create with unapproved user redirects to unapproved page" do
+    post session_url, params: { email_address: "exemplar@example.com", password: "password" }
+    assert_redirected_to unapproved_users_url
+  end
+
+  test "DELETE destroy terminates session and redirects to root" do
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+    delete session_url
+    assert_redirected_to root_path
   end
 end

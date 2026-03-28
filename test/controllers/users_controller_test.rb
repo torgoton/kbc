@@ -28,9 +28,15 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to unapproved_users_path
   end
 
-  test "should not show user" do
+  test "should not show user when unauthenticated" do
     get user_url(@user)
     assert_redirected_to new_session_path
+  end
+
+  test "authenticated user can view a user profile" do
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+    get user_url(@user)
+    assert_response :success
   end
 
   test "missing handle does not save" do

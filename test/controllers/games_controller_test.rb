@@ -124,4 +124,82 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     get game_url(game)
     assert_select "span#current-action[data-type='mandatory']"
   end
+
+  test "GET new renders the new game form" do
+    get new_game_url
+    assert_response :success
+  end
+
+  test "POST create creates a game and redirects to dashboard" do
+    assert_difference("Game.count", 1) do
+      post games_url
+    end
+    assert_redirected_to dashboard_path
+  end
+
+  test "POST action with mandatory current_action dispatches build_settlement" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new
+    game.current_action = { "type" => "mandatory" }
+    game.save
+
+    post action_game_url(game), params: { build_row: 1, build_col: 7 }
+
+    assert_equal game_players(:chris).order, game.reload.board_contents.player_at(1, 7)
+  end
+
+  test "POST action with oasis current_action dispatches activate_tile_build" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
+    game.current_action = { "type" => "oasis" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    post action_game_url(game), params: { build_row: 0, build_col: 1 }
+
+    assert_equal chris.order, game.reload.board_contents.player_at(0, 1)
+  end
+
+  test "POST join adds the current user to the game" do
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+    post join_game_url(game)
+
+    assert_includes game.reload.players, users(:paula)
+  end
+
+  test "POST join redirects to the game" do
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+    post join_game_url(game)
+
+    assert_redirected_to game_path(game)
+  end
+
+  test "POST undo_move redirects to the game" do
+    game = games(:game2player)
+    post undo_move_game_url(game)
+    assert_redirected_to game_path(game)
+  end
+
+end
+
+class GamesControllerUnauthenticatedTest < ActionDispatch::IntegrationTest
+  test "GET show redirects to login when not authenticated" do
+    get game_url(games(:game2player))
+    assert_redirected_to new_session_path
+  end
+
+  test "POST action redirects to login when not authenticated" do
+    post action_game_url(games(:game2player)), params: { build_row: 0, build_col: 0 }
+    assert_redirected_to new_session_path
+  end
 end

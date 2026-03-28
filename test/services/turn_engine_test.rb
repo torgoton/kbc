@@ -93,6 +93,163 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.moves.exists?(action: "pick_up_tile", deliberate: false)
   end
 
+  test "build_settlement returns 'No settlements left' when supply is exhausted" do
+    force_hand("G")
+    @game.current_player.update!(supply: { "settlements" => 0 })
+
+    result = @engine.build_settlement(*empty_hexes_of("G", 1).first)
+
+    assert_equal "No settlements left", result
+  end
+
+  test "build_settlement returns 'Not avilalable' when location not adjacent to existing settlements" do
+    # Place a settlement at a Canyon hex in Tavern board, then try to build
+    # at a far-away Canyon hex that cannot be adjacent
+    @game.instantiate
+    player = @game.current_player
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(0, 7, player.order)
+    @game.save
+
+    game2 = Game.find(@game.id)
+    game2.current_player.update!(hand: "C")
+    engine2 = TurnEngine.new(game2)
+
+    # (5,1) is Canyon on Tavern board row 5 ("FCCWGTTCCC"), not adjacent to (0,7)
+    result = engine2.build_settlement(5, 1)
+
+    assert_equal "Not avilalable", result
+  end
+
+  test "build_settlement uses neighbor adjacency when player has an existing settlement" do
+    # Place a settlement at a Canyon hex, then build on an adjacent Canyon hex
+    @game.instantiate
+    player = @game.current_player
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(0, 7, player.order)
+    @game.save
+
+    game2 = Game.find(@game.id)
+    game2.current_player.update!(hand: "C")
+    engine2 = TurnEngine.new(game2)
+
+    # (0,8) is Canyon and adjacent to (0,7) on even row (offset: [0,+1])
+    engine2.build_settlement(0, 8)
+    game2.reload
+
+    assert_equal player.order, game2.board_contents.player_at(0, 8)
+  end
+
+  test "activate_tile_build returns 'No settlements left' when supply is exhausted" do
+    @game.current_player.update!(supply: { "settlements" => 0 })
+    @game.update!(current_action: { "type" => "oasis" })
+
+    result = @engine.activate_tile_build(0, 1)
+
+    assert_equal "No settlements left", result
+  end
+
+  test "activate_tile_build returns 'Not available' when player has no matching tile" do
+    # Player starts with only a MandatoryTile, not an OasisTile
+    @game.update!(current_action: { "type" => "oasis" })
+
+    result = @engine.activate_tile_build(0, 1)
+
+    assert_equal "Not available", result
+  end
+
+  test "activate_tile_build returns 'Not available' when destination is not in valid_destinations" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+    ])
+    @game.update!(current_action: { "type" => "oasis" })
+
+    # (3, 3) is the Castle scoring hex on Tavern — not Desert, so not in valid_destinations
+    result = @engine.activate_tile_build(3, 3)
+
+    assert_equal "Not available", result
+  end
+
+  test "turn_state returns paddock message when current_action is paddock" do
+    @game.update!(current_action: { "type" => "paddock" })
+
+    assert_match(/must move a settlement/, @engine.turn_state)
+  end
+
+  test "turn_state returns oasis message when current_action is oasis" do
+    @game.update!(current_action: { "type" => "oasis" })
+
+    assert_match(/must build on a Desert space/, @engine.turn_state)
+  end
+
+  test "turn_state includes tile option when player has an activatable tile" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+    ])
+    # mandatory_count starts at 3 (MANDATORY_COUNT), OasisTile activatable at full count
+
+    assert_match(/or select a tile/, @engine.turn_state)
+  end
+
+  test "turn_state reports must end turn when mandatory builds complete" do
+    @game.update!(mandatory_count: 0)
+
+    assert_match(/must end their turn/, @engine.turn_state)
+  end
+
+  test "undo_allowed? returns false when there are no moves" do
+    assert_not @engine.undo_allowed?
+  end
+
+  test "undo_last_move returns immediately when there are no deliberate moves" do
+    assert_nil @engine.undo_last_move
+  end
+
+  test "undo reverses a select_action: current_action resets to mandatory" do
+    @engine.select_action("paddock")
+    assert_equal "paddock", @game.reload.current_action["type"]
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_equal "mandatory", @game.current_action["type"]
+    assert_equal 0, @game.moves.count
+  end
+
+  test "undo reverses a select_settlement: removes 'from' from current_action" do
+    @game.update!(current_action: { "type" => "paddock" })
+    @engine.select_settlement(5, 5)
+    assert_equal "[5, 5]", @game.reload.current_action["from"]
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_nil @game.current_action["from"]
+    assert_equal 0, @game.moves.count
+  end
+
+  test "tile_activatable? returns false for a used tile" do
+    tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true }
+
+    assert_not @engine.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? returns false for an unknown tile class" do
+    tile = { "klass" => "BogusNonExistentTile", "from" => "[0, 0]", "used" => false }
+
+    assert_not @engine.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? returns false when mandatory builds are partially complete" do
+    @game.update!(mandatory_count: 1)
+    tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+
+    # mandatory_count=1: not at MANDATORY_COUNT(3), not <= 0, settlements remaining → blocked
+    assert_not @engine.tile_activatable?(tile)
+  end
+
   private
 
   def find_tile_trigger_pair
