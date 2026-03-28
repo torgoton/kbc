@@ -189,6 +189,46 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post undo_move_game_url(game)
     assert_redirected_to game_path(game)
   end
+
+  test "POST action does nothing when game is completed" do
+    game = games(:game2player)
+    game.update!(state: "completed")
+    move_count_before = game.moves.count
+
+    post action_game_url(game), params: { build_row: 0, build_col: 0 }, as: :turbo_stream
+
+    assert_equal move_count_before, game.moves.count
+  end
+
+  test "POST select_action does nothing when game is completed" do
+    game = games(:game2player)
+    game.update!(state: "completed")
+    action_before = game.current_action
+
+    post select_action_game_url(game), params: { action_type: "oasis" }, as: :turbo_stream
+
+    assert_equal action_before, game.reload.current_action
+  end
+
+  test "POST end_turn does nothing when game is completed" do
+    game = games(:game2player)
+    game.update!(state: "completed", mandatory_count: 0)
+    move_count_before = game.moves.count
+
+    post end_turn_game_url(game), as: :turbo_stream
+
+    assert_equal move_count_before, game.moves.count
+  end
+
+  test "POST undo_move does nothing when game is completed" do
+    game = games(:game2player)
+    game.update!(state: "completed")
+    move_count_before = game.moves.count
+
+    post undo_move_game_url(game), as: :turbo_stream
+
+    assert_equal move_count_before, game.moves.count
+  end
 end
 
 class GamesControllerUnauthenticatedTest < ActionDispatch::IntegrationTest
