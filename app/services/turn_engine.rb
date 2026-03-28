@@ -206,7 +206,19 @@ class TurnEngine
       @game.save
     end
     max_order = @game.game_players.count - 1
-    @game.complete! if @game.ending? && game_player.order == max_order
+    if @game.ending? && game_player.order == max_order
+      @game.move_count += 1
+      @game.moves.create(
+        order: @game.move_count,
+        game_player: game_player,
+        deliberate: false,
+        action: "end_game",
+        reversible: false,
+        message: "Game over!"
+      )
+      @game.save
+      @game.complete!
+    end
   end
 
   def undo_last_move
