@@ -147,8 +147,8 @@ class Game < ApplicationRecord
     log("Attempt to build at #{row}, #{col}")
     instantiate
     game_player = current_player
-    log(" I have #{game_player.supply["settlements"]} settlements remaining")
-    return "No settlements left" if game_player.supply["settlements"] < 1
+    log(" I have #{game_player.settlements_remaining} settlements remaining")
+    return "No settlements left" unless game_player.settlements_remaining?
     card_terrain = game_player.hand
     return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
     build_on_terrain(card_terrain, row, col, game_player)
@@ -161,19 +161,16 @@ class Game < ApplicationRecord
   def activate_tile_build(row, col)
     instantiate
     game_player = current_player
-    return "No settlements left" if game_player.supply["settlements"] < 1
+    return "No settlements left" unless game_player.settlements_remaining?
     tile_klass = "#{current_action["type"].capitalize}Tile"
-    tile_idx = game_player.tiles&.find_index { |t| t["klass"] == tile_klass && !t["used"] }
-    return "Not available" unless tile_idx
-    tile = game_player.tiles[tile_idx]
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
     tile_obj = Tiles::Tile.from_hash(tile)
     destinations = tile_obj.valid_destinations(
       board_contents: board_contents, board: @board, player_order: game_player.order
     )
     return "Not available" unless destinations.include?([ row, col ])
-    updated = game_player.tiles.dup
-    updated[tile_idx] = updated[tile_idx].merge("used" => true)
-    game_player.tiles = updated
+    game_player.mark_tile_used!(tile_klass)
     build_on_terrain(tile_obj.build_terrain, row, col, game_player, tile_klass: tile_klass)
     self.current_action = { "type" => "mandatory" }
     game_player.save
@@ -228,13 +225,7 @@ class Game < ApplicationRecord
     board_contents_will_change!
     board_contents.move_settlement(*from_coord, row, col)
     self.current_action = { "type" => "mandatory" }
-    tiles = current_player.tiles || []
-    idx = tiles.index { |t| t["klass"] == "PaddockTile" && t["used"] == false }
-    if idx
-      updated = tiles.dup
-      updated[idx] = updated[idx].merge("used" => true)
-      current_player.tiles = updated
-    end
+    current_player.mark_tile_used!("PaddockTile")
     apply_tile_forfeit(current_player)
     apply_tile_pickup(current_player, row, col)
     current_player.save
@@ -245,7 +236,7 @@ class Game < ApplicationRecord
     return false if tile["used"]
     return false unless "Tiles::#{tile["klass"]}".safe_constantize
     return false unless mandatory_count == MANDATORY_COUNT || mandatory_count <= 0 ||
-      current_player.supply["settlements"] == 0
+      !current_player.settlements_remaining?
     instantiate
     ctx = { player_order: current_player.order, board_contents: board_contents, board: @board }
     Tiles::Tile.from_hash(tile).activatable?(**ctx)
@@ -253,7 +244,7 @@ class Game < ApplicationRecord
 
   def turn_endable?
     current_action["type"] == "mandatory" &&
-      (mandatory_count <= 0 || current_player.supply["settlements"] == 0)
+      (mandatory_count <= 0 || !current_player.settlements_remaining?)
   end
 
   def undo_allowed?
@@ -270,7 +261,7 @@ class Game < ApplicationRecord
       "#{current_player.player.handle} must build on a Desert space"
     else
       has_activatable = (current_player.tiles || []).any? { |t| tile_activatable?(t) }
-      if mandatory_count > 0 && current_player.supply["settlements"] > 0
+      if mandatory_count > 0 && current_player.settlements_remaining?
         "#{current_player.player.handle} must build " \
         "#{ActionController::Base.helpers.pluralize(mandatory_count, "settlement")} on " \
         "#{Boards::Board::TERRAIN_NAMES[current_player.hand]}" \
@@ -298,9 +289,7 @@ class Game < ApplicationRecord
     Rails.logger.debug(" - next in order #{next_order}")
     self.current_player = game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{current_player.inspect}")
-    if current_player.tiles
-      current_player.tiles = current_player.tiles.map { |t| t.merge("used" => false) }
-    end
+    current_player.reset_tiles!
     self.move_count += 1
     # - create a Move record
     self.moves.create(
@@ -333,16 +322,10 @@ class Game < ApplicationRecord
       when "build"
         board_contents_will_change!
         board_contents.remove(*Coordinate.from_key(move.to))
-        move.game_player.supply["settlements"] += 1
+        move.game_player.increment_supply!
         tile_klass = move.payload&.dig("tile_klass")
         if tile_klass
-          tiles = move.game_player.tiles || []
-          idx = tiles.index { |t| t["klass"] == tile_klass && t["used"] == true }
-          if idx
-            updated = tiles.dup
-            updated[idx] = updated[idx].merge("used" => false)
-            move.game_player.tiles = updated
-          end
+          move.game_player.mark_tile_unused!(tile_klass)
           self.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase }
         else
           self.mandatory_count += 1
@@ -352,14 +335,8 @@ class Game < ApplicationRecord
         board_contents_will_change!
         board_contents.move_settlement(*Coordinate.from_key(move.to), *Coordinate.from_key(move.from))
         self.current_action = { "type" => "paddock", "from" => move.from }
-        tiles = move.game_player.tiles || []
-        idx = tiles.index { |t| t["klass"] == "PaddockTile" && t["used"] == true }
-        if idx
-          updated = tiles.dup
-          updated[idx] = updated[idx].merge("used" => false)
-          move.game_player.tiles = updated
-          move.game_player.save
-        end
+        move.game_player.mark_tile_unused!("PaddockTile")
+        move.game_player.save
       when "select_action"
         self.current_action = { "type" => "mandatory" }
       when "select_settlement"
@@ -369,14 +346,11 @@ class Game < ApplicationRecord
         # Return the tile to its location (qty was decremented, never deleted)
         board_contents_will_change!
         board_contents.increment_tile(*Coordinate.from_key(move.from))
-        # Remove the tile from the player's collection
-        tiles = move.game_player.tiles || []
-        move.game_player.tiles = tiles.reject { |t| t["from"] == move.from }
+        move.game_player.remove_tile_from!(move.from)
         move.game_player.save
       when "forfeit_tile"
         klass = move.payload["klass"]
-        tiles = move.game_player.tiles || []
-        move.game_player.tiles = tiles + [ { "klass" => klass, "from" => move.from, "used" => move.to == "true" } ]
+        move.game_player.restore_tile!(klass, from: move.from, used: move.to == "true")
         move.game_player.save
       end
       move.destroy
@@ -489,7 +463,7 @@ class Game < ApplicationRecord
       payload: payload,
       message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]}"
     )
-    game_player.supply["settlements"] -= 1
+    game_player.decrement_supply!
     board_contents_will_change!
     board_contents.place_settlement(row, col, game_player.order)
     apply_tile_pickup(game_player, row, col)
@@ -519,7 +493,7 @@ class Game < ApplicationRecord
           to: tile["used"].to_s,
           payload: { "klass" => klass },
           message: (
-            tile_name = klass.delete_suffix('Tile').downcase
+            tile_name = klass.delete_suffix("Tile").downcase
             "#{game_player.player.handle} forfeited #{/\A[aeiou]/.match?(tile_name) ? "an" : "a"} #{tile_name} tile"
           )
         )
@@ -532,7 +506,7 @@ class Game < ApplicationRecord
   # Returns { key:, klass: } if a tile is available at an adjacent location
   # the player doesn't already hold, or nil otherwise.
   def find_tile_pickup(game_player, row, col)
-    held_locations = (game_player.tiles || []).map { |t| t["from"] }.to_set
+    held_locations = game_player.held_tile_locations
     board_contents.neighbors(row, col).each do |adj_r, adj_c|
       klass = board_contents.tile_klass(adj_r, adj_c)
       next unless klass && board_contents.tile_qty(adj_r, adj_c) > 0
@@ -564,8 +538,7 @@ class Game < ApplicationRecord
     # Decrement qty in place; entry remains even when qty reaches 0
     board_contents_will_change!
     board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))
-    # Add to player's tile collection, tracking which location it came from
-    game_player.tiles = (game_player.tiles || []) + [ { "klass" => tile[:klass], "from" => tile[:key], "used" => true } ]
+    game_player.receive_tile!(tile[:klass], from: tile[:key])
   end
 
   # MVP: Always boards from "First Game"
