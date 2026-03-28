@@ -16,6 +16,10 @@ class Tiles::TileTest < ActiveSupport::TestCase
     assert Tiles::Tile.new(0).activatable?(player_order: 0, board_contents: BoardState.new, board: nil)
   end
 
+  test "builds_settlement? returns false" do
+    assert_not Tiles::Tile.new(0).builds_settlement?
+  end
+
   test "from_hash raises ArgumentError for unknown klass" do
     assert_raises(ArgumentError) { Tiles::Tile.from_hash("klass" => "BogusTimeTile") }
   end

@@ -250,6 +250,18 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not @engine.tile_activatable?(tile)
   end
 
+  test "tile_activatable? returns false for a building tile when player has no settlements left" do
+    @game.current_player.update!(supply: { "settlements" => 0 })
+    @game.update!(mandatory_count: 0)
+    tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+
+    assert_not @engine.tile_activatable?(tile)
+  end
+
+  test "PaddockTile#builds_settlement? returns false" do
+    assert_not Tiles::PaddockTile.new(0).builds_settlement?
+  end
+
   private
 
   def find_tile_trigger_pair

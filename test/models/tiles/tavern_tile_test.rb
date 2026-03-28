@@ -155,4 +155,8 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
   test "from_hash returns a TavernTile" do
     assert_instance_of Tiles::TavernTile, Tiles::Tile.from_hash("klass" => "TavernTile")
   end
+
+  test "builds_settlement? returns true" do
+    assert Tiles::TavernTile.new(0).builds_settlement?
+  end
 end

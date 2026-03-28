@@ -1,6 +1,7 @@
 module Tiles
   class OasisTile < Tiles::Tile
     def build_terrain = "D"
+    def builds_settlement? = true
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:)
       adjacent_desert = board_contents.settlements_for(player_order).flat_map do |r, c|

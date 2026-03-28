@@ -126,4 +126,8 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
     tile = Tiles::OasisTile.new(0)
     assert_not tile.activatable?(player_order: chris.order, board_contents: game.board_contents, board: game.board)
   end
+
+  test "builds_settlement? returns true" do
+    assert Tiles::OasisTile.new(0).builds_settlement?
+  end
 end
