@@ -15,10 +15,25 @@ module Boards
       "L" => "Location"
     }
 
+    BOARD_CLASSES = {
+      "Farm"    => Boards::FarmBoard,
+      "Oasis"   => Boards::OasisBoard,
+      "Paddock" => Boards::PaddockBoard,
+      "Tavern"  => Boards::TavernBoard
+    }.freeze
+
+    TILE_CLASSES = {
+      "FarmTile"    => Tiles::FarmTile,
+      "OasisTile"   => Tiles::OasisTile,
+      "PaddockTile" => Tiles::PaddockTile,
+      "TavernTile"  => Tiles::TavernTile
+    }.freeze
+
     def initialize(game)
       @map = []
       game.boards.each do |section|
-        @map << "Boards::#{section[0]}Board".constantize.new(section[1])
+        board_class = BOARD_CLASSES.fetch(section[0]) { raise ArgumentError, "Unknown board type: #{section[0]}" }
+        @map << board_class.new(section[1])
       end
       @content = Array.new(20) { Array.new(20) }
       20.times do |row|
@@ -26,7 +41,8 @@ module Boards
           next if game.board_contents.empty?(row, col)
           klass = game.board_contents.tile_klass(row, col)
           if klass
-            @content[row][col] = "Tiles::#{klass}".constantize.new(game.board_contents.tile_qty(row, col))
+            tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
+            @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))
           elsif (player = game.board_contents.player_at(row, col))
             @content[row][col] = Settlement.new(player)
           else
