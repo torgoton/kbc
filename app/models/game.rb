@@ -585,6 +585,7 @@ class Game < ApplicationRecord
       end
     end
     update(board_contents: state)
+    @board = nil # board was created before tiles were placed; reset so next instantiate is fresh
     Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
   end
 
