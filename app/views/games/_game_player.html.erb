@@ -18,5 +18,9 @@
 <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
 x
 <%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
+<% score = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s, "total") %>
+<% if score %>
+  <span class="player-score"><%= score %> pts</span>
+<% end %>
 <%= render partial: "games/tiles", locals: { game:, player:, n:, engine: } %>
 

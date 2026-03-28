@@ -59,20 +59,20 @@ class BoardStateTest < ActiveSupport::TestCase
   test "neighbors returns in-bounds adjacent cells for even row" do
     state = BoardState.new
     # from game.rb comment: [10,10] adjacent to [[10,9],[10,11],[9,9],[9,10],[11,9],[11,10]]
-    assert_equal [ [10,9],[10,11],[9,9],[9,10],[11,9],[11,10] ].sort, state.neighbors(10, 10).sort
+    assert_equal [ [ 10, 9 ], [ 10, 11 ], [ 9, 9 ], [ 9, 10 ], [ 11, 9 ], [ 11, 10 ] ].sort, state.neighbors(10, 10).sort
   end
 
   test "neighbors returns in-bounds adjacent cells for odd row" do
     state = BoardState.new
     # from game.rb comment: [9,10] adjacent to [[9,9],[9,11],[8,10],[8,11],[10,10],[10,11]]
-    assert_equal [ [9,9],[9,11],[8,10],[8,11],[10,10],[10,11] ].sort, state.neighbors(9, 10).sort
+    assert_equal [ [ 9, 9 ], [ 9, 11 ], [ 8, 10 ], [ 8, 11 ], [ 10, 10 ], [ 10, 11 ] ].sort, state.neighbors(9, 10).sort
   end
 
   test "neighbors clips out-of-bounds neighbors at corner" do
     state = BoardState.new
     # [0,0] is even row; offsets produce [0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]
     # only [0,1] and [1,0] are in bounds
-    assert_equal [ [0,1],[1,0] ].sort, state.neighbors(0, 0).sort
+    assert_equal [ [ 0, 1 ], [ 1, 0 ] ].sort, state.neighbors(0, 0).sort
   end
 
   test "dump and load round-trip preserves all cells" do
@@ -95,7 +95,7 @@ class BoardStateTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(9, 9, 0)
     occupied = state.neighbors_where(9, 10) { |r, c| !state.empty?(r, c) }
-    assert_equal [ [9, 9] ], occupied
+    assert_equal [ [ 9, 9 ] ], occupied
   end
 
   test "locations_with_remaining_tiles returns coordinates of tiles with qty > 0" do
@@ -103,7 +103,7 @@ class BoardStateTest < ActiveSupport::TestCase
     state.place_tile(5, 3, "OasisTile", 2)
     state.place_tile(6, 4, "PaddockTile", 0)
     state.place_settlement(2, 7, 0)
-    assert_equal [ [5, 3] ], state.locations_with_remaining_tiles
+    assert_equal [ [ 5, 3 ] ], state.locations_with_remaining_tiles
   end
 
   test "settlements_for returns coordinates for that player only" do
@@ -111,8 +111,8 @@ class BoardStateTest < ActiveSupport::TestCase
     state.place_settlement(2, 7, 0)
     state.place_settlement(3, 4, 0)
     state.place_settlement(5, 1, 1)
-    assert_equal [ [2, 7], [3, 4] ].sort, state.settlements_for(0).sort
-    assert_equal [ [5, 1] ], state.settlements_for(1)
+    assert_equal [ [ 2, 7 ], [ 3, 4 ] ].sort, state.settlements_for(0).sort
+    assert_equal [ [ 5, 1 ] ], state.settlements_for(1)
     assert_equal [], state.settlements_for(2)
   end
 end

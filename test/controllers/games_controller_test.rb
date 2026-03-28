@@ -189,7 +189,6 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post undo_move_game_url(game)
     assert_redirected_to game_path(game)
   end
-
 end
 
 class GamesControllerUnauthenticatedTest < ActionDispatch::IntegrationTest

@@ -11,6 +11,16 @@
           select_action_game_path(game),
           params: { action_type: "oasis" },
           class: "player-tile #{type} tile-available" %>
+  <% elsif n == 0 && tile["klass"] == "FarmTile" && engine.tile_activatable?(tile) %>
+    <%= button_to type.capitalize,
+          select_action_game_path(game),
+          params: { action_type: "farm" },
+          class: "player-tile #{type} tile-available" %>
+  <% elsif n == 0 && tile["klass"] == "TavernTile" && engine.tile_activatable?(tile) %>
+    <%= button_to type.capitalize,
+          select_action_game_path(game),
+          params: { action_type: "tavern" },
+          class: "player-tile #{type} tile-available" %>
   <% else %>
     <div class="player-tile <%= type %> <%= used ? 'tile-used' : 'tile-available' %>">
       <div class="tile location-<%= type %>"></div>

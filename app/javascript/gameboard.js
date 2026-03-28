@@ -116,6 +116,93 @@ function markPaddockDestinations(from) {
   });
 }
 
+function markTavernDestinations() {
+  const BUILDABLE = ["terrain-c", "terrain-d", "terrain-f", "terrain-g", "terrain-t"];
+  // Each pair is [fwd_dir, bwd_dir]; each dir is [even_row_step, odd_row_step].
+  const DIRECTION_PAIRS = [
+    [ [ [0,  1], [0,  1] ], [ [0, -1], [0, -1] ] ],  // E / W
+    [ [ [-1, -1], [-1, 0] ], [ [1,  0], [1,  1] ] ],  // NW / SE
+    [ [ [-1,  0], [-1, 1] ], [ [1, -1], [1,  0] ] ]   // NE / SW
+  ];
+  const playerNo = parseInt(document.querySelector(".handle .player-order").innerText);
+
+  function cellStep(r, c, dir) {
+    const [dr, dc] = dir[r % 2];
+    return [r + dr, c + dc];
+  }
+
+  function isPlayerSettlement(r, c) {
+    if (r < 0 || r > 19 || c < 0 || c > 19) return false;
+    const cell = document.getElementById(`map-cell-${r}-${c}`);
+    return cell ? !!cell.querySelector(`.hex-settlement.player-${playerNo}`) : false;
+  }
+
+  function isValidBuild(r, c) {
+    if (r < 0 || r > 19 || c < 0 || c > 19) return false;
+    const cell = document.getElementById(`map-cell-${r}-${c}`);
+    if (!cell || cell.querySelector(".hex-settlement")) return false;
+    return BUILDABLE.some(cls => cell.classList.contains(cls));
+  }
+
+  const candidates = new Set();
+  document.querySelectorAll(`.hex-settlement.player-${playerNo}`).forEach(s => {
+    const hex = s.closest(".hex");
+    if (!hex) return;
+    const parts = hex.id.split("-");
+    const r = parseInt(parts[2]), c = parseInt(parts[3]);
+
+    DIRECTION_PAIRS.forEach(([fwd, bwd]) => {
+      // Only process starts of runs (no settlement one step back)
+      const [br, bc] = cellStep(r, c, bwd);
+      if (isPlayerSettlement(br, bc)) return;
+
+      // Walk forward counting consecutive settlements
+      let runEndR = r, runEndC = c;
+      let [nr, nc] = cellStep(r, c, fwd);
+      let runLength = 1;
+      while (isPlayerSettlement(nr, nc)) {
+        runEndR = nr; runEndC = nc;
+        [nr, nc] = cellStep(nr, nc, fwd);
+        runLength++;
+      }
+      if (runLength < 3) return;
+
+      if (isValidBuild(nr, nc)) candidates.add(`map-cell-${nr}-${nc}`);
+      if (isValidBuild(br, bc)) candidates.add(`map-cell-${br}-${bc}`);
+    });
+  });
+
+  candidates.forEach(id => {
+    document.getElementById(id)?.classList.add("selectable");
+  });
+}
+
+function markFarmDestinations() {
+  const playerNo = parseInt(document.querySelector(".handle .player-order").innerText);
+  let found = false;
+
+  document.querySelectorAll(`.hex-settlement.player-${playerNo}`).forEach(s => {
+    const cell = s.closest(".hex");
+    if (!cell) return;
+    adjacent_list(cell.id).forEach(adjId => {
+      const adjCell = document.getElementById(adjId);
+      if (!adjCell || adjCell.querySelector(".hex-settlement")) return;
+      if (adjCell.classList.contains("terrain-g")) {
+        adjCell.classList.add("selectable");
+        found = true;
+      }
+    });
+  });
+
+  if (found) return;
+
+  document.querySelectorAll(".terrain-g").forEach(c => {
+    if (!c.querySelector(".hex-settlement")) {
+      c.classList.add("selectable");
+    }
+  });
+}
+
 function markOasisDestinations() {
   const playerNo = parseInt(document.querySelector(".handle .player-order").innerText);
   let found = false;
@@ -233,6 +320,10 @@ function prepForMove() {
     }
   } else if (actionType === "oasis") {
     markOasisDestinations();
+  } else if (actionType === "farm") {
+    markFarmDestinations();
+  } else if (actionType === "tavern") {
+    markTavernDestinations();
   } else {
     markAvailableCells();
   }

@@ -9,6 +9,7 @@
 #  current_action    :json
 #  deck              :json
 #  discard           :json
+#  ending            :boolean          default(FALSE), not null
 #  goals             :json
 #  mandatory_count   :integer
 #  move_count        :integer
@@ -93,6 +94,36 @@ class Game < ApplicationRecord
     save
   end
 
+  def ending?
+    ending == true
+  end
+
+  def live_scores
+    Scoring.new(self).compute
+  end
+
+  def complete!
+    self.state = "completed"
+    self.scores = Scoring.new(self).compute
+    save!
+    broadcast_end_game
+  end
+
+  def broadcast_end_game
+    broadcast_append_to(
+      "game_#{id}",
+      target: "game-area",
+      partial: "games/end_game_modal",
+      locals: { game: self, scores: scores }
+    )
+  end
+
+  def winners
+    return [] if scores.blank?
+    max_total = scores.values.map { |s| s["total"] }.max
+    game_players.select { |gp| scores[gp.order.to_s]["total"] == max_total }
+  end
+
   def instantiate
     # Create objects from the serialized game state
     instantiate_board
@@ -106,6 +137,7 @@ class Game < ApplicationRecord
     @board = nil # reset the board so we can re-construct it from the game state
     instantiate
     engine = TurnEngine.new(self)
+    scores = live_scores
 
     # public stuff
     # - turn state
@@ -142,7 +174,7 @@ class Game < ApplicationRecord
         "game_#{id}",
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
-        locals: { game: self, player: gp, n: 1, engine: engine }
+        locals: { game: self, player: gp, n: 1, engine: engine, scores: scores }
       )
     end
 
@@ -153,7 +185,7 @@ class Game < ApplicationRecord
         "game_player_#{gp.id}_private", # player's private channel
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
-        locals: { game: self, player: gp, n: 0, engine: engine }
+        locals: { game: self, player: gp, n: 0, engine: engine, scores: scores }
       )
     end
 
@@ -223,7 +255,7 @@ class Game < ApplicationRecord
 
   def select_goals
     # MVP always these goals
-    self.goals = [ "Fishermen", "Knights", "Merchants" ]
+    self.goals = [ "fishermen", "knights", "merchants" ]
     save
   end
 

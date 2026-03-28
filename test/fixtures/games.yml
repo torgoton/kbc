@@ -11,6 +11,7 @@
 #  current_action    :json
 #  deck              :json
 #  discard           :json
+#  ending            :boolean          default(FALSE), not null
 #  goals             :json
 #  mandatory_count   :integer
 #  move_count        :integer

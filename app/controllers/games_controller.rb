@@ -47,7 +47,7 @@ class GamesController < ApplicationController
       else
         engine.select_settlement(coord.row, coord.col)
       end
-    when "oasis"
+    when "oasis", "farm", "tavern"
       engine.activate_tile_build(coord.row, coord.col)
     else
       engine.build_settlement(coord.row, coord.col)
