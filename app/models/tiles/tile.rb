@@ -18,6 +18,10 @@ module Tiles
       true
     end
 
+    def builds_settlement?
+      false
+    end
+
     def self.from_hash(hash)
       "Tiles::#{hash['klass']}".constantize.new(0)
     rescue NameError

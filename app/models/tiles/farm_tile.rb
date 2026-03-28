@@ -1,6 +1,7 @@
 module Tiles
   class FarmTile < Tiles::Tile
     def build_terrain = "G"
+    def builds_settlement? = true
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:)
       adjacent_grass = board_contents.settlements_for(player_order).flat_map do |r, c|

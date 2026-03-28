@@ -71,4 +71,8 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   test "from_hash returns a PaddockTile" do
     assert_instance_of Tiles::PaddockTile, Tiles::Tile.from_hash("klass" => "PaddockTile")
   end
+
+  test "builds_settlement? returns false" do
+    assert_not Tiles::PaddockTile.new(0).builds_settlement?
+  end
 end

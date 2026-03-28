@@ -131,8 +131,10 @@ class TurnEngine
     return false unless @game.mandatory_count == Game::MANDATORY_COUNT ||
       @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?
     @game.instantiate
+    tile_obj = Tiles::Tile.from_hash(tile)
+    return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board }
-    Tiles::Tile.from_hash(tile).activatable?(**ctx)
+    tile_obj.activatable?(**ctx)
   end
 
   def turn_endable?
