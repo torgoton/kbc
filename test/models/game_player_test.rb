@@ -26,7 +26,122 @@
 require "test_helper"
 
 class GamePlayerTest < ActiveSupport::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  setup do
+    @gp = game_players(:chris)  # supply: { "settlements" => 40 }, hand: "T"
+  end
+
+  # --- Supply ---
+
+  test "settlements_remaining returns settlement count" do
+    assert_equal 40, @gp.settlements_remaining
+  end
+
+  test "settlements_remaining? is true when supply > 0 and false when empty" do
+    assert @gp.settlements_remaining?
+    @gp.supply = { "settlements" => 0 }
+    assert_not @gp.settlements_remaining?
+  end
+
+  test "decrement_supply! reduces settlements by 1 in place" do
+    @gp.decrement_supply!
+    assert_equal 39, @gp.settlements_remaining
+  end
+
+  test "increment_supply! increases settlements by 1 in place" do
+    @gp.supply = { "settlements" => 39 }
+    @gp.increment_supply!
+    assert_equal 40, @gp.settlements_remaining
+  end
+
+  # --- Tiles ---
+
+  test "held_tile_locations returns a set of from-keys for held tiles" do
+    @gp.tiles = [
+      { "klass" => "FarmTile", "from" => "[11, 17]", "used" => false },
+      { "klass" => "OasisTile", "from" => "[12, 7]",  "used" => true }
+    ]
+    assert_equal Set.new([ "[11, 17]", "[12, 7]" ]), @gp.held_tile_locations
+  end
+
+  test "held_tile_locations returns empty set when tiles is nil" do
+    @gp.tiles = nil
+    assert_equal Set.new, @gp.held_tile_locations
+  end
+
+  test "mark_tile_used! marks the first unused tile of the given class used" do
+    @gp.tiles = [
+      { "klass" => "FarmTile", "from" => "[11, 17]", "used" => false },
+      { "klass" => "FarmTile", "from" => "[15, 12]", "used" => false }
+    ]
+    @gp.mark_tile_used!("FarmTile")
+    assert @gp.tiles[0]["used"]
+    assert_not @gp.tiles[1]["used"]
+  end
+
+  test "mark_tile_used! does nothing when no unused tile of that class exists" do
+    @gp.tiles = [ { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true } ]
+    @gp.mark_tile_used!("FarmTile")
+    assert @gp.tiles[0]["used"]  # unchanged
+  end
+
+  test "reset_tiles! sets all tile used flags to false" do
+    @gp.tiles = [
+      { "klass" => "FarmTile",   "from" => "[11, 17]", "used" => true },
+      { "klass" => "OasisTile",  "from" => "[12, 7]",  "used" => true }
+    ]
+    @gp.reset_tiles!
+    assert @gp.tiles.all? { |t| t["used"] == false }
+  end
+
+  test "receive_tile! appends a new tile marked used" do
+    @gp.tiles = []
+    @gp.receive_tile!("FarmTile", from: "[11, 17]")
+    assert_equal [ { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true } ], @gp.tiles
+  end
+
+  test "receive_tile! works when tiles is nil" do
+    @gp.tiles = nil
+    @gp.receive_tile!("OasisTile", from: "[12, 7]")
+    assert_equal 1, @gp.tiles.size
+  end
+
+  test "remove_tile_from! removes the tile with the matching from key" do
+    @gp.tiles = [
+      { "klass" => "FarmTile",  "from" => "[11, 17]", "used" => true },
+      { "klass" => "OasisTile", "from" => "[12, 7]",  "used" => true }
+    ]
+    @gp.remove_tile_from!("[11, 17]")
+    assert_equal 1, @gp.tiles.size
+    assert_equal "[12, 7]", @gp.tiles.first["from"]
+  end
+
+  test "restore_tile! appends a tile with the given used state" do
+    @gp.tiles = []
+    @gp.restore_tile!("PaddockTile", from: "[6, 11]", used: false)
+    assert_equal [ { "klass" => "PaddockTile", "from" => "[6, 11]", "used" => false } ], @gp.tiles
+  end
+
+  test "find_unused_tile returns the first unused tile hash of the given class" do
+    @gp.tiles = [
+      { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true },
+      { "klass" => "FarmTile", "from" => "[15, 12]", "used" => false }
+    ]
+    tile = @gp.find_unused_tile("FarmTile")
+    assert_equal "[15, 12]", tile["from"]
+  end
+
+  test "find_unused_tile returns nil when no unused tile of that class exists" do
+    @gp.tiles = [ { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true } ]
+    assert_nil @gp.find_unused_tile("FarmTile")
+  end
+
+  test "mark_tile_unused! marks the first used tile of the given class unused" do
+    @gp.tiles = [
+      { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true },
+      { "klass" => "FarmTile", "from" => "[15, 12]", "used" => true }
+    ]
+    @gp.mark_tile_unused!("FarmTile")
+    assert_not @gp.tiles[0]["used"]
+    assert @gp.tiles[1]["used"]
+  end
 end
