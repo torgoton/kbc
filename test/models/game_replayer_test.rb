@@ -71,7 +71,7 @@ class GameReplayerTest < ActiveSupport::TestCase
 
   test "replayed_state matches current state after build (with tile pickup)" do
     game = game_with_known_state
-    game.build_settlement(1, 7)   # Chris plays "T" at (1,7), picks up OasisTile
+    engine(game).build_settlement(1, 7)   # Chris plays "T" at (1,7), picks up OasisTile
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -80,7 +80,7 @@ class GameReplayerTest < ActiveSupport::TestCase
   test "replayed_state matches current state after build without tile pickup" do
     game = game_with_known_state
     # Build at (0,0) — far from the tile location at (2,7)
-    game.build_settlement(0, 0)
+    engine(game).build_settlement(0, 0)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -91,7 +91,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.mandatory_count = 0
     game.save
 
-    game.end_turn   # Chris discards "T", draws "T" (first card in deck)
+    engine(game).end_turn   # Chris discards "T", draws "T" (first card in deck)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -104,7 +104,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.mandatory_count = 0
     game.save
 
-    game.end_turn
+    engine(game).end_turn
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -120,7 +120,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.reload
     game.update(base_snapshot: game.capture_snapshot)
 
-    game.select_action("paddock")
+    engine(game).select_action("paddock")
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -136,7 +136,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.save
     game.update(base_snapshot: game.capture_snapshot)
 
-    game.select_settlement(5, 5)
+    engine(game).select_settlement(5, 5)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -150,7 +150,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.save
     game.update(base_snapshot: game.capture_snapshot)
 
-    game.move_settlement(5, 7)
+    engine(game).move_settlement(5, 7)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -167,7 +167,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.reload   # clear association cache so capture_snapshot and current_player see fresh data
     game.update(base_snapshot: game.capture_snapshot)
 
-    game.activate_tile_build(0, 1)
+    engine(game).activate_tile_build(0, 1)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -187,7 +187,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.reload   # clear association cache
     game.update(base_snapshot: game.capture_snapshot)
 
-    game.move_settlement(1, 5)   # triggers forfeit_tile
+    engine(game).move_settlement(1, 5)   # triggers forfeit_tile
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -196,18 +196,22 @@ class GameReplayerTest < ActiveSupport::TestCase
   test "replayed_state matches current state after a multi-step sequence" do
     game = game_with_known_state
     # Build three times (mandatory_count = 3), then end the turn
-    game.build_settlement(0, 0)
-    game.build_settlement(0, 2)
-    game.build_settlement(0, 4)
+    engine(game).build_settlement(0, 0)
+    engine(game).build_settlement(0, 2)
+    engine(game).build_settlement(0, 4)
     game.mandatory_count = 0
     game.save
-    game.end_turn
+    engine(game).end_turn
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
   end
 
   private
+
+  def engine(game)
+    TurnEngine.new(game)
+  end
 
   # Returns a saved game with a known, deterministic initial state and a
   # base_snapshot already captured.

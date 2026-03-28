@@ -9,8 +9,8 @@
   <span class="player-order"><%= player.order %></span>
 <% end %>
 <% if n == 0 %>
-  <%= button_to("End turn", end_turn_game_path(game), disabled: !(my_turn && game.turn_endable?)) %>
-  <%= button_to("Undo", undo_move_game_path(game), disabled: !(my_turn && game.undo_allowed?)) %>
+  <%= button_to("End turn", end_turn_game_path(game), disabled: !(my_turn && engine.turn_endable?)) %>
+  <%= button_to("Undo", undo_move_game_path(game), disabled: !(my_turn && engine.undo_allowed?)) %>
 <% end %>
 <% display_card = (n == 0 || (game.current_player_id == player.id)) ? player.hand : "B" %>
 <%= content_tag :span, display_card,
@@ -18,5 +18,5 @@
 <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
 x
 <%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
-<%= render partial: "games/tiles", locals: { game:, player:, n: } %>
+<%= render partial: "games/tiles", locals: { game:, player:, n:, engine: } %>
 

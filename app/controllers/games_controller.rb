@@ -39,17 +39,18 @@ class GamesController < ApplicationController
     end
 
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
+    engine = TurnEngine.new(@game)
     case @game.current_action["type"]
     when "paddock"
       if @game.current_action["from"]
-        @game.move_settlement(coord.row, coord.col)
+        engine.move_settlement(coord.row, coord.col)
       else
-        @game.select_settlement(coord.row, coord.col)
+        engine.select_settlement(coord.row, coord.col)
       end
     when "oasis"
-      @game.activate_tile_build(coord.row, coord.col)
+      engine.activate_tile_build(coord.row, coord.col)
     else
-      @game.build_settlement(coord.row, coord.col)
+      engine.build_settlement(coord.row, coord.col)
     end
     respond_to do |format|
       format.html { head :no_content }
@@ -62,7 +63,7 @@ class GamesController < ApplicationController
 
   def select_action
     @game = Current.user.games.find(params[:id])
-    @game.select_action(params[:action_type])
+    TurnEngine.new(@game).select_action(params[:action_type])
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -74,7 +75,8 @@ class GamesController < ApplicationController
     Rails.logger.debug("END TURN action")
     @game = Current.user.games.find(params[:id])
     current_gp = @game.game_players.find_by(player: Current.user)
-    @game.end_turn if current_gp == @game.current_player && @game.turn_endable?
+    engine = TurnEngine.new(@game)
+    engine.end_turn if current_gp == @game.current_player && engine.turn_endable?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -103,9 +105,8 @@ class GamesController < ApplicationController
   def undo_move
     Rails.logger.debug("UNDO MOVE action")
     @game = Current.user.games.find(params[:id])
-    if @game.undo_allowed?
-      @game.undo_last_move
-    end
+    engine = TurnEngine.new(@game)
+    engine.undo_last_move if engine.undo_allowed?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }

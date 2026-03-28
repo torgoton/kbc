@@ -1,4 +1,4 @@
 <% content_for :title, "KBC Game #{game.id}" %>
 <%= turbo_stream_from "game_#{game.id}" %>
-<%= render partial: "games/game", locals: { game:, my_player: } %>
+<%= render partial: "games/game", locals: { game:, my_player:, engine: TurnEngine.new(game) } %>
 <%= javascript_include_tag "gameboard" %>
