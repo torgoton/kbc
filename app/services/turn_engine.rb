@@ -129,7 +129,7 @@ class TurnEngine
     return false if tile["used"]
     return false unless "Tiles::#{tile["klass"]}".safe_constantize
     return false unless @game.current_action["type"] == "mandatory" &&
-      (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0)
+      (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
