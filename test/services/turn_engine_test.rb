@@ -281,6 +281,77 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not Tiles::PaddockTile.new(0).builds_settlement?
   end
 
+  test "buildable_cells for mandatory build returns buildable cells" do
+    force_hand("G")
+    cells = @engine.buildable_cells
+    assert cells.any?
+    row, col = cells.first
+    assert_not_equal "Not avilalable", @engine.build_settlement(row, col)
+  end
+
+  test "buildable_cells returns empty when mandatory_count is zero" do
+    force_hand("G")
+    @game.update!(mandatory_count: 0)
+
+    assert_empty @engine.buildable_cells
+  end
+
+  test "buildable_cells for paddock with from returns valid move destinations" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.reload
+    @game.update!(current_action: { "type" => "paddock", "from" => "[#{spot[0]}, #{spot[1]}]" })
+    @game.current_player.update!(
+      tiles: [ { "klass" => "PaddockTile", "from" => "[2, 0]", "used" => false } ]
+    )
+    @game.reload
+
+    cells = @engine.buildable_cells
+
+    @game.instantiate
+    expected = Tiles::PaddockTile.new(0).valid_destinations(
+      from_row: spot[0], from_col: spot[1],
+      board_contents: @game.board_contents, board: @game.board
+    )
+    assert_equal expected.sort, cells.sort
+  end
+
+  test "buildable_cells for paddock without from returns settlements with valid moves" do
+    force_hand("G")
+    @engine.build_settlement(*empty_hexes_of("G", 1).first)
+    @game.reload
+    @game.update!(current_action: { "type" => "paddock" })
+    @game.current_player.update!(
+      tiles: [ { "klass" => "PaddockTile", "from" => "[2, 0]", "used" => false } ]
+    )
+    @game.reload
+
+    cells = @engine.buildable_cells
+
+    assert cells.any?
+    @game.instantiate
+    player_settlements = @game.board_contents.settlements_for(@game.current_player.order).to_a
+    cells.each { |r, c| assert_includes player_settlements, [ r, c ] }
+  end
+
+  test "buildable_cells for oasis action returns empty desert hexes" do
+    @game.update!(current_action: { "type" => "oasis" }, mandatory_count: 0)
+    @game.current_player.update!(
+      tiles: [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    )
+    @game.reload
+
+    cells = @engine.buildable_cells
+
+    assert cells.any?
+    @game.instantiate
+    cells.each do |r, c|
+      assert_equal "D", @game.board.terrain_at(r, c)
+      assert @game.board_contents.empty?(r, c)
+    end
+  end
+
   private
 
   def find_tile_trigger_pair
