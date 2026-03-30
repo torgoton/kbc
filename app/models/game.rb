@@ -54,6 +54,10 @@ class Game < ApplicationRecord
     end
   end
 
+  scope :playing, -> { where(state: "playing") }
+  scope :waiting, -> { where(state: "waiting") }
+  scope :completed, -> { where(state: "completed") }
+
   def playing?
     state.to_s == "playing"
   end
@@ -98,6 +102,11 @@ class Game < ApplicationRecord
     ending == true
   end
 
+  def turn_state
+    return "Waiting for players" if waiting?
+    TurnEngine.new(self).turn_state
+  end
+
   def live_scores
     Scoring.new(self).compute
   end
@@ -107,6 +116,7 @@ class Game < ApplicationRecord
     self.scores = Scoring.new(self).compute
     save!
     broadcast_end_game
+    broadcast_dashboard_update
   end
 
   def broadcast_end_game
@@ -131,6 +141,18 @@ class Game < ApplicationRecord
 
   def instantiate_board
     @board ||= Boards::Board.new(self)
+  end
+
+  def broadcast_dashboard_update
+    game_players.each do |gp|
+      user = gp.player
+      broadcast_update_to("user_#{user.id}", target: "dashboard-my-games",
+        partial: "dashboard/my_games", locals: { games: user.my_games })
+      broadcast_update_to("user_#{user.id}", target: "dashboard-waiting-games",
+        partial: "dashboard/waiting_games", locals: { games: user.waiting_games, current_user: user })
+      broadcast_update_to("user_#{user.id}", target: "dashboard-completed-games",
+        partial: "dashboard/completed_games", locals: { games: user.completed_games })
+    end
   end
 
   def broadcast_game_update
@@ -196,6 +218,8 @@ class Game < ApplicationRecord
       partial: "games/last_updated_at",
       locals: { move_count: move_count }
     )
+
+    broadcast_dashboard_update
   end
 
   def capture_snapshot

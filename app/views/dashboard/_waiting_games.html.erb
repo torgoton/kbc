@@ -1,0 +1,11 @@
+<h2>Tables Awaiting Players</h2>
+<% if games.any? %>
+  <table>
+    <% games.each do |game| %>
+      <tr>
+        <td>Game <%= game.id %> &mdash; <%= game.game_players.map { |gp| gp.player.handle }.join(", ") %></td>
+        <td><%= button_to "Join", join_game_path(game) %></td>
+      </tr>
+    <% end %>
+  </table>
+<% end %>

@@ -1,6 +1,7 @@
 class DashboardController < ApplicationController
   def index
-    @my_games = Current.user.games
-    @open_games = Game.joins(:game_players).where(state: "waiting").where.not(game_players: { user_id: Current.user.id }).sort_by(&:id)
+    @my_games = Current.user.my_games
+    @waiting_games = Current.user.waiting_games
+    @completed_games = Current.user.completed_games
   end
 end

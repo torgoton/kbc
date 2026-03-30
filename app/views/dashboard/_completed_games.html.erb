@@ -1,0 +1,9 @@
+<h2>Completed Games</h2>
+<% games.each do |game| %>
+  <%= link_to game_path(game), class: "game-row" do %>
+    <div>Game <%= game.id %> &mdash; <%= game.game_players.map { |gp| gp.player.handle }.join(", ") %></div>
+    <% if game.scores.present? %>
+      <div class="scores"><%= game.game_players.map { |gp| "#{gp.player.handle}: #{game.scores.dig(gp.order.to_s, "total")}" }.join(", ") %></div>
+    <% end %>
+  <% end %>
+<% end %>
