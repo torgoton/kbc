@@ -227,7 +227,7 @@ class TurnEngine
     action = @game.current_action["type"]
 
     if action == "mandatory"
-      return [] unless player.settlements_remaining?
+      return [] unless player.settlements_remaining? && @game.mandatory_count > 0
       list = available_list(player.order, player.hand)
       return (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
     end

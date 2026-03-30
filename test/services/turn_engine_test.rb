@@ -289,6 +289,13 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not_equal "Not avilalable", @engine.build_settlement(row, col)
   end
 
+  test "buildable_cells returns empty when mandatory_count is zero" do
+    force_hand("G")
+    @game.update!(mandatory_count: 0)
+
+    assert_empty @engine.buildable_cells
+  end
+
   test "buildable_cells for paddock with from returns valid move destinations" do
     force_hand("G")
     spot = empty_hexes_of("G", 1).first
