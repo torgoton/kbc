@@ -207,6 +207,12 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal chris.order, game.reload.board_contents.player_at(0, 1)
   end
 
+  test "GET show as turbo_stream renders without error" do
+    get game_url(games(:game2player)), as: :turbo_stream
+
+    assert_response :success
+  end
+
   test "POST join adds the current user to the game" do
     game = Game.create!(state: "waiting")
     game.add_player(users(:chris))
