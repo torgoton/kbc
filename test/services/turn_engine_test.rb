@@ -352,6 +352,32 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
   end
 
+  test "turn_state returns oracle message when current_action is oracle" do
+    @game.update!(current_action: { "type" => "oracle" })
+    @game.current_player.update!(hand: "G")
+
+    assert_match(/must build on a Grass space/, @engine.turn_state)
+  end
+
+  test "buildable_cells for oracle action returns hand-terrain hexes" do
+    @game.boards = [ [ "Oracle", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 0)
+    @game.current_player.update!(
+      hand: "G",
+      tiles: [ { "klass" => "OracleTile", "from" => "[3, 7]", "used" => false } ]
+    )
+    @game.reload
+
+    cells = @engine.buildable_cells
+
+    assert cells.any?
+    @game.instantiate
+    cells.each do |r, c|
+      assert_equal "G", @game.board.terrain_at(r, c)
+      assert @game.board_contents.empty?(r, c)
+    end
+  end
+
   private
 
   def find_tile_trigger_pair

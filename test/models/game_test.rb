@@ -317,7 +317,10 @@ class GameTest < ActiveSupport::TestCase
 
   test "tile_activatable? is true when tile is unused and mandatory_count equals MANDATORY_COUNT" do
     game = games(:game2player)
-    # mandatory_count starts at 3 = MANDATORY_COUNT in fixture
+    game.mandatory_count = Game::MANDATORY_COUNT
+    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
+    game.board_contents = state
     tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
     assert engine(game).tile_activatable?(tile)
   end
@@ -332,6 +335,9 @@ class GameTest < ActiveSupport::TestCase
   test "tile_activatable? is true when mandatory_count is 0" do
     game = games(:game2player)
     game.mandatory_count = 0
+    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
+    game.board_contents = state
     tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
     assert engine(game).tile_activatable?(tile)
   end
@@ -340,6 +346,9 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     game.mandatory_count = 1
     game.current_player.supply["settlements"] = 0
+    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
+    game.board_contents = state
     tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
     assert engine(game).tile_activatable?(tile)
   end

@@ -18,6 +18,7 @@ module Boards
     BOARD_CLASSES = {
       "Farm"    => Boards::FarmBoard,
       "Oasis"   => Boards::OasisBoard,
+      "Oracle"  => Boards::OracleBoard,
       "Paddock" => Boards::PaddockBoard,
       "Tavern"  => Boards::TavernBoard
     }.freeze
@@ -25,6 +26,7 @@ module Boards
     TILE_CLASSES = {
       "FarmTile"    => Tiles::FarmTile,
       "OasisTile"   => Tiles::OasisTile,
+      "OracleTile"  => Tiles::OracleTile,
       "PaddockTile" => Tiles::PaddockTile,
       "TavernTile"  => Tiles::TavernTile
     }.freeze

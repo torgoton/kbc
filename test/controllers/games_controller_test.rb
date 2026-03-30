@@ -118,6 +118,10 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "game show renders a button for an activatable PaddockTile" do
     game = games(:game2player)
+    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
+    game.board_contents = state
+    game.save!
     chris = game_players(:chris)
     chris.tiles = [
       { "klass" => "MandatoryTile", "used" => false },
