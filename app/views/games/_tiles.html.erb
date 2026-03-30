@@ -1,22 +1,22 @@
 <% (player.tiles || []).each do |tile| %>
   <% type = tile["klass"].delete_suffix("Tile").downcase %>
   <% used = tile["used"] %>
-  <% if n == 0 && tile["klass"] == "PaddockTile" && engine.tile_activatable?(tile) %>
+  <% if my_turn && tile["klass"] == "PaddockTile" && engine.tile_activatable?(tile) %>
     <%= button_to type.capitalize,
           select_action_game_path(game),
           params: { action_type: "paddock" },
           class: "player-tile #{type} tile-available" %>
-  <% elsif n == 0 && tile["klass"] == "OasisTile" && engine.tile_activatable?(tile) %>
+  <% elsif my_turn && tile["klass"] == "OasisTile" && engine.tile_activatable?(tile) %>
     <%= button_to type.capitalize,
           select_action_game_path(game),
           params: { action_type: "oasis" },
           class: "player-tile #{type} tile-available" %>
-  <% elsif n == 0 && tile["klass"] == "FarmTile" && engine.tile_activatable?(tile) %>
+  <% elsif my_turn && tile["klass"] == "FarmTile" && engine.tile_activatable?(tile) %>
     <%= button_to type.capitalize,
           select_action_game_path(game),
           params: { action_type: "farm" },
           class: "player-tile #{type} tile-available" %>
-  <% elsif n == 0 && tile["klass"] == "TavernTile" && engine.tile_activatable?(tile) %>
+  <% elsif my_turn && tile["klass"] == "TavernTile" && engine.tile_activatable?(tile) %>
     <%= button_to type.capitalize,
           select_action_game_path(game),
           params: { action_type: "tavern" },

@@ -22,5 +22,5 @@ x
 <% if score %>
   <span class="player-score"><%= score %> pts</span>
 <% end %>
-<%= render partial: "games/tiles", locals: { game:, player:, n:, engine: } %>
+<%= render partial: "games/tiles", locals: { game:, player:, n:, engine:, my_turn: } %>
 
