@@ -273,6 +273,14 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal move_count_before, game.moves.count
   end
 
+  test "POST create broadcasts dashboard update to non-participating users" do
+    paula = users(:paula)
+
+    assert_turbo_stream_broadcasts("user_#{paula.id}") do
+      post games_url
+    end
+  end
+
   test "join broadcasts dashboard update to the joining user" do
     post session_url, params: { email_address: "paula@example.com", password: "password" }
     paula = users(:paula)

@@ -152,10 +152,12 @@ class Game < ApplicationRecord
       user = gp.player
       broadcast_update_to("user_#{user.id}", target: "dashboard-my-games",
         partial: "dashboard/my_games", locals: { games: user.my_games.includes(game_players: :player) })
-      broadcast_update_to("user_#{user.id}", target: "dashboard-waiting-games",
-        partial: "dashboard/waiting_games", locals: { games: user.waiting_games.includes(game_players: :player) })
       broadcast_update_to("user_#{user.id}", target: "dashboard-completed-games",
         partial: "dashboard/completed_games", locals: { games: user.completed_games.includes(game_players: :player) })
+    end
+    User.where(approved: true).each do |user|
+      broadcast_update_to("user_#{user.id}", target: "dashboard-waiting-games",
+        partial: "dashboard/waiting_games", locals: { games: user.waiting_games.includes(game_players: :player) })
     end
   end
 
