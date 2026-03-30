@@ -39,3 +39,47 @@ paula:
   supply: <%= { "settlements" => 40 }.to_json %>
   tiles: <%= [].to_json %>
   order: 1
+
+chris_in_paula_turn_game:
+  player: chris
+  game: paula_turn_game
+  hand: "T"
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 0
+
+paula_in_paula_turn_game:
+  player: paula
+  game: paula_turn_game
+  hand: "D"
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 1
+
+paula_in_waiting_game:
+  player: paula
+  game: waiting_game
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 0
+
+chris_in_chris_waiting_game:
+  player: chris
+  game: chris_waiting_game
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 0
+
+chris_in_completed_game:
+  player: chris
+  game: completed_game
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 0
+
+paula_in_completed_game:
+  player: paula
+  game: completed_game
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 1

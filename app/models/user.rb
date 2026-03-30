@@ -27,4 +27,16 @@ class User < ApplicationRecord
   validates :email_address, presence: true
   validates :handle, presence: true, uniqueness: true
   validates :password, presence: true, on: :create
+
+  def my_games
+    games.where(state: [ "playing", "waiting" ])
+  end
+
+  def waiting_games
+    Game.waiting.where.not(id: game_players.select(:game_id))
+  end
+
+  def completed_games
+    games.completed
+  end
 end

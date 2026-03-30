@@ -10,6 +10,7 @@ class GamesController < ApplicationController
     @game.add_player(Current.user)
     respond_to do |format|
       if @game.save
+        @game.broadcast_dashboard_update
         format.html { redirect_to dashboard_path, notice: "Game created" }
         format.json { render :show, status: :created, location: @game }
       else
@@ -92,6 +93,7 @@ class GamesController < ApplicationController
     end
     # MVP: 2 players every game, so just start it now
     @game.start
+    @game.broadcast_dashboard_update
     redirect_to game_path(@game)
   end
 

@@ -1,6 +1,9 @@
 require "test_helper"
+require "turbo/broadcastable/test_helper"
 
 class GamesControllerTest < ActionDispatch::IntegrationTest
+  include Turbo::Broadcastable::TestHelper
+
   setup do
     post session_url, params: { email_address: "chris@example.com", password: "password" }
   end
@@ -228,6 +231,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post undo_move_game_url(game), as: :turbo_stream
 
     assert_equal move_count_before, game.moves.count
+  end
+
+  test "join broadcasts dashboard update to the joining user" do
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+    paula = users(:paula)
+
+    assert_turbo_stream_broadcasts("user_#{paula.id}") do
+      post join_game_url(games(:waiting_game))
+    end
   end
 end
 
