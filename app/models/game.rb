@@ -107,6 +107,10 @@ class Game < ApplicationRecord
     TurnEngine.new(self).turn_state
   end
 
+  def player_handles
+    game_players.map { |gp| gp.player.handle }.join(", ")
+  end
+
   def live_scores
     Scoring.new(self).compute
   end
@@ -147,11 +151,11 @@ class Game < ApplicationRecord
     game_players.each do |gp|
       user = gp.player
       broadcast_update_to("user_#{user.id}", target: "dashboard-my-games",
-        partial: "dashboard/my_games", locals: { games: user.my_games })
+        partial: "dashboard/my_games", locals: { games: user.my_games.includes(game_players: :player) })
       broadcast_update_to("user_#{user.id}", target: "dashboard-waiting-games",
-        partial: "dashboard/waiting_games", locals: { games: user.waiting_games, current_user: user })
+        partial: "dashboard/waiting_games", locals: { games: user.waiting_games.includes(game_players: :player) })
       broadcast_update_to("user_#{user.id}", target: "dashboard-completed-games",
-        partial: "dashboard/completed_games", locals: { games: user.completed_games })
+        partial: "dashboard/completed_games", locals: { games: user.completed_games.includes(game_players: :player) })
     end
   end
 

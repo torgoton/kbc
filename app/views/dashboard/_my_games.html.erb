@@ -3,18 +3,12 @@
   <% if game.playing? %>
     <%= link_to game_path(game), class: "game-row" do %>
       <div>Game <%= game.id %> &mdash; <%= game.turn_state %></div>
-      <div class="player-handles">
-        Players:
-        <%= game.game_players.map { |gp| gp.player.handle }.join(", ") %>
-      </div>
+      <div class="player-handles">Players: <%= game.player_handles %></div>
     <% end %>
   <% else %>
     <div class="game-row">
-      <div>Game <%= game.id %> &mdash; Waiting for players</div>
-      <div class="player-handles">
-        Players:
-        <%= game.game_players.map { |gp| gp.player.handle }.join(", ") %>
-      </div>
+      <div>Game <%= game.id %> &mdash; <%= game.turn_state %></div>
+      <div class="player-handles">Players: <%= game.player_handles %></div>
     </div>
   <% end %>
 <% end %>

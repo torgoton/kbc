@@ -3,7 +3,7 @@
   <table>
     <% games.each do |game| %>
       <tr>
-        <td>Game <%= game.id %> &mdash; <%= game.game_players.map { |gp| gp.player.handle }.join(", ") %></td>
+        <td>Game <%= game.id %> &mdash; <%= game.player_handles %></td>
         <td><%= button_to "Join", join_game_path(game) %></td>
       </tr>
     <% end %>
