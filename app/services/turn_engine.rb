@@ -226,44 +226,11 @@ class TurnEngine
     return unless last_deliberate
     Rails.logger.debug("UNDOING back to deliberate move #{last_deliberate.inspect}")
     @game.instantiate
+    backend = MoveApplicator::LiveState.new(@game)
     @game.moves.where("id >= ?", last_deliberate.id).order(id: :desc).each do |move|
       Rails.logger.debug("  undoing #{move.action} (order #{move.order})")
       @game.move_count -= 1
-      case move.action
-      when "build"
-        @game.board_contents_will_change!
-        @game.board_contents.remove(*Coordinate.from_key(move.to))
-        move.game_player.increment_supply!
-        @game.ending = false
-        tile_klass = move.payload&.dig("tile_klass")
-        if tile_klass
-          move.game_player.mark_tile_unused!(tile_klass)
-          @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase }
-        else
-          @game.mandatory_count += 1
-        end
-        move.game_player.save
-      when "move_settlement"
-        @game.board_contents_will_change!
-        @game.board_contents.move_settlement(*Coordinate.from_key(move.to), *Coordinate.from_key(move.from))
-        @game.current_action = { "type" => "paddock", "from" => move.from }
-        move.game_player.mark_tile_unused!("PaddockTile")
-        move.game_player.save
-      when "select_action"
-        @game.current_action = { "type" => "mandatory" }
-      when "select_settlement"
-        @game.current_action_will_change!
-        @game.current_action.delete("from")
-      when "pick_up_tile"
-        @game.board_contents_will_change!
-        @game.board_contents.increment_tile(*Coordinate.from_key(move.from))
-        move.game_player.remove_tile_from!(move.from)
-        move.game_player.save
-      when "forfeit_tile"
-        klass = move.payload["klass"]
-        move.game_player.restore_tile!(klass, from: move.from, used: move.to == "true")
-        move.game_player.save
-      end
+      MoveApplicator.dispatch(backend, move)
       move.destroy
     end
     @game.save

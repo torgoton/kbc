@@ -1,0 +1,191 @@
+module MoveApplicator
+  def self.dispatch(backend, move)
+    player_order = move.game_player.order
+    case move.action
+    when "select_action"
+      backend.apply_select_action(player_order: player_order, type: move.to)
+    when "select_settlement"
+      backend.apply_select_settlement(player_order: player_order, from: move.from)
+    when "move_settlement"
+      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to)
+    when "build"
+      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"))
+    when "pick_up_tile"
+      backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
+    when "forfeit_tile"
+      backend.apply_forfeit_tile(
+        player_order: player_order,
+        from: move.from,
+        klass: move.payload["klass"],
+        used: move.to == "true"
+      )
+    when "end_turn"
+      backend.apply_end_turn(
+        player_order: player_order,
+        card_discarded: move.payload["card_discarded"],
+        card_drawn: move.payload["card_drawn"],
+        reshuffled: move.payload["reshuffled"],
+        deck_after: move.payload["deck_after"]
+      )
+    end
+  end
+end
+
+class MoveApplicator::HashState
+  attr_reader :board, :players, :deck, :discard, :mandatory_count, :current_action, :current_player_order
+
+  def initialize(snapshot)
+    @board = BoardState.load(snapshot["board_contents"])
+    @players = snapshot["players"].to_h { |p| [ p["order"], p.except("order").deep_dup ] }
+    @deck = snapshot["deck"].dup
+    @discard = snapshot["discard"].dup
+    @goals = snapshot["goals"]&.dup
+    @boards = snapshot["boards"]
+    @mandatory_count = snapshot["mandatory_count"]
+    @current_action = snapshot["current_action"].deep_dup
+    @current_player_order = snapshot["current_player_order"]
+  end
+
+  def apply_select_action(player_order:, type:)
+    @current_action = { "type" => type }
+  end
+
+  def apply_select_settlement(player_order:, from:)
+    @current_action = @current_action.merge("from" => from)
+  end
+
+  def apply_build(player_order:, to:, tile_klass:)
+    coord = Coordinate.from_key(to)
+    @board.place_settlement(coord.row, coord.col, player_order)
+    @players[player_order]["supply"]["settlements"] -= 1
+    if tile_klass
+      mark_tile_used(@players[player_order], tile_klass)
+      @current_action = { "type" => "mandatory" }
+    else
+      @mandatory_count -= 1
+    end
+  end
+
+  def apply_pick_up_tile(player_order:, from:, klass:)
+    coord = Coordinate.from_key(from)
+    @board.decrement_tile(coord.row, coord.col)
+    player = @players[player_order]
+    player["tiles"] = (player["tiles"] || []) + [ { "klass" => klass, "from" => from, "used" => true } ]
+  end
+
+  def apply_forfeit_tile(player_order:, from:, klass:, used:)
+    player = @players[player_order]
+    player["tiles"] = (player["tiles"] || []).reject { |t| t["from"] == from }
+  end
+
+  def apply_end_turn(player_order:, card_discarded:, card_drawn:, reshuffled:, deck_after:)
+    next_order = (player_order + 1) % @players.size
+    @discard.push(card_discarded)
+    @players[player_order]["hand"] = card_drawn
+    if reshuffled
+      @deck = deck_after.dup
+      @discard = []
+    else
+      @deck.shift
+    end
+    @mandatory_count = Game::MANDATORY_COUNT
+    @current_action = { "type" => "mandatory" }
+    @current_player_order = next_order
+    next_player = @players[next_order]
+    next_player["tiles"] = (next_player["tiles"] || []).map { |t| t.merge("used" => false) }
+  end
+
+  def apply_move_settlement(player_order:, from:, to:)
+    from_coord = Coordinate.from_key(from)
+    to_coord = Coordinate.from_key(to)
+    @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
+    @current_action = { "type" => "mandatory" }
+    mark_tile_used(@players[player_order], "PaddockTile")
+  end
+
+  private
+
+  def mark_tile_used(player, klass)
+    idx = player["tiles"]&.index { |t| t["klass"] == klass && t["used"] == false }
+    return unless idx
+    updated = player["tiles"].dup
+    updated[idx] = updated[idx].merge("used" => true)
+    player["tiles"] = updated
+  end
+
+  public
+
+  def result
+    {
+      "board_contents" => BoardState.dump(@board),
+      "boards" => @boards,
+      "deck" => @deck,
+      "discard" => @discard,
+      "goals" => @goals,
+      "mandatory_count" => @mandatory_count,
+      "current_action" => @current_action,
+      "current_player_order" => @current_player_order,
+      "players" => @players.map { |order, data| { "order" => order }.merge(data) }
+    }
+  end
+end
+
+class MoveApplicator::LiveState
+  def initialize(game)
+    @game = game
+  end
+
+  def apply_build(player_order:, to:, tile_klass:)
+    coord = Coordinate.from_key(to)
+    @game.board_contents_will_change!
+    @game.board_contents.remove(coord.row, coord.col)
+    gp = player_for(player_order)
+    gp.increment_supply!
+    @game.ending = false
+    if tile_klass
+      gp.mark_tile_unused!(tile_klass)
+      @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase }
+    else
+      @game.mandatory_count += 1
+    end
+    gp.save
+  end
+
+  def apply_pick_up_tile(player_order:, from:, klass:)
+    coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.increment_tile(coord.row, coord.col)
+    player_for(player_order).remove_tile_from!(from)
+    player_for(player_order).save
+  end
+
+  def apply_forfeit_tile(player_order:, from:, klass:, used:)
+    gp = player_for(player_order)
+    gp.restore_tile!(klass, from: from, used: used)
+    gp.save
+  end
+
+  def apply_select_action(player_order:, type:)
+    @game.current_action = { "type" => "mandatory" }
+  end
+
+  def apply_select_settlement(player_order:, from:)
+    @game.current_action_will_change!
+    @game.current_action.delete("from")
+  end
+
+  def apply_move_settlement(player_order:, from:, to:)
+    @game.board_contents_will_change!
+    @game.board_contents.move_settlement(*Coordinate.from_key(to), *Coordinate.from_key(from))
+    @game.current_action = { "type" => "paddock", "from" => from }
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("PaddockTile")
+    gp.save
+  end
+
+  private
+
+  def player_for(order)
+    @game.game_players.find { |gp| gp.order == order }
+  end
+end
