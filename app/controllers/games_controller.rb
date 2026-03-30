@@ -32,6 +32,8 @@ class GamesController < ApplicationController
   # 2. use a tile that I have to build a settlement on the board
   # 3. use a tile that I have to move a piece on the board
   def action
+    return unless @game.game_players.find_by(player: Current.user) == @game.current_player
+
     Rails.logger.debug("TURN ACTION PARAMS: #{action_params.inspect}")
 
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
@@ -58,6 +60,8 @@ class GamesController < ApplicationController
   end
 
   def select_action
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
     TurnEngine.new(@game).select_action(params[:action_type])
     respond_to do |format|
       format.html { redirect_to @game }

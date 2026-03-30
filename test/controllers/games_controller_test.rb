@@ -63,6 +63,28 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "button[disabled]", text: "End turn"
   end
 
+  test "POST action does nothing when the requesting player is not the current player" do
+    game = games(:game2player)
+    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
+    game.board_contents = BoardState.new
+    game.mandatory_count = 3
+    game.save
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    post action_game_url(game), params: { build_row: 3, build_col: 6 }
+
+    assert game.reload.board_contents.empty?(3, 6)
+  end
+
+  test "POST select_action does nothing when the requesting player is not the current player" do
+    game = games(:game2player)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    post select_action_game_url(game), params: { action_type: "paddock" }
+
+    assert_equal "mandatory", game.reload.current_action["type"]
+  end
+
   test "POST end_turn does nothing when the requesting player is not the current player" do
     game = games(:game2player)
     post session_url, params: { email_address: "paula@example.com", password: "password" }
@@ -106,6 +128,24 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     get game_url(game)
 
     assert_select "form[action='#{select_action_game_path(game)}'] button", minimum: 1
+  end
+
+  test "game show does not render tile action buttons when it is not the viewer's turn" do
+    game = games(:game2player)
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.mandatory_count = 0
+    game.save
+    paula = game_players(:paula)
+    paula.tiles = [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+    ]
+    paula.save
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    get game_url(game)
+
+    assert_select "form[action='#{select_action_game_path(game)}'] button", count: 0
   end
 
   test "game show does not render a button for a used PaddockTile" do
