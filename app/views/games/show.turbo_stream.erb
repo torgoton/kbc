@@ -1,2 +1,2 @@
-<%= render partial: "games/game", locals: { game: game } %>
+<%= render partial: "games/game", locals: { game:, my_player:, engine: TurnEngine.new(game), scores: game.live_scores } %>
 <%= javascript_include_tag "gameboard" %>
