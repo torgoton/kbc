@@ -222,38 +222,45 @@ class TurnEngine
   end
 
   def buildable_cells
-    @game.instantiate
-    player = @game.current_player
-    action = @game.current_action["type"]
+    @buildable_cells ||= begin
+      @game.instantiate
+      player = @game.current_player
+      action = @game.current_action["type"]
 
-    if action == "mandatory"
-      return [] unless player.settlements_remaining? && @game.mandatory_count > 0
-      list = available_list(player.order, player.hand)
-      return (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
-    end
-
-    klass = "#{action.capitalize}Tile"
-    tile = player.find_unused_tile(klass)
-    return [] unless tile
-    tile_obj = Tiles::Tile.from_hash(tile)
-
-    if action == "paddock"
-      if @game.current_action["from"]
-        from = Coordinate.from_key(@game.current_action["from"])
-        return tile_obj.valid_destinations(
-          from_row: from.row, from_col: from.col,
-          board_contents: @game.board_contents, board: @game.board
-        )
+      if action == "mandatory"
+        if player.settlements_remaining? && @game.mandatory_count > 0
+          list = available_list(player.order, player.hand)
+          (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
+        else
+          []
+        end
       else
-        return tile_obj.selectable_settlements(
-          player_order: player.order, board_contents: @game.board_contents, board: @game.board
-        )
+        klass = "#{action.capitalize}Tile"
+        tile = player.find_unused_tile(klass)
+        if tile
+          tile_obj = Tiles::Tile.from_hash(tile)
+          if action == "paddock"
+            if @game.current_action["from"]
+              from = Coordinate.from_key(@game.current_action["from"])
+              tile_obj.valid_destinations(
+                from_row: from.row, from_col: from.col,
+                board_contents: @game.board_contents, board: @game.board
+              )
+            else
+              tile_obj.selectable_settlements(
+                player_order: player.order, board_contents: @game.board_contents, board: @game.board
+              )
+            end
+          else
+            tile_obj.valid_destinations(
+              board_contents: @game.board_contents, board: @game.board, player_order: player.order
+            )
+          end
+        else
+          []
+        end
       end
     end
-
-    tile_obj.valid_destinations(
-      board_contents: @game.board_contents, board: @game.board, player_order: player.order
-    )
   end
 
   def undo_last_move
