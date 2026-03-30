@@ -10,6 +10,7 @@
 
   <div id="dashboard-my-games" class="fancy-section">
     <%= render "dashboard/my_games", games: @my_games %>
+    <%= link_to "Open a new table", new_game_path %>
   </div>
 
   <div id="dashboard-waiting-games" class="fancy-section">
@@ -18,9 +19,5 @@
 
   <div id="dashboard-completed-games" class="fancy-section">
     <%= render "dashboard/completed_games", games: @completed_games %>
-  </div>
-
-  <div class="fancy-section">
-    <%= link_to "Open a new table", new_game_path %>
   </div>
 </div>
