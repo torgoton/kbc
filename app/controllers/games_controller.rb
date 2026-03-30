@@ -1,4 +1,6 @@
 class GamesController < ApplicationController
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move ]
+
   def new
     @game = Game.new
   end
@@ -8,6 +10,7 @@ class GamesController < ApplicationController
     @game.add_player(Current.user)
     respond_to do |format|
       if @game.save
+        @game.broadcast_dashboard_update
         format.html { redirect_to dashboard_path, notice: "Game created" }
         format.json { render :show, status: :created, location: @game }
       else
@@ -30,13 +33,6 @@ class GamesController < ApplicationController
   # 3. use a tile that I have to move a piece on the board
   def action
     Rails.logger.debug("TURN ACTION PARAMS: #{action_params.inspect}")
-    @game = Current.user.games.find(action_params[:id])
-    unless @game
-      respond_to do |format|
-        format.json { render json: { message: "Cannot find game" } }
-      end
-      return
-    end
 
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
     engine = TurnEngine.new(@game)
@@ -62,7 +58,6 @@ class GamesController < ApplicationController
   end
 
   def select_action
-    @game = Current.user.games.find(params[:id])
     TurnEngine.new(@game).select_action(params[:action_type])
     respond_to do |format|
       format.html { redirect_to @game }
@@ -73,7 +68,6 @@ class GamesController < ApplicationController
 
   def end_turn
     Rails.logger.debug("END TURN action")
-    @game = Current.user.games.find(params[:id])
     current_gp = @game.game_players.find_by(player: Current.user)
     engine = TurnEngine.new(@game)
     engine.end_turn if current_gp == @game.current_player && engine.turn_endable?
@@ -99,12 +93,12 @@ class GamesController < ApplicationController
     end
     # MVP: 2 players every game, so just start it now
     @game.start
+    @game.broadcast_dashboard_update
     redirect_to game_path(@game)
   end
 
   def undo_move
     Rails.logger.debug("UNDO MOVE action")
-    @game = Current.user.games.find(params[:id])
     engine = TurnEngine.new(@game)
     engine.undo_last_move if engine.undo_allowed?
     respond_to do |format|
@@ -115,6 +109,11 @@ class GamesController < ApplicationController
   end
 
   private
+
+  def require_game_playing
+    @game = Current.user.games.find(params[:id])
+    head :no_content unless @game.playing?
+  end
 
   def action_params
     params.permit(:id, :build_row, :build_col)

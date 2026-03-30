@@ -128,8 +128,8 @@ class TurnEngine
   def tile_activatable?(tile)
     return false if tile["used"]
     return false unless "Tiles::#{tile["klass"]}".safe_constantize
-    return false unless @game.mandatory_count == Game::MANDATORY_COUNT ||
-      @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?
+    return false unless @game.current_action["type"] == "mandatory" &&
+      (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0)
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
@@ -206,7 +206,19 @@ class TurnEngine
       @game.save
     end
     max_order = @game.game_players.count - 1
-    @game.complete! if @game.ending? && game_player.order == max_order
+    if @game.ending? && game_player.order == max_order
+      @game.move_count += 1
+      @game.moves.create(
+        order: @game.move_count,
+        game_player: game_player,
+        deliberate: false,
+        action: "end_game",
+        reversible: false,
+        message: "Game over!"
+      )
+      @game.save
+      @game.complete!
+    end
   end
 
   def undo_last_move

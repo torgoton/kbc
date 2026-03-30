@@ -38,4 +38,25 @@ class UserTest < ActiveSupport::TestCase
       user.save!(validate: false)
     }
   end
+
+  test "my_games includes all playing games the user is in" do
+    assert_includes users(:chris).my_games, games(:game2player)
+    assert_includes users(:chris).my_games, games(:paula_turn_game)
+  end
+
+  test "my_games includes waiting games the user is in" do
+    assert_includes users(:chris).my_games, games(:chris_waiting_game)
+  end
+
+  test "completed games do not appear in my_games" do
+    refute_includes users(:chris).my_games, games(:completed_game)
+  end
+
+  test "waiting_games includes waiting games where the user is not a participant" do
+    assert_includes users(:chris).waiting_games, games(:waiting_game)
+  end
+
+  test "completed_games includes completed games the user participated in" do
+    assert_includes users(:chris).completed_games, games(:completed_game)
+  end
 end

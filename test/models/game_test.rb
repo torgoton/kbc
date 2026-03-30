@@ -25,7 +25,10 @@
 #
 require "test_helper"
 
+require "turbo/broadcastable/test_helper"
+
 class GameTest < ActiveSupport::TestCase
+  include Turbo::Broadcastable::TestHelper
   test "end turn with low deck should shuffle discard pile" do
     game = games(:game2player)
     game.deck = [ "A" ]
@@ -999,5 +1002,44 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
     game
+  end
+
+  test "turn_state returns the same message as TurnEngine for playing games" do
+    game = games(:game2player)
+    assert_equal TurnEngine.new(game).turn_state, game.turn_state
+  end
+
+  test "turn_state returns 'Waiting for players' for waiting games" do
+    assert_equal "Waiting for players", games(:chris_waiting_game).turn_state
+  end
+
+  test "broadcast_dashboard_update sends to each participant's user channel" do
+    game = games(:game2player)
+    chris = users(:chris)
+    paula = users(:paula)
+
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
+      assert_turbo_stream_broadcasts("user_#{paula.id}") do
+        game.broadcast_dashboard_update
+      end
+    end
+  end
+
+  test "complete! broadcasts dashboard update to participants" do
+    game = games(:game2player)
+    chris = users(:chris)
+
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
+      game.complete!
+    end
+  end
+
+  test "broadcast_game_update broadcasts dashboard update to participants" do
+    game = games(:game2player)
+    chris = users(:chris)
+
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
+      game.broadcast_game_update
+    end
   end
 end

@@ -1,36 +1,26 @@
+<% content_for :head do %>
+  <meta name="turbo-cache-control" content="no-cache">
+<% end %>
+<%= turbo_stream_from "user_#{current_user.id}" %>
 <%= render "fancy" %>
 
 <div class="dashboard-box">
   <h1>KBC Dashboard</h1>
   <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete %></div>
-  <div class="fancy-section">
-    <h2><%= "Games for #{current_user.handle}" %></h2>
-    <table>
-      <% current_user.games.each do |game| %>
-          <tr>
-            <td><%= "Game #{game.id} - #{game.state}" %></td>
-            <% if game.playing? %>
-              <td><%= link_to("Play", game) %></td>
-            <% else %>
-              <td>Waiting for players</td>
-            <% end %>
-          </tr>
-      <% end %>
-    </table>
+
+  <div id="dashboard-my-games" class="fancy-section">
+    <%= render "dashboard/my_games", games: @my_games %>
   </div>
-  <div class="fancy-section">
-    <h2>Tables awaiting players</h2>
-    <table>
-      <% @open_games.each do |game| %>
-        <tr>
-          <td><%= game.id %></td>
-          <td><%= button_to("Join", join_game_path(game)) %></td>
-        </tr>
-      <% end %>
-    </table>
+
+  <div id="dashboard-waiting-games" class="fancy-section">
+    <%= render "dashboard/waiting_games", games: @waiting_games, current_user: current_user %>
   </div>
+
+  <div id="dashboard-completed-games" class="fancy-section">
+    <%= render "dashboard/completed_games", games: @completed_games %>
+  </div>
+
   <div class="fancy-section">
-    <h2><%= link_to("Open a new table", new_game_path)%></h2>
+    <%= link_to "Open a new table", new_game_path %>
   </div>
 </div>
-

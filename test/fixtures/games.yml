@@ -37,3 +37,44 @@ game2player:
   move_count: 0
   current_action:
     type: "mandatory"
+
+paula_turn_game:
+  boards: []
+  board_contents: {}
+  deck: []
+  discard: []
+  goals: []
+  current_player: paula_in_paula_turn_game
+  mandatory_count: 0
+  state: "playing"
+  move_count: 0
+  current_action:
+    type: "mandatory"
+
+waiting_game:
+  boards: []
+  board_contents: {}
+  deck: []
+  discard: []
+  goals: []
+  state: "waiting"
+  move_count: 0
+
+chris_waiting_game:
+  boards: []
+  board_contents: {}
+  deck: []
+  discard: []
+  goals: []
+  state: "waiting"
+  move_count: 0
+
+completed_game:
+  boards: []
+  board_contents: {}
+  deck: []
+  discard: []
+  goals: []
+  scores: <%= { "chris" => 10, "paula" => 8 }.to_json %>
+  state: "completed"
+  move_count: 0
