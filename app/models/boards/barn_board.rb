@@ -2,16 +2,16 @@ module Boards
   class BarnBoard < BoardSection
     def map
       [
-        "FDDMMDDCCC",
-        "FFDDDMMCCC",
-        "FFFFFFFMMM",
-        "WWFSGGTTMM",
-        "FFWWGGGTTC",
-        "FCCWGTTCCC",
-        "DFLCWTTLCG",
-        "DDCWTTGGGG",
-        "DDDWTTTGGG",
-        "DDWWTTTGGG"
+        "CDDDDDDDDD",
+        "CCCDDDDDCD",
+        "MMMDMMLDDC",
+        "CMMMMMFFCC",
+        "CCCMMWFFFC",
+        "GCCCMFFWTC",
+        "GGLTTFWFFT",
+        "GGTTFFGSTT",
+        "GGGTTWGGTT",
+        "GGGTWGGTTT"
       ]
     end
 

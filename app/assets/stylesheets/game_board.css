@@ -292,11 +292,47 @@ ul li .hex:hover {
     background-position: 1px 3px;
 }
 
-.tile-container.tavern {
+.tile-container.barn {
     height: 100%;
     width: 100%;
-    background-image: url("gold/tavern.svg");
-    background-size: contain;
+    background-image: url("gold/barn.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.farm {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/farm.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.harbor {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/harbor.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.oasis {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/oasis.svg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.oracle {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/oracle.svg");
+    background-size: 80%;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
@@ -310,20 +346,20 @@ ul li .hex:hover {
     background-position: center 65%;
 }
 
-.tile-container.oasis {
+.tile-container.tavern {
     height: 100%;
     width: 100%;
-    background-image: url("gold/oasis.svg");
-    background-size: 70%;
+    background-image: url("gold/tavern.svg");
+    background-size: contain;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
 
-.tile-container.farm {
+.tile-container.tower {
     height: 100%;
     width: 100%;
-    background-image: url("gold/farm.svg");
-    background-size: 70%;
+    background-image: url("gold/tower.svg");
+    background-size: 80%;
     background-repeat: no-repeat;
     background-position: center 75%;
 }
