@@ -11,6 +11,8 @@ module Tiles
       [ [ 1,  0 ],  [ 1, 1 ] ]    # SE
     ].freeze
 
+    def moves_settlement? = true
+
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order: nil, hand: nil)
       return [] if from_row.nil? || from_col.nil?
       STRAIGHT_LINES.filter_map do |steps|
@@ -29,7 +31,7 @@ module Tiles
     end
 
     def activatable?(player_order:, board_contents:, board:, hand: nil)
-      selectable_settlements(player_order:, board_contents:, board:).any?
+      selectable_settlements(player_order:, board_contents:, board:, hand:).any?
     end
 
     def selectable_settlements(player_order:, board_contents:, board:, hand: nil)

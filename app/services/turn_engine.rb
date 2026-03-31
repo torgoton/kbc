@@ -244,7 +244,7 @@ class TurnEngine
         tile = player.find_unused_tile(klass)
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
-          if action == "paddock" || action == "barn"
+          if tile_obj.moves_settlement?
             if @game.current_action["from"]
               from = Coordinate.from_key(@game.current_action["from"])
               tile_obj.valid_destinations(
