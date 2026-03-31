@@ -282,10 +282,17 @@ class Game < ApplicationRecord
     save
   end
 
+  OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
+
   def select_goals
-    # MVP always these goals
-    self.goals = [ "fishermen", "knights", "merchants" ]
+    instantiate_board
+    castle_goal = board_has_castles? ? [ "castles" ] : []
+    self.goals = castle_goal + OPTIONAL_GOALS.sample(3)
     save
+  end
+
+  def board_has_castles?
+    (0..19).any? { |r| (0..19).any? { |c| board.terrain_at(r, c) == "S" } }
   end
 
   def populate_player_supplies
