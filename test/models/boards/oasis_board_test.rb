@@ -17,4 +17,14 @@ class OasisBoardTest < ActiveSupport::TestCase
     board = Boards::OasisBoard.new(0)
     assert_equal [ { r: 7, c: 1, k: "Castle" } ], board.scoring_hexes
   end
+
+  test "scoring_hexes flips coordinates when board is flipped" do
+    board = Boards::OasisBoard.new(1)
+    assert_equal [ { r: 2, c: 8, k: "Castle" } ], board.scoring_hexes
+  end
+
+  test "location_hexes flips coordinates when board is flipped" do
+    board = Boards::OasisBoard.new(1)
+    assert_equal [ { r: 7, c: 2, k: "Oasis" }, { r: 2, c: 4, k: "Oasis" } ], board.location_hexes
+  end
 end

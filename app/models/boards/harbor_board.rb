@@ -15,14 +15,14 @@ module Boards
       ]
     end
 
-    def scoring_hexes
+    def raw_scoring_hexes
       [
         { r: 4, c: 2, k: "Castle" },
         { r: 8, c: 2, k: "Castle" }
       ]
     end
 
-    def location_hexes
+    def raw_location_hexes
       [
         { r: 7, c: 6, k: "Harbor" }
       ]
