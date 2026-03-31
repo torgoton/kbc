@@ -27,7 +27,7 @@ module Tiles
       end
     end
 
-    def selectable_settlements(player_order:, board_contents:, board:)
+    def selectable_settlements(player_order:, board_contents:, board:, hand: nil)
       []
     end
 
@@ -36,6 +36,10 @@ module Tiles
     end
 
     def builds_settlement?
+      false
+    end
+
+    def moves_settlement?
       false
     end
 

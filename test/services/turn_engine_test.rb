@@ -352,6 +352,78 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
   end
 
+  test "buildable_cells for barn without from returns selectable settlements" do
+    @game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.update!(current_action: { "type" => "barn" }, mandatory_count: 0)
+    @game.current_player.update!(
+      hand: "F",
+      tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
+    )
+    # Place a settlement on F terrain with adjacent F terrain available
+    @game.instantiate
+    @game.board_contents.place_settlement(0, 0, @game.current_player.order)
+    @game.save!
+    @game.reload
+
+    cells = @engine.buildable_cells
+
+    assert cells.any?
+    @game.instantiate
+    player_settlements = @game.board_contents.settlements_for(@game.current_player.order).to_a
+    cells.each { |r, c| assert_includes player_settlements, [ r, c ] }
+  end
+
+  test "move_settlement for barn action marks BarnTile used" do
+    @game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.update!(current_action: { "type" => "barn", "from" => "[0, 0]" })
+    @game.current_player.update!(
+      hand: "F",
+      tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
+    )
+    @game.instantiate
+    order = @game.current_player.order
+    # Settlement at (2,5) stays adjacent to tile location (2,6) so BarnTile won't forfeit
+    @game.board_contents.place_settlement(2, 5, order)
+    @game.board_contents.place_settlement(0, 0, order)
+    @game.save!
+    @game.reload
+
+    @engine.move_settlement(1, 0)
+    @game.current_player.reload
+
+    barn_tile = @game.current_player.tiles.find { |t| t["klass"] == "BarnTile" }
+    assert barn_tile["used"], "BarnTile must be marked used after move"
+  end
+
+  test "buildable_cells for barn with from returns matching terrain destinations" do
+    @game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.update!(current_action: { "type" => "barn", "from" => "[0, 0]" }, mandatory_count: 0)
+    @game.current_player.update!(
+      hand: "F",
+      tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
+    )
+    @game.instantiate
+    @game.board_contents.place_settlement(0, 0, @game.current_player.order)
+    @game.save!
+    @game.reload
+
+    cells = @engine.buildable_cells
+
+    assert cells.any?
+    @game.instantiate
+    cells.each do |r, c|
+      assert_equal "F", @game.board.terrain_at(r, c)
+      assert @game.board_contents.empty?(r, c)
+    end
+  end
+
+  test "turn_state returns barn message when current_action is barn" do
+    @game.update!(current_action: { "type" => "barn" })
+    @game.current_player.update!(hand: "G")
+
+    assert_match(/must move a settlement to a Grass space/, @engine.turn_state)
+  end
+
   test "turn_state returns oracle message when current_action is oracle" do
     @game.update!(current_action: { "type" => "oracle" })
     @game.current_player.update!(hand: "G")

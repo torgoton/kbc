@@ -39,7 +39,7 @@ class GamesController < ApplicationController
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
     engine = TurnEngine.new(@game)
     case @game.current_action["type"]
-    when "paddock"
+    when "paddock", "barn"
       if @game.current_action["from"]
         engine.move_settlement(coord.row, coord.col)
       else

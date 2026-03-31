@@ -115,10 +115,11 @@ class TurnEngine
       reversible: true,
       message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
     )
+    tile_klass = "#{@game.current_action["type"].capitalize}Tile"
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*from_coord, row, col)
     @game.current_action = { "type" => "mandatory" }
-    @game.current_player.mark_tile_used!("PaddockTile")
+    @game.current_player.mark_tile_used!(tile_klass)
     apply_tile_forfeit(@game.current_player)
     apply_tile_pickup(@game.current_player, row, col)
     @game.current_player.save
@@ -158,6 +159,8 @@ class TurnEngine
       "#{@game.current_player.player.handle} must build on a Grass space"
     when "tavern"
       "#{@game.current_player.player.handle} must build at the end of a row"
+    when "barn"
+      "#{@game.current_player.player.handle} must move a settlement to a #{Boards::Board::TERRAIN_NAMES[@game.current_player.hand]} space"
     when "oracle"
       "#{@game.current_player.player.handle} must build on a #{Boards::Board::TERRAIN_NAMES[@game.current_player.hand]} space"
     else
@@ -241,16 +244,16 @@ class TurnEngine
         tile = player.find_unused_tile(klass)
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
-          if action == "paddock"
+          if tile_obj.moves_settlement?
             if @game.current_action["from"]
               from = Coordinate.from_key(@game.current_action["from"])
               tile_obj.valid_destinations(
                 from_row: from.row, from_col: from.col,
-                board_contents: @game.board_contents, board: @game.board
+                board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: player.hand
               )
             else
               tile_obj.selectable_settlements(
-                player_order: player.order, board_contents: @game.board_contents, board: @game.board
+                player_order: player.order, board_contents: @game.board_contents, board: @game.board, hand: player.hand
               )
             end
           else
