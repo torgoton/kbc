@@ -21,7 +21,8 @@ module Boards
       "Oasis"   => Boards::OasisBoard,
       "Oracle"  => Boards::OracleBoard,
       "Paddock" => Boards::PaddockBoard,
-      "Tavern"  => Boards::TavernBoard
+      "Tavern"  => Boards::TavernBoard,
+      "Tower"   => Boards::TowerBoard
     }.freeze
 
     TILE_CLASSES = {
@@ -30,7 +31,8 @@ module Boards
       "OasisTile"   => Tiles::OasisTile,
       "OracleTile"  => Tiles::OracleTile,
       "PaddockTile" => Tiles::PaddockTile,
-      "TavernTile"  => Tiles::TavernTile
+      "TavernTile"  => Tiles::TavernTile,
+      "TowerTile"   => Tiles::TowerTile
     }.freeze
 
     def initialize(game)

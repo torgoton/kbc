@@ -1,6 +1,5 @@
 module Tiles
   class TavernTile < Tiles::Tile
-    BUILDABLE_TERRAIN = %w[C D F G T].freeze
     def builds_settlement? = true
 
     # Each pair is [forward_dir, backward_dir]; each dir is [even_row_step, odd_row_step].

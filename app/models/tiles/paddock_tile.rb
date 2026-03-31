@@ -1,6 +1,5 @@
 module Tiles
   class PaddockTile < Tiles::Tile
-    BUILDABLE_TERRAIN = %w[C D F T G].freeze
     # Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
     STRAIGHT_LINES = [
       [ [ 0, -1 ], [ 0, -1 ] ],   # W

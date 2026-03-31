@@ -1,5 +1,7 @@
 module Tiles
   class Tile
+    BUILDABLE_TERRAIN = %w[C D F G T].freeze
+
     attr_accessor :qty
 
     def initialize(qty)
