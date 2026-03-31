@@ -30,7 +30,9 @@ module Tiles
     end
 
     def selectable_settlements(player_order:, board_contents:, board:, hand: nil)
-      []
+      return [] unless moves_settlement?
+      return [] unless valid_destinations(board_contents:, board:, player_order:, hand:).any?
+      board_contents.settlements_for(player_order)
     end
 
     def activatable?(player_order:, board_contents:, board:, hand: nil)
