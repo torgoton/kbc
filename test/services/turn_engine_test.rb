@@ -123,6 +123,9 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "build_settlement uses neighbor adjacency when player has an existing settlement" do
     # Place a settlement at a Canyon hex, then build on an adjacent Canyon hex
+    # Tavern board has Canyon at (0,7) and (0,8) — pin it to quadrant 0
+    @game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
+    @game.save
     @game.instantiate
     player = @game.current_player
     @game.board_contents_will_change!

@@ -251,9 +251,8 @@ class Game < ApplicationRecord
 
   private
 
-  # MVP: Always boards from "First Game"
   def select_boards
-    self.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
+    self.boards = Boards::Board::BOARD_CLASSES.keys.sample(4).map { |name| [ name, rand(2) ] }
     save
   end
 
