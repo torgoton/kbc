@@ -878,7 +878,7 @@ class GameTest < ActiveSupport::TestCase
   test "live_scores returns a hash keyed by player order with goal breakdowns and total" do
     game = games(:game2player)
     game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
-    game.goals  = [ "fishermen", "knights", "merchants" ]
+    game.goals  = [ "castles", "fishermen", "knights", "merchants" ]
     game.save
 
     result = game.live_scores
