@@ -972,6 +972,60 @@ class GameTest < ActiveSupport::TestCase
     assert_not game.ending, "ending must be cleared after undoing the last-settlement build"
   end
 
+  test "turn_state returns the same message as TurnEngine for playing games" do
+    game = games(:game2player)
+    assert_equal TurnEngine.new(game).turn_state, game.turn_state
+  end
+
+  test "turn_state returns 'Waiting for players' for waiting games" do
+    assert_equal "Waiting for players", games(:chris_waiting_game).turn_state
+  end
+
+  test "broadcast_dashboard_update sends to each participant's user channel" do
+    game = games(:game2player)
+    chris = users(:chris)
+    paula = users(:paula)
+
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
+      assert_turbo_stream_broadcasts("user_#{paula.id}") do
+        game.broadcast_dashboard_update
+      end
+    end
+  end
+
+  test "complete! broadcasts dashboard update to participants" do
+    game = games(:game2player)
+    chris = users(:chris)
+
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
+      game.complete!
+    end
+  end
+
+  # Board selection tests
+
+  test "start selects 4 unique boards from the known pool" do
+    game = new_started_game
+    board_names = game.boards.map(&:first)
+    assert_equal 4, board_names.size
+    assert_equal board_names.uniq, board_names
+    assert (board_names - Boards::Board::BOARD_CLASSES.keys).empty?
+  end
+
+  test "start randomizes board selection across games" do
+    boards_seen = 10.times.map { new_started_game.boards.map(&:first) }
+    assert boards_seen.uniq.size > 1, "expected varied board selection, got always #{boards_seen.first}"
+  end
+
+  test "broadcast_game_update broadcasts dashboard update to participants" do
+    game = games(:game2player)
+    chris = users(:chris)
+
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
+      game.broadcast_game_update
+    end
+  end
+
   private
 
   def new_started_game
@@ -1011,44 +1065,5 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
     game
-  end
-
-  test "turn_state returns the same message as TurnEngine for playing games" do
-    game = games(:game2player)
-    assert_equal TurnEngine.new(game).turn_state, game.turn_state
-  end
-
-  test "turn_state returns 'Waiting for players' for waiting games" do
-    assert_equal "Waiting for players", games(:chris_waiting_game).turn_state
-  end
-
-  test "broadcast_dashboard_update sends to each participant's user channel" do
-    game = games(:game2player)
-    chris = users(:chris)
-    paula = users(:paula)
-
-    assert_turbo_stream_broadcasts("user_#{chris.id}") do
-      assert_turbo_stream_broadcasts("user_#{paula.id}") do
-        game.broadcast_dashboard_update
-      end
-    end
-  end
-
-  test "complete! broadcasts dashboard update to participants" do
-    game = games(:game2player)
-    chris = users(:chris)
-
-    assert_turbo_stream_broadcasts("user_#{chris.id}") do
-      game.complete!
-    end
-  end
-
-  test "broadcast_game_update broadcasts dashboard update to participants" do
-    game = games(:game2player)
-    chris = users(:chris)
-
-    assert_turbo_stream_broadcasts("user_#{chris.id}") do
-      game.broadcast_game_update
-    end
   end
 end
