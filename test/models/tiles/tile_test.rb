@@ -12,8 +12,8 @@ class Tiles::TileTest < ActiveSupport::TestCase
     assert_equal [], Tiles::Tile.new(0).selectable_settlements(player_order: 0, board_contents: BoardState.new, board: nil)
   end
 
-  test "activatable? returns true" do
-    assert Tiles::Tile.new(0).activatable?(player_order: 0, board_contents: BoardState.new, board: nil)
+  test "activatable? returns false when no terrain defined" do
+    assert_not Tiles::Tile.new(0).activatable?(player_order: 0, board_contents: BoardState.new, board: nil)
   end
 
   test "builds_settlement? returns false" do

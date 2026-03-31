@@ -10,7 +10,7 @@ module Tiles
       [ [ [ -1, 0 ], [ -1, 1 ] ], [ [ 1, -1 ], [ 1, 0 ] ] ]    # NE / SW
     ].freeze
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
       settlements = board_contents.settlements_for(player_order).to_set
       candidates = []
 
@@ -40,7 +40,7 @@ module Tiles
       candidates.uniq
     end
 
-    def activatable?(player_order:, board_contents:, board:)
+    def activatable?(player_order:, board_contents:, board:, hand: nil)
       valid_destinations(board_contents:, board:, player_order:).any?
     end
 

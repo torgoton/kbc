@@ -60,7 +60,7 @@ class TurnEngine
     return "Not available" unless tile
     tile_obj = Tiles::Tile.from_hash(tile)
     destinations = tile_obj.valid_destinations(
-      board_contents: @game.board_contents, board: @game.board, player_order: game_player.order
+      board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: game_player.hand
     )
     return "Not available" unless destinations.include?([ row, col ])
     game_player.mark_tile_used!(tile_klass)
@@ -133,7 +133,7 @@ class TurnEngine
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board }
+    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand }
     tile_obj.activatable?(**ctx)
   end
 
@@ -158,6 +158,8 @@ class TurnEngine
       "#{@game.current_player.player.handle} must build on a Grass space"
     when "tavern"
       "#{@game.current_player.player.handle} must build at the end of a row"
+    when "oracle"
+      "#{@game.current_player.player.handle} must build on a #{Boards::Board::TERRAIN_NAMES[@game.current_player.hand]} space"
     else
       has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
@@ -253,7 +255,7 @@ class TurnEngine
             end
           else
             tile_obj.valid_destinations(
-              board_contents: @game.board_contents, board: @game.board, player_order: player.order
+              board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: player.hand
             )
           end
         else
