@@ -105,6 +105,8 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "build_settlement returns 'Not avilalable' when location not adjacent to existing settlements" do
     # Place a settlement at a Canyon hex in Tavern board, then try to build
     # at a far-away Canyon hex that cannot be adjacent
+    @game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
+    @game.save
     @game.instantiate
     player = @game.current_player
     @game.board_contents_will_change!
