@@ -1,5 +1,7 @@
 module Tiles
   class TowerTile < Tiles::Tile
+    CREATOR = "Icon by omeneko".freeze
+
     def builds_settlement? = true
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)

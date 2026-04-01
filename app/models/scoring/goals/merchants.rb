@@ -21,7 +21,6 @@ class Scoring
         end
         (l_hexes + castle_hexes).uniq
       end
-
     end
   end
 end

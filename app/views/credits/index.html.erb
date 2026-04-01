@@ -1,0 +1,8 @@
+<h1>Credits and Licenses</h1>
+<h2>Tile Icons</h2>
+All tile icons are from The Noun Project, with a Creative Commons Attribution License (CC BY 3.0).
+<ul class="tile-icons">
+  <% Boards::Board::TILE_CLASSES.each do |klass| %>
+    <li><%= "#{klass[0][0..-5]} by #{klass[1]::CREATOR}" %></li>
+  <% end %>
+</ul>

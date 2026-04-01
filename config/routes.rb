@@ -82,6 +82,7 @@ Rails.application.routes.draw do
 
   get "home/index"
   get "dashboard", to: "dashboard#index"
+  get "credits", to: "credits#index"
 
   resource :session
   resources :passwords, param: :token

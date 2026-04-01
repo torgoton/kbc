@@ -1,5 +1,7 @@
 module Tiles
   class HarborTile < Tiles::Tile
+    CREATOR = "Icon by Dicky Prayudawanto".freeze
+
     def moves_settlement? = true
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
