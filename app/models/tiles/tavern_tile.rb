@@ -1,7 +1,10 @@
 module Tiles
   class TavernTile < Tiles::Tile
     CREATOR = "Icon by Hendi Perkasa".freeze
-    DESCRIPTION = "Place a settlement at either end of a straight line of 3 or more of your settlements"
+    DESCRIPTION = "Build <em>one settlement</em> at one end of a line of at least <em>3 of your " \
+                  "own settlements</em>. The orientation of the line does not matter " \
+                  "(horizontally or diagonally). The chosen space must be eligible " \
+                  "for building.".freeze
 
     def builds_settlement? = true
 

@@ -1,7 +1,7 @@
 module Tiles
   class HarborTile < Tiles::Tile
     CREATOR = "Icon by Dicky Prayudawanto".freeze
-    DESCRIPTION = "Move one of your settlements to any empty Water space"
+    DESCRIPTION = "Move any one of your existing settlements to a water space. Build adjacent if possible.".freeze
 
     def moves_settlement? = true
 

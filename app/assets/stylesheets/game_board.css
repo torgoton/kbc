@@ -238,6 +238,17 @@ ul li .hex:hover {
     display: block;
 }
 
+.hex.left .tile-tooltip {
+    left: 0;
+    transform: none;
+    animation: tile-tooltip-in-left 0.12s ease-out;
+}
+
+@keyframes tile-tooltip-in-left {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 /* Terrains suitable for building */
 /* canyon */
 .hex.terrain-c {
