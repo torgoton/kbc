@@ -1,6 +1,7 @@
 class Scoring
   module Goals
     class Merchants < Goal
+      DESCRIPTION = "4 points for each location connected to any other location with your settlements"
       def score_for(game_player)
         specials = special_hexes
         components = connected_components(game_player.order)

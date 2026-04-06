@@ -437,6 +437,7 @@ ul li .hex:hover {
 
 #goals {
     background-color: black;
+    position: relative;
 }
 
 #goals ul {
@@ -444,10 +445,61 @@ ul li .hex:hover {
     padding: 0;
     display: flex;
     justify-content: space-around;
+    align-items: center;
 }
 
-#goals .card-text {
+.goals-label {
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.goal-item {
+    position: relative;
+    cursor: default;
+}
+
+.goal-name {
+    font-size: 0.85em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    transition: color 0.15s;
+}
+
+.goal-signifier {
+    font-size: 0.75em;
+}
+
+.goal-item:hover .goal-name {
+    color: var(--clr-g-link);
+}
+
+.goal-tooltip {
     display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0d1f0d;
+    border: 1px solid var(--clr-g-link);
+    box-shadow: 0 0 12px rgba(204, 204, 0, 0.25), 0 4px 16px rgba(0,0,0,0.7);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.8em;
+    color: #ddd;
+    width: 200px;
+    z-index: 100;
+    pointer-events: none;
+    animation: goal-tooltip-in 0.12s ease-out;
+}
+
+.goal-item:hover .goal-tooltip {
+    display: block;
+}
+
+@keyframes goal-tooltip-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 #turn-state {
