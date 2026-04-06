@@ -1,10 +1,10 @@
 <div id="goals" class="game-section">
     <ul>
-        <li>Scoring Goals:</li>
+        <li class="goals-label">Scoring Goals</li>
         <% @game.goals.each do |key| %>
-            <li>
-                <div class="card-title"><%= key.upcase %></div>
-                <div class="card-text"><%= Scoring::GOAL_DESCRIPTIONS[key] %></div>
+            <li class="goal-item">
+                <span class="goal-name"><%= key.upcase %> <span class="goal-signifier">⊕</span></span>
+                <div class="goal-tooltip"><%= Scoring::GOAL_CLASSES[key]::DESCRIPTION %></div>
             </li>
         <% end %>
     </ul>
