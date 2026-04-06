@@ -71,6 +71,8 @@ Rails.application.configure do
   # config.generators.apply_rubocop_autocorrect_after_generate!
 
   # Add remote hosts for development environment
-  config.hosts << ENV.fetch("NGROK_HOSTNAME") if ENV.key?("NGROK_HOSTNAME")
+  # config.hosts << ENV.fetch("NGROK_HOSTNAME") if ENV.key?("NGROK_HOSTNAME")
+  # config.hosts << IPAddr.new("0.0.0.0/0")
+  config.hosts = []
 end
 

@@ -10,7 +10,7 @@ up:
 		echo "valkey is already running."; \
 	fi
 	@echo "Starting the application..."
-	bundle exec rails server
+	bundle exec rails server --binding=0.0.0.0
 
 down:
 	@echo "Stopping the application..."
