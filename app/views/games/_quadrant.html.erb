@@ -39,6 +39,7 @@
                     <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content_class}" %>
                   <% end %>
                 <% end %>
+                <div class="tile-tooltip"><%= content.class::DESCRIPTION %></div>
               <% end %>
             <% when Settlement %>
               <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>

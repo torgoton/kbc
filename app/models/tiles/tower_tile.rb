@@ -1,6 +1,7 @@
 module Tiles
   class TowerTile < Tiles::Tile
     CREATOR = "Icon by omeneko".freeze
+    DESCRIPTION = "Place a settlement on any empty border space"
 
     def builds_settlement? = true
 
