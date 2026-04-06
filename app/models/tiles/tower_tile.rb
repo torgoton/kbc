@@ -1,6 +1,8 @@
 module Tiles
   class TowerTile < Tiles::Tile
     CREATOR = "Icon by omeneko".freeze
+    DESCRIPTION = "Build <em>one settlement</em> at the <em>edge of the game board</em>. Choose any " \
+                  "of the eligible terrain types. Build adjacent if possible.".freeze
 
     def builds_settlement? = true
 
