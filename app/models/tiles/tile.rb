@@ -14,7 +14,10 @@ module Tiles
       terrain = build_terrain || hand
       return [] unless terrain
 
-      adjacent = board_contents.settlements_for(player_order).flat_map do |r, c|
+      settlements = board_contents.settlements_for(player_order)
+      settlements = settlements.reject { |r, c| r == from_row && c == from_col } if from_row && from_col
+
+      adjacent = settlements.flat_map do |r, c|
         board_contents.neighbors_where(r, c) do |nr, nc|
           board_contents.empty?(nr, nc) && board.terrain_at(nr, nc) == terrain
         end
