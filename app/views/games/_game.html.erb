@@ -1,7 +1,10 @@
 <div id="game-area">
     <main>
       <div id="turn-state-bar">
-        <div id="turn-state" class="game-section">
+        <div id="dashboard-link-area">
+          <%= link_to "Dashboard", dashboard_path %>
+        </div>
+        <div id="turn-state">
           <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
         </div>
         <div id="end-turn-area">

@@ -1,9 +1,12 @@
 <h2>Completed Games</h2>
 <% games.each do |game| %>
   <%= link_to game_path(game), class: "game-row" do %>
-    <div>Game <%= game.id %> &mdash; <%= game.player_handles %></div>
+    <div>Game <%= game.id %>:
     <% if game.scores.present? %>
-      <div class="scores"><%= game.game_players.map { |gp| "#{gp.player.handle}: #{game.scores.dig(gp.order.to_s, "total")}" }.join(", ") %></div>
+      <span class="scores"><%= game.game_players.map { |gp| "#{gp.player.handle}: #{game.scores.dig(gp.order.to_s, "total")}" }.join(", ") %></span>
+    <% else %>
+      <span class="scores"><%= game.player_handles %></span>
     <% end %>
+    </div>
   <% end %>
 <% end %>

@@ -140,7 +140,8 @@ class TurnEngine
   end
 
   def turn_endable?
-    @game.current_action["type"] == "mandatory" &&
+    @game.playing? &&
+      @game.current_action["type"] == "mandatory" &&
       (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
   end
 
