@@ -99,7 +99,7 @@ class GamesController < ApplicationController
     end
     # MVP: 2 players every game, so just start it now
     @game.start
-    @game.broadcast_dashboard_update
+    @game.broadcast_game_update
     redirect_to game_path(@game)
   end
 
