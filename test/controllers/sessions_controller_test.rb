@@ -6,9 +6,10 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "POST create with valid approved credentials redirects" do
+  test "POST create with valid approved credentials redirects to the originally requested page" do
+    get dashboard_url   # unauthenticated access stores dashboard_url as the return destination
     post session_url, params: { email_address: "chris@example.com", password: "password" }
-    assert_response :redirect
+    assert_redirected_to dashboard_path
   end
 
   test "POST create with invalid credentials redirects to root with alert" do

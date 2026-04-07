@@ -59,4 +59,31 @@ class UserTest < ActiveSupport::TestCase
   test "completed_games includes completed games the user participated in" do
     assert_includes users(:chris).completed_games, games(:completed_game)
   end
+
+  # --- model-level validations ---
+
+  test "user without email address is invalid" do
+    user = User.new(handle: "tester", password: "password123")
+    assert_not user.valid?
+    assert_includes user.errors[:email_address], "can't be blank"
+  end
+
+  test "user without handle is invalid" do
+    user = User.new(email_address: "tester@example.com", password: "password123")
+    assert_not user.valid?
+    assert_includes user.errors[:handle], "can't be blank"
+  end
+
+  test "user without password is invalid on create" do
+    user = User.new(email_address: "tester@example.com", handle: "tester")
+    assert_not user.valid?
+    assert_includes user.errors[:password], "can't be blank"
+  end
+
+  test "duplicate handle is invalid" do
+    user = User.new(email_address: "unique@example.com", handle: users(:chris).handle, password: "abc123")
+    assert_not user.valid?
+    assert_includes user.errors[:handle], "has already been taken"
+  end
+
 end
