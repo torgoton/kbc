@@ -94,7 +94,7 @@ class GamesController < ApplicationController
     @game.add_player(Current.user)
     unless @game.save
       redirect_to dashboard_path, error: "Unable to join game"
-      Rails.logger.warn "ERROR saving game: #{@game.errors.inspect}"
+      Rails.logger.error "ERROR saving game: #{@game.errors.inspect}"
       return
     end
     # MVP: 2 players every game, so just start it now
