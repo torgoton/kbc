@@ -1,5 +1,3 @@
-var myLastUpdatedAt = null;
-
 function enableClicks() {
   document.querySelector("#board").
     addEventListener("click", function (e) {
@@ -26,7 +24,8 @@ function unmarkAvailableCells() {
 
 function prepForMove() {
   unmarkAvailableCells();
-  if (!document.querySelector(".handle.my-turn")) return;
+  const myTurnFlag = document.getElementById("my-turn-flag");
+  if (!myTurnFlag || myTurnFlag.dataset.myTurn !== "true") return;
   const actionEl = document.getElementById("current-action");
   if (!actionEl) return;
 
@@ -41,25 +40,15 @@ function prepForMove() {
   }
 }
 
-function setupPolling() {
-  // set up polling for updates
-  setInterval(function () {
-    // get the last updated at time
-    const last_updated_at = document.querySelector("#last-updated-at").innerText;
-    // if it's not the same as mine
-    if (myLastUpdatedAt != last_updated_at) {
-      // update my last updated at time
-      myLastUpdatedAt = last_updated_at;
-      console.log("UPDATE CHECK " + last_updated_at + " change detected");
-      prepForMove();
-    }
-  }, 1000);
-}
+// Re-mark selectable hexes after Turbo Stream updates.
+// turbo:before-stream-render fires before each action is applied; the 50ms
+// debounce ensures prepForMove runs once after all streams have settled.
+let prepDebounceTimer = null;
+document.addEventListener("turbo:before-stream-render", () => {
+  clearTimeout(prepDebounceTimer);
+  prepDebounceTimer = setTimeout(prepForMove, 50);
+});
 
-// Seed last-updated-at so the first poll tick doesn't trigger a spurious prepForMove
-myLastUpdatedAt = document.querySelector("#last-updated-at")?.innerText ?? null;
-// set up polling for updates
-setupPolling();
 // prepare for the first move
 prepForMove();
 // set up click targets

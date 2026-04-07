@@ -173,7 +173,7 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "turn-state",
       partial: "games/turn_state",
-      locals: { game: self, engine: engine }
+      locals: { game: self, engine: engine, my_turn: false }
     )
     # - resources
     broadcast_update_to(
@@ -209,21 +209,21 @@ class Game < ApplicationRecord
     # private stuff - each player
     game_players.each do |gp|
       gp.reload
+      my_turn = gp == current_player
       broadcast_update_to(
         "game_player_#{gp.id}_private", # player's private channel
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
         locals: { game: self, player: gp, n: 0, engine: engine, scores: scores }
       )
+      broadcast_update_to(
+        "game_player_#{gp.id}_private",
+        target: "end-turn-area",
+        partial: "games/end_turn",
+        locals: { game: self, engine: engine, my_turn: my_turn }
+      )
     end
 
-    # - timestamp - MUST be last change
-    broadcast_update_later_to(
-      "game_#{id}",
-      target: "last-updated-at",
-      partial: "games/last_updated_at",
-      locals: { move_count: move_count }
-    )
 
     broadcast_dashboard_update
   end

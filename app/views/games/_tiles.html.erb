@@ -1,30 +1,24 @@
-<% (player.tiles || []).each do |tile| %>
-  <% type = tile["klass"].delete_suffix("Tile").downcase %>
-  <% used = tile["used"] %>
-  <% if my_turn && tile["klass"] == "PaddockTile" && engine.tile_activatable?(tile) %>
-    <%= button_to type.capitalize,
-          select_action_game_path(game),
-          params: { action_type: "paddock" },
-          class: "player-tile #{type} tile-available" %>
-  <% elsif my_turn && tile["klass"] == "OasisTile" && engine.tile_activatable?(tile) %>
-    <%= button_to type.capitalize,
-          select_action_game_path(game),
-          params: { action_type: "oasis" },
-          class: "player-tile #{type} tile-available" %>
-  <% elsif my_turn && tile["klass"] == "FarmTile" && engine.tile_activatable?(tile) %>
-    <%= button_to type.capitalize,
-          select_action_game_path(game),
-          params: { action_type: "farm" },
-          class: "player-tile #{type} tile-available" %>
-  <% elsif my_turn && tile["klass"] == "TavernTile" && engine.tile_activatable?(tile) %>
-    <%= button_to type.capitalize,
-          select_action_game_path(game),
-          params: { action_type: "tavern" },
-          class: "player-tile #{type} tile-available" %>
-  <% else %>
-    <div class="player-tile <%= type %> <%= used ? 'tile-used' : 'tile-available' %>">
-      <div class="tile location-<%= type %>"></div>
-      <span class="tile-name"><%= type.capitalize %></span>
-    </div>
+<div class="player-tiles">
+  <% marked_active_type = nil %>
+  <% (player.tiles || []).each do |tile| %>
+    <% next unless "Tiles::#{tile["klass"]}".safe_constantize %>
+    <% type = tile["klass"].delete_suffix("Tile").downcase %>
+    <% used = tile["used"] %>
+    <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
+    <% marked_active_type = type if active %>
+    <% activatable = my_turn && engine.tile_activatable?(tile) %>
+    <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
+
+    <% if activatable %>
+      <%= button_to select_action_game_path(game), params: { action_type: type } do %>
+        <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+          <div class="tile-container <%= type %>"></div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+        <div class="tile-container <%= type %>"></div>
+      </div>
+    <% end %>
   <% end %>
-<% end %>
+</div>
