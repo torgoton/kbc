@@ -551,13 +551,22 @@ ul li .hex:hover {
 
 #turn-state-bar {
     background-color: black;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     align-items: center;
-    justify-content: space-between;
+}
+
+#dashboard-link-area {
+    padding-left: 0.75em;
 }
 
 #turn-state {
-    flex: 1;
+    text-align: center;
+}
+
+#end-turn-area {
+    text-align: right;
+    padding-right: 0.5em;
 }
 
 #players-area {
