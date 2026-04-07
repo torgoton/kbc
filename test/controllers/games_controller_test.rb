@@ -132,6 +132,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "End turn", count: 0
   end
 
+  test "End turn button is absent when game is completed" do
+    game = games(:game2player)
+    game.update!(state: "completed")
+
+    get game_url(game)
+
+    assert_select "button", text: "End turn", count: 0
+  end
+
   test "POST action does nothing when the requesting player is not the current player" do
     game = games(:game2player)
     game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
@@ -366,6 +375,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
     assert_turbo_stream_broadcasts("user_#{paula.id}") do
       post join_game_url(games(:waiting_game))
+    end
+  end
+
+  test "join broadcasts game update so waiting players see the game start" do
+    game = games(:waiting_game)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    assert_turbo_stream_broadcasts("game_#{game.id}") do
+      post join_game_url(game)
     end
   end
 end
