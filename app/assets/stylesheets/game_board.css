@@ -552,7 +552,7 @@ ul li .hex:hover {
 #turn-state-bar {
     background-color: black;
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
 }
 
