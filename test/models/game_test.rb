@@ -325,6 +325,33 @@ class GameTest < ActiveSupport::TestCase
     assert engine(game).tile_activatable?(tile)
   end
 
+  test "tile_activatable? is true for BarnTile at start of turn" do
+    game = games(:game2player)
+    game.mandatory_count = Game::MANDATORY_COUNT
+    game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
+    game.board_contents = state
+    tile = { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false }
+    assert engine(game).tile_activatable?(tile)
+  end
+
+  test "tile_activatable? is true for BarnTile alongside PaddockTile" do
+    game = games(:game2player)
+    game.mandatory_count = Game::MANDATORY_COUNT
+    game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
+    game.board_contents = state
+    game.current_player.update!(
+      tiles: [
+        { "klass" => "MandatoryTile", "used" => false },
+        { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false },
+        { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false }
+      ]
+    )
+    barn_tile = game.current_player.tiles.find { |t| t["klass"] == "BarnTile" }
+    assert engine(game).tile_activatable?(barn_tile)
+  end
+
   test "tile_activatable? is false when mandatory_count is mid-build" do
     game = games(:game2player)
     game.mandatory_count = 1
@@ -447,6 +474,43 @@ class GameTest < ActiveSupport::TestCase
     assert_not paddock_tile["used"], "PaddockTile must be unmarked after undo"
   end
 
+  test "undo after harbor move_settlement returns piece and restores harbor current_action" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
+    game.save
+    chris.tiles = [ { "klass" => "HarborTile", "used" => false } ]
+    chris.save
+
+    engine(game).move_settlement(5, 7)
+    game.reload
+    engine(game).undo_last_move
+    game.reload
+
+    assert game.board_contents.empty?(5, 7), "settlement must leave the destination"
+    assert_equal chris.order, game.board_contents.player_at(5, 5), "settlement must be back at origin"
+    assert_equal "harbor", game.current_action["type"]
+    assert_equal "[5, 5]", game.current_action["from"]
+  end
+
+  test "undo after harbor move_settlement unmarks HarborTile" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
+    game.save
+    chris.tiles = [ { "klass" => "HarborTile", "used" => false } ]
+    chris.save
+
+    engine(game).move_settlement(5, 7)
+    engine(game).undo_last_move
+    chris.reload
+
+    harbor_tile = chris.tiles.find { |t| t["klass"] == "HarborTile" }
+    assert_not harbor_tile["used"], "HarborTile must be unmarked after undo"
+  end
+
   test "end_turn resets all incoming player tiles to used false" do
     game = games(:game2player)
     paula = game_players(:paula)
@@ -535,6 +599,30 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     assert_match(/must move a settlement/, engine(game).turn_state)
+  end
+
+  test "turn_state returns must move a settlement when harbor action has no from" do
+    game = games(:game2player)
+    game.current_action = { "type" => "harbor" }
+    assert_match(/must move a settlement/, engine(game).turn_state)
+  end
+
+  test "turn_state returns must move a settlement when harbor action has from set" do
+    game = games(:game2player)
+    game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
+    assert_match(/must move a settlement/, engine(game).turn_state)
+  end
+
+  test "turn_state returns must move a settlement to a Water space when harbor action" do
+    game = games(:game2player)
+    game.current_action = { "type" => "harbor" }
+    assert_match(/must move a settlement to a Water space/, engine(game).turn_state)
+  end
+
+  test "turn_state returns must build at the edge of the board when tower action" do
+    game = games(:game2player)
+    game.current_action = { "type" => "tower" }
+    assert_match(/must build at the edge of the board/, engine(game).turn_state)
   end
 
   # Oasis tile action tests

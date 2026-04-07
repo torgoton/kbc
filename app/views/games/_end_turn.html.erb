@@ -1,0 +1,5 @@
+<% my_turn = local_assigns.fetch(:my_turn, false) %>
+<span id="my-turn-flag" data-my-turn="<%= my_turn %>" hidden></span>
+<% if my_turn && engine.turn_endable? %>
+  <%= button_to "End turn", end_turn_game_path(game) %>
+<% end %>

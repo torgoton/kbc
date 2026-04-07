@@ -5,5 +5,6 @@ module Tiles
                   "same terrain type as your played <em>terrain card</em>. Build adjacent " \
                   "if possible.".freeze
     def moves_settlement? = true
+    def move_terrain(hand:) = hand
   end
 end

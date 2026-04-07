@@ -38,14 +38,16 @@ class GamesController < ApplicationController
 
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
     engine = TurnEngine.new(@game)
-    case @game.current_action["type"]
-    when "paddock", "barn"
+    action_type = @game.current_action["type"]
+    tile_klass = "Tiles::#{action_type.capitalize}Tile".safe_constantize if action_type != "mandatory"
+    tile_obj = tile_klass&.new(0)
+    if tile_obj&.moves_settlement?
       if @game.current_action["from"]
         engine.move_settlement(coord.row, coord.col)
       else
         engine.select_settlement(coord.row, coord.col)
       end
-    when "oasis", "farm", "tavern"
+    elsif tile_obj&.builds_settlement?
       engine.activate_tile_build(coord.row, coord.col)
     else
       engine.build_settlement(coord.row, coord.col)
@@ -92,7 +94,7 @@ class GamesController < ApplicationController
     @game.add_player(Current.user)
     unless @game.save
       redirect_to dashboard_path, error: "Unable to join game"
-      Rails.logger.warn "ERROR saving game: #{@game.errors.inspect}"
+      Rails.logger.error "ERROR saving game: #{@game.errors.inspect}"
       return
     end
     # MVP: 2 players every game, so just start it now

@@ -8,6 +8,10 @@ module Tiles
 
     def builds_settlement? = true
 
+    def action_message(player_handle:, terrain_names:, hand: nil)
+      "#{player_handle} must build at the end of a row"
+    end
+
     # Each pair is [forward_dir, backward_dir]; each dir is [even_row_step, odd_row_step].
     DIRECTION_PAIRS = [
       [ [ [ 0,  1 ], [ 0,  1 ] ], [ [ 0, -1 ], [ 0, -1 ] ] ],  # E / W

@@ -1,7 +1,12 @@
 <div id="game-area">
     <main>
-      <div id="turn-state" class="game-section">
-        <%= render partial: "games/turn_state", locals: { game:, engine: } %>
+      <div id="turn-state-bar">
+        <div id="turn-state" class="game-section">
+          <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
+        </div>
+        <div id="end-turn-area">
+          <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
+        </div>
       </div>
       <div id="goals" class="game-section">
         <%= render partial: "games/goals", locals: { game: } %>
@@ -17,4 +22,3 @@
       <%= render partial: "games/log", locals: { game: } %>
     </section>
 </div>
-

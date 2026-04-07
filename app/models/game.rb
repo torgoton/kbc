@@ -67,12 +67,11 @@ class Game < ApplicationRecord
   end
 
   def start(safe = true)
+    if game_players.count < 2
+      Rails.logger.warn "Cannot start game with less than 2 players"
+      return false
+    end
     if safe
-      # Ensure we have at least 2 players
-      if game_players.count < 2
-        Rails.logger.warn "Cannot start game with less than 2 players"
-        return false
-      end
       # Ensure we have a valid state to start from
       if !waiting?
         Rails.logger.warn "Cannot start game in state #{state}"
@@ -96,6 +95,21 @@ class Game < ApplicationRecord
     self.current_action = { "type" => "mandatory" }
     self.base_snapshot = capture_snapshot
     save
+  end
+
+  def restart
+    if User.count < 2
+      Rails.logger.fatal "Cannot restart game with less than 2 users in the system"
+      return false
+    end
+    self.moves.destroy_all
+    self.game_players.destroy_all
+    # Add first 2 users as players (for testing)
+    User.limit(2).each { |u| add_player(u) }
+    self.discard ? self.discard.clear : self.discard = DECK.chars
+    self.scores ? self.scores.clear : self.scores = {}
+    @board = nil
+    start(false)
   end
 
   def ending?
@@ -173,7 +187,7 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "turn-state",
       partial: "games/turn_state",
-      locals: { game: self, engine: engine }
+      locals: { game: self, engine: engine, my_turn: false }
     )
     # - resources
     broadcast_update_to(
@@ -209,21 +223,21 @@ class Game < ApplicationRecord
     # private stuff - each player
     game_players.each do |gp|
       gp.reload
+      my_turn = gp == current_player
       broadcast_update_to(
         "game_player_#{gp.id}_private", # player's private channel
         target: "game_player_#{gp.id}",
         partial: "games/game_player",
         locals: { game: self, player: gp, n: 0, engine: engine, scores: scores }
       )
+      broadcast_update_to(
+        "game_player_#{gp.id}_private",
+        target: "end-turn-area",
+        partial: "games/end_turn",
+        locals: { game: self, engine: engine, my_turn: my_turn }
+      )
     end
 
-    # - timestamp - MUST be last change
-    broadcast_update_later_to(
-      "game_#{id}",
-      target: "last-updated-at",
-      partial: "games/last_updated_at",
-      locals: { move_count: move_count }
-    )
 
     broadcast_dashboard_update
   end

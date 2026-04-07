@@ -1,26 +1,48 @@
 <% my_turn = n == 0 && player.id == game.current_player.id %>
-<%= content_tag :div, class: "handle #{' my-turn' if my_turn }" do %>
-  <% if player.id == game.current_player.id %>
-    <%= content_tag :span, class: "player-spinner" do %>
-      <%= image_tag "tape-reel.svg" %>
+<div class="player-info-zone">
+  <div class="player-header">
+    <%= content_tag :div, class: "handle #{' my-turn' if my_turn }" do %>
+      <% if player.id == game.current_player.id %>
+        <%= content_tag :span, class: "player-spinner" do %>
+          <%= image_tag "tape-reel.svg" %>
+        <% end %>
+      <% end %>
+      <%= player.player.handle %>
+      <% if player.order == 0 %>
+        <span class="first-player-marker" title="First player">&#9819;</span>
+      <% end %>
     <% end %>
-  <% end %>
-  <%= player.player.handle %>
-  <span class="player-order"><%= player.order %></span>
-<% end %>
-<% if n == 0 %>
-  <%= button_to("End turn", end_turn_game_path(game), disabled: !(my_turn && engine.turn_endable?)) %>
-  <%= button_to("Undo", undo_move_game_path(game), disabled: !(my_turn && engine.undo_allowed?)) %>
-<% end %>
-<% display_card = (n == 0 || (game.current_player_id == player.id)) ? player.hand : "B" %>
-<%= content_tag :span, display_card,
-  class: "player-card card-#{display_card}" %>
-<%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
-x
-<%= content_tag :span, "#{player.supply["settlements"]}", class: "settlement-count" %>
-<% score = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s, "total") %>
-<% if score %>
-  <span class="player-score"><%= score %> pts</span>
-<% end %>
-<%= render partial: "games/tiles", locals: { game:, player:, n:, engine:, my_turn: } %>
-
+    <% if n == 0 %>
+      <%= button_to("Undo", undo_move_game_path(game), class: "undo-btn", disabled: !(my_turn && engine.undo_allowed?)) %>
+    <% end %>
+  </div>
+  <div class="player-stats">
+    <% display_card = (n == 0 || (game.current_player_id == player.id)) ? player.hand : "B" %>
+    <%= content_tag :span, display_card, class: "player-card card-#{display_card}" %>
+    <div class="supply-display">
+      <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
+      <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
+    </div>
+    <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
+    <% if score_data %>
+      <div class="score-container">
+        <div class="player-score"><%= score_data["total"] %> <span class="score-unit">pts</span></div>
+        <div class="score-breakdown">
+          <% score_data.except("total").each do |goal_key, result| %>
+            <div class="score-row">
+              <span class="score-goal-name"><%= goal_key.capitalize %></span>
+              <span class="score-goal-value"><%= result[:score] %></span>
+            </div>
+          <% end %>
+          <div class="score-row score-row-total">
+            <span class="score-goal-name">Total</span>
+            <span class="score-goal-value"><%= score_data["total"] %></span>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+<div class="player-action-zone">
+  <%= render partial: "games/tiles", locals: { game:, player:, n:, engine:, my_turn: } %>
+</div>

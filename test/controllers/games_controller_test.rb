@@ -16,7 +16,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
     get game_url(game)
 
-    assert_select ".player-tile.mandatory"
+    assert_select ".tile-container.mandatory"
   end
 
   test "select_action sets current_action type on the game" do
@@ -54,13 +54,56 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal chris.order, game.board_contents.player_at(5, 7)
   end
 
-  test "End turn button is disabled for non-current player even when turn is endable" do
+  test "POST action dispatches to select_settlement when harbor action has no from" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.current_action = { "type" => "harbor" }
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.save
+
+    post action_game_url(game), params: { build_row: 5, build_col: 5 }
+
+    game.reload
+    assert_equal "[5, 5]", game.current_action["from"], "select_settlement must have set from"
+  end
+
+  test "POST action dispatches to move_settlement when harbor action has from set" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Harbor", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
+    game.save
+
+    post action_game_url(game), params: { build_row: 0, build_col: 5 }
+
+    game.reload
+    assert game.board_contents.empty?(5, 5), "settlement must have moved from origin"
+    assert_equal chris.order, game.board_contents.player_at(0, 5)
+  end
+
+  test "POST action dispatches to activate_tile_build when tower action" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Tower", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "type" => "tower" }
+    game.save
+    chris.update!(tiles: [ { "klass" => "TowerTile", "from" => "[3, 5]", "used" => false } ])
+
+    post action_game_url(game), params: { build_row: 0, build_col: 0 }
+
+    game.reload
+    assert_equal chris.order, game.board_contents.player_at(0, 0), "tower tile must have built at border"
+  end
+
+  test "End turn button is absent for non-current player" do
     game = games(:game2player)
     post session_url, params: { email_address: "paula@example.com", password: "password" }
 
     get game_url(game)
 
-    assert_select "button[disabled]", text: "End turn"
+    assert_select "button", text: "End turn", count: 0
   end
 
   test "POST action does nothing when the requesting player is not the current player" do

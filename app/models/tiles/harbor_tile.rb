@@ -4,6 +4,7 @@ module Tiles
     DESCRIPTION = "Move any one of your existing settlements to a water space. Build adjacent if possible.".freeze
 
     def moves_settlement? = true
+    def move_terrain(hand:) = "W"
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
       other_settlements = board_contents.settlements_for(player_order).reject { |r, c| r == from_row && c == from_col }

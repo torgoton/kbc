@@ -43,6 +43,9 @@ module Boards
         board_class = BOARD_CLASSES.fetch(section[0]) { raise ArgumentError, "Unknown board type: #{section[0]}" }
         @map << board_class.new(section[1])
       end
+      # This fills in the in-memory content of the board from board_contents, which is the source of
+      # truth for what's on the board. We need to do this to properly instantiate tile objects with
+      # their qty, and to properly instantiate settlements with their player.
       @content = Array.new(20) { Array.new(20) }
       20.times do |row|
         20.times do |col|

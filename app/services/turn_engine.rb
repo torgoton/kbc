@@ -104,6 +104,7 @@ class TurnEngine
     @game.instantiate
     from = @game.current_action["from"]
     from_coord = Coordinate.from_key(from)
+    tile_klass = "#{@game.current_action["type"].capitalize}Tile"
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -113,9 +114,9 @@ class TurnEngine
       from: from,
       to: Coordinate.new(row, col).to_key,
       reversible: true,
+      payload: { "tile_klass" => tile_klass },
       message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
     )
-    tile_klass = "#{@game.current_action["type"].capitalize}Tile"
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*from_coord, row, col)
     @game.current_action = { "type" => "mandatory" }
@@ -150,19 +151,14 @@ class TurnEngine
   end
 
   def turn_state
-    case @game.current_action["type"]
-    when "paddock"
-      "#{@game.current_player.player.handle} must move a settlement"
-    when "oasis"
-      "#{@game.current_player.player.handle} must build on a Desert space"
-    when "farm"
-      "#{@game.current_player.player.handle} must build on a Grass space"
-    when "tavern"
-      "#{@game.current_player.player.handle} must build at the end of a row"
-    when "barn"
-      "#{@game.current_player.player.handle} must move a settlement to a #{Boards::Board::TERRAIN_NAMES[@game.current_player.hand]} space"
-    when "oracle"
-      "#{@game.current_player.player.handle} must build on a #{Boards::Board::TERRAIN_NAMES[@game.current_player.hand]} space"
+    action_type = @game.current_action["type"]
+    tile_klass = "Tiles::#{action_type.capitalize}Tile".safe_constantize if action_type != "mandatory"
+    if tile_klass
+      tile_klass.new(0).action_message(
+        player_handle: @game.current_player.player.handle,
+        terrain_names: Boards::Board::TERRAIN_NAMES,
+        hand: @game.current_player.hand
+      )
     else
       has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?

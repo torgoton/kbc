@@ -1,8 +1,9 @@
-<%= engine.turn_state %>
-<span class="mandatory-count"><%= game.mandatory_count %></span>
-<span id="current-action"
-  data-type="<%= game.current_action&.dig('type') %>"
-  data-from="<%= game.current_action&.dig('from') %>"
-  data-buildable="<%= engine.buildable_cells.to_json %>">
+<span class="turn-state-text">
+  <%= engine.turn_state %>
+  <span class="mandatory-count"><%= game.mandatory_count %></span>
+  <span id="current-action"
+    data-type="<%= game.current_action&.dig('type') %>"
+    data-from="<%= game.current_action&.dig('from') %>"
+    data-buildable="<%= engine.buildable_cells.to_json %>">
+  </span>
 </span>
-
