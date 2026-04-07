@@ -132,6 +132,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "button", text: "End turn", count: 0
   end
 
+  test "End turn button is absent when game is completed" do
+    game = games(:game2player)
+    game.update!(state: "completed")
+
+    get game_url(game)
+
+    assert_select "button", text: "End turn", count: 0
+  end
+
   test "POST action does nothing when the requesting player is not the current player" do
     game = games(:game2player)
     game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]

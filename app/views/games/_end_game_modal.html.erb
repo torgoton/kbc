@@ -9,32 +9,34 @@
     <% end %>
   </p>
   <% players = game.game_players.sort_by(&:order) %>
-  <% goal_keys = (scores.values.first&.keys || []) - ["total"] %>
-  <table class="score-table">
-    <thead>
-      <tr>
-        <th>Goal</th>
-        <% players.each do |player| %>
-          <th><%= player.player.handle %></th>
-        <% end %>
-      </tr>
-    </thead>
-    <tbody>
-      <% goal_keys.each do |goal| %>
+  <% goal_keys = (scores&.values&.first&.keys || []) - ["total"] %>
+  <% if scores.present? %>
+    <table class="score-table">
+      <thead>
         <tr>
-          <td><%= goal.capitalize %></td>
+          <th>Goal</th>
           <% players.each do |player| %>
-            <td><%= scores[player.order.to_s][goal]["score"] %></td>
+            <th><%= player.player.handle %></th>
           <% end %>
         </tr>
-      <% end %>
-      <tr class="score-total">
-        <td>Total</td>
-        <% players.each do |player| %>
-          <td><%= scores[player.order.to_s]["total"] %></td>
+      </thead>
+      <tbody>
+        <% goal_keys.each do |goal| %>
+          <tr>
+            <td><%= goal.capitalize %></td>
+            <% players.each do |player| %>
+              <td><%= scores[player.order.to_s][goal]["score"] %></td>
+            <% end %>
+          </tr>
         <% end %>
-      </tr>
-    </tbody>
-  </table>
+        <tr class="score-total">
+          <td>Total</td>
+          <% players.each do |player| %>
+            <td><%= scores[player.order.to_s]["total"] %></td>
+          <% end %>
+        </tr>
+      </tbody>
+    </table>
+  <% end %>
   <form method="dialog"><button>Close</button></form>
 </dialog>
