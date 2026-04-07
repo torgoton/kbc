@@ -1,8 +1,23 @@
-<h1>Credits and Licenses</h1>
+<h1>Credits</h1>
+<h2>Game Engine</h2>
+<p>The KBC game engine is built in Ruby on Rails by Chris Schumann, with help from Claude Code.</p>
+<p>Chris is a software engineer based in the Twin Cities, Minnesota area. He has a passion for board games and game design, and built KBC to scratch his own itch for a better digital version of the game.</p>
+<h3>Chris's LinkedIn Profile: <a href="https://www.linkedin.com/in/chrisschumann/">https://www.linkedin.com/in/chrisschumann/</a></h3>
+<h3>Chris's GitHub Profile: <a href="https://github.com/torgoton">https://github.com/torgoton</a></h3>
+<h3>The repository for this application: <a href="https://github.com/torgoton/kbc">https://github.com/torgoton/kbc</a></h3>
+<p>Claude is a software engineer based in the San Francisco Bay Area. He has a passion for board games and game design, and contributed to KBC by helping to build out the backend API and implementing the game logic.</p>
+<p>(Claude wrote both of those bios.)</p>
+<h3>Learn more about Claude: <a href="https://claude.com/product/claude-code">https://claude.com/product/claude-code</a></h3>
+
 <h2>Tile Icons</h2>
-All tile icons are from The Noun Project, with a Creative Commons Attribution License (CC BY 3.0).
+All tile icons are from <a href="https://thenounproject.com/">The Noun Project</a>, with a Creative Commons Attribution License (CC BY 3.0).
 <ul class="tile-icons">
   <% Boards::Board::TILE_CLASSES.each do |klass| %>
     <li><%= "#{klass[0][0..-5]} by #{klass[1]::CREATOR}" %></li>
   <% end %>
+  <li>Castle by Nufraji Aldi</li>
+</ul>
+Except:
+<ul class="tile-icons">
+  <li>Settlement by Chris Schumann</li>
 </ul>
