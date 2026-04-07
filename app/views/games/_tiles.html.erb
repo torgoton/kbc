@@ -3,7 +3,7 @@
   <% (player.tiles || []).each do |tile| %>
     <% next unless "Tiles::#{tile["klass"]}".safe_constantize %>
     <% type = tile["klass"].delete_suffix("Tile").downcase %>
-    <% used = tile["used"] %>
+    <% used = engine.tile_used?(tile) %>
     <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
     <% marked_active_type = type if active %>
     <% activatable = my_turn && engine.tile_activatable?(tile) %>
