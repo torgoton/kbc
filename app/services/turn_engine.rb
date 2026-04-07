@@ -144,6 +144,10 @@ class TurnEngine
       (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
   end
 
+  def tile_used?(tile)
+    tile["used"] || (tile["klass"] == "MandatoryTile" && turn_endable?)
+  end
+
   def undo_allowed?
     last_move = @game.moves.where(deliberate: true).order(order: :desc).first
     return false unless last_move

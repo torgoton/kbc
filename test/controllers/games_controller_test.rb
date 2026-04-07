@@ -19,6 +19,32 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".tile-container.mandatory"
   end
 
+  test "mandatory tile renders as tile-used when the turn is endable" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.mandatory_count = 0
+    game.save
+    chris.tiles = [ { "klass" => "MandatoryTile", "used" => false } ]
+    chris.save
+
+    get game_url(game)
+
+    assert_select ".player-tile.tile-used .tile-container.mandatory"
+  end
+
+  test "mandatory tile does not render as tile-used when mandatory builds remain" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.mandatory_count = 3
+    game.save
+    chris.tiles = [ { "klass" => "MandatoryTile", "used" => false } ]
+    chris.save
+
+    get game_url(game)
+
+    assert_select ".player-tile.tile-used .tile-container.mandatory", count: 0
+  end
+
   test "select_action sets current_action type on the game" do
     game = games(:game2player)
     post select_action_game_url(game), params: { action_type: "paddock" }
