@@ -47,6 +47,22 @@ module Tiles
       false
     end
 
+    # Returns the terrain key that constrains the move destination, or nil if unconstrained.
+    # Subclasses override this (e.g. BarnTile returns hand, HarborTile returns "W").
+    def move_terrain(hand:) = nil
+
+    # Human-readable description of what the player must do with this tile.
+    def action_message(player_handle:, terrain_names:, hand: nil)
+      if moves_settlement?
+        terrain = move_terrain(hand:)
+        msg = "#{player_handle} must move a settlement"
+        terrain ? "#{msg} to a #{terrain_names[terrain]} space" : msg
+      else
+        terrain = build_terrain || hand
+        terrain ? "#{player_handle} must build on a #{terrain_names[terrain]} space" : "#{player_handle} must build"
+      end
+    end
+
     def self.from_hash(hash)
       "Tiles::#{hash['klass']}".constantize.new(0)
     rescue NameError

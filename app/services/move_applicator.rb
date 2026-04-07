@@ -7,7 +7,7 @@ module MoveApplicator
     when "select_settlement"
       backend.apply_select_settlement(player_order: player_order, from: move.from)
     when "move_settlement"
-      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to)
+      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to, tile_klass: move.payload&.dig("tile_klass"))
     when "build"
       backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"))
     when "pick_up_tile"
@@ -95,12 +95,12 @@ class MoveApplicator::HashState
     next_player["tiles"] = (next_player["tiles"] || []).map { |t| t.merge("used" => false) }
   end
 
-  def apply_move_settlement(player_order:, from:, to:)
+  def apply_move_settlement(player_order:, from:, to:, tile_klass:)
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
     @current_action = { "type" => "mandatory" }
-    mark_tile_used(@players[player_order], "PaddockTile")
+    mark_tile_used(@players[player_order], tile_klass)
   end
 
   private
@@ -174,12 +174,12 @@ class MoveApplicator::LiveState
     @game.current_action.delete("from")
   end
 
-  def apply_move_settlement(player_order:, from:, to:)
+  def apply_move_settlement(player_order:, from:, to:, tile_klass:)
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*Coordinate.from_key(to), *Coordinate.from_key(from))
-    @game.current_action = { "type" => "paddock", "from" => from }
+    @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase, "from" => from }
     gp = player_for(player_order)
-    gp.mark_tile_unused!("PaddockTile")
+    gp.mark_tile_unused!(tile_klass)
     gp.save
   end
 

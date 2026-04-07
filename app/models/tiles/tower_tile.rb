@@ -6,6 +6,10 @@ module Tiles
 
     def builds_settlement? = true
 
+    def action_message(player_handle:, terrain_names:, hand: nil)
+      "#{player_handle} must build at the edge of the board"
+    end
+
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
       border = ->(r, c) { r == 0 || r == 19 || c == 0 || c == 19 }
       buildable = ->(r, c) { BUILDABLE_TERRAIN.include?(board.terrain_at(r, c)) }

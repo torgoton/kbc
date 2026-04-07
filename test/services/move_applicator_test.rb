@@ -29,7 +29,7 @@ class MoveApplicatorTest < ActiveSupport::TestCase
       "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40 },
                        "tiles" => [ { "klass" => "PaddockTile", "from" => "[2, 0]", "used" => false } ] } ]
     )
-    move = fake_move(action: "move_settlement", from: "[5, 5]", to: "[5, 7]")
+    move = fake_move(action: "move_settlement", from: "[5, 5]", to: "[5, 7]", payload: { "tile_klass" => "PaddockTile" })
 
     MoveApplicator.dispatch(state, move)
 
