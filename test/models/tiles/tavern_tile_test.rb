@@ -159,4 +159,10 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
   test "builds_settlement? returns true" do
     assert Tiles::TavernTile.new(0).builds_settlement?
   end
+
+  test "action_message returns end-of-row instruction" do
+    tile = Tiles::TavernTile.new(0)
+    msg = tile.action_message(player_handle: "Alice", terrain_names: {})
+    assert_equal "Alice must build at the end of a row", msg
+  end
 end
