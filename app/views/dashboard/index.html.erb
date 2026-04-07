@@ -7,6 +7,7 @@
 <div class="dashboard-box">
   <h1>KBC Dashboard</h1>
   <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete %></div>
+  <%= link_to "Credits", credits_path %>
 
   <div id="dashboard-my-games" class="fancy-section">
     <%= render "dashboard/my_games", games: @my_games %>
