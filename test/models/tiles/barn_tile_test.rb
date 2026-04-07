@@ -27,6 +27,21 @@ class Tiles::BarnTileTest < ActiveSupport::TestCase
     assert_includes result, [ 0, 0 ]
   end
 
+  test "valid_destinations does not count the moved settlement as a neighbor anchor" do
+    # BarnBoard row 6: "GGLTTFWFFT" → (6,3)=T
+    # Even-row neighbors of (6,3) include (5,2)=C and (5,3)=C (Canyon).
+    # With the bug, moving FROM (6,3) with hand "C" would return only those two
+    # adjacent Canyon spaces instead of all Canyon spaces (fallback).
+    setup_board(6, 3)
+    tile = Tiles::BarnTile.new(0)
+
+    result = tile.valid_destinations(from_row: 6, from_col: 3, **@ctx, player_order: @chris.order, hand: "C")
+
+    # With the bug: only 2 results (adjacent to the from-settlement).
+    # After fix: all Canyon spaces on the board.
+    assert result.size > 2, "expected fallback to all Canyon spaces, got #{result.inspect}"
+  end
+
   test "builds_settlement? returns false" do
     assert_not Tiles::BarnTile.new(0).builds_settlement?
   end
