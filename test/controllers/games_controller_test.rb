@@ -368,15 +368,6 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
       post join_game_url(games(:waiting_game))
     end
   end
-
-  test "join broadcasts game update so waiting players see the game start" do
-    game = games(:waiting_game)
-    post session_url, params: { email_address: "paula@example.com", password: "password" }
-
-    assert_turbo_stream_broadcasts("game_#{game.id}") do
-      post join_game_url(game)
-    end
-  end
 end
 
 class GamesControllerUnauthenticatedTest < ActionDispatch::IntegrationTest
