@@ -769,7 +769,7 @@ ul li .hex:hover {
 .score-breakdown {
     display: none;
     position: absolute;
-    bottom: calc(100% + 6px);
+    top: calc(100% + 6px);
     left: 0;
     background: #0d1f0d;
     border: 1px solid var(--clr-g-link);
