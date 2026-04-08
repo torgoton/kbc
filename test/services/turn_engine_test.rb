@@ -488,3 +488,13 @@ class TurnEngineTest < ActiveSupport::TestCase
     spots
   end
 end
+
+class TurnEngineCompletedGameTest < ActiveSupport::TestCase
+  test "buildable_cells returns empty array for a completed game" do
+    game = games(:game2player)
+    game.update!(state: "completed", mandatory_count: 3, current_action: { "type" => "mandatory" })
+    engine = TurnEngine.new(game)
+
+    assert_equal [], engine.buildable_cells
+  end
+end

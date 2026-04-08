@@ -228,6 +228,7 @@ class TurnEngine
   end
 
   def buildable_cells
+    return [] unless @game.playing?
     @buildable_cells ||= begin
       @game.instantiate
       player = @game.current_player
