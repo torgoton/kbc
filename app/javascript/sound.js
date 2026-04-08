@@ -1,0 +1,67 @@
+// sound.js — loaded as a classic script before gameboard.js
+// Exposes SoundManager as a global accessible to gameboard.js.
+const SoundManager = (() => {
+  const MUTE_KEY   = "kbc_muted";
+  const VOLUME_KEY = "kbc_volume";
+
+  let sounds    = {};   // { key: HTMLAudioElement }
+  let muted     = false;
+  let volume    = 1.0;
+  let ready     = false;
+
+  function applyVolume(audio) {
+    audio.volume = muted ? 0 : volume;
+  }
+
+  function applyVolumeAll() {
+    Object.values(sounds).forEach(applyVolume);
+  }
+
+  function init() {
+    if (ready) return;
+    ready = true;
+
+    const config = document.getElementById("sound-config");
+    if (!config) return;
+
+    const keys  = JSON.parse(config.dataset.soundPreload || "[]");
+    const paths = JSON.parse(config.dataset.soundPaths   || "{}");
+
+    keys.forEach(k => {
+      if (!paths[k]) return;   // file not yet recorded
+      const audio = new Audio(paths[k]);
+      audio.preload = "auto";
+      sounds[k] = audio;
+    });
+
+    volume = parseFloat(localStorage.getItem(VOLUME_KEY) ?? "1");
+    muted  = localStorage.getItem(MUTE_KEY) === "true";
+    applyVolumeAll();
+  }
+
+  function play(name) {
+    const audio = sounds[name];
+    if (!audio) return;
+    audio.currentTime = 0;
+    applyVolume(audio);
+    audio.play().catch(() => {});   // ignore autoplay policy errors
+  }
+
+  function setVolume(v) {
+    volume = Math.min(1, Math.max(0, parseFloat(v)));
+    localStorage.setItem(VOLUME_KEY, volume);
+    applyVolumeAll();
+  }
+
+  function toggleMute() {
+    muted = !muted;
+    localStorage.setItem(MUTE_KEY, muted);
+    applyVolumeAll();
+    return muted;
+  }
+
+  function isMuted() { return muted; }
+  function getVolume() { return volume; }
+
+  return { init, play, setVolume, toggleMute, isMuted, getVolume };
+})();
