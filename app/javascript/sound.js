@@ -1,6 +1,6 @@
 // sound.js — loaded as a classic script before gameboard.js
 // Exposes SoundManager as a global accessible to gameboard.js.
-const SoundManager = (() => {
+var SoundManager = (() => {
   const MUTE_KEY   = "kbc_muted";
   const VOLUME_KEY = "kbc_volume";
 
