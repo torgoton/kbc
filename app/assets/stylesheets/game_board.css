@@ -16,15 +16,45 @@ html{
     color: var(--clr-g-text);
 }
 
+body.game-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
 #game-area {
     display: grid;
     grid-template-areas:
         "main players-area game-log";
     grid-template-columns: 5fr 2fr 2fr;
+    flex: 1;
+    min-height: 0;
 }
 
 main {
     grid-area: main;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#board-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+}
+
+#board-viewport.grabbing {
+    cursor: grabbing;
+}
+
+section#log {
+    grid-area: game-log;
+    overflow-y: auto;
+    height: 100%;
 }
 
 .game-section {
@@ -49,6 +79,12 @@ main {
     grid-template-columns: 10fr 10fr 1fr;
     height: 60vw;
     margin-left: 5px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    transform-origin: 0 0;
+    will-change: transform;
 }
 
 .quadrant {
@@ -214,16 +250,30 @@ ul li .hex:hover {
 
 .tile-counter {
     position: absolute;
-    top: -5%;
-    left: 29%;
-    background-color: orange;
-    border: 1px solid black;
-    border-radius: 50%;
-    font-size: 0.9em;
-    height: 0;
-    padding-bottom: 40%;
-    text-align: center;
-    width: 40%;
+    top: 0;
+    right: 0;
+    width: 48%;
+    height: 48%;
+    background: #cc1100;
+    clip-path: polygon(100% 0, 100% 100%, 0 0);
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding: 4% 6% 0 0;
+    color: white;
+    font-size: 0.75em;
+    font-weight: 900;
+    line-height: 1;
+    z-index: 2;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+}
+
+#end-game-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
 }
 
 .tile-tooltip {
@@ -242,6 +292,7 @@ ul li .hex:hover {
     width: 160px;
     z-index: 200;
     pointer-events: none;
+    will-change: transform, opacity;
     animation: goal-tooltip-in 0.12s ease-out;
 }
 

@@ -1,21 +1,23 @@
+<div id="turn-state-bar">
+  <div id="dashboard-link-area">
+    <%= link_to "Dashboard", dashboard_path %>
+  </div>
+  <div id="turn-state">
+    <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
+  </div>
+  <div id="end-turn-area">
+    <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
+  </div>
+</div>
 <div id="game-area">
     <main>
-      <div id="turn-state-bar">
-        <div id="dashboard-link-area">
-          <%= link_to "Dashboard", dashboard_path %>
-        </div>
-        <div id="turn-state">
-          <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
-        </div>
-        <div id="end-turn-area">
-          <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
-        </div>
-      </div>
       <div id="goals" class="game-section">
         <%= render partial: "games/goals", locals: { game: } %>
       </div>
-      <div id="board">
-        <%= render partial: "games/board", locals: { game: } %>
+      <div id="board-viewport">
+        <div id="board">
+          <%= render partial: "games/board", locals: { game: } %>
+        </div>
       </div>
     </main>
     <aside>

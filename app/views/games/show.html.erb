@@ -1,4 +1,5 @@
 <% content_for :title, "KBC Game #{game.id}" %>
+<% content_for :body_class, "game-page" %>
 <%= turbo_stream_from "game_#{game.id}" %>
 <%= render partial: "games/game", locals: { game:, my_player:, engine: TurnEngine.new(game), scores: game.live_scores } %>
 <% if game.state == "completed" %>
