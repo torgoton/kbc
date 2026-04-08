@@ -610,12 +610,56 @@ ul li .hex:hover {
 #turn-state-bar {
     background-color: black;
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto auto 1fr auto;
     align-items: center;
+    height: 2.5em;
 }
 
 #dashboard-link-area {
     padding-left: 0.75em;
+}
+
+#sound-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    padding-left: 1.25em;
+}
+
+#audio-unlock-prompt {
+    font-size: 0.75em;
+    color: #aaa;
+    white-space: nowrap;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 0.1em 0.35em;
+    animation: sound-prompt-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes sound-prompt-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+}
+
+#mute-btn {
+    background: none;
+    border: 1px solid #555;
+    border-radius: 3px;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1em;
+    line-height: 1;
+    padding: 0.1em 0.3em;
+}
+
+#mute-btn.muted {
+    background: rgba(220, 60, 60, 0.35);
+    border-color: #cc4444;
+    color: #ff9090;
+}
+
+#volume-slider {
+    width: 5em;
 }
 
 #turn-state {
@@ -623,8 +667,16 @@ ul li .hex:hover {
 }
 
 #end-turn-area {
-    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     padding-right: 0.5em;
+    height: 100%;
+}
+
+#end-turn-area button, #end-turn-area [type="submit"] {
+    font-size: 0.85em;
+    padding: 0.2em 0.75em;
 }
 
 #players-area {

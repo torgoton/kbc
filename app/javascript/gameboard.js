@@ -3,7 +3,6 @@ function enableClicks() {
     addEventListener("click", function (e) {
       const hex = e.target.closest(".hex");
       if (!hex || !hex.classList.contains("selectable")) {
-        // console.log("click not OK here");
         return;
       }
       console.log("Click target: " + hex.id);
@@ -11,6 +10,13 @@ function enableClicks() {
       const parts = hex.id.split("-");
       document.getElementById("build_row").value = parts[2];
       document.getElementById("build_col").value = parts[3];
+      const actionEl = document.getElementById("current-action");
+      const dataFrom         = actionEl?.dataset.from;
+      const movesSettlement  = actionEl?.dataset.movesSettlement === "true";
+      // data-from set → clicking move destination; movement tile + no data-from → selecting
+      // a settlement (select_settlement fires via stream); otherwise → build
+      if (dataFrom)                        SoundManager.play("move");
+      else if (!movesSettlement)           SoundManager.play("build");
       document.getElementById("action_submit").click();
     });
 }
@@ -137,11 +143,109 @@ function initBoardZoom() {
 // Re-mark selectable hexes after Turbo Stream updates.
 // turbo:before-stream-render fires before each action is applied; the 50ms
 // debounce ensures prepForMove runs once after all streams have settled.
-let prepDebounceTimer = null;
+let prepDebounceTimer     = null;
+let streamSnapshotPending = false;
+let streamSnapshot        = null;
+let gameEndSoundPlayed    = false;
+let undoPending           = false;
+
+function captureStreamSnapshot() {
+  return {
+    myTurn:    document.getElementById("my-turn-flag")?.dataset.myTurn,
+    dataFrom:  document.getElementById("current-action")?.dataset.from,
+    tileCount: document.querySelector(".player-tiles")?.dataset.tileCount,
+    hasEndModal: !!document.getElementById("end-game-modal")
+  };
+}
+
+function triggerStreamSounds(before) {
+  if (!before) return;
+  if (undoPending) { undoPending = false; return; }
+  const after = captureStreamSnapshot();
+
+  // My turn started
+  if (before.myTurn !== "true" && after.myTurn === "true") {
+    SoundManager.play("my_turn");
+  }
+
+  // Settlement selected for move (data-from appeared) — only for the active player
+  if (!before.dataFrom && after.dataFrom && after.myTurn === "true") {
+    SoundManager.play("select_settlement");
+  }
+
+  // Tile count changed
+  const countBefore = parseInt(before.tileCount ?? "0", 10);
+  const countAfter  = parseInt(after.tileCount  ?? "0", 10);
+  if (countAfter > countBefore) SoundManager.playAfterLast("tile_pickup");
+  if (countAfter < countBefore) SoundManager.playAfterLast("tile_forfeit");
+
+  // Game ended
+  if (!before.hasEndModal && after.hasEndModal && !gameEndSoundPlayed) {
+    gameEndSoundPlayed = true;
+    SoundManager.play("game_end");
+  }
+}
+
 document.addEventListener("turbo:before-stream-render", () => {
+  if (!streamSnapshotPending) {
+    streamSnapshotPending = true;
+    streamSnapshot = captureStreamSnapshot();
+  }
   clearTimeout(prepDebounceTimer);
-  prepDebounceTimer = setTimeout(prepForMove, 50);
+  prepDebounceTimer = setTimeout(() => {
+    prepForMove();
+    triggerStreamSounds(streamSnapshot);
+    streamSnapshot        = null;
+    streamSnapshotPending = false;
+    prepDebounceTimer     = null;
+  }, 50);
 });
+
+function initSoundTriggers() {
+  SoundManager.init();
+
+  // End turn — delegate from turn-state bar (stable ancestor)
+  document.getElementById("turn-state-bar")?.addEventListener("click", (e) => {
+    if (e.target.closest("#end-turn-area button, #end-turn-area [type='submit']")) {
+      SoundManager.play("end_turn");
+    }
+  });
+
+  // Undo and tile selection — delegate from players-area (stable ancestor)
+  document.getElementById("players-area")?.addEventListener("click", (e) => {
+    if (e.target.closest(".undo-btn")) { undoPending = true; SoundManager.play("undo"); return; }
+    const tileEl = e.target.closest(".tile-activatable");
+    if (!tileEl) return;
+    const container = tileEl.querySelector(".tile-container");
+    if (!container) return;
+    const type = [...container.classList].find(c => c !== "tile-container");
+    if (type) SoundManager.play(type);
+  });
+
+  // Mute toggle
+  document.getElementById("mute-btn")?.addEventListener("click", () => {
+    const nowMuted = SoundManager.toggleMute();
+    const btn = document.getElementById("mute-btn");
+    if (btn) {
+      btn.innerHTML = nowMuted ? "&#128264;" : "&#128266;";
+      btn.classList.toggle("muted", nowMuted);
+    }
+  });
+
+  // Volume slider
+  document.getElementById("volume-slider")?.addEventListener("input", (e) => {
+    SoundManager.setVolume(e.target.value);
+  });
+
+  // Restore volume control UI state from localStorage
+  const slider = document.getElementById("volume-slider");
+  const muteBtn = document.getElementById("mute-btn");
+  if (slider) slider.value = SoundManager.getVolume();
+  if (muteBtn) {
+    muteBtn.innerHTML = SoundManager.isMuted() ? "&#128264;" : "&#128266;";
+    muteBtn.classList.toggle("muted", SoundManager.isMuted());
+  }
+}
 
 // prepare for the first move
 prepForMove();
@@ -149,3 +253,5 @@ prepForMove();
 enableClicks();
 // set up board zoom
 initBoardZoom();
+// set up sound triggers
+initSoundTriggers();

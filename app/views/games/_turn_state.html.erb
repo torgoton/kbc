@@ -4,6 +4,7 @@
   <span id="current-action"
     data-type="<%= game.current_action&.dig('type') %>"
     data-from="<%= game.current_action&.dig('from') %>"
-    data-buildable="<%= engine.buildable_cells.to_json %>">
+    data-buildable="<%= engine.buildable_cells.to_json %>"
+    data-moves-settlement="<%= current_action_moves_settlement?(game) %>">
   </span>
 </span>
