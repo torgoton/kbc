@@ -139,10 +139,60 @@ function initBoardZoom() {
 // Re-mark selectable hexes after Turbo Stream updates.
 // turbo:before-stream-render fires before each action is applied; the 50ms
 // debounce ensures prepForMove runs once after all streams have settled.
-let prepDebounceTimer = null;
+let prepDebounceTimer     = null;
+let streamSnapshotPending = false;
+let streamSnapshot        = null;
+let gameEndSoundPlayed    = false;
+
+function captureStreamSnapshot() {
+  return {
+    myTurn:    document.getElementById("my-turn-flag")?.dataset.myTurn,
+    dataFrom:  document.getElementById("current-action")?.dataset.from,
+    tileCount: document.querySelector(".player-tiles")?.dataset.tileCount,
+    hasEndModal: !!document.getElementById("end-game-modal")
+  };
+}
+
+function triggerStreamSounds(before) {
+  if (!before) return;
+  const after = captureStreamSnapshot();
+
+  // My turn started
+  if (before.myTurn !== "true" && after.myTurn === "true") {
+    SoundManager.play("my_turn");
+  }
+
+  // Settlement selected for move (data-from appeared)
+  if (!before.dataFrom && after.dataFrom) {
+    SoundManager.play("select_settlement");
+  }
+
+  // Tile count changed
+  const countBefore = parseInt(before.tileCount ?? "0", 10);
+  const countAfter  = parseInt(after.tileCount  ?? "0", 10);
+  if (countAfter > countBefore) SoundManager.play("tile_pickup");
+  if (countAfter < countBefore) SoundManager.play("tile_forfeit");
+
+  // Game ended
+  if (!before.hasEndModal && after.hasEndModal && !gameEndSoundPlayed) {
+    gameEndSoundPlayed = true;
+    SoundManager.play("game_end");
+  }
+}
+
 document.addEventListener("turbo:before-stream-render", () => {
+  if (!streamSnapshotPending) {
+    streamSnapshotPending = true;
+    streamSnapshot = captureStreamSnapshot();
+  }
   clearTimeout(prepDebounceTimer);
-  prepDebounceTimer = setTimeout(prepForMove, 50);
+  prepDebounceTimer = setTimeout(() => {
+    prepForMove();
+    triggerStreamSounds(streamSnapshot);
+    streamSnapshot        = null;
+    streamSnapshotPending = false;
+    prepDebounceTimer     = null;
+  }, 50);
 });
 
 function initSoundTriggers() {
