@@ -14,7 +14,7 @@ Add sound effects to KBC that play for the player making choices. Volume and mut
 | `move` | Hex click with `data-from` present (move destination) |
 | `select_settlement` | `data-from` appears on `#current-action` post-stream (settlement chosen for move) |
 | `tile_pickup` | Tile count in player hand increases post-stream (automatic pickup) |
-| `tile_surrender` | Tile count in player hand decreases post-stream (tile forfeit) |
+| `tile_forfeit` | Tile count in player hand decreases post-stream (tile forfeit) |
 | `my_turn` | `data-my-turn` flips to `"true"` post-stream |
 | `game_end` | `#end-game-modal` appears in DOM post-stream (fires once, guarded by flag) |
 | `undo` | `.undo-btn` click |
@@ -79,7 +79,7 @@ Imports `SoundManager` and calls `SoundManager.init()` on load.
 **Post-stream triggers (in `turbo:before-stream-render` debounce handler):**
 - Snapshot `data-my-turn` before stream; compare after → flipped to `"true"` → `play("my_turn")`
 - Snapshot `data-from` on `#current-action` before stream; compare after → appeared → `play("select_settlement")`
-- Snapshot `data-tile-count` on the player's own `.player-tiles` container (index 0 in the player list; server adds this attribute) before stream; compare after → increased → `play("tile_pickup")`, decreased → `play("tile_surrender")`
+- Snapshot `data-tile-count` on the player's own `.player-tiles` container (index 0 in the player list; server adds this attribute) before stream; compare after → increased → `play("tile_pickup")`, decreased → `play("tile_forfeit")`
 - Check `#end-game-modal` existence after stream → appeared → `play("game_end")` (once, guarded by flag)
 
 ### Server-side changes
@@ -102,7 +102,7 @@ Add one element inside the game layout:
 **`app/helpers/games_helper.rb`** (or `application_helper.rb`)
 
 ```ruby
-FIXED_SOUND_KEYS = %w[build move select_settlement tile_pickup tile_surrender
+FIXED_SOUND_KEYS = %w[build move select_settlement tile_pickup tile_forfeit
                       my_turn game_end undo end_turn].freeze
 
 def sound_preload_keys(game)
@@ -133,7 +133,7 @@ Turn starts       → my_turn
     Select tile   → <tile-type>
     If move-type:
       Select hex  → select_settlement
-      Dest hex    → move [→ tile_surrender if forfeited]
+      Dest hex    → move [→ tile_forfeit if forfeited]
     If build-type:
       Click hex   → build [→ tile_pickup if applicable]
   Undo            → undo
