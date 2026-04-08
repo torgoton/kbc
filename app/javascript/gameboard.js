@@ -143,6 +143,7 @@ let prepDebounceTimer     = null;
 let streamSnapshotPending = false;
 let streamSnapshot        = null;
 let gameEndSoundPlayed    = false;
+let undoPending           = false;
 
 function captureStreamSnapshot() {
   return {
@@ -155,6 +156,7 @@ function captureStreamSnapshot() {
 
 function triggerStreamSounds(before) {
   if (!before) return;
+  if (undoPending) { undoPending = false; return; }
   const after = captureStreamSnapshot();
 
   // My turn started
@@ -207,7 +209,7 @@ function initSoundTriggers() {
 
   // Undo and tile selection — delegate from players-area (stable ancestor)
   document.getElementById("players-area")?.addEventListener("click", (e) => {
-    if (e.target.closest(".undo-btn")) { SoundManager.play("undo"); return; }
+    if (e.target.closest(".undo-btn")) { undoPending = true; SoundManager.play("undo"); return; }
     const tileEl = e.target.closest(".tile-activatable");
     if (!tileEl) return;
     const container = tileEl.querySelector(".tile-container");
