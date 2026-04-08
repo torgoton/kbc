@@ -148,16 +148,16 @@ document.addEventListener("turbo:before-stream-render", () => {
 function initSoundTriggers() {
   SoundManager.init();
 
-  // Undo button — delegate from turn-state bar (stable ancestor)
+  // End turn — delegate from turn-state bar (stable ancestor)
   document.getElementById("turn-state-bar")?.addEventListener("click", (e) => {
-    if (e.target.closest(".undo-btn")) SoundManager.play("undo");
     if (e.target.closest("#end-turn-area button, #end-turn-area [type='submit']")) {
       SoundManager.play("end_turn");
     }
   });
 
-  // Tile selection — delegate from players-area (stable ancestor)
+  // Undo and tile selection — delegate from players-area (stable ancestor)
   document.getElementById("players-area")?.addEventListener("click", (e) => {
+    if (e.target.closest(".undo-btn")) { SoundManager.play("undo"); return; }
     const tileEl = e.target.closest(".tile-activatable");
     if (!tileEl) return;
     const container = tileEl.querySelector(".tile-container");
