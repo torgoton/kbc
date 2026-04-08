@@ -121,6 +121,10 @@ class Game < ApplicationRecord
     TurnEngine.new(self).turn_state
   end
 
+  def my_turn?(user)
+    playing? && current_player&.player == user
+  end
+
   def player_handles
     game_players.map { |gp| gp.player.handle }.join(", ")
   end

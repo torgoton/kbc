@@ -1,3 +1,26 @@
+.game-row {
+    position: relative;
+    padding-left: 1.2em;
+}
+
+.game-row.my-turn::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.55em;
+    height: 0.55em;
+    border-radius: 50%;
+    background-color: #f0c040;
+    animation: turn-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes turn-pulse {
+    0%, 100% { opacity: 1; transform: translateY(-50%) scale(1); }
+    50%       { opacity: 0.4; transform: translateY(-50%) scale(0.65); }
+}
+
 .dashboard-box {
     background-color: inherit;
     border-radius: 15px;

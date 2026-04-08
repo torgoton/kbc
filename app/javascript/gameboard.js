@@ -34,7 +34,7 @@ function prepForMove() {
     document.getElementById(`map-cell-${r}-${c}`)?.classList.add("selectable");
   });
 
-  if (actionEl.dataset.type === "paddock" && actionEl.dataset.from) {
+  if (actionEl.dataset.from) {
     const parts = actionEl.dataset.from.replace(/[\[\] ]/g, "").split(",");
     document.getElementById(`map-cell-${parts[0].trim()}-${parts[1].trim()}`)?.classList.add("selected");
   }
