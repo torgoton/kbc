@@ -168,8 +168,8 @@ function triggerStreamSounds(before) {
     SoundManager.play("my_turn");
   }
 
-  // Settlement selected for move (data-from appeared)
-  if (!before.dataFrom && after.dataFrom) {
+  // Settlement selected for move (data-from appeared) — only for the active player
+  if (!before.dataFrom && after.dataFrom && after.myTurn === "true") {
     SoundManager.play("select_settlement");
   }
 
