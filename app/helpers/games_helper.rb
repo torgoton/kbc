@@ -19,6 +19,16 @@ module GamesHelper
     (FIXED_SOUND_KEYS + tile_keys).uniq
   end
 
+  # Returns true when the current action involves selecting a settlement to move
+  # (so the click handler knows not to play the "build" sound).
+  def current_action_moves_settlement?(game)
+    type = game.current_action&.dig("type")
+    return false unless type && type != "mandatory"
+    "Tiles::#{type.capitalize}Tile".safe_constantize&.new(0)&.moves_settlement? || false
+  rescue
+    false
+  end
+
   # Returns a hash of { sound_key => fingerprinted_asset_path } for all keys
   # whose .ogg file exists in app/assets/sounds/. Silently skips missing files
   # so the game works before all recordings are in place.

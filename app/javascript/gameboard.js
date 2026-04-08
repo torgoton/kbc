@@ -10,9 +10,13 @@ function enableClicks() {
       const parts = hex.id.split("-");
       document.getElementById("build_row").value = parts[2];
       document.getElementById("build_col").value = parts[3];
-      // data-from present means a settlement is selected for move → destination click
-      const dataFrom = document.getElementById("current-action")?.dataset.from;
-      SoundManager.play(dataFrom ? "move" : "build");
+      const actionEl = document.getElementById("current-action");
+      const dataFrom         = actionEl?.dataset.from;
+      const movesSettlement  = actionEl?.dataset.movesSettlement === "true";
+      // data-from set → clicking move destination; movement tile + no data-from → selecting
+      // a settlement (select_settlement fires via stream); otherwise → build
+      if (dataFrom)                        SoundManager.play("move");
+      else if (!movesSettlement)           SoundManager.play("build");
       document.getElementById("action_submit").click();
     });
 }
