@@ -11,10 +11,10 @@ Add sound effects to KBC that play for the player making choices. Volume and mut
 | Key | Trigger |
 |---|---|
 | `build` | Hex click with no `data-from` on `#current-action` (mandatory build or build-type tile action) |
-| `move` | Hex click with `data-from` present (Paddock move destination) |
+| `move` | Hex click with `data-from` present (move destination) |
 | `select_settlement` | `data-from` appears on `#current-action` post-stream (settlement chosen for move) |
 | `tile_pickup` | Tile count in player hand increases post-stream (automatic pickup) |
-| `tile_surrender` | Tile count in player hand decreases post-stream (Paddock forfeit) |
+| `tile_surrender` | Tile count in player hand decreases post-stream (tile forfeit) |
 | `my_turn` | `data-my-turn` flips to `"true"` post-stream |
 | `game_end` | `#end-game-modal` appears in DOM post-stream (fires once, guarded by flag) |
 | `undo` | `.undo-btn` click |
