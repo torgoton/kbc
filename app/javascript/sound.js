@@ -4,10 +4,11 @@ var SoundManager = (() => {
   const MUTE_KEY   = "kbc_muted";
   const VOLUME_KEY = "kbc_volume";
 
-  let sounds    = {};   // { key: HTMLAudioElement }
-  let muted     = false;
-  let volume    = 1.0;
-  let ready     = false;
+  let sounds        = {};   // { key: HTMLAudioElement }
+  let muted         = false;
+  let volume        = 1.0;
+  let ready         = false;
+  let lastPlayed    = null; // track most recently started audio
 
   function applyVolume(audio) {
     audio.volume = muted ? 0 : volume;
@@ -45,6 +46,17 @@ var SoundManager = (() => {
     audio.currentTime = 0;
     applyVolume(audio);
     audio.play().catch(() => {});   // ignore autoplay policy errors
+    lastPlayed = audio;
+  }
+
+  // Play name after the most recently started sound finishes.
+  // Falls through to play() immediately if nothing is currently playing.
+  function playAfterLast(name) {
+    if (lastPlayed && !lastPlayed.ended && !lastPlayed.paused) {
+      lastPlayed.addEventListener("ended", () => play(name), { once: true });
+    } else {
+      play(name);
+    }
   }
 
   function setVolume(v) {
@@ -63,5 +75,5 @@ var SoundManager = (() => {
   function isMuted() { return muted; }
   function getVolume() { return volume; }
 
-  return { init, play, setVolume, toggleMute, isMuted, getVolume };
+  return { init, play, playAfterLast, setVolume, toggleMute, isMuted, getVolume };
 })();

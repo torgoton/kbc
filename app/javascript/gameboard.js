@@ -170,8 +170,8 @@ function triggerStreamSounds(before) {
   // Tile count changed
   const countBefore = parseInt(before.tileCount ?? "0", 10);
   const countAfter  = parseInt(after.tileCount  ?? "0", 10);
-  if (countAfter > countBefore) SoundManager.play("tile_pickup");
-  if (countAfter < countBefore) SoundManager.play("tile_forfeit");
+  if (countAfter > countBefore) SoundManager.playAfterLast("tile_pickup");
+  if (countAfter < countBefore) SoundManager.playAfterLast("tile_forfeit");
 
   // Game ended
   if (!before.hasEndModal && after.hasEndModal && !gameEndSoundPlayed) {
