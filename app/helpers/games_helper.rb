@@ -1,7 +1,14 @@
 module GamesHelper
   FIXED_SOUND_KEYS = %w[
-    build move select_settlement tile_pickup tile_forfeit
-    my_turn game_end undo end_turn
+    build
+    end_turn
+    game_end
+    move
+    my_turn
+    select_settlement
+    tile_forfeit
+    tile_pickup
+    undo
   ].freeze
 
   # Returns the list of sound keys to preload for this game:
@@ -17,7 +24,7 @@ module GamesHelper
   # so the game works before all recordings are in place.
   def sound_asset_paths(keys)
     keys.each_with_object({}) do |k, hash|
-      hash[k] = asset_path("sounds/#{k}.ogg")
+      hash[k] = asset_path("#{k}.ogg")
     rescue StandardError
       # File not yet added to app/assets/sounds/ — JS will skip unknown keys
     end
