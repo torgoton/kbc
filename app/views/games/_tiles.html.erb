@@ -1,4 +1,4 @@
-<div class="player-tiles">
+<div class="player-tiles" data-tile-count="<%= (player.tiles || []).size %>">
   <% marked_active_type = nil %>
   <% (player.tiles || []).each do |tile| %>
     <% next unless "Tiles::#{tile["klass"]}".safe_constantize %>
