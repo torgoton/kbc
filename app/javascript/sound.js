@@ -38,6 +38,21 @@ var SoundManager = (() => {
     volume = parseFloat(localStorage.getItem(VOLUME_KEY) ?? "1");
     muted  = localStorage.getItem(MUTE_KEY) === "true";
     applyVolumeAll();
+
+    // Unlock audio for browsers that block autoplay until user interaction.
+    // On first click, silently play-then-pause every loaded element so that
+    // stream-triggered sounds (e.g. my_turn) are allowed to play later.
+    const unlock = () => {
+      Object.values(sounds).forEach(audio => {
+        const v = audio.volume;
+        audio.volume = 0;
+        const p = audio.play();
+        if (p) p.then(() => { audio.pause(); audio.currentTime = 0; audio.volume = v; }).catch(() => {});
+        else audio.volume = v;
+      });
+      document.removeEventListener("click", unlock, true);
+    };
+    document.addEventListener("click", unlock, true);
   }
 
   function play(name) {
