@@ -781,7 +781,12 @@ ul li .hex:hover {
     min-width: 160px;
     z-index: 100;
     pointer-events: none;
-    animation: goal-tooltip-in 0.12s ease-out;
+    animation: score-breakdown-in 0.12s ease-out;
+}
+
+@keyframes score-breakdown-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .score-container:hover .score-breakdown {
