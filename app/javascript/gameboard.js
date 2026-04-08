@@ -3,7 +3,6 @@ function enableClicks() {
     addEventListener("click", function (e) {
       const hex = e.target.closest(".hex");
       if (!hex || !hex.classList.contains("selectable")) {
-        // console.log("click not OK here");
         return;
       }
       console.log("Click target: " + hex.id);
@@ -11,6 +10,9 @@ function enableClicks() {
       const parts = hex.id.split("-");
       document.getElementById("build_row").value = parts[2];
       document.getElementById("build_col").value = parts[3];
+      // data-from present means a settlement is selected for move → destination click
+      const dataFrom = document.getElementById("current-action")?.dataset.from;
+      SoundManager.play(dataFrom ? "move" : "build");
       document.getElementById("action_submit").click();
     });
 }
@@ -143,9 +145,51 @@ document.addEventListener("turbo:before-stream-render", () => {
   prepDebounceTimer = setTimeout(prepForMove, 50);
 });
 
+function initSoundTriggers() {
+  SoundManager.init();
+
+  // Undo button — delegate from turn-state bar (stable ancestor)
+  document.getElementById("turn-state-bar")?.addEventListener("click", (e) => {
+    if (e.target.closest(".undo-btn")) SoundManager.play("undo");
+    if (e.target.closest("#end-turn-area button, #end-turn-area [type='submit']")) {
+      SoundManager.play("end_turn");
+    }
+  });
+
+  // Tile selection — delegate from players-area (stable ancestor)
+  document.getElementById("players-area")?.addEventListener("click", (e) => {
+    const tileEl = e.target.closest(".tile-activatable");
+    if (!tileEl) return;
+    const container = tileEl.querySelector(".tile-container");
+    if (!container) return;
+    const type = [...container.classList].find(c => c !== "tile-container");
+    if (type) SoundManager.play(type);
+  });
+
+  // Mute toggle
+  document.getElementById("mute-btn")?.addEventListener("click", () => {
+    const nowMuted = SoundManager.toggleMute();
+    const btn = document.getElementById("mute-btn");
+    if (btn) btn.innerHTML = nowMuted ? "&#128264;" : "&#128266;";
+  });
+
+  // Volume slider
+  document.getElementById("volume-slider")?.addEventListener("input", (e) => {
+    SoundManager.setVolume(e.target.value);
+  });
+
+  // Restore volume control UI state from localStorage
+  const slider = document.getElementById("volume-slider");
+  const muteBtn = document.getElementById("mute-btn");
+  if (slider) slider.value = SoundManager.getVolume();
+  if (muteBtn) muteBtn.innerHTML = SoundManager.isMuted() ? "&#128264;" : "&#128266;";
+}
+
 // prepare for the first move
 prepForMove();
 // set up click targets
 enableClicks();
 // set up board zoom
 initBoardZoom();
+// set up sound triggers
+initSoundTriggers();
