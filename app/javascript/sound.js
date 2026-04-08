@@ -40,16 +40,19 @@ var SoundManager = (() => {
     applyVolumeAll();
 
     // Unlock audio for browsers that block autoplay until user interaction.
-    // On first click, silently play-then-pause every loaded element so that
+    // On first gesture, silently play every loaded element so that
     // stream-triggered sounds (e.g. my_turn) are allowed to play later.
     const unlock = () => {
       Object.values(sounds).forEach(audio => {
         audio.volume = 0;
         audio.play().catch(() => {});
       });
-      document.removeEventListener("click", unlock, true);
+      document.getElementById("audio-unlock-prompt")?.remove();
+      ["click", "keydown", "pointerdown"].forEach(ev =>
+        document.removeEventListener(ev, unlock, true));
     };
-    document.addEventListener("click", unlock, true);
+    ["click", "keydown", "pointerdown"].forEach(ev =>
+      document.addEventListener(ev, unlock, true));
   }
 
   function play(name) {

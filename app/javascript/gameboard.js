@@ -226,7 +226,10 @@ function initSoundTriggers() {
   document.getElementById("mute-btn")?.addEventListener("click", () => {
     const nowMuted = SoundManager.toggleMute();
     const btn = document.getElementById("mute-btn");
-    if (btn) btn.innerHTML = nowMuted ? "&#128264;" : "&#128266;";
+    if (btn) {
+      btn.innerHTML = nowMuted ? "&#128264;" : "&#128266;";
+      btn.classList.toggle("muted", nowMuted);
+    }
   });
 
   // Volume slider
@@ -238,7 +241,10 @@ function initSoundTriggers() {
   const slider = document.getElementById("volume-slider");
   const muteBtn = document.getElementById("mute-btn");
   if (slider) slider.value = SoundManager.getVolume();
-  if (muteBtn) muteBtn.innerHTML = SoundManager.isMuted() ? "&#128264;" : "&#128266;";
+  if (muteBtn) {
+    muteBtn.innerHTML = SoundManager.isMuted() ? "&#128264;" : "&#128266;";
+    muteBtn.classList.toggle("muted", SoundManager.isMuted());
+  }
 }
 
 // prepare for the first move
