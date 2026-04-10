@@ -76,9 +76,10 @@ module Boards
       20.times do |row|
         20.times do |col|
           next if game.board_contents.empty?(row, col)
-          next if game.board_contents.wall_at?(row, col)
           klass = game.board_contents.tile_klass(row, col)
-          if klass
+          if klass == "Wall"
+            @content[row][col] = Wall.new
+          elsif klass
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
             @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))
           elsif (player = game.board_contents.player_at(row, col))
