@@ -195,6 +195,12 @@ class TurnEngine
     @game.current_player = @game.game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{@game.current_player.inspect}")
     @game.current_player.reset_tiles!
+    # Forfeit expired nomad tiles
+    game_player.tiles = (game_player.tiles || []).reject do |tile|
+      tile["expires_on_turn"] && tile["expires_on_turn"] == @game.turn_number
+    end
+    # Increment turn number
+    @game.turn_number += 1
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -372,6 +378,40 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))
     game_player.receive_tile!(tile[:klass], from: tile[:key])
+    tile_obj = "Tiles::#{tile[:klass]}".safe_constantize&.new(0)
+    if tile_obj&.nomad_tile?
+      if tile_obj.is_a?(Tiles::Nomad::TreasureTile)
+        # Score 3 points immediately and remove the tile
+        game_player.tiles = (game_player.tiles || []).reject { |t| t["klass"] == tile[:klass] && t["from"] == tile[:key] }
+        score_goal(game_player, "treasure", 3, "#{game_player.player.handle} scored 3 points from a Treasure tile")
+      else
+        # Set expiry on the tile
+        expires = @game.turn_number + @game.game_players.count
+        game_player.tiles = (game_player.tiles || []).map do |t|
+          if t["klass"] == tile[:klass] && t["from"] == tile[:key]
+            t.merge("expires_on_turn" => expires)
+          else
+            t
+          end
+        end
+      end
+    end
+  end
+
+  def score_goal(game_player, goal, points, message)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: false,
+      action: "score_goal",
+      reversible: true,
+      payload: { "goal" => goal, "score" => points },
+      message: message
+    )
+    game_player.bonus_scores = (game_player.bonus_scores || {}).merge(
+      goal => (game_player.bonus_scores&.dig(goal) || 0) + points
+    )
   end
 
   def next_card

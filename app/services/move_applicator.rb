@@ -27,6 +27,8 @@ module MoveApplicator
         reshuffled: move.payload["reshuffled"],
         deck_after: move.payload["deck_after"]
       )
+    when "score_goal"
+      backend.apply_score_goal(player_order: player_order, goal: move.payload["goal"], score: move.payload["score"])
     end
   end
 end
@@ -44,6 +46,8 @@ class MoveApplicator::HashState
     @mandatory_count = snapshot["mandatory_count"]
     @current_action = snapshot["current_action"].deep_dup
     @current_player_order = snapshot["current_player_order"]
+    @stone_walls = snapshot["stone_walls"]
+    @turn_number = snapshot["turn_number"]
   end
 
   def apply_select_action(player_order:, type:)
@@ -79,6 +83,10 @@ class MoveApplicator::HashState
   end
 
   def apply_end_turn(player_order:, card_discarded:, card_drawn:, reshuffled:, deck_after:)
+    @turn_number = (@turn_number || 0) + 1
+    # Forfeit expired nomad tiles for current player
+    player = @players[player_order]
+    player["tiles"] = (player["tiles"] || []).reject { |t| t["expires_on_turn"] && t["expires_on_turn"] == (@turn_number - 1) }
     next_order = (player_order + 1) % @players.size
     @discard.push(card_discarded)
     @players[player_order]["hand"] = card_drawn
@@ -93,6 +101,12 @@ class MoveApplicator::HashState
     @current_player_order = next_order
     next_player = @players[next_order]
     next_player["tiles"] = (next_player["tiles"] || []).map { |t| t.merge("used" => false) }
+  end
+
+  def apply_score_goal(player_order:, goal:, score:)
+    player = @players[player_order]
+    player["bonus_scores"] ||= {}
+    player["bonus_scores"][goal] = (player["bonus_scores"][goal] || 0) - score
   end
 
   def apply_move_settlement(player_order:, from:, to:, tile_klass:)
@@ -125,6 +139,8 @@ class MoveApplicator::HashState
       "mandatory_count" => @mandatory_count,
       "current_action" => @current_action,
       "current_player_order" => @current_player_order,
+      "stone_walls" => @stone_walls,
+      "turn_number" => @turn_number,
       "players" => @players.map { |order, data| { "order" => order }.merge(data) }
     }
   end
@@ -180,6 +196,14 @@ class MoveApplicator::LiveState
     @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase, "from" => from }
     gp = player_for(player_order)
     gp.mark_tile_unused!(tile_klass)
+    gp.save
+  end
+
+  def apply_score_goal(player_order:, goal:, score:)
+    gp = player_for(player_order)
+    gp.bonus_scores = (gp.bonus_scores || {}).merge(
+      goal => (gp.bonus_scores&.dig(goal) || 0) - score
+    )
     gp.save
   end
 
