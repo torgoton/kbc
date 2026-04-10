@@ -328,6 +328,13 @@ class TurnEngine
       (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
   end
 
+  def tile_action_endable?
+    @game.playing? && (
+      (@game.current_action["type"] == "resettlement" && @game.current_action["moves"].to_i >= 1) ||
+      (@game.current_action["type"] == "quarry" && @game.current_action["walls_placed"].to_i >= 1)
+    )
+  end
+
   def tile_used?(tile)
     tile["used"] || (tile["klass"] == "MandatoryTile" && turn_endable?)
   end
