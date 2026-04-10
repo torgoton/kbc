@@ -223,6 +223,10 @@ class TurnEngine
       budget = @game.current_action["budget"].to_i - 1
       vacated = (@game.current_action["vacated"] || []) + [ from ]
       moves = @game.current_action["moves"].to_i + 1
+      # Rule: Resettlement picks up tiles at each step; forfeits location tiles no longer adjacent
+      # (Nomad tiles are exempt from location-based forfeit per the nomad_tile? guard in apply_tile_forfeit)
+      apply_tile_forfeit(@game.current_player)
+      apply_tile_pickup(@game.current_player, row, col)
       if budget <= 0
         @game.current_player.mark_tile_used!(tile_klass_name.demodulize)
         @game.current_action = { "type" => "mandatory" }
@@ -528,6 +532,8 @@ class TurnEngine
   def apply_tile_forfeit(game_player)
     return if (game_player.tiles || []).empty?
     game_player.tiles = game_player.tiles.reject do |tile|
+      # Rule: Nomad tiles expire by turn, never by location
+      next false if "Tiles::#{tile["klass"]}".safe_constantize&.new(0)&.nomad_tile?
       loc = tile["from"]
       next false unless loc
       loc_coord = Coordinate.from_key(loc)
