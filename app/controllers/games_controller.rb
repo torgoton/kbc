@@ -48,6 +48,8 @@ class GamesController < ApplicationController
       else
         engine.select_settlement(coord.row, coord.col)
       end
+    elsif tile_obj&.sword_tile?
+      engine.remove_settlement(coord.row, coord.col)
     elsif tile_obj&.builds_settlement?
       engine.activate_tile_build(coord.row, coord.col)
     else
