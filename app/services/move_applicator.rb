@@ -35,6 +35,8 @@ module MoveApplicator
         from: move.from,
         owner_order: move.payload["owner_order"]
       )
+    when "place_wall"
+      backend.apply_place_wall(player_order: player_order, to: move.to)
     end
   end
 end
@@ -120,6 +122,12 @@ class MoveApplicator::HashState
     coord = Coordinate.from_key(from)
     @board.remove(coord.row, coord.col)
     @players[owner_order]["supply"]["settlements"] += 1
+  end
+
+  def apply_place_wall(player_order:, to:)
+    coord = Coordinate.from_key(to)
+    @board.place_wall(coord.row, coord.col)
+    @stone_walls = (@stone_walls || 0) - 1
   end
 
   def apply_move_settlement(player_order:, from:, to:, tile_klass:)
@@ -227,6 +235,14 @@ class MoveApplicator::LiveState
     owner = player_for(owner_order)
     owner.decrement_supply!
     owner.save
+  end
+
+  def apply_place_wall(player_order:, to:)
+    coord = Coordinate.from_key(to)
+    @game.board_contents_will_change!
+    @game.board_contents.remove(coord.row, coord.col)
+    @game.stone_walls += 1
+    @game.save
   end
 
   private

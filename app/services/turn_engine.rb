@@ -162,6 +162,9 @@ class TurnEngine
     action = { "type" => type, "klass" => klass_name }
     tile_klass = "Tiles::#{klass_name}".safe_constantize
     action["remaining"] = 3 if tile_klass&.new(0)&.is_a?(Tiles::Nomad::DonationTile)
+    if tile_klass&.new(0)&.is_a?(Tiles::QuarryTile)
+      action["walls_placed"] = 0
+    end
     if tile_klass&.new(0)&.is_a?(Tiles::Nomad::ResettlementTile)
       action["budget"] = 4
       action["vacated"] = []
@@ -244,10 +247,52 @@ class TurnEngine
     game_player = @game.current_player
     tile_klass_name = current_action_tile_klass
     moves_made = @game.current_action["moves"].to_i
-    return "Not allowed" unless moves_made >= 1
+    walls_placed = @game.current_action["walls_placed"].to_i
+    return "Not allowed" unless moves_made >= 1 || walls_placed >= 1
 
     game_player.mark_tile_used!(tile_klass_name.demodulize)
     @game.current_action = { "type" => "mandatory" }
+    game_player.save
+    @game.save
+  end
+
+  def place_wall(row, col)
+    @game.instantiate
+    game_player = @game.current_player
+
+    tile_obj = Tiles::QuarryTile.new(0)
+    destinations = tile_obj.valid_destinations(
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: game_player.order, hand: game_player.hand
+    )
+    return "Not available" unless destinations.include?([ row, col ])
+    return "No stone walls left" if @game.stone_walls <= 0
+
+    walls_placed = @game.current_action["walls_placed"].to_i + 1
+
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "place_wall",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{game_player.player.handle} placed a stone wall at [#{row}, #{col}]"
+    )
+
+    @game.board_contents_will_change!
+    @game.board_contents.place_wall(row, col)
+    @game.stone_walls -= 1
+
+    if walls_placed >= 2
+      game_player.mark_tile_used!("QuarryTile")
+      @game.current_action = { "type" => "mandatory" }
+    else
+      @game.current_action_will_change!
+      @game.current_action["walls_placed"] = walls_placed
+    end
+
     game_player.save
     @game.save
   end
@@ -259,6 +304,7 @@ class TurnEngine
       (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile)
+    return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand }
     tile_obj.activatable?(**ctx)
@@ -380,7 +426,12 @@ class TurnEngine
         tile = player.find_unused_tile(klass)
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
-          if tile_obj.moves_settlement?
+          if tile_obj.places_wall?
+            tile_obj.valid_destinations(
+              board_contents: @game.board_contents, board: @game.board,
+              player_order: player.order, hand: player.hand
+            )
+          elsif tile_obj.moves_settlement?
             if @game.current_action["from"]
               from = Coordinate.from_key(@game.current_action["from"])
               extra_kwargs = {}

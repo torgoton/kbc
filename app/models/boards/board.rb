@@ -76,6 +76,7 @@ module Boards
       20.times do |row|
         20.times do |col|
           next if game.board_contents.empty?(row, col)
+          next if game.board_contents.wall_at?(row, col)
           klass = game.board_contents.tile_klass(row, col)
           if klass
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }

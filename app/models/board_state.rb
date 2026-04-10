@@ -24,6 +24,14 @@ class BoardState
     @cells.delete([ row, col ])
   end
 
+  def place_wall(row, col)
+    @cells[[ row, col ]] = { "klass" => "Wall" }
+  end
+
+  def wall_at?(row, col)
+    @cells[[ row, col ]]&.dig("klass") == "Wall"
+  end
+
   def empty?(row, col)
     !@cells.key?([ row, col ])
   end

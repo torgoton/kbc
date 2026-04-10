@@ -54,6 +54,10 @@ module Tiles
       false
     end
 
+    def places_wall?
+      false
+    end
+
     def outpost_tile?
       false
     end
