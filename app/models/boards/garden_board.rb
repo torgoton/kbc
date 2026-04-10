@@ -2,16 +2,16 @@ module Boards
   class GardenBoard < BoardSection
     def map
       [
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        "",
-        ""
+        "CCCWWWWDDD",
+        "CCCWLFDDMD",
+        "CCCCCCFDMD",
+        "CGGCCMFMDD",
+        "CGGGDMMFFF",
+        "TFGLDDFFFF",
+        "TTFFDMFGGF",
+        "TTMFMTSGGG",
+        "TMTTTTWWGG",
+        "TTTTWWWGGG"
       ]
     end
 
@@ -23,8 +23,8 @@ module Boards
 
     def raw_location_hexes
       [
-        { r: 2, c: 5, k: "Garden" },
-        { r: 6, c: 3, k: "Garden" }
+        { r: 1, c: 4, k: "Garden" },
+        { r: 5, c: 3, k: "Garden" }
       ]
     end
   end
