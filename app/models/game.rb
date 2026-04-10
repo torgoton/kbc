@@ -271,6 +271,10 @@ class Game < ApplicationRecord
     GameReplayer.new(self).replay
   end
 
+  def board_has_quarry?
+    board.map.any? { |s| s.location_hexes.any? { |h| h[:k] == "Quarry" } }
+  end
+
   private
 
   def select_boards
