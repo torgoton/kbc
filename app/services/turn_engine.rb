@@ -43,10 +43,76 @@ class TurnEngine
     Rails.logger.debug(" I have #{game_player.settlements_remaining} settlements remaining")
     return "No settlements left" unless game_player.settlements_remaining?
     card_terrain = game_player.hand
-    return "Not avilalable" unless available?(game_player.order, card_terrain, row, col)
-    build_on_terrain(card_terrain, row, col, game_player)
-    @game.mandatory_count -= 1
+
+    if @game.current_action["outpost_active"]
+      # Skip adjacency: just check it's empty and correct terrain
+      return "Not available" unless @game.board_contents.empty?(row, col) && @game.board.terrain_at(row, col) == card_terrain
+      build_on_terrain(card_terrain, row, col, game_player)
+      @game.mandatory_count -= 1
+      @game.current_action_will_change!
+      @game.current_action.delete("outpost_active")
+    else
+      return "Not available" unless available?(game_player.order, card_terrain, row, col)
+      build_on_terrain(card_terrain, row, col, game_player)
+      @game.mandatory_count -= 1
+    end
+
     Rails.logger.debug("Building settlement at #{row}, #{col} for player #{game_player.order}")
+    game_player.save
+    @game.save
+  end
+
+  def activate_outpost
+    @game.instantiate
+    game_player = @game.current_player
+    return "No outpost tile" unless game_player.find_unused_tile("OutpostTile")
+    return "Not in build action" unless @game.current_action["type"] == "mandatory"
+    game_player.mark_tile_used!("OutpostTile")
+    @game.current_action_will_change!
+    @game.current_action["outpost_active"] = true
+    game_player.save
+    @game.save
+  end
+
+  def remove_settlement(row, col)
+    @game.instantiate
+    game_player = @game.current_player
+
+    pending_orders = @game.current_action["pending_orders"] || []
+    owner_order = @game.board_contents.player_at(row, col)
+    return "Not a valid target" unless owner_order && pending_orders.include?(owner_order)
+
+    owner = @game.game_players.find { |gp| gp.order == owner_order }
+
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "remove_settlement",
+      from: "[#{row}, #{col}]",
+      to: "player_#{owner_order}_supply",
+      reversible: true,
+      payload: { "owner_order" => owner_order },
+      message: "#{game_player.player.handle} removed #{owner.player.handle}'s settlement"
+    )
+
+    @game.board_contents_will_change!
+    @game.board_contents.remove(row, col)
+    owner.increment_supply!
+
+    remaining_orders = pending_orders - [ owner_order ]
+
+    if remaining_orders.empty?
+      klass_name = current_action_tile_klass
+      game_player.mark_tile_used!(klass_name.demodulize)
+      @game.current_action = { "type" => "mandatory" }
+    else
+      @game.current_action_will_change!
+      @game.current_action["pending_orders"] = remaining_orders
+    end
+
+    owner.save
     game_player.save
     @game.save
   end
@@ -96,6 +162,20 @@ class TurnEngine
     action = { "type" => type, "klass" => klass_name }
     tile_klass = "Tiles::#{klass_name}".safe_constantize
     action["remaining"] = 3 if tile_klass&.new(0)&.is_a?(Tiles::Nomad::DonationTile)
+    if tile_klass&.new(0)&.is_a?(Tiles::Nomad::ResettlementTile)
+      action["budget"] = 4
+      action["vacated"] = []
+      action["moves"] = 0
+    end
+    if tile_klass&.new(0)&.is_a?(Tiles::Nomad::SwordTile)
+      opponents = @game.game_players
+        .reject { |gp| gp == @game.current_player }
+        .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
+        .map(&:order)
+        .sort
+      return "No opponents with settlements" if opponents.empty?
+      action["pending_orders"] = opponents
+    end
     @game.current_action = action
     @game.save
   end
@@ -119,7 +199,8 @@ class TurnEngine
     @game.instantiate
     from = @game.current_action["from"]
     from_coord = Coordinate.from_key(from)
-    tile_klass = current_action_tile_klass
+    tile_klass_name = current_action_tile_klass
+    tile_obj = "Tiles::#{tile_klass_name}".safe_constantize&.new(0)
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -129,16 +210,45 @@ class TurnEngine
       from: from,
       to: Coordinate.new(row, col).to_key,
       reversible: true,
-      payload: { "tile_klass" => tile_klass },
+      payload: { "tile_klass" => tile_klass_name },
       message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*from_coord, row, col)
-    @game.current_action = { "type" => "mandatory" }
-    @game.current_player.mark_tile_used!(tile_klass)
-    apply_tile_forfeit(@game.current_player)
-    apply_tile_pickup(@game.current_player, row, col)
+
+    if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
+      budget = @game.current_action["budget"].to_i - 1
+      vacated = (@game.current_action["vacated"] || []) + [ from ]
+      moves = @game.current_action["moves"].to_i + 1
+      if budget <= 0
+        @game.current_player.mark_tile_used!(tile_klass_name.demodulize)
+        @game.current_action = { "type" => "mandatory" }
+      else
+        @game.current_action = @game.current_action.except("from").merge(
+          "budget" => budget, "vacated" => vacated, "moves" => moves
+        )
+      end
+    else
+      @game.current_action = { "type" => "mandatory" }
+      @game.current_player.mark_tile_used!(tile_klass_name)
+      apply_tile_forfeit(@game.current_player)
+      apply_tile_pickup(@game.current_player, row, col)
+    end
+
     @game.current_player.save
+    @game.save
+  end
+
+  def end_tile_action
+    @game.instantiate
+    game_player = @game.current_player
+    tile_klass_name = current_action_tile_klass
+    moves_made = @game.current_action["moves"].to_i
+    return "Not allowed" unless moves_made >= 1
+
+    game_player.mark_tile_used!(tile_klass_name.demodulize)
+    @game.current_action = { "type" => "mandatory" }
+    game_player.save
     @game.save
   end
 
@@ -262,6 +372,9 @@ class TurnEngine
         else
           []
         end
+      elsif action == "sword"
+        pending_orders = @game.current_action["pending_orders"] || []
+        pending_orders.flat_map { |order| @game.board_contents.settlements_for(order) }
       else
         klass = current_action_tile_klass
         tile = player.find_unused_tile(klass)
@@ -270,13 +383,29 @@ class TurnEngine
           if tile_obj.moves_settlement?
             if @game.current_action["from"]
               from = Coordinate.from_key(@game.current_action["from"])
+              extra_kwargs = {}
+              if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
+                extra_kwargs = {
+                  budget: @game.current_action["budget"].to_i,
+                  vacated: @game.current_action["vacated"] || []
+                }
+              end
               tile_obj.valid_destinations(
                 from_row: from.row, from_col: from.col,
-                board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: player.hand
+                board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: player.hand,
+                **extra_kwargs
               )
             else
+              extra_kwargs = {}
+              if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
+                extra_kwargs = {
+                  budget: @game.current_action["budget"].to_i,
+                  vacated: @game.current_action["vacated"] || []
+                }
+              end
               tile_obj.selectable_settlements(
-                player_order: player.order, board_contents: @game.board_contents, board: @game.board, hand: player.hand
+                player_order: player.order, board_contents: @game.board_contents, board: @game.board, hand: player.hand,
+                **extra_kwargs
               )
             end
           else

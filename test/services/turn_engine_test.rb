@@ -120,7 +120,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     # (5,1) is Canyon on Tavern board row 5 ("FCCWGTTCCC"), not adjacent to (0,7)
     result = engine2.build_settlement(5, 1)
 
-    assert_equal "Not avilalable", result
+    assert_equal "Not available", result
   end
 
   test "build_settlement uses neighbor adjacency when player has an existing settlement" do

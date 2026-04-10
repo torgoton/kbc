@@ -1,5 +1,5 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move ]
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_settlement ]
 
   def new
     @game = Game.new
@@ -110,6 +110,40 @@ class GamesController < ApplicationController
     engine.undo_last_move if engine.undo_allowed?
     respond_to do |format|
       format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def end_tile_action
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    TurnEngine.new(@game).end_tile_action
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def activate_outpost
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    TurnEngine.new(@game).activate_outpost
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def remove_settlement
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
+    TurnEngine.new(@game).remove_settlement(coord.row, coord.col)
+    respond_to do |format|
+      format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
     @game.broadcast_game_update

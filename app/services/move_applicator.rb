@@ -29,6 +29,12 @@ module MoveApplicator
       )
     when "score_goal"
       backend.apply_score_goal(player_order: player_order, goal: move.payload["goal"], score: move.payload["score"])
+    when "remove_settlement"
+      backend.apply_remove_settlement(
+        player_order: player_order,
+        from: move.from,
+        owner_order: move.payload["owner_order"]
+      )
     end
   end
 end
@@ -108,6 +114,12 @@ class MoveApplicator::HashState
     player = @players[player_order]
     player["bonus_scores"] ||= {}
     player["bonus_scores"][goal] = (player["bonus_scores"][goal] || 0) - score
+  end
+
+  def apply_remove_settlement(player_order:, from:, owner_order:)
+    coord = Coordinate.from_key(from)
+    @board.place_settlement(coord.row, coord.col, owner_order)
+    @players[owner_order]["supply"]["settlements"] -= 1
   end
 
   def apply_move_settlement(player_order:, from:, to:, tile_klass:)
@@ -206,6 +218,15 @@ class MoveApplicator::LiveState
       goal => (gp.bonus_scores&.dig(goal) || 0) - score
     )
     gp.save
+  end
+
+  def apply_remove_settlement(player_order:, from:, owner_order:)
+    coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(coord.row, coord.col, owner_order)
+    owner = player_for(owner_order)
+    owner.decrement_supply!
+    owner.save
   end
 
   private
