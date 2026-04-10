@@ -310,7 +310,7 @@ class Game < ApplicationRecord
   end
 
   def board_has_castles?
-    (0..19).any? { |r| (0..19).any? { |c| board.terrain_at(r, c) == "S" } }
+    board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
   end
 
   def populate_player_supplies

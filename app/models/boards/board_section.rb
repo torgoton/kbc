@@ -8,7 +8,7 @@ module Boards
       raise "Map not implemented"
     end
 
-    def raw_scoring_hexes
+    def raw_silver_hexes
       []
     end
 
@@ -16,8 +16,8 @@ module Boards
       []
     end
 
-    def scoring_hexes
-      flip_hexes(raw_scoring_hexes)
+    def silver_hexes
+      flip_hexes(raw_silver_hexes)
     end
 
     def location_hexes
