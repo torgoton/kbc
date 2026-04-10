@@ -83,10 +83,10 @@ class MoveApplicator::HashState
   end
 
   def apply_end_turn(player_order:, card_discarded:, card_drawn:, reshuffled:, deck_after:)
-    @turn_number = (@turn_number || 0) + 1
-    # Forfeit expired nomad tiles for current player
+    # Forfeit expired nomad tiles for current player (before incrementing, matching turn_engine ordering)
     player = @players[player_order]
-    player["tiles"] = (player["tiles"] || []).reject { |t| t["expires_on_turn"] && t["expires_on_turn"] == (@turn_number - 1) }
+    player["tiles"] = (player["tiles"] || []).reject { |t| t["expires_on_turn"] && t["expires_on_turn"] == (@turn_number || 0) }
+    @turn_number = (@turn_number || 0) + 1
     next_order = (player_order + 1) % @players.size
     @discard.push(card_discarded)
     @players[player_order]["hand"] = card_drawn
