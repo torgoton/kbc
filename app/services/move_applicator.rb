@@ -118,8 +118,8 @@ class MoveApplicator::HashState
 
   def apply_remove_settlement(player_order:, from:, owner_order:)
     coord = Coordinate.from_key(from)
-    @board.place_settlement(coord.row, coord.col, owner_order)
-    @players[owner_order]["supply"]["settlements"] -= 1
+    @board.remove(coord.row, coord.col)
+    @players[owner_order]["supply"]["settlements"] += 1
   end
 
   def apply_move_settlement(player_order:, from:, to:, tile_klass:)
