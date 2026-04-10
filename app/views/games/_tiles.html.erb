@@ -1,6 +1,8 @@
-<div class="player-tiles" data-tile-count="<%= (player.tiles || []).size %>">
+<% regular_tiles, nomad_tiles = (player.tiles || []).partition { |t| !"Tiles::#{t["klass"]}".safe_constantize&.new(0)&.nomad_tile? } %>
+
+<div class="player-tiles" data-tile-count="<%= regular_tiles.size %>">
   <% marked_active_type = nil %>
-  <% (player.tiles || []).each do |tile| %>
+  <% regular_tiles.each do |tile| %>
     <% next unless "Tiles::#{tile["klass"]}".safe_constantize %>
     <% type = tile["klass"].delete_suffix("Tile").downcase %>
     <% used = engine.tile_used?(tile) %>
@@ -22,3 +24,53 @@
     <% end %>
   <% end %>
 </div>
+
+<% if nomad_tiles.any? %>
+  <div class="player-tiles nomad-tiles" data-tile-count="<%= nomad_tiles.size %>">
+    <% nomad_tiles.each do |tile| %>
+      <% next unless (tile_klass = "Tiles::#{tile["klass"]}".safe_constantize) %>
+      <% tile_obj = tile_klass.new(0) %>
+      <% type = tile["klass"].delete_suffix("Tile").downcase %>
+      <% used = engine.tile_used?(tile) %>
+
+      <% if tile_obj.outpost_tile? %>
+        <% outpost_on = game.current_action["outpost_active"] %>
+        <% selectable = my_turn && engine.outpost_activatable?(tile) %>
+        <% state = outpost_on ? "tile-active" : used ? "tile-used" : selectable ? "tile-activatable" : "tile-inactive" %>
+        <% if selectable %>
+          <%= button_to activate_outpost_game_path(game) do %>
+            <div class="player-tile <%= state %> spin" title="Outpost">
+              <div class="tile-container outpost"></div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="player-tile <%= state %>" title="Outpost">
+            <div class="tile-container outpost"></div>
+          </div>
+        <% end %>
+
+      <% else %>
+        <% active = my_turn && !used && game.current_action["type"] == type %>
+        <% activatable = my_turn && engine.tile_activatable?(tile) %>
+        <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
+        <% if activatable %>
+          <%= button_to select_action_game_path(game), params: { action_type: type } do %>
+            <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+              <div class="tile-container <%= type %>"></div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+            <div class="tile-container <%= type %>"></div>
+          </div>
+        <% end %>
+        <% if active && game.current_action["remaining"] %>
+          <span class="tile-progress"><%= game.current_action["remaining"] %> left</span>
+        <% end %>
+        <% if active && game.current_action["budget"] %>
+          <span class="tile-progress"><%= game.current_action["budget"] %> steps left</span>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

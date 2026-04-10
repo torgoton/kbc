@@ -74,7 +74,7 @@ class TurnEngine
     @game.instantiate
     game_player = @game.current_player
     return "No outpost tile" unless game_player.find_unused_tile("OutpostTile")
-    return "Not in build action" unless @game.current_action["type"] == "mandatory"
+    return "Not in build action" unless build_action?
     game_player.mark_tile_used!("OutpostTile")
     @game.current_action_will_change!
     @game.current_action["outpost_active"] = true
@@ -133,10 +133,16 @@ class TurnEngine
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
     tile_obj = Tiles::Tile.from_hash(tile)
-    destinations = tile_obj.valid_destinations(
-      board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: game_player.hand
-    )
-    return "Not available" unless destinations.include?([ row, col ])
+    if @game.current_action["outpost_active"]
+      return "Not available" unless @game.board_contents.empty?(row, col)
+      @game.current_action_will_change!
+      @game.current_action.delete("outpost_active")
+    else
+      destinations = tile_obj.valid_destinations(
+        board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: game_player.hand
+      )
+      return "Not available" unless destinations.include?([ row, col ])
+    end
     build_on_terrain(@game.board.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
     if tile_obj.is_a?(Tiles::Nomad::DonationTile)
       remaining = @game.current_action["remaining"].to_i - 1
@@ -328,6 +334,13 @@ class TurnEngine
       (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
   end
 
+  def outpost_activatable?(tile)
+    return false if tile["used"]
+    return false unless build_action?
+    return false if @game.current_action["outpost_active"]
+    @game.current_player.settlements_remaining?
+  end
+
   def tile_action_endable?
     @game.playing? && (
       (@game.current_action["type"] == "resettlement" && @game.current_action["moves"].to_i >= 1) ||
@@ -506,6 +519,13 @@ class TurnEngine
   end
 
   private
+
+  def build_action?
+    type = @game.current_action["type"]
+    return true if type == "mandatory"
+    klass = "Tiles::#{current_action_tile_klass}".safe_constantize
+    klass&.new(0)&.builds_settlement? || false
+  end
 
   # Returns the tile klass name (without "Tiles::" prefix) for the current action.
   # Uses "klass" from current_action if present (stored by select_action),
