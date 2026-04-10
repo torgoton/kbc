@@ -455,6 +455,162 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
   end
 
+  # ── Real-time goals ─────────────────────────────────────────────────────────
+
+  # Helper: fresh game object from DB with Oasis boards and clean board_contents
+  def fresh_oasis_game(goals:, board_contents: BoardState.new, mandatory_count: 3)
+    @game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.goals = goals
+    @game.board_contents = board_contents
+    @game.mandatory_count = mandatory_count
+    @game.save!
+    Game.find(@game.id)
+  end
+
+  test "Ambassadors: scores 1 point when building adjacent to opponent settlement" do
+    # OasisBoard row 0: "DDCWWTTGGG" — (0,0)=D, (0,1)=D
+    # Place opponent at (0,0), current player builds at adjacent (0,1)
+    game = fresh_oasis_game(goals: [ "ambassadors" ])
+    opponent = game.game_players.find { |gp| gp.order != game.current_player.order }
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(0, 0, opponent.order)
+    game.save!
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game2)
+
+    engine.build_settlement(0, 1)
+
+    game2.current_player.reload
+    assert_equal 1, game2.current_player.bonus_scores&.dig("ambassadors")
+    assert game2.moves.exists?(action: "score_goal", deliberate: false)
+  end
+
+  test "Ambassadors: does not score when building with no adjacent opponent" do
+    # (0,0)=D on OasisBoard; no opponent neighbors
+    game = fresh_oasis_game(goals: [ "ambassadors" ])
+    game.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 0)
+
+    game.current_player.reload
+    assert_equal 0, game.current_player.bonus_scores&.dig("ambassadors").to_i
+  end
+
+  test "Ambassadors: does not score when goal is not active" do
+    game = fresh_oasis_game(goals: [])
+    opponent = game.game_players.find { |gp| gp.order != game.current_player.order }
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(0, 0, opponent.order)
+    game.save!
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game2)
+
+    engine.build_settlement(0, 1)
+
+    game2.current_player.reload
+    assert_equal 0, game2.current_player.bonus_scores&.dig("ambassadors").to_i
+    assert_not game2.moves.exists?(action: "score_goal")
+  end
+
+  test "Shepherds: scores 2 points when no adjacent empty same-terrain exists" do
+    # OasisBoard row 8: "WWCFWWWDDW", row 9: "WWWWWWWWWW"
+    # (9,0) even-row in-board neighbors of (9,0): (8,0)=W, (8,1)=W, (9,1)=W
+    # Fill those with player settlements so no adjacent empty W hex remains at (9,0).
+    game = fresh_oasis_game(goals: [ "shepherds" ])
+    player_order = game.current_player.order
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(8, 0, player_order)
+    game.board_contents.place_settlement(8, 1, player_order)
+    game.board_contents.place_settlement(9, 1, player_order)
+    game.save!
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "W", supply: { "settlements" => 40 })
+    engine = TurnEngine.new(game2)
+
+    engine.build_settlement(9, 0)
+
+    game2.current_player.reload
+    assert_equal 2, game2.current_player.bonus_scores&.dig("shepherds")
+  end
+
+  test "Shepherds: does not score when adjacent empty same-terrain exists" do
+    # (0,0)=D on OasisBoard; (0,1)=D is adjacent and empty
+    game = fresh_oasis_game(goals: [ "shepherds" ])
+    game.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 0)
+
+    game.current_player.reload
+    assert_equal 0, game.current_player.bonus_scores&.dig("shepherds").to_i
+  end
+
+  test "Families: scores 2 points when 3 mandatory builds form a straight line" do
+    # OasisBoard row 0: "DDCWWTTGGG" — G at (0,7),(0,8),(0,9)
+    # Even-row E direction: (0,7)->(0,8)->(0,9) is a straight line.
+    game = fresh_oasis_game(goals: [ "families" ], mandatory_count: 3)
+    game.current_player.update!(hand: "G")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 7)
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "G")
+    engine2 = TurnEngine.new(game2)
+    engine2.build_settlement(0, 8)
+    game3 = Game.find(game.id)
+    game3.current_player.update!(hand: "G")
+    engine3 = TurnEngine.new(game3)
+    engine3.build_settlement(0, 9)
+
+    game3.current_player.reload
+    assert_equal 2, game3.current_player.bonus_scores&.dig("families")
+  end
+
+  test "Families: does not score when 3 mandatory builds do not form a straight line" do
+    # OasisBoard row 0: "DDCWWTTGGG", row 1: "DCWFFTTTGG"
+    # (0,7)=G, (0,8)=G, (1,8)=G — (1,8) is SE of (0,8), not E, so (0,7),(0,8),(1,8) is not a line.
+    game = fresh_oasis_game(goals: [ "families" ], mandatory_count: 3)
+    game.current_player.update!(hand: "G")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 7)
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "G")
+    engine2 = TurnEngine.new(game2)
+    engine2.build_settlement(0, 8)
+    game3 = Game.find(game.id)
+    game3.current_player.update!(hand: "G")
+    engine3 = TurnEngine.new(game3)
+    engine3.build_settlement(1, 8)
+
+    game3.current_player.reload
+    assert_equal 0, game3.current_player.bonus_scores&.dig("families").to_i
+  end
+
+  test "Families: does not score when goal is not active" do
+    # Same positions as the straight-line test but no families goal
+    game = fresh_oasis_game(goals: [], mandatory_count: 3)
+    game.current_player.update!(hand: "G")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 7)
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "G")
+    engine2 = TurnEngine.new(game2)
+    engine2.build_settlement(0, 8)
+    game3 = Game.find(game.id)
+    game3.current_player.update!(hand: "G")
+    engine3 = TurnEngine.new(game3)
+    engine3.build_settlement(0, 9)
+
+    game3.current_player.reload
+    assert_equal 0, game3.current_player.bonus_scores&.dig("families").to_i
+    assert_not game3.moves.exists?(action: "score_goal")
+  end
+
   private
 
   def find_tile_trigger_pair

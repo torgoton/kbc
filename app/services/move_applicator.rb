@@ -76,6 +76,9 @@ class MoveApplicator::HashState
       @current_action = { "type" => "mandatory" }
     else
       @mandatory_count -= 1
+      @current_action = @current_action.merge(
+        "builds" => (@current_action["builds"] || []) + [ [ coord.row, coord.col ] ]
+      )
     end
   end
 
@@ -184,6 +187,9 @@ class MoveApplicator::LiveState
       @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase }
     else
       @game.mandatory_count += 1
+      builds = (@game.current_action["builds"] || [])[0..-2]
+      @game.current_action_will_change!
+      @game.current_action["builds"] = builds
     end
     gp.save
   end

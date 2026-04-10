@@ -51,10 +51,18 @@ class TurnEngine
       @game.mandatory_count -= 1
       @game.current_action_will_change!
       @game.current_action.delete("outpost_active")
+      @game.current_action_will_change!
+      builds = (@game.current_action["builds"] || []) + [ [ row, col ] ]
+      @game.current_action["builds"] = builds
+      check_families_goal(game_player) if builds.size == 3
     else
       return "Not available" unless available?(game_player.order, card_terrain, row, col)
       build_on_terrain(card_terrain, row, col, game_player)
       @game.mandatory_count -= 1
+      @game.current_action_will_change!
+      builds = (@game.current_action["builds"] || []) + [ [ row, col ] ]
+      @game.current_action["builds"] = builds
+      check_families_goal(game_player) if builds.size == 3
     end
 
     Rails.logger.debug("Building settlement at #{row}, #{col} for player #{game_player.order}")
@@ -526,6 +534,8 @@ class TurnEngine
     @game.ending = true if game_player.settlements_remaining == 0
     @game.board_contents_will_change!
     @game.board_contents.place_settlement(row, col, game_player.order)
+    check_ambassadors_goal(game_player, row, col)
+    check_shepherds_goal(game_player, row, col, terrain)
     apply_tile_pickup(game_player, row, col)
   end
 
@@ -611,6 +621,54 @@ class TurnEngine
           end
         end
       end
+    end
+  end
+
+  def check_ambassadors_goal(game_player, row, col)
+    return unless Array(@game.goals).include?("ambassadors")
+    adjacent_opponent = @game.board_contents.neighbors(row, col).any? do |nr, nc|
+      p = @game.board_contents.player_at(nr, nc)
+      p && p != game_player.order
+    end
+    return unless adjacent_opponent
+    score_goal(game_player, "ambassadors", 1,
+      "#{game_player.player.handle} scored 1 point (Ambassadors)")
+  end
+
+  def check_shepherds_goal(game_player, row, col, terrain)
+    return unless Array(@game.goals).include?("shepherds")
+    no_adjacent_empty = @game.board_contents.neighbors(row, col).none? do |nr, nc|
+      @game.board_contents.empty?(nr, nc) && @game.board.terrain_at(nr, nc) == terrain
+    end
+    return unless no_adjacent_empty
+    score_goal(game_player, "shepherds", 2,
+      "#{game_player.player.handle} scored 2 points (Shepherds)")
+  end
+
+  def check_families_goal(game_player)
+    return unless Array(@game.goals).include?("families")
+    builds = @game.current_action["builds"] || []
+    return unless builds.size == 3
+    return unless straight_line?(builds)
+    score_goal(game_player, "families", 2,
+      "#{game_player.player.handle} scored 2 points (Families)")
+  end
+
+  def straight_line?(positions)
+    a, b, c = positions
+    [ [ a, b, c ], [ a, c, b ], [ b, a, c ] ].any? do |p1, p2, p3|
+      in_same_direction?(p1, p2, p3)
+    end
+  end
+
+  def in_same_direction?(p1, p2, p3)
+    Tiles::PaddockTile::STRAIGHT_LINES.any? do |steps|
+      dr1, dc1 = steps[p1[0] % 2]
+      mid = [ p1[0] + dr1, p1[1] + dc1 ]
+      next false unless mid == p2
+      dr2, dc2 = steps[p2[0] % 2]
+      far = [ p2[0] + dr2, p2[1] + dc2 ]
+      far == p3
     end
   end
 

@@ -1,14 +1,17 @@
 class Scoring
   GOAL_CLASSES = {
+    "ambassadors" => Scoring::Goals::Ambassadors,
     "castles"     => Scoring::Goals::Castles,
     "citizens"    => Scoring::Goals::Citizens,
     "discoverers" => Scoring::Goals::Discoverers,
+    "families"    => Scoring::Goals::Families,
     "farmers"     => Scoring::Goals::Farmers,
     "fishermen"   => Scoring::Goals::Fishermen,
     "hermits"     => Scoring::Goals::Hermits,
     "knights"     => Scoring::Goals::Knights,
     "merchants"   => Scoring::Goals::Merchants,
     "miners"      => Scoring::Goals::Miners,
+    "shepherds"   => Scoring::Goals::Shepherds,
     "workers"     => Scoring::Goals::Workers
   }.freeze
 

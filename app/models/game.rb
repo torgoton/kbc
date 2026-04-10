@@ -312,7 +312,7 @@ class Game < ApplicationRecord
     save
   end
 
-  OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
+  OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
 
   def select_goals
     instantiate_board
