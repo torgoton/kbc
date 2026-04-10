@@ -39,7 +39,8 @@ class GamesController < ApplicationController
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
     engine = TurnEngine.new(@game)
     action_type = @game.current_action["type"]
-    tile_klass = "Tiles::#{action_type.capitalize}Tile".safe_constantize if action_type != "mandatory"
+    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
+    tile_klass = "Tiles::#{klass_name}".safe_constantize if action_type != "mandatory"
     tile_obj = tile_klass&.new(0)
     if tile_obj&.moves_settlement?
       if @game.current_action["from"]

@@ -3,7 +3,7 @@ module MoveApplicator
     player_order = move.game_player.order
     case move.action
     when "select_action"
-      backend.apply_select_action(player_order: player_order, type: move.to)
+      backend.apply_select_action(player_order: player_order, type: move.to, klass: move.payload&.dig("klass"))
     when "select_settlement"
       backend.apply_select_settlement(player_order: player_order, from: move.from)
     when "move_settlement"
@@ -50,8 +50,9 @@ class MoveApplicator::HashState
     @turn_number = snapshot["turn_number"]
   end
 
-  def apply_select_action(player_order:, type:)
+  def apply_select_action(player_order:, type:, klass: nil)
     @current_action = { "type" => type }
+    @current_action["klass"] = klass if klass
   end
 
   def apply_select_settlement(player_order:, from:)
@@ -181,7 +182,7 @@ class MoveApplicator::LiveState
     gp.save
   end
 
-  def apply_select_action(player_order:, type:)
+  def apply_select_action(player_order:, type:, klass: nil)
     @game.current_action = { "type" => "mandatory" }
   end
 
