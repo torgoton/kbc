@@ -586,7 +586,7 @@ class TurnEngine
     return if (game_player.tiles || []).empty?
     game_player.tiles = game_player.tiles.reject do |tile|
       # Rule: Nomad tiles expire by turn, never by location
-      next false if "Tiles::#{tile["klass"]}".safe_constantize&.new(0)&.nomad_tile?
+      next false if Tiles::Tile.for_klass(tile["klass"])&.new(0)&.nomad_tile?
       loc = tile["from"]
       next false unless loc
       loc_coord = Coordinate.from_key(loc)
@@ -647,7 +647,7 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))
     game_player.receive_tile!(tile[:klass], from: tile[:key])
-    tile_obj = "Tiles::#{tile[:klass]}".safe_constantize&.new(0)
+    tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)
     if tile_obj&.nomad_tile?
       if tile_obj.is_a?(Tiles::Nomad::TreasureTile)
         # Score 3 points immediately and remove the tile
