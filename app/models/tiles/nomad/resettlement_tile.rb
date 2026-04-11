@@ -1,6 +1,7 @@
 module Tiles
   module Nomad
     class ResettlementTile < Tiles::NomadTile
+      CREATOR = "Icon by Icon from us".freeze
       DESCRIPTION = "Move settlements using a shared budget of 4 steps.".freeze
 
       def moves_settlement? = true

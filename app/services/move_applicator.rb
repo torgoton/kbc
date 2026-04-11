@@ -217,6 +217,11 @@ class MoveApplicator::LiveState
 
   def apply_select_action(player_order:, type:, klass: nil)
     @game.current_action = { "type" => "mandatory" }
+    if klass
+      gp = player_for(player_order)
+      gp.mark_tile_unused!(klass.demodulize)
+      gp.save
+    end
   end
 
   def apply_select_settlement(player_order:, from:)

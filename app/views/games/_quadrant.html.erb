@@ -44,6 +44,10 @@
               <div class="tile-tooltip"><%= content.description.html_safe %></div>
             <% when Settlement %>
               <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
+            <% when Wall %>
+              <%= content_tag :div, nil, class: "hex-wall" %>
+            <% else %>
+              <%= content_tag :div, nil, class: "hex-mystery" %>
             <% end %>
           <% end %>
         <% end %>
@@ -54,4 +58,3 @@
     <% end %>
   <% end %>
 <% end %>
-

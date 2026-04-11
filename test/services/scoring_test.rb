@@ -59,6 +59,14 @@ class ScoringTest < ActiveSupport::TestCase
     assert_equal 0, result["total"]
   end
 
+  test "bonus_scores not covered by a goal are included in score_for total" do
+    ctx = build_game(chris_settlements: [], goals: [])
+    ctx[:chris].update!(bonus_scores: { "treasure" => 3 })
+    result = Scoring.new(ctx[:game]).score_for(ctx[:chris])
+    assert_equal 3, result["treasure"][:score]
+    assert_equal 3, result["total"]
+  end
+
   test "compute returns a hash keyed by player order string covering all players" do
     ctx = build_game(
       chris_settlements: [ [ 6, 2 ] ],

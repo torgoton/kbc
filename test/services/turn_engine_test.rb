@@ -223,6 +223,24 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 0, @game.moves.count
   end
 
+  test "undo of select_action marks quarry tile as unused" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[5, 5]", "used" => false } ])
+
+    @engine.select_action("quarry")
+    @game.reload
+
+    # Simulate end_tile_action marking the tile used without creating a move record
+    player.reload.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[5, 5]", "used" => true } ])
+    @game.update!(current_action: { "type" => "mandatory" })
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    quarry_tile = @game.current_player.tiles.find { |t| t["klass"] == "QuarryTile" }
+    assert_equal false, quarry_tile["used"]
+  end
+
   test "undo reverses a select_settlement: removes 'from' from current_action" do
     @game.update!(current_action: { "type" => "paddock" })
     @engine.select_settlement(5, 5)

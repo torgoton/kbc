@@ -28,11 +28,18 @@ class Scoring
   end
 
   def score_for(game_player)
-    @goals.each_with_object({ "total" => 0 }) do |goal, h|
+    goal_keys = @goals.map { |g| GOAL_CLASSES.key(g.class) }.to_set
+    h = @goals.each_with_object({ "total" => 0 }) do |goal, acc|
       key = GOAL_CLASSES.key(goal.class)
       result = goal.score_for(game_player)
-      h[key] = result
-      h["total"] += result[:score]
+      acc[key] = result
+      acc["total"] += result[:score]
     end
+    (game_player.bonus_scores || {}).each do |key, score|
+      next if goal_keys.include?(key)
+      h[key] = { score: score }
+      h["total"] += score
+    end
+    h
   end
 end

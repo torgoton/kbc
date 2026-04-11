@@ -312,7 +312,11 @@ class TurnEngine
     @game.board_contents.place_wall(row, col)
     @game.stone_walls -= 1
 
-    if walls_placed >= 2
+    remaining = tile_obj.valid_destinations(
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: game_player.order, hand: game_player.hand
+    )
+    if walls_placed >= 2 || remaining.empty?
       game_player.mark_tile_used!("QuarryTile")
       @game.current_action = { "type" => "mandatory" }
     else

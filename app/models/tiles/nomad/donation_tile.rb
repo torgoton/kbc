@@ -1,6 +1,7 @@
 module Tiles
   module Nomad
     class DonationTile < Tiles::NomadTile
+      CREATOR = "Icon by agus raharjo".freeze
       DESCRIPTION = "Build 3 settlements on the donation terrain. Build adjacent if possible.".freeze
 
       def description

@@ -1,6 +1,6 @@
 module Tiles
   class CaravanTile < Tiles::Tile
-    CREATOR = "Icon by ".freeze
+    CREATOR = "Icon by Smalllike".freeze
     DESCRIPTION = "Move one of your own settlements in a straight line, either horizontally or diagonally, until it is blocked by an obstacle.".freeze
 
     STRAIGHT_LINES = Tiles::PaddockTile::STRAIGHT_LINES
