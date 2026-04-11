@@ -626,6 +626,67 @@ class TurnEngineTest < ActiveSupport::TestCase
     nil
   end
 
+  # ---------------------------------------------------------------------------
+  # activate_outpost
+  # ---------------------------------------------------------------------------
+
+  test "activate_outpost sets outpost_active, marks tile used, and logs a move" do
+    force_hand("G")
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_outpost
+    @game.reload
+
+    assert @game.current_action["outpost_active"]
+    outpost = @game.current_player.tiles.find { |t| t["klass"] == "OutpostTile" }
+    assert outpost["used"]
+    assert_equal 1, @game.moves.count
+    assert_equal "activate_outpost", @game.moves.last.action
+  end
+
+  test "buildable_cells with outpost_active returns all terrain cells, not just adjacent" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.reload
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+    @engine.activate_outpost
+    @game.reload
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    all_empty_grass = (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if @game.board_contents.empty?(r, c) && @game.board.terrain_at(r, c) == "G" } }
+    assert_equal all_empty_grass.sort, cells.sort
+  end
+
+  test "undo of activate_outpost clears outpost_active and marks tile unused" do
+    force_hand("G")
+    player = @game.current_player
+    player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_outpost
+    @game.reload
+    assert @game.current_action["outpost_active"]
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_nil @game.current_action["outpost_active"]
+    outpost = @game.current_player.tiles.find { |t| t["klass"] == "OutpostTile" }
+    assert_equal false, outpost["used"]
+    assert_equal 0, @game.moves.count
+  end
+
   def force_hand(terrain)
     @game.current_player.update!(hand: terrain)
   end

@@ -37,6 +37,8 @@ module MoveApplicator
       )
     when "place_wall"
       backend.apply_place_wall(player_order: player_order, to: move.to)
+    when "activate_outpost"
+      backend.apply_activate_outpost(player_order: player_order)
     end
   end
 end
@@ -131,6 +133,11 @@ class MoveApplicator::HashState
     coord = Coordinate.from_key(to)
     @board.place_wall(coord.row, coord.col)
     @stone_walls = (@stone_walls || 0) - 1
+  end
+
+  def apply_activate_outpost(player_order:)
+    mark_tile_used(@players[player_order], "OutpostTile")
+    @current_action = @current_action.merge("outpost_active" => true)
   end
 
   def apply_move_settlement(player_order:, from:, to:, tile_klass:)
@@ -249,6 +256,14 @@ class MoveApplicator::LiveState
     @game.board_contents.remove(coord.row, coord.col)
     @game.stone_walls += 1
     @game.save
+  end
+
+  def apply_activate_outpost(player_order:)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("OutpostTile")
+    @game.current_action_will_change!
+    @game.current_action.delete("outpost_active")
+    gp.save
   end
 
   private

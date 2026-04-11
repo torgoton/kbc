@@ -75,6 +75,15 @@ class TurnEngine
     game_player = @game.current_player
     return "No outpost tile" unless game_player.find_unused_tile("OutpostTile")
     return "Not in build action" unless build_action?
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "activate_outpost",
+      reversible: true,
+      message: "#{game_player.player.handle} activated the Outpost tile"
+    )
     game_player.mark_tile_used!("OutpostTile")
     @game.current_action_will_change!
     @game.current_action["outpost_active"] = true
@@ -445,8 +454,15 @@ class TurnEngine
 
       if action == "mandatory"
         if player.settlements_remaining? && @game.mandatory_count > 0
-          list = available_list(player.order, player.hand)
-          (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
+          if @game.current_action["outpost_active"]
+            terrain = player.hand
+            (0..19).flat_map do |r|
+              (0..19).filter_map { |c| [ r, c ] if @game.board_contents.empty?(r, c) && @game.board.terrain_at(r, c) == terrain }
+            end
+          else
+            list = available_list(player.order, player.hand)
+            (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
+          end
         else
           []
         end
