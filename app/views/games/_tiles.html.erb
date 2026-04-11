@@ -1,9 +1,9 @@
-<% regular_tiles, nomad_tiles = (player.tiles || []).partition { |t| !"Tiles::#{t["klass"]}".safe_constantize&.new(0)&.nomad_tile? } %>
+<% regular_tiles, nomad_tiles = (player.tiles || []).partition { |t| !Tiles::Tile.for_klass(t["klass"])&.new(0)&.nomad_tile? } %>
 
 <div class="player-tiles" data-tile-count="<%= regular_tiles.size %>">
   <% marked_active_type = nil %>
   <% regular_tiles.each do |tile| %>
-    <% next unless "Tiles::#{tile["klass"]}".safe_constantize %>
+    <% next unless Tiles::Tile.for_klass(tile["klass"]) %>
     <% type = tile["klass"].delete_suffix("Tile").downcase %>
     <% used = engine.tile_used?(tile) %>
     <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
@@ -28,7 +28,7 @@
 <% if nomad_tiles.any? %>
   <div class="player-tiles nomad-tiles" data-tile-count="<%= nomad_tiles.size %>">
     <% nomad_tiles.each do |tile| %>
-      <% next unless (tile_klass = "Tiles::#{tile["klass"]}".safe_constantize) %>
+      <% next unless (tile_klass = Tiles::Tile.for_klass(tile["klass"])) %>
       <% tile_obj = tile_klass.new(0) %>
       <% type = tile["klass"].delete_suffix("Tile").downcase %>
       <% used = engine.tile_used?(tile) %>

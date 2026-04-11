@@ -3,6 +3,11 @@ module Tiles
     class DonationTile < Tiles::NomadTile
       DESCRIPTION = "Build 3 settlements on the donation terrain. Build adjacent if possible.".freeze
 
+      def description
+        terrain_name = Boards::Board::TERRAIN_NAMES[build_terrain]
+        "Build 3 settlements on #{terrain_name} spaces. Build adjacent if possible."
+      end
+
       def builds_settlement? = true
 
       # build_terrain must be defined by subclasses

@@ -41,7 +41,7 @@
                   <% end %>
                 <% end %>
               <% end %>
-              <div class="tile-tooltip"><%= content.class::DESCRIPTION.html_safe %></div>
+              <div class="tile-tooltip"><%= content.description.html_safe %></div>
             <% when Settlement %>
               <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
             <% end %>

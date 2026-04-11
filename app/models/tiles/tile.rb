@@ -12,6 +12,10 @@ module Tiles
       self.class.name.demodulize.delete_suffix("Tile").downcase
     end
 
+    def description
+      self.class::DESCRIPTION
+    end
+
     def build_terrain = nil
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
@@ -86,10 +90,14 @@ module Tiles
       end
     end
 
+    def self.for_klass(name)
+      "Tiles::#{name}".safe_constantize || Boards::Board::TILE_CLASSES[name]
+    end
+
     def self.from_hash(hash)
-      "Tiles::#{hash['klass']}".constantize.new(0)
-    rescue NameError
-      raise ArgumentError, "Unknown tile class: #{hash['klass']}"
+      tile_class = for_klass(hash["klass"])
+      raise ArgumentError, "Unknown tile class: #{hash['klass']}" unless tile_class
+      tile_class.new(0)
     end
   end
 end
