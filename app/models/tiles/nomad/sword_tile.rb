@@ -1,7 +1,7 @@
 module Tiles
   module Nomad
     class SwordTile < Tiles::NomadTile
-      DESCRIPTION = "Remove one settlement from each opponent (skip opponents with none).".freeze
+      DESCRIPTION = "Remove one settlement from each opponent.".freeze
 
       def sword_tile? = true
 

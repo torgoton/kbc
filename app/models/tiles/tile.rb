@@ -8,6 +8,10 @@ module Tiles
       @qty = qty
     end
 
+    def tile_css_class
+      self.class.name.demodulize.delete_suffix("Tile").downcase
+    end
+
     def build_terrain = nil
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)

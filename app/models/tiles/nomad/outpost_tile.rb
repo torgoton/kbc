@@ -1,7 +1,7 @@
 module Tiles
   module Nomad
     class OutpostTile < Tiles::NomadTile
-      DESCRIPTION = "Activate to skip adjacency requirement for your next mandatory build.".freeze
+      DESCRIPTION = "Activate to skip adjacency requirement for the current build.".freeze
 
       def outpost_tile? = true
 

@@ -1,7 +1,7 @@
 module Tiles
   module Nomad
     class DonationTile < Tiles::NomadTile
-      DESCRIPTION = "Build 3 settlements on the donation terrain. Adjacency preferred.".freeze
+      DESCRIPTION = "Build 3 settlements on the donation terrain. Build adjacent if possible.".freeze
 
       def builds_settlement? = true
 

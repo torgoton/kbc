@@ -20,6 +20,10 @@ module Boards
       flip_hexes(raw_silver_hexes)
     end
 
+    def silver_hex_kind(row, col)
+      silver_hexes.find { |h| h[:r] == row && h[:c] == col }&.dig(:k)
+    end
+
     def location_hexes
       flip_hexes(raw_location_hexes)
     end
