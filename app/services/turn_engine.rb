@@ -101,6 +101,10 @@ class TurnEngine
 
     owner = @game.game_players.find { |gp| gp.order == owner_order }
 
+    action_before = @game.current_action.deep_dup
+    remaining_orders = pending_orders - [ owner_order ]
+    tile_used = remaining_orders.empty?
+
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -110,17 +114,16 @@ class TurnEngine
       from: "[#{row}, #{col}]",
       to: "player_#{owner_order}_supply",
       reversible: true,
-      payload: { "owner_order" => owner_order },
+      payload: { "owner_order" => owner_order, "action_before" => action_before, "tile_used" => tile_used },
       message: "#{game_player.player.handle} removed #{owner.player.handle}'s settlement"
     )
 
     @game.board_contents_will_change!
     @game.board_contents.remove(row, col)
     owner.increment_supply!
+    apply_tile_forfeit(owner)
 
-    remaining_orders = pending_orders - [ owner_order ]
-
-    if remaining_orders.empty?
+    if tile_used
       klass_name = current_action_tile_klass
       game_player.mark_tile_used!(klass_name.demodulize)
       @game.current_action = { "type" => "mandatory" }

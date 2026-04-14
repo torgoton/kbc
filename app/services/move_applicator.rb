@@ -33,7 +33,9 @@ module MoveApplicator
       backend.apply_remove_settlement(
         player_order: player_order,
         from: move.from,
-        owner_order: move.payload["owner_order"]
+        owner_order: move.payload["owner_order"],
+        action_before: move.payload["action_before"],
+        tile_used: move.payload["tile_used"]
       )
     when "place_wall"
       backend.apply_place_wall(player_order: player_order, to: move.to)
@@ -128,7 +130,7 @@ class MoveApplicator::HashState
     player["bonus_scores"][goal] = (player["bonus_scores"][goal] || 0) - score
   end
 
-  def apply_remove_settlement(player_order:, from:, owner_order:)
+  def apply_remove_settlement(player_order:, from:, owner_order:, action_before: nil, tile_used: nil)
     coord = Coordinate.from_key(from)
     @board.remove(coord.row, coord.col)
     @players[owner_order]["supply"]["settlements"] += 1
@@ -254,13 +256,21 @@ class MoveApplicator::LiveState
     gp.save
   end
 
-  def apply_remove_settlement(player_order:, from:, owner_order:)
+  def apply_remove_settlement(player_order:, from:, owner_order:, action_before: nil, tile_used: nil)
     coord = Coordinate.from_key(from)
     @game.board_contents_will_change!
     @game.board_contents.place_settlement(coord.row, coord.col, owner_order)
     owner = player_for(owner_order)
     owner.decrement_supply!
     owner.save
+    if action_before
+      @game.current_action = action_before
+    end
+    if tile_used
+      gp = player_for(player_order)
+      gp.mark_tile_unused!(action_before&.dig("klass")&.demodulize || "SwordTile")
+      gp.save
+    end
   end
 
   def apply_place_wall(player_order:, to:)

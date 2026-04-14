@@ -154,7 +154,7 @@ function captureStreamSnapshot() {
   return {
     myTurn:    document.getElementById("my-turn-flag")?.dataset.myTurn,
     dataFrom:  document.getElementById("current-action")?.dataset.from,
-    tileCount: document.querySelector(".player-tiles")?.dataset.tileCount,
+    tileCount: [...document.querySelectorAll(".player-tiles")].reduce((sum, el) => sum + parseInt(el.dataset.tileCount ?? "0", 10), 0),
     hasEndModal: !!document.getElementById("end-game-modal")
   };
 }

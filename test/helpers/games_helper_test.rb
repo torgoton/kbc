@@ -44,6 +44,12 @@ class GamesHelperTest < ActionView::TestCase
     assert_not current_action_moves_settlement?(game)
   end
 
+  test "current_action_moves_settlement? returns true for sword action" do
+    game = Struct.new(:current_action).new({ "type" => "sword", "klass" => "SwordTile" })
+
+    assert current_action_moves_settlement?(game)
+  end
+
   test "sound_asset_paths does not raise when sound files are absent" do
     assert_nothing_raised { sound_asset_paths(%w[build move undo]) }
   end

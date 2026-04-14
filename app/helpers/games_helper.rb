@@ -25,7 +25,8 @@ module GamesHelper
     type = game.current_action&.dig("type")
     return false unless type && type != "mandatory"
     klass_name = game.current_action["klass"] || "#{type.capitalize}Tile"
-    Tiles::Tile.for_klass(klass_name)&.new(0)&.moves_settlement? || false
+    tile = Tiles::Tile.for_klass(klass_name)&.new(0)
+    tile&.moves_settlement? || tile&.sword_tile? || false
   rescue
     false
   end

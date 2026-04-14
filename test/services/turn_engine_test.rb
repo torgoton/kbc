@@ -838,6 +838,80 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 0, @game.moves.count
   end
 
+  test "remove_settlement forfeits opponent tile when removed settlement was its only adjacency to tile location" do
+    @game.boards = [ [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ], [ "Tavern", 0 ] ]
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+
+    # Opponent holds a PaddockTile from location (2, 8); their settlement at (2, 7) is
+    # their only adjacency to that location — removing it should trigger forfeit
+    opponent.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 8]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.board_contents.place_tile(2, 8, "PaddockTile", 2)
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.update!(
+      boards: [ [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ], [ "Tavern", 0 ] ],
+      current_action: { "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ] }
+    )
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(2, 7)
+
+    assert_empty opponent.reload.tiles, "opponent's tile should be forfeited when their only adjacent settlement is removed"
+  end
+
+  test "turn_state with sword action tells player to select a settlement to remove" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+
+    assert_match(/select a settlement to remove/, @engine.turn_state)
+  end
+
+  test "undo of remove_settlement restores sword current_action with pending_orders" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(2, 7)
+    @game.reload
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_equal "sword", @game.current_action["type"]
+    assert_includes @game.current_action["pending_orders"], opponent.order
+  end
+
+  test "undo of remove_settlement restores sword tile as unused" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(2, 7)
+    @game.reload
+
+    @engine.undo_last_move
+    @game.reload
+
+    sword = @game.current_player.tiles.find { |t| t["klass"] == "SwordTile" }
+    assert_equal false, sword["used"], "SwordTile must be unused after undo"
+  end
+
   def force_hand(terrain)
     @game.current_player.update!(hand: terrain)
   end
