@@ -137,7 +137,8 @@ function initBoardZoom() {
     applyTransform();
   }, { passive: false });
 
-  requestAnimationFrame(fitBoard);
+  fitBoard();
+  new ResizeObserver(fitBoard).observe(viewport);
 }
 
 // Re-mark selectable hexes after Turbo Stream updates.

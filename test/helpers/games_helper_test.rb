@@ -32,6 +32,18 @@ class GamesHelperTest < ActionView::TestCase
     assert_equal keys, keys.uniq
   end
 
+  test "current_action_moves_settlement? returns true for namespaced Nomad tile" do
+    game = Struct.new(:current_action).new({ "type" => "resettlement", "klass" => "ResettlementTile" })
+
+    assert current_action_moves_settlement?(game)
+  end
+
+  test "current_action_moves_settlement? returns false for mandatory action" do
+    game = Struct.new(:current_action).new({ "type" => "mandatory" })
+
+    assert_not current_action_moves_settlement?(game)
+  end
+
   test "sound_asset_paths does not raise when sound files are absent" do
     assert_nothing_raised { sound_asset_paths(%w[build move undo]) }
   end

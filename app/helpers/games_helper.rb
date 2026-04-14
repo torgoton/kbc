@@ -24,7 +24,8 @@ module GamesHelper
   def current_action_moves_settlement?(game)
     type = game.current_action&.dig("type")
     return false unless type && type != "mandatory"
-    "Tiles::#{type.capitalize}Tile".safe_constantize&.new(0)&.moves_settlement? || false
+    klass_name = game.current_action["klass"] || "#{type.capitalize}Tile"
+    Tiles::Tile.for_klass(klass_name)&.new(0)&.moves_settlement? || false
   rescue
     false
   end

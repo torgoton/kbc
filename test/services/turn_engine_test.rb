@@ -188,6 +188,18 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_match(/must build on a Desert space/, @engine.turn_state)
   end
 
+  test "turn_state returns donation tile message for namespaced Nomad tile action" do
+    @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 })
+
+    assert_match(/must build on a Desert space/, @engine.turn_state)
+  end
+
+  test "turn_state includes remaining count for donation tile action" do
+    @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 2 })
+
+    assert_match(/2 remaining/, @engine.turn_state)
+  end
+
   test "turn_state includes tile option when player has an activatable tile" do
     @game.current_player.update!(tiles: [
       { "klass" => "MandatoryTile", "used" => false },
@@ -239,6 +251,121 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     quarry_tile = @game.current_player.tiles.find { |t| t["klass"] == "QuarryTile" }
     assert_equal false, quarry_tile["used"]
+  end
+
+  test "undo of donation tile build restores current_action with klass and remaining" do
+    spot = empty_hexes_of("D", 1).first
+    @game.current_player.update!(tiles: [
+      { "klass" => "DonationDesertTile", "from" => "[0, 5]", "used" => false }
+    ])
+    @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 })
+    @engine.activate_tile_build(*spot)
+    @game.reload
+    assert_equal 2, @game.current_action["remaining"]
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "donationdesert", @game.current_action["type"]
+    assert_equal "DonationDesertTile", @game.current_action["klass"]
+    assert_equal 3, @game.current_action["remaining"]
+  end
+
+  test "resettlement move deducts actual step cost from budget" do
+    # Find two Grass hexes at least 2 apart so cost > 1
+    grass_hexes = empty_hexes_of("G", 10)
+    # Find a source and a destination that are 2+ steps apart
+    from_hex = grass_hexes[0]
+    dest_hex = grass_hexes.find do |h|
+      @game.instantiate
+      dist = Tiles::Nomad::ResettlementTile.new(0).move_cost(
+        from_row: from_hex[0], from_col: from_hex[1],
+        to_row: h[0], to_col: h[1],
+        board_contents: @game.board_contents, board: @game.board,
+        player_order: @game.current_player.order
+      )
+      dist && dist >= 2
+    end
+    skip "No suitable hex pair found" unless dest_hex
+
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*from_hex, player.order)
+    @game.save
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0
+    })
+    @game.instantiate
+    expected_cost = Tiles::Nomad::ResettlementTile.new(0).move_cost(
+      from_row: from_hex[0], from_col: from_hex[1],
+      to_row: dest_hex[0], to_col: dest_hex[1],
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order
+    )
+
+    @engine.select_settlement(*from_hex)
+    @game.reload
+    @engine.move_settlement(*dest_hex)
+    @game.reload
+
+    assert_equal 4 - expected_cost, @game.current_action["budget"]
+  end
+
+  test "undo of resettlement move restores budget, vacated, moves, and from in current_action" do
+    spots = empty_hexes_of("G", 2)
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
+    # Place a settlement so there's something to move
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*spots[0], player.order)
+    @game.save
+    from_key = "[#{spots[0][0]}, #{spots[0][1]}]"
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0
+    })
+    @engine.select_settlement(*spots[0])
+    @game.reload
+    @engine.move_settlement(*spots[1])
+    @game.reload
+    assert_equal 3, @game.current_action["budget"]
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "resettlement",     @game.current_action["type"]
+    assert_equal "ResettlementTile", @game.current_action["klass"]
+    assert_equal 4,                  @game.current_action["budget"]
+    assert_equal [],                 @game.current_action["vacated"]
+    assert_equal 0,                  @game.current_action["moves"]
+    assert_equal from_key,           @game.current_action["from"]
+  end
+
+  test "undo of resettlement select_settlement restores full action without from" do
+    spots = empty_hexes_of("G", 1)
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*spots[0], player.order)
+    @game.save
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0
+    })
+    @engine.select_settlement(*spots[0])
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "resettlement",     @game.current_action["type"]
+    assert_equal "ResettlementTile", @game.current_action["klass"]
+    assert_equal 4,                  @game.current_action["budget"]
+    assert_equal [],                 @game.current_action["vacated"]
+    assert_equal 0,                  @game.current_action["moves"]
+    assert_nil                       @game.current_action["from"]
   end
 
   test "undo reverses a select_settlement: removes 'from' from current_action" do
@@ -298,6 +425,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
 
     assert_not @engine.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? returns true for an unused Nomad tile (namespaced class)" do
+    tile = { "klass" => "DonationDesertTile", "from" => "[3, 5]", "used" => false }
+
+    assert @engine.tile_activatable?(tile)
   end
 
   test "PaddockTile#builds_settlement? returns false" do

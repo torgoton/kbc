@@ -152,7 +152,8 @@ class TurnEngine
       )
       return "Not available" unless destinations.include?([ row, col ])
     end
-    build_on_terrain(@game.board.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
+    remaining_before = @game.current_action["remaining"]
+    build_on_terrain(@game.board.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass, remaining_before: remaining_before)
     if tile_obj.is_a?(Tiles::Nomad::DonationTile)
       remaining = @game.current_action["remaining"].to_i - 1
       if remaining > 0
@@ -183,7 +184,7 @@ class TurnEngine
       message: "#{@game.current_player.player.handle} selected the #{type} action"
     )
     action = { "type" => type, "klass" => klass_name }
-    tile_klass = "Tiles::#{klass_name}".safe_constantize
+    tile_klass = Tiles::Tile.for_klass(klass_name)
     action["remaining"] = 3 if tile_klass&.new(0)&.is_a?(Tiles::Nomad::DonationTile)
     if tile_klass&.new(0)&.is_a?(Tiles::QuarryTile)
       action["walls_placed"] = 0
@@ -226,7 +227,8 @@ class TurnEngine
     from = @game.current_action["from"]
     from_coord = Coordinate.from_key(from)
     tile_klass_name = current_action_tile_klass
-    tile_obj = "Tiles::#{tile_klass_name}".safe_constantize&.new(0)
+    tile_obj = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
+    action_before = @game.current_action.slice("type", "klass", "budget", "vacated", "moves", "from")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -236,14 +238,24 @@ class TurnEngine
       from: from,
       to: Coordinate.new(row, col).to_key,
       reversible: true,
-      payload: { "tile_klass" => tile_klass_name },
+      payload: { "tile_klass" => tile_klass_name, "action_before" => action_before },
       message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
     )
+    if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
+      step_cost = tile_obj.move_cost(
+        from_row: from_coord.row, from_col: from_coord.col,
+        to_row: row, to_col: col,
+        board_contents: @game.board_contents, board: @game.board,
+        player_order: @game.current_player.order,
+        budget: @game.current_action["budget"].to_i,
+        vacated: @game.current_action["vacated"] || []
+      ) || 1
+    end
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*from_coord, row, col)
 
     if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
-      budget = @game.current_action["budget"].to_i - 1
+      budget = @game.current_action["budget"].to_i - step_cost
       vacated = (@game.current_action["vacated"] || []) + [ from ]
       moves = @game.current_action["moves"].to_i + 1
       # Rule: Resettlement picks up tiles at each step; forfeits location tiles no longer adjacent
@@ -330,7 +342,7 @@ class TurnEngine
 
   def tile_activatable?(tile)
     return false if tile["used"]
-    return false unless "Tiles::#{tile["klass"]}".safe_constantize
+    return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.current_action["type"] == "mandatory" &&
       (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
     @game.instantiate
@@ -373,13 +385,15 @@ class TurnEngine
 
   def turn_state
     action_type = @game.current_action["type"]
-    tile_klass = "Tiles::#{current_action_tile_klass}".safe_constantize if action_type != "mandatory"
+    tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
     if tile_klass
-      tile_klass.new(0).action_message(
+      msg = tile_klass.new(0).action_message(
         player_handle: @game.current_player.player.handle,
         terrain_names: Boards::Board::TERRAIN_NAMES,
         hand: @game.current_player.hand
       )
+      remaining = @game.current_action["remaining"]
+      remaining ? "#{msg} (#{remaining} remaining)" : msg
     else
       has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
@@ -543,7 +557,7 @@ class TurnEngine
   def build_action?
     type = @game.current_action["type"]
     return true if type == "mandatory"
-    klass = "Tiles::#{current_action_tile_klass}".safe_constantize
+    klass = Tiles::Tile.for_klass(current_action_tile_klass)
     klass&.new(0)&.builds_settlement? || false
   end
 
@@ -562,9 +576,10 @@ class TurnEngine
     tile&.dig("klass") || "#{type.capitalize}Tile"
   end
 
-  def build_on_terrain(terrain, row, col, game_player, tile_klass: nil)
+  def build_on_terrain(terrain, row, col, game_player, tile_klass: nil, remaining_before: nil)
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
+    payload["remaining_before"] = remaining_before if remaining_before
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,

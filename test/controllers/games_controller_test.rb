@@ -317,6 +317,22 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal chris.order, game.reload.board_contents.player_at(0, 1)
   end
 
+  test "POST action with donation tile current_action dispatches activate_tile_build" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    # OasisBoard has Desert at [0,0]; place settlement elsewhere so fallback path is used
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 }
+    game.save
+    chris.tiles = [ { "klass" => "DonationDesertTile", "from" => "[0, 5]", "used" => false } ]
+    chris.save
+
+    post action_game_url(game), params: { build_row: 0, build_col: 0 }
+
+    assert_equal chris.order, game.reload.board_contents.player_at(0, 0)
+  end
+
   test "GET show as turbo_stream renders without error" do
     get game_url(games(:game2player)), as: :turbo_stream
 

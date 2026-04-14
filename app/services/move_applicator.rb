@@ -7,9 +7,9 @@ module MoveApplicator
     when "select_settlement"
       backend.apply_select_settlement(player_order: player_order, from: move.from)
     when "move_settlement"
-      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to, tile_klass: move.payload&.dig("tile_klass"))
+      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to, tile_klass: move.payload&.dig("tile_klass"), action_before: move.payload&.dig("action_before"))
     when "build"
-      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"))
+      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"))
     when "pick_up_tile"
       backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
     when "forfeit_tile"
@@ -69,13 +69,18 @@ class MoveApplicator::HashState
     @current_action = @current_action.merge("from" => from)
   end
 
-  def apply_build(player_order:, to:, tile_klass:)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil)
     coord = Coordinate.from_key(to)
     @board.place_settlement(coord.row, coord.col, player_order)
     @players[player_order]["supply"]["settlements"] -= 1
     if tile_klass
       mark_tile_used(@players[player_order], tile_klass)
-      @current_action = { "type" => "mandatory" }
+      remaining_after = remaining_before ? remaining_before - 1 : nil
+      if remaining_after && remaining_after > 0
+        @current_action = { "type" => tile_klass.delete_suffix("Tile").downcase, "klass" => tile_klass, "remaining" => remaining_after }
+      else
+        @current_action = { "type" => "mandatory" }
+      end
     else
       @mandatory_count -= 1
       @current_action = @current_action.merge(
@@ -140,7 +145,7 @@ class MoveApplicator::HashState
     @current_action = @current_action.merge("outpost_active" => true)
   end
 
-  def apply_move_settlement(player_order:, from:, to:, tile_klass:)
+  def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil)
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
@@ -182,7 +187,7 @@ class MoveApplicator::LiveState
     @game = game
   end
 
-  def apply_build(player_order:, to:, tile_klass:)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
@@ -191,7 +196,10 @@ class MoveApplicator::LiveState
     @game.ending = false
     if tile_klass
       gp.mark_tile_unused!(tile_klass)
-      @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase }
+      action = { "type" => tile_klass.delete_suffix("Tile").downcase }
+      action["klass"] = tile_klass if remaining_before
+      action["remaining"] = remaining_before if remaining_before
+      @game.current_action = action
     else
       @game.mandatory_count += 1
       builds = (@game.current_action["builds"] || [])[0..-2]
@@ -229,10 +237,10 @@ class MoveApplicator::LiveState
     @game.current_action.delete("from")
   end
 
-  def apply_move_settlement(player_order:, from:, to:, tile_klass:)
+  def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil)
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*Coordinate.from_key(to), *Coordinate.from_key(from))
-    @game.current_action = { "type" => tile_klass.delete_suffix("Tile").downcase, "from" => from }
+    @game.current_action = action_before || { "type" => tile_klass.delete_suffix("Tile").downcase, "from" => from }
     gp = player_for(player_order)
     gp.mark_tile_unused!(tile_klass)
     gp.save

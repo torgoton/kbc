@@ -28,6 +28,7 @@ body.game-page {
     grid-template-areas:
         "main players-area game-log";
     grid-template-columns: 5fr 2fr 2fr;
+    grid-template-rows: 1fr;
     flex: 1;
     min-height: 0;
 }
@@ -806,7 +807,7 @@ ul li .hex:hover {
     font-family: monospace;
     font-weight: 600;
     margin: 8px;
-    height: 97vh;
+    height: calc(100vh - 2.5em - 16px);
 }
 
 
