@@ -96,6 +96,7 @@ class MoveApplicator::HashState
     @board.decrement_tile(coord.row, coord.col)
     player = @players[player_order]
     player["tiles"] = (player["tiles"] || []) + [ { "klass" => klass, "from" => from, "used" => true } ]
+    player["taken_from"] = (player["taken_from"] || []) + [ from ]
   end
 
   def apply_forfeit_tile(player_order:, from:, klass:, used:)
@@ -215,8 +216,10 @@ class MoveApplicator::LiveState
     coord = Coordinate.from_key(from)
     @game.board_contents_will_change!
     @game.board_contents.increment_tile(coord.row, coord.col)
-    player_for(player_order).remove_tile_from!(from)
-    player_for(player_order).save
+    gp = player_for(player_order)
+    gp.remove_tile_from!(from)
+    gp.taken_from = (gp.taken_from || []) - [ from ]
+    gp.save
   end
 
   def apply_forfeit_tile(player_order:, from:, klass:, used:)

@@ -262,7 +262,8 @@ class Game < ApplicationRecord
       "turn_number" => turn_number,
       "players" => game_players.map do |gp|
         { "order" => gp.order, "hand" => gp.hand,
-          "supply" => gp.supply.dup, "tiles" => (gp.tiles || []).dup }
+          "supply" => gp.supply.dup, "tiles" => (gp.tiles || []).dup,
+          "taken_from" => (gp.taken_from || []).dup }
       end
     }
   end

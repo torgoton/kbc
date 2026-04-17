@@ -93,6 +93,79 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.moves.exists?(action: "pick_up_tile", deliberate: false)
   end
 
+  test "picking up a tile records the location in taken_from" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    player = @game.current_player
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+
+    assert_includes player.reload.taken_from || [], "[#{tile_row}, #{tile_col}]"
+  end
+
+  test "undo of a pickup removes the location from taken_from" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    tile_key = "[#{tile_row}, #{tile_col}]"
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+    assert_includes @game.current_player.reload.taken_from || [], tile_key
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_not_includes @game.current_player.reload.taken_from || [], tile_key
+  end
+
+  test "forfeiting a tile preserves taken_from (cannot re-seize the same location)" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    tile_key = "[#{tile_row}, #{tile_col}]"
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+    assert_includes @game.current_player.reload.taken_from || [], tile_key
+
+    @game.board_contents_will_change!
+    @game.board_contents.remove(trigger_row, trigger_col)
+    @game.save
+    @engine.send(:apply_tile_forfeit, @game.current_player)
+    @game.current_player.save
+    @game.save
+    reloaded = @game.current_player.reload
+
+    assert_empty reloaded.tiles.reject { |t| t["klass"] == "MandatoryTile" },
+      "tile should have been forfeited"
+    assert_includes reloaded.taken_from || [], tile_key,
+      "taken_from must survive forfeit so the location cannot be re-seized"
+  end
+
+  test "player cannot pick up a second tile from a location they've already seized" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    player = @game.current_player
+    tile_key = "[#{tile_row}, #{tile_col}]"
+    player.update!(taken_from: [ tile_key ])
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+
+    assert_equal 2, @game.board_contents.tile_qty(tile_row, tile_col),
+      "tile qty should stay at 2 when player has already taken from this location"
+    assert_empty player.reload.tiles.reject { |t| t["klass"] == "MandatoryTile" }
+    assert_not @game.moves.exists?(action: "pick_up_tile")
+  end
+
   test "build_settlement returns 'No settlements left' when supply is exhausted" do
     force_hand("G")
     @game.current_player.update!(supply: { "settlements" => 0 })

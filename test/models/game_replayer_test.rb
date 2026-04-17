@@ -77,6 +77,19 @@ class GameReplayerTest < ActiveSupport::TestCase
     assert_states_equal game.capture_snapshot, game.replayed_state
   end
 
+  test "capture_snapshot and replayed_state both include taken_from after a pickup" do
+    game = game_with_known_state
+    engine(game).build_settlement(1, 7)
+    game.reload
+    order = game_players(:chris).order
+
+    snap_player = game.capture_snapshot["players"].find { |p| p["order"] == order }
+    replay_player = game.replayed_state["players"].find { |p| p["order"] == order }
+
+    assert_equal [ "[2, 7]" ], snap_player["taken_from"]
+    assert_equal [ "[2, 7]" ], replay_player["taken_from"]
+  end
+
   test "replayed_state matches current state after build without tile pickup" do
     game = game_with_known_state
     # Build at (0,0) — far from the tile location at (2,7)

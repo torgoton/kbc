@@ -639,11 +639,13 @@ class TurnEngine
 
   def find_tile_pickup(game_player, row, col)
     held_locations = game_player.held_tile_locations
+    taken_from = game_player.taken_from || []
     @game.board_contents.neighbors(row, col).each do |adj_r, adj_c|
       klass = @game.board_contents.tile_klass(adj_r, adj_c)
       next unless klass && @game.board_contents.tile_qty(adj_r, adj_c) > 0
       tile_key = Coordinate.new(adj_r, adj_c).to_key
       next if held_locations.include?(tile_key)
+      next if taken_from.include?(tile_key)
       return { key: tile_key, klass: klass }
     end
     nil
@@ -669,6 +671,7 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))
     game_player.receive_tile!(tile[:klass], from: tile[:key])
+    game_player.taken_from = (game_player.taken_from || []) + [ tile[:key] ]
     tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)
     if tile_obj&.nomad_tile?
       if tile_obj.is_a?(Tiles::Nomad::TreasureTile)
