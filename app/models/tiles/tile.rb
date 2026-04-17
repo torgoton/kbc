@@ -8,6 +8,14 @@ module Tiles
       @qty = qty
     end
 
+    def tile_css_class
+      self.class.name.demodulize.delete_suffix("Tile").downcase
+    end
+
+    def description
+      self.class::DESCRIPTION
+    end
+
     def build_terrain = nil
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
@@ -50,6 +58,22 @@ module Tiles
       false
     end
 
+    def nomad_tile?
+      false
+    end
+
+    def places_wall?
+      false
+    end
+
+    def outpost_tile?
+      false
+    end
+
+    def sword_tile?
+      false
+    end
+
     # Returns the terrain key that constrains the move destination, or nil if unconstrained.
     # Subclasses override this (e.g. BarnTile returns hand, HarborTile returns "W").
     def move_terrain(hand:) = nil
@@ -66,10 +90,14 @@ module Tiles
       end
     end
 
+    def self.for_klass(name)
+      "Tiles::#{name}".safe_constantize || Boards::Board::TILE_CLASSES[name]
+    end
+
     def self.from_hash(hash)
-      "Tiles::#{hash['klass']}".constantize.new(0)
-    rescue NameError
-      raise ArgumentError, "Unknown tile class: #{hash['klass']}"
+      tile_class = for_klass(hash["klass"])
+      raise ArgumentError, "Unknown tile class: #{hash['klass']}" unless tile_class
+      tile_class.new(0)
     end
   end
 end

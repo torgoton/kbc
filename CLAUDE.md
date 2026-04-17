@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-KBC is a Ruby on Rails 8.1 implementation of the board game **Kingdom Builder**, built as a real-time multiplayer web app. The current POC uses the "First Game" fixed setup (Tavern, Paddock, Oasis, Farm boards; Fishermen, Knights, Merchants goals).
+KBC is a Ruby on Rails 8.1 implementation of the board game **Kingdom Builder**, built as a real-time multiplayer web app.
 
 ## Common Commands
 
@@ -51,11 +51,11 @@ Per-player state lives in `GamePlayer`: `hand` (terrain card), `supply` (settlem
 
 ### Board Sections (`app/models/boards/`)
 
-Each board section (`TavernBoard`, `PaddockBoard`, `OasisBoard`, `FarmBoard`) inherits from `BoardSection`. They define the hex layout via `terrain_at(row, col)` and expose `location_hexes` (positions where tiles spawn).
+Each board section inherits from `BoardSection`. They define the hex layout via `terrain_at(row, col)` and expose `location_hexes` (positions where tiles spawn).
 
 ### Tiles (`app/models/tiles/`)
 
-Tile subclasses (`TavernTile`, `PaddockTile`, `OasisTile`, `FarmTile`, `CastleTile`) represent special-action tokens that players pick up. They are instantiated from `board_contents` by `Boards::Board`. Tiles are picked up automatically when a player builds adjacent to a location hex with remaining quantity (`apply_tile_pickup`). After a Paddock move, tiles whose source hex is no longer adjacent to any player settlement are forfeited (`apply_tile_forfeit`).
+Tile subclasses represent special-action tokens that players pick up. They are instantiated from `board_contents` by `Boards::Board`. Tiles are picked up automatically when a player builds adjacent to a location hex with remaining quantity (`apply_tile_pickup`). After a move, tiles whose source hex is no longer adjacent to any player settlement are forfeited (`apply_tile_forfeit`).
 
 ### Move History and Undo
 

@@ -93,6 +93,79 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.moves.exists?(action: "pick_up_tile", deliberate: false)
   end
 
+  test "picking up a tile records the location in taken_from" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    player = @game.current_player
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+
+    assert_includes player.reload.taken_from || [], "[#{tile_row}, #{tile_col}]"
+  end
+
+  test "undo of a pickup removes the location from taken_from" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    tile_key = "[#{tile_row}, #{tile_col}]"
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+    assert_includes @game.current_player.reload.taken_from || [], tile_key
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_not_includes @game.current_player.reload.taken_from || [], tile_key
+  end
+
+  test "forfeiting a tile preserves taken_from (cannot re-seize the same location)" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    tile_key = "[#{tile_row}, #{tile_col}]"
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+    assert_includes @game.current_player.reload.taken_from || [], tile_key
+
+    @game.board_contents_will_change!
+    @game.board_contents.remove(trigger_row, trigger_col)
+    @game.save
+    @engine.send(:apply_tile_forfeit, @game.current_player)
+    @game.current_player.save
+    @game.save
+    reloaded = @game.current_player.reload
+
+    assert_empty reloaded.tiles.reject { |t| t["klass"] == "MandatoryTile" },
+      "tile should have been forfeited"
+    assert_includes reloaded.taken_from || [], tile_key,
+      "taken_from must survive forfeit so the location cannot be re-seized"
+  end
+
+  test "player cannot pick up a second tile from a location they've already seized" do
+    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
+    skip "No valid trigger position found" unless tile_row
+
+    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
+    player = @game.current_player
+    tile_key = "[#{tile_row}, #{tile_col}]"
+    player.update!(taken_from: [ tile_key ])
+
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+
+    assert_equal 2, @game.board_contents.tile_qty(tile_row, tile_col),
+      "tile qty should stay at 2 when player has already taken from this location"
+    assert_empty player.reload.tiles.reject { |t| t["klass"] == "MandatoryTile" }
+    assert_not @game.moves.exists?(action: "pick_up_tile")
+  end
+
   test "build_settlement returns 'No settlements left' when supply is exhausted" do
     force_hand("G")
     @game.current_player.update!(supply: { "settlements" => 0 })
@@ -120,7 +193,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     # (5,1) is Canyon on Tavern board row 5 ("FCCWGTTCCC"), not adjacent to (0,7)
     result = engine2.build_settlement(5, 1)
 
-    assert_equal "Not avilalable", result
+    assert_equal "Not available", result
   end
 
   test "build_settlement uses neighbor adjacency when player has an existing settlement" do
@@ -188,6 +261,18 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_match(/must build on a Desert space/, @engine.turn_state)
   end
 
+  test "turn_state returns donation tile message for namespaced Nomad tile action" do
+    @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 })
+
+    assert_match(/must build on a Desert space/, @engine.turn_state)
+  end
+
+  test "turn_state includes remaining count for donation tile action" do
+    @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 2 })
+
+    assert_match(/2 remaining/, @engine.turn_state)
+  end
+
   test "turn_state includes tile option when player has an activatable tile" do
     @game.current_player.update!(tiles: [
       { "klass" => "MandatoryTile", "used" => false },
@@ -221,6 +306,139 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     assert_equal "mandatory", @game.current_action["type"]
     assert_equal 0, @game.moves.count
+  end
+
+  test "undo of select_action marks quarry tile as unused" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[5, 5]", "used" => false } ])
+
+    @engine.select_action("quarry")
+    @game.reload
+
+    # Simulate end_tile_action marking the tile used without creating a move record
+    player.reload.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[5, 5]", "used" => true } ])
+    @game.update!(current_action: { "type" => "mandatory" })
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    quarry_tile = @game.current_player.tiles.find { |t| t["klass"] == "QuarryTile" }
+    assert_equal false, quarry_tile["used"]
+  end
+
+  test "undo of donation tile build restores current_action with klass and remaining" do
+    spot = empty_hexes_of("D", 1).first
+    @game.current_player.update!(tiles: [
+      { "klass" => "DonationDesertTile", "from" => "[0, 5]", "used" => false }
+    ])
+    @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 })
+    @engine.activate_tile_build(*spot)
+    @game.reload
+    assert_equal 2, @game.current_action["remaining"]
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "donationdesert", @game.current_action["type"]
+    assert_equal "DonationDesertTile", @game.current_action["klass"]
+    assert_equal 3, @game.current_action["remaining"]
+  end
+
+  test "resettlement move deducts actual step cost from budget" do
+    # Find two Grass hexes at least 2 apart so cost > 1
+    grass_hexes = empty_hexes_of("G", 10)
+    # Find a source and a destination that are 2+ steps apart
+    from_hex = grass_hexes[0]
+    dest_hex = grass_hexes.find do |h|
+      @game.instantiate
+      dist = Tiles::Nomad::ResettlementTile.new(0).move_cost(
+        from_row: from_hex[0], from_col: from_hex[1],
+        to_row: h[0], to_col: h[1],
+        board_contents: @game.board_contents, board: @game.board,
+        player_order: @game.current_player.order
+      )
+      dist && dist >= 2
+    end
+    skip "No suitable hex pair found" unless dest_hex
+
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*from_hex, player.order)
+    @game.save
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0
+    })
+    @game.instantiate
+    expected_cost = Tiles::Nomad::ResettlementTile.new(0).move_cost(
+      from_row: from_hex[0], from_col: from_hex[1],
+      to_row: dest_hex[0], to_col: dest_hex[1],
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order
+    )
+
+    @engine.select_settlement(*from_hex)
+    @game.reload
+    @engine.move_settlement(*dest_hex)
+    @game.reload
+
+    assert_equal 4 - expected_cost, @game.current_action["budget"]
+  end
+
+  test "undo of resettlement move restores budget, vacated, moves, and from in current_action" do
+    spots = empty_hexes_of("G", 2)
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
+    # Place a settlement so there's something to move
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*spots[0], player.order)
+    @game.save
+    from_key = "[#{spots[0][0]}, #{spots[0][1]}]"
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0
+    })
+    @engine.select_settlement(*spots[0])
+    @game.reload
+    @engine.move_settlement(*spots[1])
+    @game.reload
+    assert_equal 3, @game.current_action["budget"]
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "resettlement",     @game.current_action["type"]
+    assert_equal "ResettlementTile", @game.current_action["klass"]
+    assert_equal 4,                  @game.current_action["budget"]
+    assert_equal [],                 @game.current_action["vacated"]
+    assert_equal 0,                  @game.current_action["moves"]
+    assert_equal from_key,           @game.current_action["from"]
+  end
+
+  test "undo of resettlement select_settlement restores full action without from" do
+    spots = empty_hexes_of("G", 1)
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*spots[0], player.order)
+    @game.save
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0
+    })
+    @engine.select_settlement(*spots[0])
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "resettlement",     @game.current_action["type"]
+    assert_equal "ResettlementTile", @game.current_action["klass"]
+    assert_equal 4,                  @game.current_action["budget"]
+    assert_equal [],                 @game.current_action["vacated"]
+    assert_equal 0,                  @game.current_action["moves"]
+    assert_nil                       @game.current_action["from"]
   end
 
   test "undo reverses a select_settlement: removes 'from' from current_action" do
@@ -280,6 +498,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
 
     assert_not @engine.tile_activatable?(tile)
+  end
+
+  test "tile_activatable? returns true for an unused Nomad tile (namespaced class)" do
+    tile = { "klass" => "DonationDesertTile", "from" => "[3, 5]", "used" => false }
+
+    assert @engine.tile_activatable?(tile)
   end
 
   test "PaddockTile#builds_settlement? returns false" do
@@ -455,6 +679,162 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
   end
 
+  # ── Real-time goals ─────────────────────────────────────────────────────────
+
+  # Helper: fresh game object from DB with Oasis boards and clean board_contents
+  def fresh_oasis_game(goals:, board_contents: BoardState.new, mandatory_count: 3)
+    @game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.goals = goals
+    @game.board_contents = board_contents
+    @game.mandatory_count = mandatory_count
+    @game.save!
+    Game.find(@game.id)
+  end
+
+  test "Ambassadors: scores 1 point when building adjacent to opponent settlement" do
+    # OasisBoard row 0: "DDCWWTTGGG" — (0,0)=D, (0,1)=D
+    # Place opponent at (0,0), current player builds at adjacent (0,1)
+    game = fresh_oasis_game(goals: [ "ambassadors" ])
+    opponent = game.game_players.find { |gp| gp.order != game.current_player.order }
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(0, 0, opponent.order)
+    game.save!
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game2)
+
+    engine.build_settlement(0, 1)
+
+    game2.current_player.reload
+    assert_equal 1, game2.current_player.bonus_scores&.dig("ambassadors")
+    assert game2.moves.exists?(action: "score_goal", deliberate: false)
+  end
+
+  test "Ambassadors: does not score when building with no adjacent opponent" do
+    # (0,0)=D on OasisBoard; no opponent neighbors
+    game = fresh_oasis_game(goals: [ "ambassadors" ])
+    game.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 0)
+
+    game.current_player.reload
+    assert_equal 0, game.current_player.bonus_scores&.dig("ambassadors").to_i
+  end
+
+  test "Ambassadors: does not score when goal is not active" do
+    game = fresh_oasis_game(goals: [])
+    opponent = game.game_players.find { |gp| gp.order != game.current_player.order }
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(0, 0, opponent.order)
+    game.save!
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game2)
+
+    engine.build_settlement(0, 1)
+
+    game2.current_player.reload
+    assert_equal 0, game2.current_player.bonus_scores&.dig("ambassadors").to_i
+    assert_not game2.moves.exists?(action: "score_goal")
+  end
+
+  test "Shepherds: scores 2 points when no adjacent empty same-terrain exists" do
+    # OasisBoard row 8: "WWCFWWWDDW", row 9: "WWWWWWWWWW"
+    # (9,0) even-row in-board neighbors of (9,0): (8,0)=W, (8,1)=W, (9,1)=W
+    # Fill those with player settlements so no adjacent empty W hex remains at (9,0).
+    game = fresh_oasis_game(goals: [ "shepherds" ])
+    player_order = game.current_player.order
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(8, 0, player_order)
+    game.board_contents.place_settlement(8, 1, player_order)
+    game.board_contents.place_settlement(9, 1, player_order)
+    game.save!
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "W", supply: { "settlements" => 40 })
+    engine = TurnEngine.new(game2)
+
+    engine.build_settlement(9, 0)
+
+    game2.current_player.reload
+    assert_equal 2, game2.current_player.bonus_scores&.dig("shepherds")
+  end
+
+  test "Shepherds: does not score when adjacent empty same-terrain exists" do
+    # (0,0)=D on OasisBoard; (0,1)=D is adjacent and empty
+    game = fresh_oasis_game(goals: [ "shepherds" ])
+    game.current_player.update!(hand: "D")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 0)
+
+    game.current_player.reload
+    assert_equal 0, game.current_player.bonus_scores&.dig("shepherds").to_i
+  end
+
+  test "Families: scores 2 points when 3 mandatory builds form a straight line" do
+    # OasisBoard row 0: "DDCWWTTGGG" — G at (0,7),(0,8),(0,9)
+    # Even-row E direction: (0,7)->(0,8)->(0,9) is a straight line.
+    game = fresh_oasis_game(goals: [ "families" ], mandatory_count: 3)
+    game.current_player.update!(hand: "G")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 7)
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "G")
+    engine2 = TurnEngine.new(game2)
+    engine2.build_settlement(0, 8)
+    game3 = Game.find(game.id)
+    game3.current_player.update!(hand: "G")
+    engine3 = TurnEngine.new(game3)
+    engine3.build_settlement(0, 9)
+
+    game3.current_player.reload
+    assert_equal 2, game3.current_player.bonus_scores&.dig("families")
+  end
+
+  test "Families: does not score when 3 mandatory builds do not form a straight line" do
+    # OasisBoard row 0: "DDCWWTTGGG", row 1: "DCWFFTTTGG"
+    # (0,7)=G, (0,8)=G, (1,8)=G — (1,8) is SE of (0,8), not E, so (0,7),(0,8),(1,8) is not a line.
+    game = fresh_oasis_game(goals: [ "families" ], mandatory_count: 3)
+    game.current_player.update!(hand: "G")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 7)
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "G")
+    engine2 = TurnEngine.new(game2)
+    engine2.build_settlement(0, 8)
+    game3 = Game.find(game.id)
+    game3.current_player.update!(hand: "G")
+    engine3 = TurnEngine.new(game3)
+    engine3.build_settlement(1, 8)
+
+    game3.current_player.reload
+    assert_equal 0, game3.current_player.bonus_scores&.dig("families").to_i
+  end
+
+  test "Families: does not score when goal is not active" do
+    # Same positions as the straight-line test but no families goal
+    game = fresh_oasis_game(goals: [], mandatory_count: 3)
+    game.current_player.update!(hand: "G")
+    engine = TurnEngine.new(game)
+
+    engine.build_settlement(0, 7)
+    game2 = Game.find(game.id)
+    game2.current_player.update!(hand: "G")
+    engine2 = TurnEngine.new(game2)
+    engine2.build_settlement(0, 8)
+    game3 = Game.find(game.id)
+    game3.current_player.update!(hand: "G")
+    engine3 = TurnEngine.new(game3)
+    engine3.build_settlement(0, 9)
+
+    game3.current_player.reload
+    assert_equal 0, game3.current_player.bonus_scores&.dig("families").to_i
+    assert_not game3.moves.exists?(action: "score_goal")
+  end
+
   private
 
   def find_tile_trigger_pair
@@ -468,6 +848,141 @@ class TurnEngineTest < ActiveSupport::TestCase
       end
     end
     nil
+  end
+
+  # ---------------------------------------------------------------------------
+  # activate_outpost
+  # ---------------------------------------------------------------------------
+
+  test "activate_outpost sets outpost_active, marks tile used, and logs a move" do
+    force_hand("G")
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_outpost
+    @game.reload
+
+    assert @game.current_action["outpost_active"]
+    outpost = @game.current_player.tiles.find { |t| t["klass"] == "OutpostTile" }
+    assert outpost["used"]
+    assert_equal 1, @game.moves.count
+    assert_equal "activate_outpost", @game.moves.last.action
+  end
+
+  test "buildable_cells with outpost_active returns all terrain cells, not just adjacent" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.reload
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+    @engine.activate_outpost
+    @game.reload
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    all_empty_grass = (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if @game.board_contents.empty?(r, c) && @game.board.terrain_at(r, c) == "G" } }
+    assert_equal all_empty_grass.sort, cells.sort
+  end
+
+  test "undo of activate_outpost clears outpost_active and marks tile unused" do
+    force_hand("G")
+    player = @game.current_player
+    player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_outpost
+    @game.reload
+    assert @game.current_action["outpost_active"]
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_nil @game.current_action["outpost_active"]
+    outpost = @game.current_player.tiles.find { |t| t["klass"] == "OutpostTile" }
+    assert_equal false, outpost["used"]
+    assert_equal 0, @game.moves.count
+  end
+
+  test "remove_settlement forfeits opponent tile when removed settlement was its only adjacency to tile location" do
+    @game.boards = [ [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ], [ "Tavern", 0 ] ]
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+
+    # Opponent holds a PaddockTile from location (2, 8); their settlement at (2, 7) is
+    # their only adjacency to that location — removing it should trigger forfeit
+    opponent.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 8]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.board_contents.place_tile(2, 8, "PaddockTile", 2)
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.update!(
+      boards: [ [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ], [ "Tavern", 0 ] ],
+      current_action: { "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ] }
+    )
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(2, 7)
+
+    assert_empty opponent.reload.tiles, "opponent's tile should be forfeited when their only adjacent settlement is removed"
+  end
+
+  test "turn_state with sword action tells player to select a settlement to remove" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+
+    assert_match(/select a settlement to remove/, @engine.turn_state)
+  end
+
+  test "undo of remove_settlement restores sword current_action with pending_orders" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(2, 7)
+    @game.reload
+
+    @engine.undo_last_move
+    @game.reload
+
+    assert_equal "sword", @game.current_action["type"]
+    assert_includes @game.current_action["pending_orders"], opponent.order
+  end
+
+  test "undo of remove_settlement restores sword tile as unused" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(2, 7)
+    @game.reload
+
+    @engine.undo_last_move
+    @game.reload
+
+    sword = @game.current_player.tiles.find { |t| t["klass"] == "SwordTile" }
+    assert_equal false, sword["used"], "SwordTile must be unused after undo"
   end
 
   def force_hand(terrain)

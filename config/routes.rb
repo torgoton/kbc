@@ -77,6 +77,10 @@ Rails.application.routes.draw do
       post :end_turn
       post :undo_move
       post :select_action
+      post :end_tile_action
+      post :activate_outpost
+      post :remove_settlement
+      post :place_wall
     end
   end
 

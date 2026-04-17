@@ -15,7 +15,7 @@ module Boards
       ]
     end
 
-    def raw_scoring_hexes
+    def raw_silver_hexes
       [
         { r: 5, c: 2, k: "Nomad" },
         { r: 5, c: 7, k: "Nomad" },

@@ -3,16 +3,17 @@
 #
 # Table name: game_players
 #
-#  id         :bigint           not null, primary key
-#  hand       :json
-#  order      :integer
-#  supply     :json
-#  taken_from :json
-#  tiles      :json
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  game_id    :integer          not null
-#  user_id    :integer          not null
+#  id           :bigint           not null, primary key
+#  bonus_scores :jsonb            not null
+#  hand         :json
+#  order        :integer
+#  supply       :json
+#  taken_from   :json
+#  tiles        :json
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  game_id      :integer          not null
+#  user_id      :integer          not null
 #
 # Indexes
 #

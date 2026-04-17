@@ -23,19 +23,45 @@ module Boards
       "Paddock" => Boards::PaddockBoard,
       "Tavern"  => Boards::TavernBoard,
       "Tower"   => Boards::TowerBoard,
-      "Harbor"  => Boards::HarborBoard
+      "Harbor"  => Boards::HarborBoard,
+      "Caravan" => Boards::CaravanBoard,
+      "Garden"  => Boards::GardenBoard,
+      "Quarry"  => Boards::QuarryBoard,
+      "Village" => Boards::VillageBoard
     }.freeze
 
     TILE_CLASSES = {
-      "BarnTile"    => Tiles::BarnTile,
-      "FarmTile"    => Tiles::FarmTile,
-      "OasisTile"   => Tiles::OasisTile,
-      "OracleTile"  => Tiles::OracleTile,
-      "PaddockTile" => Tiles::PaddockTile,
-      "TavernTile"  => Tiles::TavernTile,
-      "TowerTile"   => Tiles::TowerTile,
-      "HarborTile"  => Tiles::HarborTile
+      "BarnTile"             => Tiles::BarnTile,
+      "FarmTile"             => Tiles::FarmTile,
+      "OasisTile"            => Tiles::OasisTile,
+      "OracleTile"           => Tiles::OracleTile,
+      "PaddockTile"          => Tiles::PaddockTile,
+      "TavernTile"           => Tiles::TavernTile,
+      "TowerTile"            => Tiles::TowerTile,
+      "HarborTile"           => Tiles::HarborTile,
+      "CaravanTile"          => Tiles::CaravanTile,
+      "GardenTile"           => Tiles::GardenTile,
+      "QuarryTile"           => Tiles::QuarryTile,
+      "VillageTile"          => Tiles::VillageTile,
+      "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
+      "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
+      "DonationFlowerTile"   => Tiles::Nomad::DonationFlowerTile,
+      "DonationGrassTile"    => Tiles::Nomad::DonationGrassTile,
+      "DonationTimberTile"   => Tiles::Nomad::DonationTimberTile,
+      "DonationWaterTile"    => Tiles::Nomad::DonationWaterTile,
+      "DonationMountainTile" => Tiles::Nomad::DonationMountainTile,
+      "ResettlementTile"     => Tiles::Nomad::ResettlementTile,
+      "OutpostTile"          => Tiles::Nomad::OutpostTile,
+      "SwordTile"            => Tiles::Nomad::SwordTile,
+      "TreasureTile"         => Tiles::Nomad::TreasureTile
     }.freeze
+
+    NOMAD_TILE_POOL = %w[
+      DonationCanyonTile DonationDesertTile DonationFlowerTile DonationGrassTile
+      DonationTimberTile DonationWaterTile DonationMountainTile
+      ResettlementTile ResettlementTile OutpostTile OutpostTile
+      SwordTile SwordTile TreasureTile TreasureTile
+    ].freeze
 
     def initialize(game)
       @map = []
@@ -51,7 +77,9 @@ module Boards
         20.times do |col|
           next if game.board_contents.empty?(row, col)
           klass = game.board_contents.tile_klass(row, col)
-          if klass
+          if klass == "Wall"
+            @content[row][col] = Wall.new
+          elsif klass
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
             @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))
           elsif (player = game.board_contents.player_at(row, col))

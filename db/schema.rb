@@ -10,11 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_28_201539) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_10_123732) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "game_players", force: :cascade do |t|
+    t.jsonb "bonus_scores", default: {}, null: false
     t.datetime "created_at", null: false
     t.integer "game_id", null: false
     t.json "hand"
@@ -43,6 +44,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_28_201539) do
     t.integer "move_count"
     t.json "scores"
     t.string "state"
+    t.integer "stone_walls", default: 25, null: false
+    t.integer "turn_number", default: 0, null: false
     t.datetime "updated_at", null: false
     t.index ["current_player_id"], name: "index_games_on_current_player_id"
   end

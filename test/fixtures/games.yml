@@ -17,6 +17,8 @@
 #  move_count        :integer
 #  scores            :json
 #  state             :string
+#  stone_walls       :integer          default(25), not null
+#  turn_number       :integer          default(0), not null
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  current_player_id :integer

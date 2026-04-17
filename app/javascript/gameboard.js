@@ -137,7 +137,8 @@ function initBoardZoom() {
     applyTransform();
   }, { passive: false });
 
-  requestAnimationFrame(fitBoard);
+  fitBoard();
+  new ResizeObserver(fitBoard).observe(viewport);
 }
 
 // Re-mark selectable hexes after Turbo Stream updates.
@@ -153,7 +154,7 @@ function captureStreamSnapshot() {
   return {
     myTurn:    document.getElementById("my-turn-flag")?.dataset.myTurn,
     dataFrom:  document.getElementById("current-action")?.dataset.from,
-    tileCount: document.querySelector(".player-tiles")?.dataset.tileCount,
+    tileCount: [...document.querySelectorAll(".player-tiles")].reduce((sum, el) => sum + parseInt(el.dataset.tileCount ?? "0", 10), 0),
     hasEndModal: !!document.getElementById("end-game-modal")
   };
 }

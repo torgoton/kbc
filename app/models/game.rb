@@ -15,6 +15,8 @@
 #  move_count        :integer
 #  scores            :json
 #  state             :string
+#  stone_walls       :integer          default(25), not null
+#  turn_number       :integer          default(0), not null
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  current_player_id :integer
@@ -256,15 +258,22 @@ class Game < ApplicationRecord
       "mandatory_count" => mandatory_count,
       "current_action" => current_action.dup,
       "current_player_order" => current_player.order,
+      "stone_walls" => stone_walls,
+      "turn_number" => turn_number,
       "players" => game_players.map do |gp|
         { "order" => gp.order, "hand" => gp.hand,
-          "supply" => gp.supply.dup, "tiles" => (gp.tiles || []).dup }
+          "supply" => gp.supply.dup, "tiles" => (gp.tiles || []).dup,
+          "taken_from" => (gp.taken_from || []).dup }
       end
     }
   end
 
   def replayed_state
     GameReplayer.new(self).replay
+  end
+
+  def board_has_quarry?
+    board.map.any? { |s| s.location_hexes.any? { |h| h[:k] == "Quarry" } }
   end
 
   private
@@ -284,6 +293,14 @@ class Game < ApplicationRecord
         state.place_tile(row, col, "#{loc[:k]}Tile", 2)
       end
     end
+    nomad_pool = Boards::Board::NOMAD_TILE_POOL.shuffle
+    @board.map.each_with_index do |board_section, i|
+      board_section.silver_hexes.select { |h| h[:k] == "Nomad" }.each do |nomad_hex|
+        row, col = overall_location(i, nomad_hex[:r], nomad_hex[:c])
+        klass = nomad_pool.shift
+        state.place_tile(row, col, klass, 1) if klass
+      end
+    end
     update(board_contents: state)
     @board = nil # board was created before tiles were placed; reset so next instantiate is fresh
     Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
@@ -300,7 +317,7 @@ class Game < ApplicationRecord
     save
   end
 
-  OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
+  OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
 
   def select_goals
     instantiate_board
@@ -310,7 +327,7 @@ class Game < ApplicationRecord
   end
 
   def board_has_castles?
-    (0..19).any? { |r| (0..19).any? { |c| board.terrain_at(r, c) == "S" } }
+    board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
   end
 
   def populate_player_supplies

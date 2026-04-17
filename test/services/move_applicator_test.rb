@@ -156,6 +156,25 @@ class MoveApplicatorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
+  # activate_outpost
+  # ---------------------------------------------------------------------------
+
+  test "dispatch activate_outpost marks OutpostTile used and sets outpost_active" do
+    state = minimal_state(
+      "current_action" => { "type" => "mandatory" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40 },
+                       "tiles" => [ { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "activate_outpost")
+
+    MoveApplicator.dispatch(state, move)
+
+    assert state.current_action["outpost_active"]
+    outpost = state.players[0]["tiles"].find { |t| t["klass"] == "OutpostTile" }
+    assert outpost["used"]
+  end
+
+  # ---------------------------------------------------------------------------
   # select_settlement
   # ---------------------------------------------------------------------------
 

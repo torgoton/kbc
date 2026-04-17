@@ -250,6 +250,34 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span#current-action[data-type='mandatory']"
   end
 
+  test "POST action dispatches to place_wall when quarry action" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(3, 5, chris.order) }
+    game.current_action = { "type" => "quarry", "walls_placed" => 0 }
+    game.save
+    chris.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[2, 0]", "used" => false } ])
+
+    post action_game_url(game), params: { build_row: 3, build_col: 6 }
+
+    assert_equal "Wall", game.reload.board_contents.tile_klass(3, 6), "quarry action must place a wall, not a settlement"
+  end
+
+  test "POST action auto-ends quarry action when no valid walls remain after first placement" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(3, 5, chris.order) }
+    game.current_action = { "type" => "quarry", "walls_placed" => 0 }
+    game.save
+    chris.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[2, 0]", "used" => false } ])
+
+    post action_game_url(game), params: { build_row: 3, build_col: 6 }
+
+    assert_equal "mandatory", game.reload.current_action["type"], "quarry action must auto-end when no valid placements remain"
+  end
+
   test "GET new renders the new game form" do
     get new_game_url
     assert_response :success
@@ -287,6 +315,22 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post action_game_url(game), params: { build_row: 0, build_col: 1 }
 
     assert_equal chris.order, game.reload.board_contents.player_at(0, 1)
+  end
+
+  test "POST action with donation tile current_action dispatches activate_tile_build" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    # OasisBoard has Desert at [0,0]; place settlement elsewhere so fallback path is used
+    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 }
+    game.save
+    chris.tiles = [ { "klass" => "DonationDesertTile", "from" => "[0, 5]", "used" => false } ]
+    chris.save
+
+    post action_game_url(game), params: { build_row: 0, build_col: 0 }
+
+    assert_equal chris.order, game.reload.board_contents.player_at(0, 0)
   end
 
   test "GET show as turbo_stream renders without error" do

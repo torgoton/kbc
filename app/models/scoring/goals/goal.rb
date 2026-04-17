@@ -25,7 +25,7 @@ class Scoring
 
       def castle_hexes
         @castle_hexes ||= board.map.each_with_index.flat_map do |section, i|
-          section.scoring_hexes
+          section.silver_hexes
                  .select { |h| h[:k] == "Castle" }
                  .map { |h| [ i / 2 * 10 + h[:r], i % 2 * 10 + h[:c] ] }
         end

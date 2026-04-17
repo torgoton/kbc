@@ -1,2 +1,5 @@
 <div>Deck: <%= game.deck.size %> cards left</div>
 <div>Discard: <%= game.discard.size %> cards</div>
+<% if game.board_has_quarry? %>
+  <div>Stone walls: <%= game.stone_walls %> remaining</div>
+<% end %>

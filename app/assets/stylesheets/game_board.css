@@ -28,6 +28,7 @@ body.game-page {
     grid-template-areas:
         "main players-area game-log";
     grid-template-columns: 5fr 2fr 2fr;
+    grid-template-rows: 1fr;
     flex: 1;
     min-height: 0;
 }
@@ -388,6 +389,15 @@ ul li .hex:hover {
     background-position: 1px 3px;
 }
 
+.hex .terrain-nomad {
+    height: inherit;
+    width: inherit;
+    background-image: url("silver/nomad.svg");
+    background-size: 100%;
+    background-repeat: no-repeat;
+    background-position: 1px 3px;
+}
+
 .tile-container.barn {
     height: 100%;
     width: 100%;
@@ -469,6 +479,95 @@ ul li .hex:hover {
     background-position: center 75%;
 }
 
+.tile-container.caravan {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/caravan.svg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.garden {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/garden.svg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.quarry {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/quarry.svg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.village {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/village.svg");
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.outpost,
+.tile-container.resettlement,
+.tile-container.sword,
+.tile-container.treasure,
+.tile-container.donationcanyon,
+.tile-container.donationdesert,
+.tile-container.donationflower,
+.tile-container.donationgrass,
+.tile-container.donationmountain,
+.tile-container.donationtimber,
+.tile-container.donationwater {
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.outpost      { background-image: url("nomad/outpost.svg"); }
+.tile-container.resettlement { background-image: url("nomad/resettlement.svg"); }
+.tile-container.sword        { background-image: url("nomad/sword.svg"); }
+.tile-container.treasure     { background-image: url("nomad/treasure.svg"); }
+
+.tile-container.donationcanyon   { background-image: url("nomad/donationcanyon.svg"); }
+.tile-container.donationdesert   { background-image: url("nomad/donationdesert.svg"); }
+.tile-container.donationflower   { background-image: url("nomad/donationflower.svg"); }
+.tile-container.donationgrass    { background-image: url("nomad/donationgrass.svg"); }
+.tile-container.donationmountain { background-image: url("nomad/donationmountain.svg"); }
+.tile-container.donationtimber   { background-image: url("nomad/donationtimber.svg"); }
+.tile-container.donationwater    { background-image: url("nomad/donationwater.svg"); }
+
+.hex .tile-container.donationcanyon,
+.hex .tile-container.donationdesert,
+.hex .tile-container.donationflower,
+.hex .tile-container.donationgrass,
+.hex .tile-container.donationmountain,
+.hex .tile-container.donationtimber,
+.hex .tile-container.donationwater,
+.hex .tile-container.outpost,
+.hex .tile-container.resettlement {
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.hex .tile-container.donationcanyon   { background-image: url("nomad/donationcanyon.svg"); }
+.hex .tile-container.donationdesert   { background-image: url("nomad/donationdesert.svg"); }
+.hex .tile-container.donationflower   { background-image: url("nomad/donationflower.svg"); }
+.hex .tile-container.donationgrass    { background-image: url("nomad/donationgrass.svg"); }
+.hex .tile-container.donationmountain { background-image: url("nomad/donationmountain.svg"); }
+.hex .tile-container.donationtimber   { background-image: url("nomad/donationtimber.svg"); }
+.hex .tile-container.donationwater    { background-image: url("nomad/donationwater.svg"); }
+.hex .tile-container.outpost    { background-image: url("nomad/outpost.svg"); }
+.hex .tile-container.resettlement { background-image: url("nomad/resettlement.svg"); }
+
 .hex-map-image {
     background-size: 300% 450%;
     content: "";
@@ -530,6 +629,28 @@ ul li .hex:hover {
     left: 21%;
     width: 66%;
     height: 66%;
+}
+
+.hex-wall {
+    background-image: url("wall.svg");
+    background-repeat: no-repeat;
+    background-size: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.hex-mystery {
+    background-image: url("mystery.svg");
+    background-repeat: no-repeat;
+    background-size: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 }
 
 .player-0 {
@@ -686,7 +807,7 @@ ul li .hex:hover {
     font-family: monospace;
     font-weight: 600;
     margin: 8px;
-    height: 97vh;
+    height: calc(100vh - 2.5em - 16px);
 }
 
 

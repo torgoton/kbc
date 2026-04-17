@@ -1,5 +1,5 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move ]
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_settlement, :place_wall ]
 
   def new
     @game = Game.new
@@ -39,7 +39,8 @@ class GamesController < ApplicationController
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
     engine = TurnEngine.new(@game)
     action_type = @game.current_action["type"]
-    tile_klass = "Tiles::#{action_type.capitalize}Tile".safe_constantize if action_type != "mandatory"
+    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
+    tile_klass = Tiles::Tile.for_klass(klass_name) if action_type != "mandatory"
     tile_obj = tile_klass&.new(0)
     if tile_obj&.moves_settlement?
       if @game.current_action["from"]
@@ -47,6 +48,10 @@ class GamesController < ApplicationController
       else
         engine.select_settlement(coord.row, coord.col)
       end
+    elsif tile_obj&.sword_tile?
+      engine.remove_settlement(coord.row, coord.col)
+    elsif tile_obj&.places_wall?
+      engine.place_wall(coord.row, coord.col)
     elsif tile_obj&.builds_settlement?
       engine.activate_tile_build(coord.row, coord.col)
     else
@@ -109,6 +114,52 @@ class GamesController < ApplicationController
     engine.undo_last_move if engine.undo_allowed?
     respond_to do |format|
       format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def end_tile_action
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    TurnEngine.new(@game).end_tile_action
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def activate_outpost
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    TurnEngine.new(@game).activate_outpost
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def remove_settlement
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
+    TurnEngine.new(@game).remove_settlement(coord.row, coord.col)
+    respond_to do |format|
+      format.html { head :no_content }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def place_wall
+    current_gp = @game.game_players.find_by(player: Current.user)
+    return unless current_gp == @game.current_player
+    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
+    TurnEngine.new(@game).place_wall(coord.row, coord.col)
+    respond_to do |format|
+      format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
     @game.broadcast_game_update
