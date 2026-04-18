@@ -27,6 +27,26 @@
 #  fk_rails_...  (game_player_id => game_players.id)
 #
 class Move < ApplicationRecord
+  SOUNDS = {
+    "build"             => "build",
+    "select_settlement" => "select_settlement",
+    "move_settlement"   => "move",
+    "pick_up_tile"      => "tile_pickup",
+    "forfeit_tile"      => "tile_forfeit",
+    "end_turn"          => "end_turn",
+    "end_game"          => "game_end",
+    "remove_settlement" => "removed",
+    "activate_outpost"  => "outpost",
+    "place_wall"        => "wall"
+  }.freeze
+
   belongs_to :game
   belongs_to :game_player
+
+  private
+
+  def sound_key
+    return SOUNDS[action] if SOUNDS.key?(action)
+    payload["klass"].delete_suffix("Tile").downcase if action == "select_action" && payload&.dig("klass")
+  end
 end
