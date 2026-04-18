@@ -138,6 +138,10 @@ function initBoardZoom() {
   }, { passive: false });
 
   fitBoard();
+  // On first load (especially via Turbo nav), the sync fitBoard call above
+  // can read viewport dimensions before layout has fully settled. Re-fit
+  // after the next frame to pick up correct measurements.
+  requestAnimationFrame(fitBoard);
   new ResizeObserver(fitBoard).observe(viewport);
 }
 
