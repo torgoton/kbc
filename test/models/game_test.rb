@@ -1116,6 +1116,24 @@ class GameTest < ActiveSupport::TestCase
     end
   end
 
+  test "broadcast_sound emits a play_sound turbo stream to the game channel" do
+    game = games(:game2player)
+    broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}") do
+      game.broadcast_sound("undo")
+    end
+    assert broadcasts.any? { |b| b.to_s.include?(%(action="play_sound")) && b.to_s.include?(%(key="undo")) },
+      "expected a play_sound[key=undo] broadcast, got: #{broadcasts.inspect}"
+  end
+
+  test "broadcast_sound refuses keys containing HTML-hostile characters" do
+    game = games(:game2player)
+    [%(a"b), "a<b", "a>b", "a/b", "a b", "a\nb", "a.b", "a1b", ""].each do |hostile|
+      assert_no_turbo_stream_broadcasts("game_#{game.id}") do
+        game.broadcast_sound(hostile)
+      end
+    end
+  end
+
   private
 
   def new_started_game

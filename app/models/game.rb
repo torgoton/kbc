@@ -268,6 +268,16 @@ class Game < ApplicationRecord
     }
   end
 
+  SOUND_KEY_FORMAT = /\A[a-z_]+\z/
+
+  def broadcast_sound(key)
+    return unless key&.match?(SOUND_KEY_FORMAT)
+    Turbo::StreamsChannel.broadcast_render_to(
+      "game_#{id}",
+      inline: %(<turbo-stream action="play_sound" key="#{key}"></turbo-stream>)
+    )
+  end
+
   def replayed_state
     GameReplayer.new(self).replay
   end

@@ -405,6 +405,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal move_count_before, game.moves.count
   end
 
+  test "undo_move broadcasts the undo play_sound turbo stream" do
+    game = games(:game2player)
+    broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}") do
+      post undo_move_game_url(game)
+    end
+    assert broadcasts.any? { |b| b.to_s.include?(%(action="play_sound")) && b.to_s.include?(%(key="undo")) },
+      "expected a play_sound[key=undo] broadcast, got: #{broadcasts.inspect}"
+  end
+
   test "POST create broadcasts dashboard update to non-participating users" do
     paula = users(:paula)
 

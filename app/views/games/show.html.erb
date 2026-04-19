@@ -5,9 +5,6 @@
 <% if game.state == "completed" %>
   <%= render "games/end_game_modal", game:, scores: game.scores %>
 <% end %>
-<div id="sound-config"
-     data-sound-preload="<%= sound_preload_keys(game).to_json %>"
-     data-sound-paths="<%= sound_asset_paths(sound_preload_keys(game)).to_json %>"
-     hidden></div>
+<div id="sound-config" data-sound-paths="<%= sound_paths.to_json %>" hidden></div>
 <%= javascript_include_tag "sound" %>
 <%= javascript_include_tag "gameboard" %>
