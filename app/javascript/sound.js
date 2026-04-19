@@ -1,14 +1,13 @@
 // sound.js — loaded as a classic script before gameboard.js
-// Exposes SoundManager as a global accessible to gameboard.js.
+// Exposes SoundManager as a global and registers the play_sound Turbo Stream action.
 var SoundManager = (() => {
   const MUTE_KEY   = "kbc_muted";
   const VOLUME_KEY = "kbc_volume";
 
-  let sounds        = {};   // { key: HTMLAudioElement }
-  let muted         = false;
-  let volume        = 1.0;
-  let ready         = false;
-  let lastPlayed    = null; // track most recently started audio
+  let sounds = {};
+  let muted  = false;
+  let volume = 1.0;
+  let ready  = false;
 
   function applyVolume(audio) {
     audio.volume = muted ? 0 : volume;
@@ -25,12 +24,9 @@ var SoundManager = (() => {
     const config = document.getElementById("sound-config");
     if (!config) return;
 
-    const keys  = JSON.parse(config.dataset.soundPreload || "[]");
-    const paths = JSON.parse(config.dataset.soundPaths   || "{}");
-
-    keys.forEach(k => {
-      if (!paths[k]) return;   // file not yet recorded
-      const audio = new Audio(paths[k]);
+    const paths = JSON.parse(config.dataset.soundPaths || "{}");
+    Object.entries(paths).forEach(([k, p]) => {
+      const audio = new Audio(p);
       audio.preload = "auto";
       sounds[k] = audio;
     });
@@ -39,9 +35,7 @@ var SoundManager = (() => {
     muted  = localStorage.getItem(MUTE_KEY) === "true";
     applyVolumeAll();
 
-    // Unlock audio for browsers that block autoplay until user interaction.
-    // On first gesture, silently play every loaded element so that
-    // stream-triggered sounds (e.g. my_turn) are allowed to play later.
+    // Unlock audio on first user gesture (autoplay policy).
     const unlock = () => {
       Object.values(sounds).forEach(audio => {
         audio.volume = 0;
@@ -60,18 +54,7 @@ var SoundManager = (() => {
     if (!audio) return;
     audio.currentTime = 0;
     applyVolume(audio);
-    audio.play().catch(() => {});   // ignore autoplay policy errors
-    lastPlayed = audio;
-  }
-
-  // Play name after the most recently started sound finishes.
-  // Falls through to play() immediately if nothing is currently playing.
-  function playAfterLast(name) {
-    if (lastPlayed && !lastPlayed.ended && !lastPlayed.paused) {
-      lastPlayed.addEventListener("ended", () => play(name), { once: true });
-    } else {
-      play(name);
-    }
+    audio.play().catch(() => {});
   }
 
   function setVolume(v) {
@@ -87,8 +70,13 @@ var SoundManager = (() => {
     return muted;
   }
 
-  function isMuted() { return muted; }
-  function getVolume() { return volume; }
-
-  return { init, play, playAfterLast, setVolume, toggleMute, isMuted, getVolume };
+  return {
+    init, play, setVolume, toggleMute,
+    isMuted: () => muted,
+    getVolume: () => volume
+  };
 })();
+
+Turbo.StreamActions.play_sound = function () {
+  SoundManager.play(this.getAttribute("key"));
+};
