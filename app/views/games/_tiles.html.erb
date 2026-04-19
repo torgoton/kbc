@@ -1,6 +1,6 @@
 <% regular_tiles, nomad_tiles = (player.tiles || []).partition { |t| !Tiles::Tile.for_klass(t["klass"])&.new(0)&.nomad_tile? } %>
 
-<div class="player-tiles" data-tile-count="<%= regular_tiles.size %>">
+<div class="player-tiles">
   <% marked_active_type = nil %>
   <% regular_tiles.each do |tile| %>
     <% next unless Tiles::Tile.for_klass(tile["klass"]) %>
@@ -26,7 +26,7 @@
 </div>
 
 <% if nomad_tiles.any? %>
-  <div class="player-tiles nomad-tiles" data-tile-count="<%= nomad_tiles.size %>">
+  <div class="player-tiles nomad-tiles">
     <% nomad_tiles.each do |tile| %>
       <% next unless (tile_klass = Tiles::Tile.for_klass(tile["klass"])) %>
       <% tile_obj = tile_klass.new(0) %>
