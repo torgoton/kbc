@@ -238,33 +238,71 @@ git commit -m "Broadcast play_sound Turbo Stream on Move create"
 ### Task 3: Add `Game#broadcast_sound` for non-Move sounds
 
 **Files:**
+- Modify: `app/models/move.rb` (extract shared regex constant)
 - Modify: `app/models/game.rb`
 - Test: `test/models/game_test.rb`
 
-- [ ] **Step 1: Write failing test**
+Task 2 introduced an inline `/\A[a-z_]+\z/` guard in `Move#broadcast_sound` to prevent HTML injection via the `key` attribute. `Game#broadcast_sound` will broadcast through the same inline-HTML path with a caller-supplied key and must carry the same guard. To keep the guard from drifting, extract the regex into a `SOUND_KEY_FORMAT` constant on `Move` and reference it from both sites.
+
+- [ ] **Step 1: Extract `SOUND_KEY_FORMAT` on `Move`**
+
+In `app/models/move.rb`, directly after the `SOUNDS = { ... }.freeze` constant, add:
+
+```ruby
+  SOUND_KEY_FORMAT = /\A[a-z_]+\z/
+```
+
+Change the guard in `broadcast_sound` from:
+
+```ruby
+    return unless key&.match?(/\A[a-z_]+\z/)
+```
+
+to:
+
+```ruby
+    return unless key&.match?(SOUND_KEY_FORMAT)
+```
+
+Run: `bin/rails test test/models/move_test.rb`
+Expected: 6 runs, 0 failures (no behavior change).
+
+- [ ] **Step 2: Write failing tests for `Game#broadcast_sound`**
 
 Append to `test/models/game_test.rb` before the final `private` block (around line 1117):
 
 ```ruby
   test "broadcast_sound emits a play_sound turbo stream to the game channel" do
     game = games(:game2player)
-    assert_turbo_stream_broadcasts("game_#{game.id}") do
+    broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}") do
       game.broadcast_sound("undo")
+    end
+    assert broadcasts.any? { |b| b.include?(%(action="play_sound")) && b.include?(%(key="undo")) },
+      "expected a play_sound[key=undo] broadcast, got: #{broadcasts.inspect}"
+  end
+
+  test "broadcast_sound refuses to broadcast a malicious key" do
+    game = games(:game2player)
+    assert_no_turbo_stream_broadcasts("game_#{game.id}") do
+      game.broadcast_sound(%(foo"><script>alert(1)</script><x))
     end
   end
 ```
 
-- [ ] **Step 2: Run test and verify failure**
+If `test/models/game_test.rb` doesn't already have `include Turbo::Broadcastable::TestHelper` and `require "turbo/broadcastable/test_helper"`, verify by reading the file header — the existing `assert_turbo_stream_broadcasts` usage around line 1079 implies the setup is already in place; if not, add the require and include.
 
-Run: `bin/rails test test/models/game_test.rb -n test_broadcast_sound_emits_a_play_sound_turbo_stream_to_the_game_channel`
+- [ ] **Step 3: Run tests and verify failure**
+
+Run: `bin/rails test test/models/game_test.rb -n /broadcast_sound/`
 Expected: FAIL with `NoMethodError: undefined method 'broadcast_sound'`.
 
-- [ ] **Step 3: Add the method**
+- [ ] **Step 4: Add the method**
 
 In `app/models/game.rb`, inside the `Game` class (next to `broadcast_game_update`, still in public methods), add:
 
 ```ruby
   def broadcast_sound(key)
+    return unless key&.match?(Move::SOUND_KEY_FORMAT)
     Turbo::StreamsChannel.broadcast_render_to(
       "game_#{id}",
       inline: %(<turbo-stream action="play_sound" key="#{key}"></turbo-stream>)
@@ -272,16 +310,19 @@ In `app/models/game.rb`, inside the `Game` class (next to `broadcast_game_update
   end
 ```
 
-- [ ] **Step 4: Run test to verify pass**
+- [ ] **Step 5: Run tests to verify pass**
 
-Run: `bin/rails test test/models/game_test.rb -n test_broadcast_sound_emits_a_play_sound_turbo_stream_to_the_game_channel`
+Run: `bin/rails test test/models/game_test.rb -n /broadcast_sound/`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+Run: `bin/rails test`
+Expected: green.
+
+- [ ] **Step 6: Commit**
 
 ```bash
-git add app/models/game.rb test/models/game_test.rb
-git commit -m "Add Game#broadcast_sound"
+git add app/models/move.rb app/models/game.rb test/models/game_test.rb
+git commit -m "Add Game#broadcast_sound with shared key-sanitization guard"
 ```
 
 ---
