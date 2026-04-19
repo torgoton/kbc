@@ -40,8 +40,6 @@ class Move < ApplicationRecord
     "place_wall"        => "wall"
   }.freeze
 
-  SOUND_KEY_FORMAT = /\A[a-z_]+\z/
-
   belongs_to :game
   belongs_to :game_player
 
@@ -50,12 +48,7 @@ class Move < ApplicationRecord
   private
 
   def broadcast_sound
-    key = sound_key
-    return unless key&.match?(SOUND_KEY_FORMAT)
-    Turbo::StreamsChannel.broadcast_render_to(
-      "game_#{game_id}",
-      inline: %(<turbo-stream action="play_sound" key="#{key}"></turbo-stream>)
-    )
+    game.broadcast_sound(sound_key)
   end
 
   def sound_key

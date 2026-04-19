@@ -77,6 +77,10 @@ var SoundManager = (() => {
   };
 })();
 
-Turbo.StreamActions.play_sound = function () {
-  SoundManager.play(this.getAttribute("key"));
-};
+// Register once Turbo is loaded — sound.js is a classic body script but Turbo
+// loads from importmap modules, which execute after classic scripts parse.
+document.addEventListener("turbo:load", () => {
+  Turbo.StreamActions.play_sound = function () {
+    SoundManager.play(this.getAttribute("key"));
+  };
+}, { once: true });
