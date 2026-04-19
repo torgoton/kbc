@@ -49,7 +49,7 @@ class Move < ApplicationRecord
 
   def broadcast_sound
     key = sound_key
-    return unless key
+    return unless key&.match?(/\A[a-z_]+\z/)
     Turbo::StreamsChannel.broadcast_render_to(
       "game_#{game_id}",
       inline: %(<turbo-stream action="play_sound" key="#{key}"></turbo-stream>)

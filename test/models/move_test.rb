@@ -56,4 +56,17 @@ class MoveTest < ActiveSupport::TestCase
       game.moves.create!(game_player: gp, action: "score_goal", order: 2)
     end
   end
+
+  test "creating a Move with a malicious select_action payload does not broadcast" do
+    game = games(:game2player)
+    gp = game_players(:chris)
+    assert_no_turbo_stream_broadcasts("game_#{game.id}") do
+      game.moves.create!(
+        game_player: gp,
+        action: "select_action",
+        payload: { "klass" => "Foo\"><script>alert(1)</script><xTile" },
+        order: 3
+      )
+    end
+  end
 end
