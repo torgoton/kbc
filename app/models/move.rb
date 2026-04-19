@@ -43,7 +43,18 @@ class Move < ApplicationRecord
   belongs_to :game
   belongs_to :game_player
 
+  after_create_commit :broadcast_sound
+
   private
+
+  def broadcast_sound
+    key = sound_key
+    return unless key
+    Turbo::StreamsChannel.broadcast_render_to(
+      "game_#{game_id}",
+      inline: %(<turbo-stream action="play_sound" key="#{key}"></turbo-stream>)
+    )
+  end
 
   def sound_key
     return SOUNDS[action] if SOUNDS.key?(action)

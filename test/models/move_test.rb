@@ -1,6 +1,8 @@
 require "test_helper"
+require "turbo/broadcastable/test_helper"
 
 class MoveTest < ActiveSupport::TestCase
+  include Turbo::Broadcastable::TestHelper
   def build_move(action:, payload: nil)
     game = games(:game2player)
     gp = game_players(:chris)
@@ -37,5 +39,21 @@ class MoveTest < ActiveSupport::TestCase
     assert_nil build_move(action: "score_goal").send(:sound_key)
     assert_nil build_move(action: "select_action").send(:sound_key)
     assert_nil build_move(action: "select_action", payload: {}).send(:sound_key)
+  end
+
+  test "creating a Move broadcasts a play_sound turbo stream with the mapped key" do
+    game = games(:game2player)
+    gp = game_players(:chris)
+    assert_turbo_stream_broadcasts("game_#{game.id}") do
+      game.moves.create!(game_player: gp, action: "build", order: 1)
+    end
+  end
+
+  test "creating a Move with unmapped action does not broadcast" do
+    game = games(:game2player)
+    gp = game_players(:chris)
+    assert_no_turbo_stream_broadcasts("game_#{game.id}") do
+      game.moves.create!(game_player: gp, action: "score_goal", order: 2)
+    end
   end
 end
