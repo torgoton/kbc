@@ -116,6 +116,7 @@ class GamesController < ApplicationController
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
     end
+    @game.broadcast_sound("undo")
     @game.broadcast_game_update
   end
 
