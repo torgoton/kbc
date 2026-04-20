@@ -328,7 +328,11 @@ class Game < ApplicationRecord
   end
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
+<<<<<<< crossroads-tasks
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
+=======
+  TASKS = %w[fortress home_country].freeze
+>>>>>>> main
 
   def select_goals
     instantiate_board
