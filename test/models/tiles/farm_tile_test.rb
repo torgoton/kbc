@@ -9,7 +9,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
   def setup_board
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(14, 0, chris.order) }
     yield state if block_given?
     game.board_contents = state
@@ -43,7 +43,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
   test "valid_destinations falls back to any empty Grass when no adjacent Grass exists" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     # Settlement at (12,0) = C terrain; all neighbors are C/D — no adjacent Grass
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(12, 0, chris.order) }
     game.save
@@ -75,7 +75,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     ]
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       grass_hexes.each { |r, c| s.place_settlement(r, c, 1) }
       s.place_settlement(12, 0, chris.order)
@@ -120,7 +120,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     ]
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       grass_hexes.each { |r, c| s.place_settlement(r, c, 1) }
       s.place_settlement(12, 0, chris.order)

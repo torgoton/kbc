@@ -178,7 +178,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "build_settlement returns 'Not avilalable' when location not adjacent to existing settlements" do
     # Place a settlement at a Canyon hex in Tavern board, then try to build
     # at a far-away Canyon hex that cannot be adjacent
-    @game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
+    @game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 1, 0 ], [ 0, 0 ] ]
     @game.save
     @game.instantiate
     player = @game.current_player
@@ -199,7 +199,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "build_settlement uses neighbor adjacency when player has an existing settlement" do
     # Place a settlement at a Canyon hex, then build on an adjacent Canyon hex
     # Tavern board has Canyon at (0,7) and (0,8) — pin it to quadrant 0
-    @game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
+    @game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 1, 0 ], [ 0, 0 ] ]
     @game.save
     @game.instantiate
     player = @game.current_player
@@ -582,7 +582,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "buildable_cells for barn without from returns selectable settlements" do
-    @game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "barn" }, mandatory_count: 0)
     @game.current_player.update!(
       hand: "F",
@@ -603,7 +603,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "move_settlement for barn action marks BarnTile used" do
-    @game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "barn", "from" => "[0, 0]" })
     @game.current_player.update!(
       hand: "F",
@@ -625,7 +625,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "buildable_cells for barn with from returns matching terrain destinations" do
-    @game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "barn", "from" => "[0, 0]" }, mandatory_count: 0)
     @game.current_player.update!(
       hand: "F",
@@ -661,7 +661,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "buildable_cells for oracle action returns hand-terrain hexes" do
-    @game.boards = [ [ "Oracle", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 0)
     @game.current_player.update!(
       hand: "G",
@@ -683,7 +683,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   # Helper: fresh game object from DB with Oasis boards and clean board_contents
   def fresh_oasis_game(goals:, board_contents: BoardState.new, mandatory_count: 3)
-    @game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.goals = goals
     @game.board_contents = board_contents
     @game.mandatory_count = mandatory_count
@@ -912,7 +912,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "remove_settlement forfeits opponent tile when removed settlement was its only adjacency to tile location" do
-    @game.boards = [ [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ], [ "Tavern", 0 ] ]
+    @game.boards = [ [ 5, 0 ], [ 0, 0 ], [ 1, 0 ], [ 4, 0 ] ]
     opponent = @game.game_players.find { |gp| gp != @game.current_player }
 
     # Opponent holds a PaddockTile from location (2, 8); their settlement at (2, 7) is
@@ -923,7 +923,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.board_contents.place_tile(2, 8, "PaddockTile", 2)
     @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
     @game.update!(
-      boards: [ [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ], [ "Tavern", 0 ] ],
+      boards: [ [ 5, 0 ], [ 0, 0 ], [ 1, 0 ], [ 4, 0 ] ],
       current_action: { "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ] }
     )
     @game.save!

@@ -289,7 +289,7 @@ class Game < ApplicationRecord
   private
 
   def select_boards
-    self.boards = Boards::Board::BOARD_CLASSES.keys.sample(4).map { |name| [ name, rand(2) ] }
+    self.boards = (0...Boards::BoardSection::SECTIONS.size).to_a.sample(4).map { |id| [ id, rand(2) ] }
     save
   end
 

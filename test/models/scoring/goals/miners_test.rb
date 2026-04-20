@@ -8,7 +8,7 @@ class Scoring::Goals::MinersTest < Scoring::Goals::GoalTestCase
   # Neighbors of global (0,13) [even row]: (0,12),(0,14),(1,12),(1,13) — (0,14) is M → qualifies
   # Neighbors of global (0,14) [even row]: (0,13),(0,15),(1,13),(1,14) — (0,15) is M → on M, does not score
 
-  TOWER_BOARDS = [ [ "Oasis", 0 ], [ "Tower", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+  TOWER_BOARDS = [ [ 1, 0 ], [ 3, 0 ], [ 0, 0 ], [ 4, 0 ] ]
 
   def build_tower_game(chris_settlements: [], paula_settlements: [])
     build_game(chris_settlements: chris_settlements, paula_settlements: paula_settlements,

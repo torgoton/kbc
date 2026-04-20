@@ -9,7 +9,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   def setup_board
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ] ]
+    game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 1, 0 ], [ 0, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 14, chris.order) }
     yield state if block_given?
     game.board_contents = state

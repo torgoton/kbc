@@ -126,7 +126,7 @@ class GameReplayerTest < ActiveSupport::TestCase
   test "replayed_state matches current state after select_action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.save
     chris.tiles = [ { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false } ]
     chris.save
@@ -230,7 +230,7 @@ class GameReplayerTest < ActiveSupport::TestCase
   # base_snapshot already captured.
   def game_with_known_state
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", 2) }
     game.deck = [ "T", "G", "C", "D", "F" ]
     game.discard = []

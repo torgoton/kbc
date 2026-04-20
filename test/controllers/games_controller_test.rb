@@ -96,7 +96,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action dispatches to move_settlement when harbor action has from set" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Harbor", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 7, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
     game.save
@@ -111,7 +111,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action dispatches to activate_tile_build when tower action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Tower", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 3, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "tower" }
     game.save
@@ -143,7 +143,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "POST action does nothing when the requesting player is not the current player" do
     game = games(:game2player)
-    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
+    game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 0, 0 ], [ 1, 0 ] ]
     game.board_contents = BoardState.new
     game.mandatory_count = 3
     game.save
@@ -196,7 +196,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "game show renders a button for an activatable PaddockTile" do
     game = games(:game2player)
-    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 5, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
     game.board_contents = state
     game.save!
@@ -214,7 +214,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "game show does not render tile action buttons when it is not the viewer's turn" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.mandatory_count = 0
     game.save
     paula = game_players(:paula)
@@ -253,7 +253,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action dispatches to place_wall when quarry action" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
+    game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 0, 0 ], [ 1, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(3, 5, chris.order) }
     game.current_action = { "type" => "quarry", "walls_placed" => 0 }
     game.save
@@ -267,7 +267,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action auto-ends quarry action when no valid walls remain after first placement" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Tavern", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Oasis", 0 ] ]
+    game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 0, 0 ], [ 1, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(3, 5, chris.order) }
     game.current_action = { "type" => "quarry", "walls_placed" => 0 }
     game.save
@@ -292,7 +292,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "POST action with mandatory current_action dispatches build_settlement" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new
     game.current_action = { "type" => "mandatory" }
     game.save
@@ -305,7 +305,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action with oasis current_action dispatches activate_tile_build" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
     game.current_action = { "type" => "oasis" }
     game.save
@@ -321,7 +321,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game = games(:game2player)
     chris = game_players(:chris)
     # OasisBoard has Desert at [0,0]; place settlement elsewhere so fallback path is used
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 }
     game.save

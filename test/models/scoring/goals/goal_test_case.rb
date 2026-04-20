@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Scoring::Goals::GoalTestCase < ActiveSupport::TestCase
-  BOARDS = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+  BOARDS = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
 
   def build_game(chris_settlements: [], paula_settlements: [], goals: [], boards: BOARDS)
     game = games(:game2player)

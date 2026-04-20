@@ -15,21 +15,6 @@ module Boards
       "L" => "Location"
     }
 
-    BOARD_CLASSES = {
-      "Barn"    => Boards::BarnBoard,
-      "Farm"    => Boards::FarmBoard,
-      "Oasis"   => Boards::OasisBoard,
-      "Oracle"  => Boards::OracleBoard,
-      "Paddock" => Boards::PaddockBoard,
-      "Tavern"  => Boards::TavernBoard,
-      "Tower"   => Boards::TowerBoard,
-      "Harbor"  => Boards::HarborBoard,
-      "Caravan" => Boards::CaravanBoard,
-      "Garden"  => Boards::GardenBoard,
-      "Quarry"  => Boards::QuarryBoard,
-      "Village" => Boards::VillageBoard
-    }.freeze
-
     TILE_CLASSES = {
       "BarnTile"             => Tiles::BarnTile,
       "FarmTile"             => Tiles::FarmTile,
@@ -66,8 +51,7 @@ module Boards
     def initialize(game)
       @map = []
       game.boards.each do |section|
-        board_class = BOARD_CLASSES.fetch(section[0]) { raise ArgumentError, "Unknown board type: #{section[0]}" }
-        @map << board_class.new(section[1])
+        @map << BoardSection.new(section[0], section[1])
       end
       # This fills in the in-memory content of the board from board_contents, which is the source of
       # truth for what's on the board. We need to do this to properly instantiate tile objects with

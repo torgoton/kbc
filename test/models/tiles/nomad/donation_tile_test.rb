@@ -16,7 +16,7 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     @chris = game_players(:chris)
   end
 
-  def setup_board_with_settlement(row, col, boards: [ [ "Quarry", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ])
+  def setup_board_with_settlement(row, col, boards: [ [ 10, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ])
     @game.boards = boards
     state = BoardState.new.tap { |s| s.place_settlement(row, col, @chris.order) }
     yield state if block_given?

@@ -9,7 +9,7 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
   def setup_board
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
     yield state if block_given?
     game.board_contents = state
@@ -42,7 +42,7 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
   test "valid_destinations falls back to any empty Desert when no adjacent Desert exists" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     # Settlement at (4,0): all neighbors are W terrain
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(4, 0, chris.order) }
     game.save
@@ -71,7 +71,7 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
     ]
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       desert_hexes.each { |r, c| s.place_settlement(r, c, 1) }
       s.place_settlement(4, 0, chris.order)
@@ -116,7 +116,7 @@ class Tiles::OasisTileTest < ActiveSupport::TestCase
     ]
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       desert_hexes.each { |r, c| s.place_settlement(r, c, 1) }
       s.place_settlement(4, 0, chris.order)
