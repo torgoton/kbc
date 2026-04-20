@@ -4,7 +4,7 @@
         <% @game.goals.each do |key| %>
             <li class="goal-item">
                 <span class="goal-name"><%= key.upcase %> <span class="goal-signifier">⊕</span></span>
-                <div class="goal-tooltip"><%= Scoring::GOAL_CLASSES[key]::DESCRIPTION %></div>
+                <div class="goal-tooltip"><%= Scoring::SCORER_CLASSES[key]::DESCRIPTION %></div>
             </li>
         <% end %>
     </ul>
