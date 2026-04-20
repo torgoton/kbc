@@ -16,8 +16,12 @@ class Scoring
   }.freeze
 
   TASK_CLASSES = {
-    "fortress"     => Scoring::Tasks::Fortress,
-    "home_country" => Scoring::Tasks::HomeCountry
+    "advance"        => Scoring::Tasks::Advance,
+    "compass_points" => Scoring::Tasks::CompassPoints,
+    "fortress"       => Scoring::Tasks::Fortress,
+    "home_country"   => Scoring::Tasks::HomeCountry,
+    "place_of_refuge" => Scoring::Tasks::PlaceOfRefuge,
+    "road"           => Scoring::Tasks::Road
   }.freeze
 
   SCORER_CLASSES = GOAL_CLASSES.merge(TASK_CLASSES).freeze
