@@ -15,10 +15,16 @@ class Scoring
     "workers"     => Scoring::Goals::Workers
   }.freeze
 
+  TASK_CLASSES = {
+    "home_country" => Scoring::Tasks::HomeCountry
+  }.freeze
+
+  SCORER_CLASSES = GOAL_CLASSES.merge(TASK_CLASSES).freeze
+
   def initialize(game)
     @game = game
     @game.instantiate
-    @goals = Array(@game.goals).map { |k| GOAL_CLASSES.fetch(k).new(@game) }
+    @scorers = Array(@game.goals).map { |k| SCORER_CLASSES.fetch(k).new(@game) }
   end
 
   def compute
@@ -28,15 +34,15 @@ class Scoring
   end
 
   def score_for(game_player)
-    goal_keys = @goals.map { |g| GOAL_CLASSES.key(g.class) }.to_set
-    h = @goals.each_with_object({ "total" => 0 }) do |goal, acc|
-      key = GOAL_CLASSES.key(goal.class)
-      result = goal.score_for(game_player)
+    scorer_keys = @scorers.map { |s| SCORER_CLASSES.key(s.class) }.to_set
+    h = @scorers.each_with_object({ "total" => 0 }) do |scorer, acc|
+      key = SCORER_CLASSES.key(scorer.class)
+      result = scorer.score_for(game_player)
       acc[key] = result
       acc["total"] += result[:score]
     end
     (game_player.bonus_scores || {}).each do |key, score|
-      next if goal_keys.include?(key)
+      next if scorer_keys.include?(key)
       h[key] = { score: score }
       h["total"] += score
     end
