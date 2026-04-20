@@ -16,6 +16,7 @@ class Scoring
   }.freeze
 
   TASK_CLASSES = {
+    "fortress"     => Scoring::Tasks::Fortress,
     "home_country" => Scoring::Tasks::HomeCountry
   }.freeze
 
