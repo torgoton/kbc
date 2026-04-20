@@ -1,7 +1,7 @@
 class Scoring
   module Tasks
     class HomeCountry < Task
-      DESCRIPTION = "5 points if you control a complete terrain area (every hex of a connected same-terrain region occupied by your settlements)."
+      DESCRIPTION = "5 points if you control a complete terrain area."
       POINTS = 5
 
       def arrangement_met?(game_player)
