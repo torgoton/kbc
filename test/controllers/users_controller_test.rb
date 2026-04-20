@@ -89,5 +89,4 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     user = User.find_by(handle: "Barney")
     assert_not user.approved
   end
-
 end

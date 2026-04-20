@@ -1127,7 +1127,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "broadcast_sound refuses keys containing HTML-hostile characters" do
     game = games(:game2player)
-    [%(a"b), "a<b", "a>b", "a/b", "a b", "a\nb", "a.b", "a1b", ""].each do |hostile|
+    [ %(a"b), "a<b", "a>b", "a/b", "a b", "a\nb", "a.b", "a1b", "" ].each do |hostile|
       assert_no_turbo_stream_broadcasts("game_#{game.id}") do
         game.broadcast_sound(hostile)
       end
