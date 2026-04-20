@@ -18,7 +18,7 @@ class ScoringTest < ActiveSupport::TestCase
   # Neighbors of castle (7,1) [odd row]: (7,0),(7,2),(6,1),(6,2),(8,1),(8,2)
   # Neighbors of castle (7,15)[odd row]: (7,14),(7,16),(6,15),(6,16),(8,15),(8,16)
 
-  BOARDS = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+  BOARDS = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
 
   def build_game(chris_settlements: [], paula_settlements: [], goals: [])
     game = games(:game2player)

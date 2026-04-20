@@ -39,7 +39,7 @@ Hex adjacency uses offset-coordinate rules: even rows and odd rows have differen
 
 All mutable game state lives in `Game` (AR model) as JSON columns:
 - `board_contents` — hash keyed by `"[row, col]"` strings, values are `{klass:, qty:}` for tiles or `{klass: "Settlement", player: order}` for settlements
-- `boards` — array of `[board_name, rotation]` pairs
+- `boards` — array of `[section_id, rotation]` pairs (section_id indexes into `Boards::BoardSection::SECTIONS`)
 - `deck`/`discard` — terrain card strings (`"C"`, `"D"`, `"F"`, `"G"`, `"T"`)
 - `goals`, `scores`, `current_action` — JSON
 
@@ -51,7 +51,7 @@ Per-player state lives in `GamePlayer`: `hand` (terrain card), `supply` (settlem
 
 ### Board Sections (`app/models/boards/`)
 
-Each board section inherits from `BoardSection`. They define the hex layout via `terrain_at(row, col)` and expose `location_hexes` (positions where tiles spawn).
+All board sections are instances of `Boards::BoardSection`. Layouts (map, silver hexes, location hexes) live in the `BoardSection::SECTIONS` array, indexed by integer id. Each section exposes `terrain_at(row, col)` and `location_hexes` (positions where tiles spawn).
 
 ### Tiles (`app/models/tiles/`)
 

@@ -17,7 +17,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
   def setup_board
     game = games(:game2player)
     @chris = game_players(:chris)
-    game.boards = [ [ "Village", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 11, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new
     yield state if block_given?
     game.board_contents = state

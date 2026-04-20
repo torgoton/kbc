@@ -16,7 +16,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
 
   def game_with_boards
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game
   end
 

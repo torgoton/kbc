@@ -10,7 +10,7 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
   def setup_board
     game = games(:game2player)
     @chris = game_players(:chris)
-    game.boards = [ [ "Harbor", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 7, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap do |s|
       s.place_settlement(2, 0, @chris.order)
       s.place_settlement(0, 4, @chris.order)
@@ -42,7 +42,7 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
     # Only one settlement — no other settlements to check adjacency against
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Harbor", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 7, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(2, 0, chris.order) }
     game.save
     game.instantiate

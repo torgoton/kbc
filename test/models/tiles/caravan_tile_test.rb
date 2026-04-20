@@ -16,7 +16,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
   def setup_board(row, col)
     game = games(:game2player)
     @chris = game_players(:chris)
-    game.boards = [ [ "Caravan", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 8, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(row, col, @chris.order) }
     yield state if block_given?
     game.board_contents = state

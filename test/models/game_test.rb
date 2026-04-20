@@ -320,7 +320,7 @@ class GameTest < ActiveSupport::TestCase
   test "tile_activatable? is true when tile is unused and mandatory_count equals MANDATORY_COUNT" do
     game = games(:game2player)
     game.mandatory_count = Game::MANDATORY_COUNT
-    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 5, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
     game.board_contents = state
     tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
@@ -330,7 +330,7 @@ class GameTest < ActiveSupport::TestCase
   test "tile_activatable? is true for BarnTile at start of turn" do
     game = games(:game2player)
     game.mandatory_count = Game::MANDATORY_COUNT
-    game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
     game.board_contents = state
     tile = { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false }
@@ -340,7 +340,7 @@ class GameTest < ActiveSupport::TestCase
   test "tile_activatable? is true for BarnTile alongside PaddockTile" do
     game = games(:game2player)
     game.mandatory_count = Game::MANDATORY_COUNT
-    game.boards = [ [ "Barn", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
     game.board_contents = state
     game.current_player.update!(
@@ -364,7 +364,7 @@ class GameTest < ActiveSupport::TestCase
   test "tile_activatable? is true when mandatory_count is 0" do
     game = games(:game2player)
     game.mandatory_count = 0
-    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 5, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
     game.board_contents = state
     tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
@@ -375,7 +375,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     game.mandatory_count = 1
     game.current_player.supply["settlements"] = 0
-    game.boards = [ [ "Paddock", 0 ], [ "Oasis", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 5, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(0, 0, game.current_player.order) }
     game.board_contents = state
     tile = { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false }
@@ -386,7 +386,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     # Settlement moved to [1,5] — not adjacent to tile location [2,7]. Tile forfeited.
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       s.place_tile(2, 7, "OasisTile", 0)
       s.place_settlement(1, 7, chris.order)
@@ -410,7 +410,7 @@ class GameTest < ActiveSupport::TestCase
   test "undo after move_settlement that forfeits a tile restores the tile" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       s.place_tile(2, 7, "OasisTile", 0)
       s.place_settlement(1, 7, chris.order)
@@ -561,7 +561,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "turn_state says 'must end their turn or select a tile' when mandatory done and tile is activatable" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.save
     chris = game_players(:chris)
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
@@ -580,7 +580,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "turn_state includes 'or select a tile' at start of turn when player has an activatable tile" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.mandatory_count = 3
     game.save
     chris = game_players(:chris)
@@ -688,7 +688,7 @@ class GameTest < ActiveSupport::TestCase
     # so a second pickup from (7,5) is allowed.
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       s.place_tile(7, 5, "OasisTile", 2)
       s.place_settlement(7, 7, chris.order)
@@ -756,7 +756,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "tile_activatable? returns true for unused OasisTile when Desert hexes exist" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new
     game.save
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
@@ -773,7 +773,7 @@ class GameTest < ActiveSupport::TestCase
       [ 17, 8 ], [ 17, 10 ], [ 17, 11 ], [ 18, 10 ], [ 18, 11 ], [ 18, 12 ], [ 19, 10 ], [ 19, 11 ]
     ]
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       desert_hexes.each { |r, c| s.place_settlement(r, c, 1) }
     end
@@ -864,7 +864,7 @@ class GameTest < ActiveSupport::TestCase
   test "forfeit_tile stores tile klass in payload" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       s.place_tile(2, 7, "OasisTile", 0)
       s.place_settlement(1, 7, chris.order)
@@ -883,7 +883,7 @@ class GameTest < ActiveSupport::TestCase
   test "forfeit_tile message uses correct article for vowel-initial tile names" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       s.place_tile(2, 7, "OasisTile", 0)
       s.place_settlement(1, 7, chris.order)
@@ -904,7 +904,7 @@ class GameTest < ActiveSupport::TestCase
     # but we'll remove it to prove undo reads from payload instead).
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap do |s|
       s.place_tile(2, 7, "OasisTile", 0)
       s.place_settlement(1, 7, chris.order)
@@ -967,7 +967,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "live_scores returns a hash keyed by player order with goal breakdowns and total" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.goals  = [ "castles", "fishermen", "knights", "merchants" ]
     game.save
 
@@ -984,7 +984,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "build_settlement sets ending when the player places their last settlement" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.mandatory_count = 1
     game.save
     chris = game_players(:chris)
@@ -998,7 +998,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "build_settlement does not set ending when supply remains above zero" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.mandatory_count = 1
     game.save
     chris = game_players(:chris)
@@ -1046,7 +1046,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "undo_last_move after last settlement clears the ending flag" do
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.mandatory_count = 1
     game.save
     chris = game_players(:chris)
@@ -1096,10 +1096,10 @@ class GameTest < ActiveSupport::TestCase
 
   test "start selects 4 unique boards from the known pool" do
     game = new_started_game
-    board_names = game.boards.map(&:first)
-    assert_equal 4, board_names.size
-    assert_equal board_names.uniq, board_names
-    assert (board_names - Boards::Board::BOARD_CLASSES.keys).empty?
+    board_ids = game.boards.map(&:first)
+    assert_equal 4, board_ids.size
+    assert_equal board_ids.uniq, board_ids
+    assert board_ids.all? { |id| (0...Boards::BoardSection::SECTIONS.size).include?(id) }
   end
 
   test "start randomizes board selection across games" do
@@ -1154,7 +1154,7 @@ class GameTest < ActiveSupport::TestCase
   # Chris is the current player with hand "T"; row 1 col 7 is adjacent "T" terrain.
   def game_with_tile_at_2_7(qty:)
     game = games(:game2player)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", qty) }
     game.save
     game
@@ -1166,7 +1166,7 @@ class GameTest < ActiveSupport::TestCase
   def game_in_oasis_action
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Oasis", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
     game.current_action = { "type" => "oasis" }
     game.save

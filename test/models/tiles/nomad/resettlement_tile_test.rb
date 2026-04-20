@@ -14,7 +14,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     @tile = Tiles::Nomad::ResettlementTile.new(0)
   end
 
-  def setup_board(boards: [ [ "Quarry", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ])
+  def setup_board(boards: [ [ 10, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ])
     @game.boards = boards
     state = BoardState.new
     yield state if block_given?

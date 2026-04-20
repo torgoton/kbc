@@ -9,7 +9,7 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
   def setup_board
     game = games(:game2player)
     @chris = game_players(:chris)
-    game.boards = [ [ "Tower", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 3, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     state = BoardState.new.tap { |s| s.place_settlement(1, 1, @chris.order) }
     yield state if block_given?
     game.board_contents = state
@@ -40,7 +40,7 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
     # Settlement at (5,5) — interior, no neighbors on the border
     game = games(:game2player)
     chris = game_players(:chris)
-    game.boards = [ [ "Tower", 0 ], [ "Paddock", 0 ], [ "Farm", 0 ], [ "Tavern", 0 ] ]
+    game.boards = [ [ 3, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.save
     game.instantiate
