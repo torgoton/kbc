@@ -29,7 +29,8 @@ class Scoring
   def initialize(game)
     @game = game
     @game.instantiate
-    @scorers = Array(@game.goals).map { |k| SCORER_CLASSES.fetch(k).new(@game) }
+    all_keys = Array(@game.goals) + Array(@game.tasks)
+    @scorers = all_keys.map { |k| SCORER_CLASSES.fetch(k).new(@game) }
   end
 
   def compute
