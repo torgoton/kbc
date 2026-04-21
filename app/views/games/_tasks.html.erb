@@ -1,0 +1,13 @@
+<% if game.tasks.present? %>
+<div id="tasks" class="game-section">
+    <ul>
+        <li class="goals-label">Crossroads Tasks</li>
+        <% game.tasks.each do |key| %>
+            <li class="goal-item">
+                <span class="goal-name"><%= key.upcase %> <span class="goal-signifier">⊕</span></span>
+                <div class="goal-tooltip"><%= Scoring::SCORER_CLASSES[key]::DESCRIPTION %></div>
+            </li>
+        <% end %>
+    </ul>
+</div>
+<% end %>
