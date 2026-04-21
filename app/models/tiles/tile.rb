@@ -13,7 +13,7 @@ module Tiles
     end
 
     def description
-      self.class::DESCRIPTION
+      "#{self.class.name.demodulize.delete_suffix("Tile")} - #{self.class::DESCRIPTION}"
     end
 
     def build_terrain = nil

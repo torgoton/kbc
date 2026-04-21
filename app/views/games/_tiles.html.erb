@@ -4,6 +4,7 @@
   <% marked_active_type = nil %>
   <% regular_tiles.each do |tile| %>
     <% next unless Tiles::Tile.for_klass(tile["klass"]) %>
+    <% description = Tiles::Tile.for_klass(tile["klass"])&.new(0)&.description %>
     <% type = tile["klass"].delete_suffix("Tile").downcase %>
     <% used = engine.tile_used?(tile) %>
     <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
@@ -13,12 +14,12 @@
 
     <% if activatable %>
       <%= button_to select_action_game_path(game), params: { action_type: type } do %>
-        <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+        <div class="player-tile <%= state %>" title="<%= description %>">
           <div class="tile-container <%= type %>"></div>
         </div>
       <% end %>
     <% else %>
-      <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+      <div class="player-tile <%= state %>" title="<%= description %>">
         <div class="tile-container <%= type %>"></div>
       </div>
     <% end %>
@@ -30,6 +31,7 @@
     <% nomad_tiles.each do |tile| %>
       <% next unless (tile_klass = Tiles::Tile.for_klass(tile["klass"])) %>
       <% tile_obj = tile_klass.new(0) %>
+      <% description = Tiles::Tile.for_klass(tile["klass"])&.new(0)&.description %>
       <% type = tile["klass"].delete_suffix("Tile").downcase %>
       <% used = engine.tile_used?(tile) %>
 
@@ -39,12 +41,12 @@
         <% state = outpost_on ? "tile-active" : used ? "tile-used" : selectable ? "tile-activatable" : "tile-inactive" %>
         <% if selectable %>
           <%= button_to activate_outpost_game_path(game) do %>
-            <div class="player-tile <%= state %> spin" title="Outpost">
+            <div class="player-tile <%= state %> spin" title="<%= description %>">
               <div class="tile-container outpost"></div>
             </div>
           <% end %>
         <% else %>
-          <div class="player-tile <%= state %>" title="Outpost">
+          <div class="player-tile <%= state %>" title="<%= description %>">
             <div class="tile-container outpost"></div>
           </div>
         <% end %>
@@ -55,12 +57,12 @@
         <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
         <% if activatable %>
           <%= button_to select_action_game_path(game), params: { action_type: type } do %>
-            <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+            <div class="player-tile <%= state %>" title="<%= description %>">
               <div class="tile-container <%= type %>"></div>
             </div>
           <% end %>
         <% else %>
-          <div class="player-tile <%= state %>" title="<%= type.capitalize %>">
+          <div class="player-tile <%= state %>" title="<%= description %>">
             <div class="tile-container <%= type %>"></div>
           </div>
         <% end %>

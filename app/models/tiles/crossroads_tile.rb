@@ -1,6 +1,6 @@
 module Tiles
   class CrossroadsTile < Tiles::Tile
-    CREATOR = "".freeze
-    DESCRIPTION = "Draw another card each turn".freeze
+    CREATOR = "Icon by Gregor Cresnar".freeze
+    DESCRIPTION = "Draw an extra card each turn".freeze
   end
 end
