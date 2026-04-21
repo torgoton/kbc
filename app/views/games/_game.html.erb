@@ -17,8 +17,7 @@
 </div>
 <div id="game-area">
     <main>
-      <%= render partial: "games/goals", locals: { game: } %>
-      <%= render partial: "games/tasks", locals: { game: } %>
+      <%= render partial: "games/scoring", locals: { game: } %>
       <div id="board-viewport">
         <div id="board">
           <%= render partial: "games/board", locals: { game: } %>

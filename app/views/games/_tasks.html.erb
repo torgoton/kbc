@@ -1,7 +1,7 @@
 <% if game.tasks.present? %>
-<div id="tasks" class="game-section">
+<div id="tasks">
     <ul>
-        <li class="goals-label">Crossroads Tasks</li>
+        <li class="goals-label">Tasks</li>
         <% game.tasks.each do |key| %>
             <li class="goal-item">
                 <span class="goal-name"><%= key.upcase %> <span class="goal-signifier">⊕</span></span>

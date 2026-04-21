@@ -70,7 +70,7 @@ section#log {
     display: none;
 }
 
-#goals ul {
+#goals ul,#tasks ul {
     padding: inherit;
     margin: inherit;
 }
@@ -515,6 +515,79 @@ ul li .hex:hover {
     background-position: center 75%;
 }
 
+.tile-container.barracks {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/barracks.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.cityhall {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/cityhall.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.crossroads {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/crossroads.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.foresterslodge {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/foresterslodge.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.fort {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/fort.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.lighthouse {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/lighthouse.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.monastery {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/monastery.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+.tile-container.wagon {
+    height: 100%;
+    width: 100%;
+    background-image: url("gold/wagon.svg");
+    background-size: 70%;
+    background-repeat: no-repeat;
+    background-position: center 75%;
+}
+
+
 .tile-container.outpost,
 .tile-container.resettlement,
 .tile-container.sword,
@@ -661,12 +734,12 @@ ul li .hex:hover {
     background-position: 100%;
 }
 
-#goals {
+#scoring {
     background-color: black;
     position: relative;
 }
 
-#goals ul {
+#scoring ul {
     list-style-type: none;
     padding: 0;
     display: flex;
