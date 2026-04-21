@@ -16,6 +16,7 @@
 #  scores            :json
 #  state             :string
 #  stone_walls       :integer          default(25), not null
+#  tasks             :json
 #  turn_number       :integer          default(0), not null
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
@@ -91,6 +92,7 @@ class Game < ApplicationRecord
     populate_boards
     initialize_terrain_deck
     select_goals
+    select_tasks
     populate_player_supplies
     deal_terrain_cards
     choose_start_player
@@ -329,11 +331,18 @@ class Game < ApplicationRecord
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
+  CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
 
   def select_goals
     instantiate_board
     castle_goal = board_has_castles? ? [ "castles" ] : []
-    self.goals = castle_goal + (OPTIONAL_GOALS + TASKS).sample(3)
+    self.goals = castle_goal + OPTIONAL_GOALS.sample(3)
+    save
+  end
+
+  def select_tasks
+    crossroads_count = boards.count { |id, _| CROSSROADS_BOARD_IDS.include?(id) }
+    self.tasks = TASKS.sample(crossroads_count)
     save
   end
 
