@@ -62,4 +62,23 @@ class GameLifecycleTest < ActiveSupport::TestCase
       assert_includes %w[C D F G T], gp.hand
     end
   end
+
+  test "start sets goals only from non-task pool" do
+    @game.reload
+    all_goal_keys = Game::OPTIONAL_GOALS + [ "castles" ]
+    @game.goals.each do |key|
+      assert_includes all_goal_keys, key,
+        "expected #{key.inspect} to be a goal, not a task"
+    end
+  end
+
+  test "start sets tasks based on number of crossroads boards in play" do
+    @game.reload
+    crossroads_count = @game.boards.count { |id, _| Game::CROSSROADS_BOARD_IDS.include?(id) }
+    assert_equal crossroads_count, Array(@game.tasks).size
+    Array(@game.tasks).each do |key|
+      assert_includes Game::TASKS, key,
+        "expected #{key.inspect} to be a task key"
+    end
+  end
 end

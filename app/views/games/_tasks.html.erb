@@ -1,7 +1,8 @@
-<div id="goals">
+<% if game.tasks.present? %>
+<div id="tasks">
     <ul>
-        <li class="goals-label">Scoring Goals</li>
-        <% @game.goals.each do |key| %>
+        <li class="goals-label">Tasks</li>
+        <% game.tasks.each do |key| %>
             <li class="goal-item">
                 <span class="goal-name"><%= key.upcase %> <span class="goal-signifier">⊕</span></span>
                 <div class="goal-tooltip"><%= Scoring::SCORER_CLASSES[key]::DESCRIPTION %></div>
@@ -9,3 +10,4 @@
         <% end %>
     </ul>
 </div>
+<% end %>

@@ -1,3 +1,31 @@
+# == Schema Information
+#
+# Table name: moves
+#
+#  id             :bigint           not null, primary key
+#  action         :string
+#  deliberate     :boolean
+#  from           :string
+#  message        :string
+#  order          :integer
+#  payload        :jsonb
+#  reversible     :boolean
+#  to             :string
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  game_id        :bigint           not null
+#  game_player_id :bigint           not null
+#
+# Indexes
+#
+#  index_moves_on_game_id         (game_id)
+#  index_moves_on_game_player_id  (game_player_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (game_id => games.id)
+#  fk_rails_...  (game_player_id => game_players.id)
+#
 require "test_helper"
 require "turbo/broadcastable/test_helper"
 

@@ -20,12 +20,13 @@ class ScoringTest < ActiveSupport::TestCase
 
   BOARDS = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
 
-  def build_game(chris_settlements: [], paula_settlements: [], goals: [])
+  def build_game(chris_settlements: [], paula_settlements: [], goals: [], tasks: [])
     game = games(:game2player)
     chris = game_players(:chris)
     paula = game_players(:paula)
     game.boards = BOARDS
     game.goals  = goals
+    game.tasks  = tasks
     game.board_contents = BoardState.new.tap do |s|
       chris_settlements.each { |r, c| s.place_settlement(r, c, chris.order) }
       paula_settlements.each { |r, c| s.place_settlement(r, c, paula.order) }
@@ -65,6 +66,17 @@ class ScoringTest < ActiveSupport::TestCase
     result = Scoring.new(ctx[:game]).score_for(ctx[:chris])
     assert_equal 3, result["treasure"][:score]
     assert_equal 3, result["total"]
+  end
+
+  test "tasks in game.tasks column are scored" do
+    ctx = build_game(
+      chris_settlements: [ [ 6, 2 ] ],
+      goals: [],
+      tasks: [ "road" ]
+    )
+    result = Scoring.new(ctx[:game]).score_for(ctx[:chris])
+    assert result.key?("road"), "road task must appear in score_for result"
+    assert_equal 0, result["total"]  # road not met with 1 settlement
   end
 
   test "compute returns a hash keyed by player order string covering all players" do
