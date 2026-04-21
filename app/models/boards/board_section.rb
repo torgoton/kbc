@@ -265,6 +265,94 @@ module Boards
           { r: 4, c: 7, k: "Village" },
           { r: 6, c: 3, k: "Village" }
         ]
+      },
+      # 12: Lighthouse / Forester's Lodge
+      {
+        map: [
+          "TTTTWWFFFF",
+          "TTTTWDFFFF",
+          "CTTTTWDSDM",
+          "CCLTWDDDDW",
+          "CCCCWWWWWW",
+          "WWWWWWDDDW",
+          "FFFFWGLDDD",
+          "FMGWGGGGMC",
+          "FGGWGGGCMC",
+          "GGGWWWCCCC"
+        ],
+        silver_hexes: [
+          { r: 2, c: 7, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 6, c: 6, k: "Lighthouse" },
+          { r: 3, c: 2, k: "ForestersLodge" }
+        ]
+      },
+      # 13: Barracks / Crossroads
+      {
+        map: [
+          "GGTTWWTTGG",
+          "GGTTWGGCGG",
+          "GFFTTTTCCG",
+          "FFFLDTTCCC",
+          "FFFFFDTLMC",
+          "FFFDDMCCCC",
+          "FFFMDDDCCC",
+          "FFDDSDDCMC",
+          "GGDDDWWDGG",
+          "GGDWWWDDGG"
+        ],
+        silver_hexes: [
+          { r: 7, c: 4, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 3, c: 3, k: "Barracks" },
+          { r: 4, c: 7, k: "Crossroads" }
+        ]
+      },
+      # 14: City Hall / Fort
+      {
+        map: [
+          "TTTTWWDDDD",
+          "TTFFFGGDDD",
+          "MMTFFLGMCD",
+          "TTMMGGGCCM",
+          "TTSFGMMCCC",
+          "TTTFMMCCMC",
+          "MMTFFFLCCC",
+          "FFFMGGDWCM",
+          "FFWGGGDDDD",
+          "FGGGGGGDDD"
+        ],
+        silver_hexes: [
+          { r: 4, c: 2, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 2, c: 5, k: "CityHall" },
+          { r: 6, c: 6, k: "Fort" }
+        ]
+      },
+      # 15: Monastery / Wagon
+      {
+        map: [
+          "MDDDMWMGGG",
+          "DDDMWFFFGG",
+          "DDDDWFFLGW",
+          "MCDDWFFGWW",
+          "MCCDDWFWWW",
+          "MCCGGWWCCC",
+          "CCCSGTTTCC",
+          "CFGGGTTTCM",
+          "FFFGTTTTLM",
+          "FFTTTTMMMM"
+        ],
+        silver_hexes: [
+          { r: 6, c: 3, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 2, c: 7, k: "Monastery" },
+          { r: 8, c: 8, k: "Wagon" }
+        ]
       }
     ].freeze
 
