@@ -11,6 +11,29 @@ class BoardState
     @cells[[ row, col ]] = { "klass" => "Settlement", "player" => player }
   end
 
+  def place_warrior(row, col, player)
+    @cells[[ row, col ]] = { "klass" => "Settlement", "player" => player, "meeple" => "warrior" }
+  end
+
+  def meeple_at(row, col)
+    cell = @cells[[ row, col ]]
+    cell["meeple"] if cell && cell["klass"] == "Settlement"
+  end
+
+  def warriors_for(player)
+    @cells.filter_map do |(row, col), cell|
+      [ row, col ] if cell["klass"] == "Settlement" && cell["player"] == player && cell["meeple"] == "warrior"
+    end
+  end
+
+  def warrior_blocked?(row, col)
+    neighbors(row, col).any? { |nr, nc| warrior_at?(nr, nc) }
+  end
+
+  def available_for_building?(row, col)
+    empty?(row, col) && !warrior_blocked?(row, col)
+  end
+
   def move_settlement(from_row, from_col, to_row, to_col)
     cell = @cells.delete([ from_row, from_col ])
     @cells[[ to_row, to_col ]] = cell
@@ -83,6 +106,11 @@ class BoardState
 
   def locations_with_remaining_tiles
     @cells.filter_map { |(row, col), cell| [ row, col ] if cell["klass"] != "Settlement" && cell["qty"].to_i > 0 }
+  end
+
+  def warrior_at?(row, col)
+    cell = @cells[[ row, col ]]
+    cell && cell["klass"] == "Settlement" && cell["meeple"] == "warrior"
   end
 
   def settlements_for(player)

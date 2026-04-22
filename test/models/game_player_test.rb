@@ -145,4 +145,31 @@ class GamePlayerTest < ActiveSupport::TestCase
     assert_not @gp.tiles[0]["used"]
     assert @gp.tiles[1]["used"]
   end
+
+  test "warriors_remaining returns 0 by default" do
+    assert_equal 0, @gp.warriors_remaining
+  end
+
+  test "add_warriors! increases warrior count" do
+    @gp.add_warriors!(2)
+    assert_equal 2, @gp.warriors_remaining
+    assert @gp.warriors_remaining?
+  end
+
+  test "decrement_warrior_supply! reduces count by 1" do
+    @gp.add_warriors!(2)
+    @gp.decrement_warrior_supply!
+    assert_equal 1, @gp.warriors_remaining
+  end
+
+  test "increment_warrior_supply! increases count by 1" do
+    @gp.add_warriors!(1)
+    @gp.decrement_warrior_supply!
+    @gp.increment_warrior_supply!
+    assert_equal 1, @gp.warriors_remaining
+  end
+
+  test "warriors_remaining? is false when supply is 0" do
+    assert_not @gp.warriors_remaining?
+  end
 end

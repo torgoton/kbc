@@ -25,7 +25,7 @@ module Tiles
           board_contents.neighbors(r, c).each do |nr, nc|
             next if visited[[ nr, nc ]]
             key = "[#{nr}, #{nc}]"
-            is_empty = board_contents.empty?(nr, nc) || vacated_set.include?(key)
+            is_empty = (board_contents.empty?(nr, nc) || vacated_set.include?(key)) && !board_contents.warrior_blocked?(nr, nc)
             next unless is_empty
             next unless BUILDABLE_TERRAIN.include?(board.terrain_at(nr, nc))
 
@@ -52,7 +52,7 @@ module Tiles
         end
       end
 
-      def activatable?(player_order:, board_contents:, board:, hand: nil)
+      def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
         selectable_settlements(player_order:, board_contents:, board:, hand:).any?
       end
 
@@ -72,7 +72,7 @@ module Tiles
           board_contents.neighbors(r, c).each do |nr, nc|
             next if visited[[ nr, nc ]]
             key = "[#{nr}, #{nc}]"
-            is_empty = board_contents.empty?(nr, nc) || vacated_set.include?(key)
+            is_empty = (board_contents.empty?(nr, nc) || vacated_set.include?(key)) && !board_contents.warrior_blocked?(nr, nc)
             next unless is_empty
             next unless BUILDABLE_TERRAIN.include?(board.terrain_at(nr, nc))
             new_dist = dist + 1

@@ -16,7 +16,7 @@ module Tiles
           dr, dc = steps[r % 2]
           nr, nc = r + dr, c + dc
           break unless (0..19).cover?(nr) && (0..19).cover?(nc) &&
-                       board_contents.empty?(nr, nc) &&
+                       board_contents.available_for_building?(nr, nc) &&
                        BUILDABLE_TERRAIN.include?(board.terrain_at(nr, nc))
           last = [ nr, nc ]
           r, c = nr, nc
@@ -31,7 +31,7 @@ module Tiles
       end
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
       selectable_settlements(player_order:, board_contents:, board:, hand:).any?
     end
   end

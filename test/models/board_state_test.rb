@@ -115,4 +115,80 @@ class BoardStateTest < ActiveSupport::TestCase
     assert_equal [ [ 5, 1 ] ], state.settlements_for(1)
     assert_equal [], state.settlements_for(2)
   end
+
+  # Warrior tests
+  test "place_warrior stores warrior at cell" do
+    state = BoardState.new
+    state.place_warrior(3, 5, 0)
+    assert_not state.empty?(3, 5)
+    assert_equal 0, state.player_at(3, 5)
+    assert_equal "warrior", state.meeple_at(3, 5)
+  end
+
+  test "meeple_at returns nil for regular settlement" do
+    state = BoardState.new
+    state.place_settlement(3, 5, 0)
+    assert_nil state.meeple_at(3, 5)
+  end
+
+  test "meeple_at returns nil for empty cell" do
+    assert_nil BoardState.new.meeple_at(0, 0)
+  end
+
+  test "warriors_for returns coordinates of warriors for a player" do
+    state = BoardState.new
+    state.place_warrior(2, 7, 0)
+    state.place_settlement(3, 4, 0)
+    state.place_warrior(5, 1, 1)
+    assert_equal [ [ 2, 7 ] ], state.warriors_for(0)
+    assert_equal [ [ 5, 1 ] ], state.warriors_for(1)
+  end
+
+  test "settlements_for includes warriors" do
+    state = BoardState.new
+    state.place_settlement(2, 7, 0)
+    state.place_warrior(3, 4, 0)
+    assert_equal [ [ 2, 7 ], [ 3, 4 ] ].sort, state.settlements_for(0).sort
+  end
+
+  test "warrior_blocked? is false when no warriors on board" do
+    state = BoardState.new
+    assert_not state.warrior_blocked?(5, 5)
+  end
+
+  test "warrior_blocked? is true for hexes adjacent to a warrior" do
+    state = BoardState.new
+    state.place_warrior(10, 10, 0)
+    # [10,10] is even row; neighbors are [10,9],[10,11],[9,9],[9,10],[11,9],[11,10]
+    assert state.warrior_blocked?(10, 9)
+    assert state.warrior_blocked?(9, 10)
+    assert_not state.warrior_blocked?(10, 10) # warrior's own hex is occupied, not "blocked"
+    assert_not state.warrior_blocked?(0, 0)
+  end
+
+  test "available_for_building? is false when occupied" do
+    state = BoardState.new
+    state.place_settlement(3, 5, 0)
+    assert_not state.available_for_building?(3, 5)
+  end
+
+  test "available_for_building? is false when warrior-adjacent" do
+    state = BoardState.new
+    state.place_warrior(10, 10, 0)
+    assert_not state.available_for_building?(10, 9)
+  end
+
+  test "available_for_building? is true for empty non-blocked hex" do
+    state = BoardState.new
+    state.place_warrior(10, 10, 0)
+    assert state.available_for_building?(5, 5)
+  end
+
+  test "dump/load round-trip preserves warrior meeple type" do
+    state = BoardState.new
+    state.place_warrior(3, 5, 1)
+    reloaded = BoardState.load(BoardState.dump(state))
+    assert_equal 1, reloaded.player_at(3, 5)
+    assert_equal "warrior", reloaded.meeple_at(3, 5)
+  end
 end

@@ -52,4 +52,15 @@ class BoardTest < ActiveSupport::TestCase
     game = GameStub.new([], contents)
     assert_raises(ArgumentError) { Boards::Board.new(game) }
   end
+
+  test "Board.new reconstructs warrior with meeple_type set" do
+    contents = BoardState.new
+    contents.place_warrior(3, 5, 1)
+    game = GameStub.new([], contents)
+    board = Boards::Board.new(game)
+    settlement = board.content_at(3, 5)
+    assert_instance_of Settlement, settlement
+    assert_equal 1, settlement.player
+    assert_equal "warrior", settlement.meeple_type
+  end
 end

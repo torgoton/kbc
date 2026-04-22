@@ -23,4 +23,12 @@ class Tiles::TileTest < ActiveSupport::TestCase
   test "from_hash raises ArgumentError for unknown klass" do
     assert_raises(ArgumentError) { Tiles::Tile.from_hash("klass" => "BogusTimeTile") }
   end
+
+  test "on_pickup returns nil by default" do
+    assert_nil Tiles::Tile.new(0).on_pickup(game_player: nil)
+  end
+
+  test "places_meeple? returns false by default" do
+    assert_not Tiles::Tile.new(0).places_meeple?
+  end
 end

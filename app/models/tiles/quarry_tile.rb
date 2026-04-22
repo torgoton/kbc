@@ -12,12 +12,12 @@ module Tiles
       settlements = board_contents.settlements_for(player_order)
       settlements.flat_map do |r, c|
         board_contents.neighbors_where(r, c) do |nr, nc|
-          board_contents.empty?(nr, nc) && board.terrain_at(nr, nc) == terrain
+          board_contents.available_for_building?(nr, nc) && board.terrain_at(nr, nc) == terrain
         end
       end.uniq
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
       valid_destinations(board_contents:, board:, player_order:, hand:).any?
     end
 

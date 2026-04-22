@@ -48,6 +48,26 @@ class GamePlayer < ApplicationRecord
     supply["settlements"] += 1
   end
 
+  def warriors_remaining
+    supply["warriors"].to_i
+  end
+
+  def warriors_remaining?
+    warriors_remaining > 0
+  end
+
+  def add_warriors!(n)
+    supply["warriors"] = warriors_remaining + n
+  end
+
+  def decrement_warrior_supply!
+    supply["warriors"] = warriors_remaining - 1
+  end
+
+  def increment_warrior_supply!
+    supply["warriors"] = warriors_remaining + 1
+  end
+
   def held_tile_locations
     (tiles || []).map { |t| t["from"] }.to_set
   end
