@@ -16,6 +16,6 @@
         <% end %>
     <% when Settlement %>
         <% Rails.logger.debug " - it's a SETTLEMENT" %>
-        <%= content_tag :div, nil, class: "hex-settlement player-#{content.player}" %>
+        <%= render "games/settlement", color: player_color(content.player), css_class: "hex-settlement" %>
     <% end %>
 <% end %>
