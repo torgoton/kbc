@@ -22,6 +22,9 @@
     <div class="supply-display">
       <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
       <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>
+      <% player.warriors_remaining.times do %>
+        <%= render "games/warrior", color: player_color(player.order), css_class: "warrior-icon" %>
+      <% end %>
     </div>
     <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
     <% if score_data %>

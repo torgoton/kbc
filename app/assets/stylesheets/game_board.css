@@ -1028,6 +1028,12 @@ ul li .hex:hover {
     height: 38px;
 }
 
+.warrior-icon {
+    display: inline-block;
+    width: 36px;
+    height: 38px;
+}
+
 .settlement-count {
     display: inline-block;
     font-size: 20px;

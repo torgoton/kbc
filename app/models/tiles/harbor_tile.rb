@@ -11,7 +11,7 @@ module Tiles
 
       adjacent = other_settlements.flat_map do |r, c|
         board_contents.neighbors_where(r, c) do |nr, nc|
-          board_contents.empty?(nr, nc) && board.terrain_at(nr, nc) == "W"
+          board_contents.available_for_building?(nr, nc) && board.terrain_at(nr, nc) == "W"
         end
       end.uniq
 
@@ -19,7 +19,7 @@ module Tiles
 
       (0..19).flat_map do |r|
         (0..19).filter_map do |c|
-          [ r, c ] if board_contents.empty?(r, c) && board.terrain_at(r, c) == "W"
+          [ r, c ] if board_contents.available_for_building?(r, c) && board.terrain_at(r, c) == "W"
         end
       end
     end

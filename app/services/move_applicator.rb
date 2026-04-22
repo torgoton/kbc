@@ -41,6 +41,10 @@ module MoveApplicator
       backend.apply_place_wall(player_order: player_order, to: move.to)
     when "activate_outpost"
       backend.apply_activate_outpost(player_order: player_order)
+    when "place_warrior"
+      backend.apply_place_warrior(player_order: player_order, to: move.to)
+    when "remove_warrior"
+      backend.apply_remove_warrior(player_order: player_order, from: move.from)
     end
   end
 end
@@ -166,6 +170,20 @@ class MoveApplicator::HashState
     player["tiles"] = updated
   end
 
+  def apply_place_warrior(player_order:, to:)
+    coord = Coordinate.from_key(to)
+    @board.place_warrior(coord.row, coord.col, player_order)
+    @players[player_order]["supply"]["warriors"] = (@players[player_order]["supply"]["warriors"] || 0) - 1
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_remove_warrior(player_order:, from:)
+    coord = Coordinate.from_key(from)
+    @board.remove(coord.row, coord.col)
+    @players[player_order]["supply"]["warriors"] = (@players[player_order]["supply"]["warriors"] || 0) + 1
+    @current_action = { "type" => "mandatory" }
+  end
+
   public
 
   def result
@@ -289,6 +307,26 @@ class MoveApplicator::LiveState
     gp.mark_tile_unused!("OutpostTile")
     @game.current_action_will_change!
     @game.current_action.delete("outpost_active")
+    gp.save
+  end
+
+  def apply_place_warrior(player_order:, to:)
+    coord = Coordinate.from_key(to)
+    @game.board_contents_will_change!
+    @game.board_contents.remove(coord.row, coord.col)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("BarracksTile")
+    gp.increment_warrior_supply!
+    gp.save
+  end
+
+  def apply_remove_warrior(player_order:, from:)
+    coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.place_warrior(coord.row, coord.col, player_order)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("BarracksTile")
+    gp.decrement_warrior_supply!
     gp.save
   end
 

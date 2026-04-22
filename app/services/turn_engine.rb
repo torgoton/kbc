@@ -12,7 +12,8 @@ class TurnEngine
       20.times do |col|
         if @game.board.content_at(row, col).try(:player) == active_player
           @game.board_contents.neighbors(row, col).each do |nr, nc|
-            if @game.board.content_at(nr, nc) == nil && @game.board.terrain_at(nr, nc) == terrain
+            if @game.board.content_at(nr, nc) == nil && @game.board.terrain_at(nr, nc) == terrain &&
+               !@game.board_contents.warrior_blocked?(nr, nc)
               any = available[nr][nc] = true
             end
           end
@@ -23,7 +24,7 @@ class TurnEngine
 
     20.times do |row|
       20.times do |col|
-        if @game.board.terrain_at(row, col) == terrain
+        if @game.board.terrain_at(row, col) == terrain && !@game.board_contents.warrior_blocked?(row, col)
           available[row][col] = true unless @game.board.content_at(row, col)
         end
       end
@@ -46,7 +47,7 @@ class TurnEngine
 
     if @game.current_action["outpost_active"]
       # Skip adjacency: just check it's empty and correct terrain
-      return "Not available" unless @game.board_contents.empty?(row, col) && @game.board.terrain_at(row, col) == card_terrain
+      return "Not available" unless @game.board_contents.available_for_building?(row, col) && @game.board.terrain_at(row, col) == card_terrain
       build_on_terrain(card_terrain, row, col, game_player)
       @game.mandatory_count -= 1
       @game.current_action_will_change!
@@ -133,6 +134,32 @@ class TurnEngine
     end
 
     owner.save
+    game_player.save
+    @game.save
+  end
+
+  def execute_meeple_action(row, col)
+    @game.instantiate
+    game_player = @game.current_player
+    tile_klass = current_action_tile_klass
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+
+    tile_obj = Tiles::Tile.from_hash(tile)
+    warrior_supply = game_player.warriors_remaining
+
+    if @game.board_contents.warrior_at?(row, col) && @game.board_contents.player_at(row, col) == game_player.order
+      remove_warrior(row, col, game_player, tile_klass:)
+    else
+      destinations = tile_obj.valid_destinations(
+        board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, warrior_supply:
+      )
+      return "Not available" unless destinations.include?([ row, col ])
+      place_warrior(row, col, game_player, tile_klass:)
+    end
+
+    game_player.mark_tile_used!(tile_klass)
+    @game.current_action = { "type" => "mandatory" }
     game_player.save
     @game.save
   end
@@ -352,7 +379,7 @@ class TurnEngine
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand }
+    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand, warrior_supply: @game.current_player.warriors_remaining }
     tile_obj.activatable?(**ctx)
   end
 
@@ -495,7 +522,12 @@ class TurnEngine
         tile = player.find_unused_tile(klass)
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
-          if tile_obj.places_wall?
+          if tile_obj.places_meeple?
+            tile_obj.valid_destinations(
+              board_contents: @game.board_contents, board: @game.board,
+              player_order: player.order, warrior_supply: player.warriors_remaining
+            )
+          elsif tile_obj.places_wall?
             tile_obj.valid_destinations(
               board_contents: @game.board_contents, board: @game.board,
               player_order: player.order, hand: player.hand
@@ -673,6 +705,7 @@ class TurnEngine
     game_player.receive_tile!(tile[:klass], from: tile[:key])
     game_player.taken_from = (game_player.taken_from || []) + [ tile[:key] ]
     tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)
+    tile_obj&.on_pickup(game_player:)
     if tile_obj&.nomad_tile?
       if tile_obj.is_a?(Tiles::Nomad::TreasureTile)
         # Score 3 points immediately and remove the tile
@@ -767,5 +800,40 @@ class TurnEngine
     @game.deck = @game.discard.shuffle
     @game.discard.clear
     @game.save
+  end
+
+  def place_warrior(row, col, game_player, tile_klass:)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "place_warrior",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} placed a warrior at [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.place_warrior(row, col, game_player.order)
+    game_player.decrement_warrior_supply!
+    apply_tile_pickup(game_player, row, col)
+  end
+
+  def remove_warrior(row, col, game_player, tile_klass:)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "remove_warrior",
+      from: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} removed a warrior from [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.remove(row, col)
+    game_player.increment_warrior_supply!
   end
 end

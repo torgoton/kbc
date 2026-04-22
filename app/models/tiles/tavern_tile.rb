@@ -49,7 +49,7 @@ module Tiles
       candidates.uniq
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
       valid_destinations(board_contents:, board:, player_order:).any?
     end
 
@@ -62,7 +62,7 @@ module Tiles
 
     def valid_build?(r, c, board_contents, board)
       (0..19).cover?(r) && (0..19).cover?(c) &&
-        board_contents.empty?(r, c) &&
+        board_contents.available_for_building?(r, c) &&
         BUILDABLE_TERRAIN.include?(board.terrain_at(r, c))
     end
   end

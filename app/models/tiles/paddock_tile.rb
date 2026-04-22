@@ -28,13 +28,13 @@ module Tiles
         r2 = r1 + dr2
         c2 = c1 + dc2
         next unless (0..19).cover?(r2) && (0..19).cover?(c2)
-        next unless board_contents.empty?(r2, c2)
+        next unless board_contents.available_for_building?(r2, c2)
         next unless BUILDABLE_TERRAIN.include?(board.terrain_at(r2, c2))
         [ r2, c2 ]
       end
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
       selectable_settlements(player_order:, board_contents:, board:, hand:).any?
     end
 

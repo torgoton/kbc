@@ -75,4 +75,17 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   test "builds_settlement? returns false" do
     assert_not Tiles::PaddockTile.new(0).builds_settlement?
   end
+
+  test "valid_destinations excludes hexes adjacent to a warrior" do
+    ctx = setup_board
+    # (0,14) settlement; (0,12) would be a valid destination (2-hop W)
+    # Place a warrior adjacent to (0,12): e.g. at (0,11) — even row, E neighbor of (0,11) is (0,12)
+    ctx[:board_contents].place_warrior(0, 11, 1)
+    tile = Tiles::PaddockTile.new(0)
+    result = tile.valid_destinations(
+      from_row: 0, from_col: 14,
+      board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order
+    )
+    assert_not_includes result, [ 0, 12 ]
+  end
 end
