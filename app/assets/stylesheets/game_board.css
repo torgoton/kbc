@@ -694,9 +694,6 @@ ul li .hex:hover {
 }
 
 .hex-settlement {
-    background-image: url("settlement.svg");
-    background-repeat: no-repeat;
-    background-size: 200%;
     position: absolute;
     top: 14%;
     left: 21%;
@@ -726,13 +723,6 @@ ul li .hex:hover {
     height: 100%;
 }
 
-.player-0 {
-    background-position: 0%;
-}
-
-.player-1 {
-    background-position: 100%;
-}
 
 #scoring {
     background-color: black;
@@ -1034,9 +1024,6 @@ ul li .hex:hover {
 
 .settlement-icon {
     display: inline-block;
-    background-image: url("settlement.svg");
-    background-repeat: no-repeat;
-    background-size: 200%;
     width: 36px;
     height: 38px;
 }

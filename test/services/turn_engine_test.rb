@@ -237,13 +237,15 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "activate_tile_build returns 'Not available' when destination is not in valid_destinations" do
+    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.save!
     @game.current_player.update!(tiles: [
       { "klass" => "MandatoryTile", "used" => false },
       { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
     ])
     @game.update!(current_action: { "type" => "oasis" })
 
-    # (3, 3) is the Castle scoring hex on Tavern — not Desert, so not in valid_destinations
+    # (3, 3) is Forest on the Oasis board (section 1, row 3: "WWWFGTFFFF") — not Desert
     result = @engine.activate_tile_build(3, 3)
 
     assert_equal "Not available", result

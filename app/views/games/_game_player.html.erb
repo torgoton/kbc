@@ -21,7 +21,7 @@
     <%= content_tag :span, display_card, class: "player-card card-#{display_card}" %>
     <div class="supply-display">
       <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
-      <%= content_tag :span, nil, class: "settlement-icon player-#{player.order}" %>
+      <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>
     </div>
     <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
     <% if score_data %>
