@@ -889,6 +889,7 @@ class TurnEngine
   end
 
   def place_warrior(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -897,7 +898,7 @@ class TurnEngine
       action: "place_warrior",
       to: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} placed a warrior at [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
@@ -907,6 +908,7 @@ class TurnEngine
   end
 
   def remove_warrior(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -915,7 +917,7 @@ class TurnEngine
       action: "remove_warrior",
       from: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} removed a warrior from [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
@@ -924,6 +926,7 @@ class TurnEngine
   end
 
   def place_ship(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -932,7 +935,7 @@ class TurnEngine
       action: "place_ship",
       to: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} placed their ship at [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
@@ -941,6 +944,7 @@ class TurnEngine
   end
 
   def remove_ship(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -949,7 +953,7 @@ class TurnEngine
       action: "remove_ship",
       from: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} removed their ship from [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
@@ -959,6 +963,7 @@ class TurnEngine
 
   def move_ship(row, col, game_player, tile_klass:)
     from = @game.current_action["from"]
+    action_before = @game.current_action.slice("type", "klass", "from")
     from_coord = Coordinate.from_key(from)
     @game.move_count += 1
     @game.moves.create(
@@ -969,7 +974,7 @@ class TurnEngine
       from: from,
       to: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} moved their ship to [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
