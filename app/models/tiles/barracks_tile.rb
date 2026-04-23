@@ -9,11 +9,11 @@ module Tiles
       game_player.add_warriors!(2)
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
       warrior_supply > 0 || board_contents.warriors_for(player_order).any?
     end
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, warrior_supply: 0)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, warrior_supply: 0, ship_supply: 0)
       placement = warrior_supply > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
       removal = board_contents.warriors_for(player_order)
       (placement + removal).uniq
