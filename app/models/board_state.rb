@@ -26,6 +26,21 @@ class BoardState
     end
   end
 
+  def place_ship(row, col, player)
+    @cells[[ row, col ]] = { "klass" => "Settlement", "player" => player, "meeple" => "ship" }
+  end
+
+  def ships_for(player)
+    @cells.filter_map do |(row, col), cell|
+      [ row, col ] if cell["klass"] == "Settlement" && cell["player"] == player && cell["meeple"] == "ship"
+    end
+  end
+
+  def ship_at?(row, col)
+    cell = @cells[[ row, col ]]
+    cell && cell["klass"] == "Settlement" && cell["meeple"] == "ship"
+  end
+
   def warrior_blocked?(row, col)
     neighbors(row, col).any? { |nr, nc| warrior_at?(nr, nc) }
   end

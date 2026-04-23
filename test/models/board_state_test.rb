@@ -191,4 +191,41 @@ class BoardStateTest < ActiveSupport::TestCase
     assert_equal 1, reloaded.player_at(3, 5)
     assert_equal "warrior", reloaded.meeple_at(3, 5)
   end
+
+  # Ship tests
+  test "place_ship stores ship meeple at cell" do
+    state = BoardState.new
+    state.place_ship(3, 5, 0)
+    assert_equal "ship", state.meeple_at(3, 5)
+  end
+
+  test "ships_for returns coordinates of ships for a player" do
+    state = BoardState.new
+    state.place_ship(2, 7, 0)
+    state.place_ship(5, 1, 1)
+    assert_equal [ [ 2, 7 ] ], state.ships_for(0)
+    assert_equal [ [ 5, 1 ] ], state.ships_for(1)
+  end
+
+  test "ship_at? is true for ship cell" do
+    state = BoardState.new
+    state.place_ship(4, 4, 0)
+    assert state.ship_at?(4, 4)
+  end
+
+  test "ship_at? is false for warrior cell" do
+    state = BoardState.new
+    state.place_warrior(4, 4, 0)
+    assert_not state.ship_at?(4, 4)
+  end
+
+  test "ship_at? is false for empty cell" do
+    assert_not BoardState.new.ship_at?(0, 0)
+  end
+
+  test "settlements_for includes ships" do
+    state = BoardState.new
+    state.place_ship(3, 4, 0)
+    assert_includes state.settlements_for(0), [ 3, 4 ]
+  end
 end
