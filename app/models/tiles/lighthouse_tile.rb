@@ -15,7 +15,7 @@ module Tiles
 
     # No from_row/from_col: placement hexes + own ship hex (for popup triggering).
     # With from_row/from_col: BFS move destinations through empty water up to 3 steps.
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, ship_supply: 0)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, warrior_supply: 0, ship_supply: 0)
       if from_row && from_col
         water_bfs(from_row, from_col, board_contents:, board:, max_depth: 3)
       else
