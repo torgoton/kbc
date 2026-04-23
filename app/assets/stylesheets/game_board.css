@@ -1145,3 +1145,43 @@ ul li .hex:hover {
 .player-card.card-T {
     background-image: url("timberland.svg");
 }
+
+.meeple-popup {
+    position: absolute;
+    z-index: 100;
+    background: #222;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.meeple-popup.hidden {
+    display: none;
+}
+
+.popup-btn {
+    background: #444;
+    color: #eee;
+    border: none;
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    width: 100%;
+}
+
+.popup-btn:hover {
+    background: #666;
+}
+
+.popup-btn-cancel {
+    background: #333;
+    color: #aaa;
+}

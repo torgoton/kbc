@@ -146,21 +146,96 @@ class TurnEngine
     return "Not available" unless tile
 
     tile_obj = Tiles::Tile.from_hash(tile)
-    warrior_supply = game_player.warriors_remaining
 
-    if @game.board_contents.warrior_at?(row, col) && @game.board_contents.player_at(row, col) == game_player.order
-      remove_warrior(row, col, game_player, tile_klass:)
-    else
+    if @game.current_action["from"]
+      # LighthouseTile: complete ship move to destination
+      from_coord = Coordinate.from_key(@game.current_action["from"])
       destinations = tile_obj.valid_destinations(
-        board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, warrior_supply:
+        from_row: from_coord.row, from_col: from_coord.col,
+        board_contents: @game.board_contents, board: @game.board,
+        player_order: game_player.order
       )
       return "Not available" unless destinations.include?([ row, col ])
-      place_warrior(row, col, game_player, tile_klass:)
+      move_ship(row, col, game_player, tile_klass:)
+    elsif @game.board_contents.ship_at?(row, col) &&
+          @game.board_contents.player_at(row, col) == game_player.order
+      return "Not available"  # handled by popup: remove_meeple_action or select_meeple_for_move
+    elsif @game.board_contents.warrior_at?(row, col) &&
+          @game.board_contents.player_at(row, col) == game_player.order
+      return "Not available"  # handled by popup: remove_meeple_action
+    else
+      ship_supply = game_player.ships_remaining
+      warrior_supply = game_player.warriors_remaining
+      destinations = tile_obj.valid_destinations(
+        board_contents: @game.board_contents, board: @game.board,
+        player_order: game_player.order, warrior_supply:, ship_supply:
+      )
+      return "Not available" unless destinations.include?([ row, col ])
+      if tile_obj.is_a?(Tiles::LighthouseTile)
+        place_ship(row, col, game_player, tile_klass:)
+      else
+        place_warrior(row, col, game_player, tile_klass:)
+      end
     end
 
     game_player.mark_tile_used!(tile_klass)
     @game.current_action = { "type" => "mandatory" }
     game_player.save
+    @game.save
+  end
+
+  def remove_meeple_action(row, col)
+    @game.instantiate
+    game_player = @game.current_player
+    tile_klass = current_action_tile_klass
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+
+    if @game.board_contents.warrior_at?(row, col) &&
+       @game.board_contents.player_at(row, col) == game_player.order
+      remove_warrior(row, col, game_player, tile_klass:)
+    elsif @game.board_contents.ship_at?(row, col) &&
+          @game.board_contents.player_at(row, col) == game_player.order
+      remove_ship(row, col, game_player, tile_klass:)
+    else
+      return "Not available"
+    end
+
+    game_player.mark_tile_used!(tile_klass)
+    @game.current_action = { "type" => "mandatory" }
+    game_player.save
+    @game.save
+  end
+
+  def select_meeple_for_move(row, col)
+    @game.instantiate
+    game_player = @game.current_player
+    tile_klass = current_action_tile_klass
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+
+    return "Not available" unless @game.board_contents.ship_at?(row, col)
+    return "Not available" unless @game.board_contents.player_at(row, col) == game_player.order
+
+    tile_obj = Tiles::Tile.from_hash(tile)
+    destinations = tile_obj.valid_destinations(
+      from_row: row, from_col: col,
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: game_player.order
+    )
+    return "Not available" unless destinations.any?
+
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "select_ship",
+      from: "[#{row}, #{col}]",
+      reversible: true,
+      message: "#{game_player.player.handle} selected their ship at [#{row}, #{col}]"
+    )
+    @game.current_action = @game.current_action.merge("from" => "[#{row}, #{col}]")
     @game.save
   end
 
@@ -379,7 +454,7 @@ class TurnEngine
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand, warrior_supply: @game.current_player.warriors_remaining }
+    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand, warrior_supply: @game.current_player.warriors_remaining, ship_supply: @game.current_player.ships_remaining }
     tile_obj.activatable?(**ctx)
   end
 
@@ -523,10 +598,21 @@ class TurnEngine
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
           if tile_obj.places_meeple?
-            tile_obj.valid_destinations(
-              board_contents: @game.board_contents, board: @game.board,
-              player_order: player.order, warrior_supply: player.warriors_remaining
-            )
+            if @game.current_action["from"]
+              from = Coordinate.from_key(@game.current_action["from"])
+              tile_obj.valid_destinations(
+                from_row: from.row, from_col: from.col,
+                board_contents: @game.board_contents, board: @game.board,
+                player_order: player.order
+              )
+            else
+              tile_obj.valid_destinations(
+                board_contents: @game.board_contents, board: @game.board,
+                player_order: player.order,
+                warrior_supply: player.warriors_remaining,
+                ship_supply: player.ships_remaining
+              )
+            end
           elsif tile_obj.places_wall?
             tile_obj.valid_destinations(
               board_contents: @game.board_contents, board: @game.board,
@@ -803,6 +889,7 @@ class TurnEngine
   end
 
   def place_warrior(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -811,7 +898,7 @@ class TurnEngine
       action: "place_warrior",
       to: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} placed a warrior at [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
@@ -821,6 +908,7 @@ class TurnEngine
   end
 
   def remove_warrior(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -829,11 +917,67 @@ class TurnEngine
       action: "remove_warrior",
       from: "[#{row}, #{col}]",
       reversible: true,
-      payload: { "klass" => tile_klass },
+      payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} removed a warrior from [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
     @game.board_contents.remove(row, col)
     game_player.increment_warrior_supply!
+  end
+
+  def place_ship(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "place_ship",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass, "action_before" => action_before },
+      message: "#{game_player.player.handle} placed their ship at [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.place_ship(row, col, game_player.order)
+    game_player.decrement_ship_supply!
+  end
+
+  def remove_ship(row, col, game_player, tile_klass:)
+    action_before = @game.current_action.slice("type", "klass")
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "remove_ship",
+      from: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass, "action_before" => action_before },
+      message: "#{game_player.player.handle} removed their ship from [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.remove(row, col)
+    game_player.increment_ship_supply!
+  end
+
+  def move_ship(row, col, game_player, tile_klass:)
+    from = @game.current_action["from"]
+    action_before = @game.current_action.slice("type", "klass", "from")
+    from_coord = Coordinate.from_key(from)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "move_ship",
+      from: from,
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass, "action_before" => action_before },
+      message: "#{game_player.player.handle} moved their ship to [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.move_settlement(from_coord.row, from_coord.col, row, col)
   end
 end

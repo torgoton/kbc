@@ -172,4 +172,31 @@ class GamePlayerTest < ActiveSupport::TestCase
   test "warriors_remaining? is false when supply is 0" do
     assert_not @gp.warriors_remaining?
   end
+
+  test "ships_remaining returns 0 by default" do
+    assert_equal 0, @gp.ships_remaining
+  end
+
+  test "add_ships! increases ship count" do
+    @gp.add_ships!(1)
+    assert_equal 1, @gp.ships_remaining
+    assert @gp.ships_remaining?
+  end
+
+  test "decrement_ship_supply! reduces count by 1" do
+    @gp.add_ships!(1)
+    @gp.decrement_ship_supply!
+    assert_equal 0, @gp.ships_remaining
+  end
+
+  test "increment_ship_supply! increases count by 1" do
+    @gp.add_ships!(1)
+    @gp.decrement_ship_supply!
+    @gp.increment_ship_supply!
+    assert_equal 1, @gp.ships_remaining
+  end
+
+  test "ships_remaining? is false when supply is 0" do
+    assert_not @gp.ships_remaining?
+  end
 end

@@ -10,7 +10,7 @@ module Tiles
         "#{player_handle} must select a settlement to remove"
       end
 
-      def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
+      def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
         # Activatable if any opponent has settlements; full validation done in select_action
         true
       end

@@ -18,7 +18,7 @@ module Tiles
 
     def build_terrain = nil
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, ship_supply: 0)
       terrain = build_terrain || hand
       return [] unless terrain
 
@@ -40,13 +40,13 @@ module Tiles
       end
     end
 
-    def selectable_settlements(player_order:, board_contents:, board:, hand: nil)
+    def selectable_settlements(player_order:, board_contents:, board:, hand: nil, ship_supply: 0)
       return [] unless moves_settlement?
       return [] unless valid_destinations(board_contents:, board:, player_order:, hand:).any?
       board_contents.settlements_for(player_order)
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
       valid_destinations(board_contents:, board:, player_order:, hand:).any?
     end
 

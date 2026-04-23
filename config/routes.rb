@@ -81,6 +81,8 @@ Rails.application.routes.draw do
       post :activate_outpost
       post :remove_settlement
       post :place_wall
+      post :remove_meeple
+      post :select_meeple
     end
   end
 

@@ -42,9 +42,17 @@ module MoveApplicator
     when "activate_outpost"
       backend.apply_activate_outpost(player_order: player_order)
     when "place_warrior"
-      backend.apply_place_warrior(player_order: player_order, to: move.to)
+      backend.apply_place_warrior(player_order: player_order, to: move.to, action_before: move.payload&.dig("action_before"))
     when "remove_warrior"
-      backend.apply_remove_warrior(player_order: player_order, from: move.from)
+      backend.apply_remove_warrior(player_order: player_order, from: move.from, action_before: move.payload&.dig("action_before"))
+    when "place_ship"
+      backend.apply_place_ship(player_order: player_order, to: move.to, action_before: move.payload&.dig("action_before"))
+    when "remove_ship"
+      backend.apply_remove_ship(player_order: player_order, from: move.from, action_before: move.payload&.dig("action_before"))
+    when "move_ship"
+      backend.apply_move_ship(player_order: player_order, from: move.from, to: move.to, action_before: move.payload&.dig("action_before"))
+    when "select_ship"
+      backend.apply_select_ship(player_order: player_order, from: move.from)
     end
   end
 end
@@ -170,18 +178,44 @@ class MoveApplicator::HashState
     player["tiles"] = updated
   end
 
-  def apply_place_warrior(player_order:, to:)
+  def apply_place_warrior(player_order:, to:, action_before: nil)
     coord = Coordinate.from_key(to)
     @board.place_warrior(coord.row, coord.col, player_order)
     @players[player_order]["supply"]["warriors"] = (@players[player_order]["supply"]["warriors"] || 0) - 1
     @current_action = { "type" => "mandatory" }
   end
 
-  def apply_remove_warrior(player_order:, from:)
+  def apply_remove_warrior(player_order:, from:, action_before: nil)
     coord = Coordinate.from_key(from)
     @board.remove(coord.row, coord.col)
     @players[player_order]["supply"]["warriors"] = (@players[player_order]["supply"]["warriors"] || 0) + 1
     @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_place_ship(player_order:, to:, action_before: nil)
+    coord = Coordinate.from_key(to)
+    @board.place_ship(coord.row, coord.col, player_order)
+    @players[player_order]["supply"]["ships"] = (@players[player_order]["supply"]["ships"] || 0) - 1
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_remove_ship(player_order:, from:, action_before: nil)
+    coord = Coordinate.from_key(from)
+    @board.remove(coord.row, coord.col)
+    @players[player_order]["supply"]["ships"] = (@players[player_order]["supply"]["ships"] || 0) + 1
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_move_ship(player_order:, from:, to:, action_before: nil)
+    from_coord = Coordinate.from_key(from)
+    to_coord = Coordinate.from_key(to)
+    @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
+    mark_tile_used(@players[player_order], "LighthouseTile")
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_select_ship(player_order:, from:)
+    @current_action = @current_action.merge("from" => from)
   end
 
   public
@@ -310,7 +344,7 @@ class MoveApplicator::LiveState
     gp.save
   end
 
-  def apply_place_warrior(player_order:, to:)
+  def apply_place_warrior(player_order:, to:, action_before: nil)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
@@ -318,9 +352,10 @@ class MoveApplicator::LiveState
     gp.mark_tile_unused!("BarracksTile")
     gp.increment_warrior_supply!
     gp.save
+    @game.current_action = action_before if action_before
   end
 
-  def apply_remove_warrior(player_order:, from:)
+  def apply_remove_warrior(player_order:, from:, action_before: nil)
     coord = Coordinate.from_key(from)
     @game.board_contents_will_change!
     @game.board_contents.place_warrior(coord.row, coord.col, player_order)
@@ -328,6 +363,45 @@ class MoveApplicator::LiveState
     gp.mark_tile_unused!("BarracksTile")
     gp.decrement_warrior_supply!
     gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_place_ship(player_order:, to:, action_before: nil)
+    coord = Coordinate.from_key(to)
+    @game.board_contents_will_change!
+    @game.board_contents.remove(coord.row, coord.col)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("LighthouseTile")
+    gp.increment_ship_supply!
+    gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_remove_ship(player_order:, from:, action_before: nil)
+    coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.place_ship(coord.row, coord.col, player_order)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("LighthouseTile")
+    gp.decrement_ship_supply!
+    gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_move_ship(player_order:, from:, to:, action_before: nil)
+    to_coord = Coordinate.from_key(to)
+    from_coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.move_settlement(to_coord.row, to_coord.col, from_coord.row, from_coord.col)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("LighthouseTile")
+    gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_select_ship(player_order:, from:)
+    @game.current_action_will_change!
+    @game.current_action.delete("from")
   end
 
   private

@@ -6,7 +6,7 @@ module Tiles
 
       def outpost_tile? = true
 
-      def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0)
+      def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
         false # activated via separate route, not the normal tile action flow
       end
     end
