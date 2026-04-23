@@ -17,7 +17,7 @@ export default class extends Controller {
   }
 
   toggle(event) {
-    if (!this.element.classList.contains("selectable")) return
+    if (!this.element.closest(".hex")?.classList.contains("selectable")) return
     event.stopPropagation()
     this.popupTarget.classList.toggle("hidden")
   }
