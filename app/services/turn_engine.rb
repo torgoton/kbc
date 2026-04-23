@@ -836,4 +836,57 @@ class TurnEngine
     @game.board_contents.remove(row, col)
     game_player.increment_warrior_supply!
   end
+
+  def place_ship(row, col, game_player, tile_klass:)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "place_ship",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} placed their ship at [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.place_ship(row, col, game_player.order)
+    game_player.decrement_ship_supply!
+  end
+
+  def remove_ship(row, col, game_player, tile_klass:)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "remove_ship",
+      from: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} removed their ship from [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.remove(row, col)
+    game_player.increment_ship_supply!
+  end
+
+  def move_ship(row, col, game_player, tile_klass:)
+    from = @game.current_action["from"]
+    from_coord = Coordinate.from_key(from)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "move_ship",
+      from: from,
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} moved their ship to [#{row}, #{col}]"
+    )
+    @game.board_contents_will_change!
+    @game.board_contents.move_settlement(from_coord.row, from_coord.col, row, col)
+  end
 end
