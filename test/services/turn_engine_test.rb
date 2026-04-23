@@ -987,6 +987,48 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal false, sword["used"], "SwordTile must be unused after undo"
   end
 
+  test "undo of place_warrior restores current_action to barracks tile state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[0, 0]", "used" => false } ])
+    player.reload.add_warriors!(2)
+    @game.update!(current_action: { "type" => "barracks", "klass" => "BarracksTile" })
+
+    hex = empty_hexes_of("G", 1).first
+    skip "No grass hex available" unless hex
+    @engine.execute_meeple_action(*hex)
+    assert_equal "mandatory", @game.reload.current_action["type"]
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    assert_equal "barracks", @game.current_action["type"]
+    assert_equal "BarracksTile", @game.current_action["klass"]
+    assert_equal false, @game.current_player.tiles.find { |t| t["klass"] == "BarracksTile" }["used"]
+    assert_equal 2, @game.current_player.warriors_remaining
+  end
+
+  test "undo of remove_warrior restores current_action to barracks tile state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[0, 0]", "used" => false } ])
+    player.reload.add_warriors!(2)
+    @game.board_contents_will_change!
+    hex = empty_hexes_of("G", 1).first
+    skip "No grass hex available" unless hex
+    @game.board_contents.place_warrior(*hex, player.order)
+    @game.save
+    @game.update!(current_action: { "type" => "barracks", "klass" => "BarracksTile" })
+
+    TurnEngine.new(@game.reload).remove_meeple_action(*hex)
+    assert_equal "mandatory", @game.reload.current_action["type"]
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    assert_equal "barracks", @game.current_action["type"]
+    assert_equal "BarracksTile", @game.current_action["klass"]
+    assert @game.board_contents.warrior_at?(*hex)
+  end
+
   def force_hand(terrain)
     @game.current_player.update!(hand: terrain)
   end
