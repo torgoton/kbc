@@ -337,6 +337,7 @@ class Game < ApplicationRecord
     instantiate_board
     castle_goal = board_has_castles? ? [ "castles" ] : []
     self.goals = castle_goal + OPTIONAL_GOALS.sample(3)
+    @board = nil
     save
   end
 
