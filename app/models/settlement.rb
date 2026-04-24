@@ -7,5 +7,6 @@ class Settlement
   end
 
   def warrior? = meeple_type == "warrior"
-  def ship? = meeple_type == "ship"
+  def ship?    = meeple_type == "ship"
+  def wagon?   = meeple_type == "wagon"
 end
