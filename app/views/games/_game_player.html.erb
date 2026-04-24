@@ -28,6 +28,9 @@
       <% player.ships_remaining.times do %>
         <%= render "games/ship", color: player_color(player.order), css_class: "warrior-icon" %>
       <% end %>
+      <% player.wagons_remaining.times do %>
+        <%= render "games/wagon", color: player_color(player.order), css_class: "warrior-icon" %>
+      <% end %>
     </div>
     <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
     <% if score_data %>
