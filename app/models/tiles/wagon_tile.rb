@@ -1,6 +1,6 @@
 module Tiles
   class WagonTile < Tiles::Tile
-    CREATOR = "Icon by dDara".freeze
+    CREATOR = "Icon by Chris Schumann".freeze
     DESCRIPTION = "Place, move, or remove your wagon".freeze
 
     SUITABLE_TERRAIN = (BUILDABLE_TERRAIN + [ "M" ]).freeze
