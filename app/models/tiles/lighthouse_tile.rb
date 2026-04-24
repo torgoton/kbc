@@ -4,23 +4,24 @@ module Tiles
     DESCRIPTION = "Place, move, or remove your ship".freeze
 
     def places_meeple? = true
+    def meeple_kind    = "ship"
 
     def on_pickup(game_player:)
       game_player.add_ships!(1)
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
-      ship_supply > 0 || board_contents.ships_for(player_order).any?
+    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
+      supply["ship"] > 0 || board_contents.ships_for(player_order).any?
     end
 
     # No from_row/from_col: placement hexes + own ship hex (for popup triggering).
     # With from_row/from_col: BFS move destinations through empty water up to 3 steps.
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, warrior_supply: 0, ship_supply: 0)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, supply: Hash.new(0))
       if from_row && from_col
         water_bfs(from_row, from_col, board_contents:, board:, max_depth: 3)
       else
         ships = board_contents.ships_for(player_order)
-        placement = ship_supply > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
+        placement = supply["ship"] > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
         (placement + ships).uniq
       end
     end

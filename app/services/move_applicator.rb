@@ -53,6 +53,14 @@ module MoveApplicator
       backend.apply_move_ship(player_order: player_order, from: move.from, to: move.to, action_before: move.payload&.dig("action_before"))
     when "select_ship"
       backend.apply_select_ship(player_order: player_order, from: move.from)
+    when "place_wagon"
+      backend.apply_place_wagon(player_order: player_order, to: move.to, action_before: move.payload&.dig("action_before"))
+    when "remove_wagon"
+      backend.apply_remove_wagon(player_order: player_order, from: move.from, action_before: move.payload&.dig("action_before"))
+    when "move_wagon"
+      backend.apply_move_wagon(player_order: player_order, from: move.from, to: move.to, action_before: move.payload&.dig("action_before"))
+    when "select_wagon"
+      backend.apply_select_wagon(player_order: player_order, from: move.from)
     end
   end
 end
@@ -215,6 +223,32 @@ class MoveApplicator::HashState
   end
 
   def apply_select_ship(player_order:, from:)
+    @current_action = @current_action.merge("from" => from)
+  end
+
+  def apply_place_wagon(player_order:, to:, action_before: nil)
+    coord = Coordinate.from_key(to)
+    @board.place_wagon(coord.row, coord.col, player_order)
+    @players[player_order]["supply"]["wagons"] = (@players[player_order]["supply"]["wagons"] || 0) - 1
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_remove_wagon(player_order:, from:, action_before: nil)
+    coord = Coordinate.from_key(from)
+    @board.remove(coord.row, coord.col)
+    @players[player_order]["supply"]["wagons"] = (@players[player_order]["supply"]["wagons"] || 0) + 1
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_move_wagon(player_order:, from:, to:, action_before: nil)
+    from_coord = Coordinate.from_key(from)
+    to_coord = Coordinate.from_key(to)
+    @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
+    mark_tile_used(@players[player_order], "WagonTile")
+    @current_action = { "type" => "mandatory" }
+  end
+
+  def apply_select_wagon(player_order:, from:)
     @current_action = @current_action.merge("from" => from)
   end
 
@@ -400,6 +434,44 @@ class MoveApplicator::LiveState
   end
 
   def apply_select_ship(player_order:, from:)
+    @game.current_action_will_change!
+    @game.current_action.delete("from")
+  end
+
+  def apply_place_wagon(player_order:, to:, action_before: nil)
+    coord = Coordinate.from_key(to)
+    @game.board_contents_will_change!
+    @game.board_contents.remove(coord.row, coord.col)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("WagonTile")
+    gp.increment_wagon_supply!
+    gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_remove_wagon(player_order:, from:, action_before: nil)
+    coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.place_wagon(coord.row, coord.col, player_order)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("WagonTile")
+    gp.decrement_wagon_supply!
+    gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_move_wagon(player_order:, from:, to:, action_before: nil)
+    to_coord = Coordinate.from_key(to)
+    from_coord = Coordinate.from_key(from)
+    @game.board_contents_will_change!
+    @game.board_contents.move_settlement(to_coord.row, to_coord.col, from_coord.row, from_coord.col)
+    gp = player_for(player_order)
+    gp.mark_tile_unused!("WagonTile")
+    gp.save
+    @game.current_action = action_before if action_before
+  end
+
+  def apply_select_wagon(player_order:, from:)
     @game.current_action_will_change!
     @game.current_action.delete("from")
   end

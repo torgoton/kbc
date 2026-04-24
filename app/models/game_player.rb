@@ -88,6 +88,34 @@ class GamePlayer < ApplicationRecord
     supply["ships"] = ships_remaining + 1
   end
 
+  def wagons_remaining
+    supply["wagons"].to_i
+  end
+
+  def wagons_remaining?
+    wagons_remaining > 0
+  end
+
+  def add_wagons!(n)
+    supply["wagons"] = wagons_remaining + n
+  end
+
+  def decrement_wagon_supply!
+    supply["wagons"] = wagons_remaining - 1
+  end
+
+  def increment_wagon_supply!
+    supply["wagons"] = wagons_remaining + 1
+  end
+
+  def supply_hash
+    {
+      "warrior" => warriors_remaining,
+      "ship"    => ships_remaining,
+      "wagon"   => wagons_remaining
+    }
+  end
+
   def held_tile_locations
     (tiles || []).map { |t| t["from"] }.to_set
   end

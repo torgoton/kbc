@@ -49,7 +49,7 @@ module Tiles
       candidates.uniq
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
+    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
       valid_destinations(board_contents:, board:, player_order:).any?
     end
 

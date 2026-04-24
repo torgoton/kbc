@@ -43,15 +43,17 @@
               <% end %>
               <div class="tile-tooltip"><%= content.description.html_safe %></div>
             <% when Settlement %>
-              <% meeple_tile_active = %w[BarracksTile LighthouseTile].include?(game.current_action["klass"]) %>
+              <% meeple_tile_active = %w[BarracksTile LighthouseTile WagonTile].include?(game.current_action["klass"]) %>
               <% show_popup = meeple_tile_active && content.player == game.current_player.order %>
-              <% if show_popup && (content.warrior? || content.ship?) %>
+              <% if show_popup && (content.warrior? || content.ship? || content.wagon?) %>
                 <div data-controller="meeple-popup"
                      data-action="click->meeple-popup#toggle">
                   <% if content.warrior? %>
                     <%= render "games/warrior", color: player_color(content.player), css_class: "hex-settlement" %>
-                  <% else %>
+                  <% elsif content.ship? %>
                     <%= render "games/ship", color: player_color(content.player), css_class: "hex-settlement" %>
+                  <% else %>
+                    <%= render "games/wagon", color: player_color(content.player), css_class: "hex-settlement" %>
                   <% end %>
                   <div data-meeple-popup-target="popup" class="meeple-popup hidden">
                     <%= button_to "Remove",
@@ -59,7 +61,7 @@
                           params: { row: board_row, col: board_col },
                           class: "popup-btn",
                           data: { turbo_stream: true } %>
-                    <% if content.ship? %>
+                    <% if content.ship? || content.wagon? %>
                       <%= button_to "Move",
                             select_meeple_game_path(game),
                             params: { row: board_row, col: board_col },
@@ -73,6 +75,8 @@
                 <%= render "games/warrior", color: player_color(content.player), css_class: "hex-settlement" %>
               <% elsif content.ship? %>
                 <%= render "games/ship", color: player_color(content.player), css_class: "hex-settlement" %>
+              <% elsif content.wagon? %>
+                <%= render "games/wagon", color: player_color(content.player), css_class: "hex-settlement" %>
               <% else %>
                 <%= render "games/settlement", color: player_color(content.player), css_class: "hex-settlement" %>
               <% end %>
