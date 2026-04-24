@@ -27,30 +27,30 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
 
   test "activatable? is true when ship in supply" do
     state = BoardState.new
-    assert tile.activatable?(player_order: 0, board_contents: state, board: all_water_board, ship_supply: 1)
+    assert tile.activatable?(player_order: 0, board_contents: state, board: all_water_board, supply: { "ship" => 1 })
   end
 
   test "activatable? is true when ship already on board" do
     state = BoardState.new
     state.place_ship(5, 5, 0)
-    assert tile.activatable?(player_order: 0, board_contents: state, board: all_water_board, ship_supply: 0)
+    assert tile.activatable?(player_order: 0, board_contents: state, board: all_water_board, supply: { "ship" => 0 })
   end
 
   test "activatable? is false when no supply and no ship on board" do
     state = BoardState.new
-    assert_not tile.activatable?(player_order: 0, board_contents: state, board: all_water_board, ship_supply: 0)
+    assert_not tile.activatable?(player_order: 0, board_contents: state, board: all_water_board, supply: { "ship" => 0 })
   end
 
   test "valid_destinations (placement) returns empty when ship supply 0 and no ship on board" do
     state = BoardState.new
-    assert_equal [], tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, ship_supply: 0)
+    assert_equal [], tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, supply: { "ship" => 0 })
   end
 
   test "valid_destinations (placement) returns adjacent water hexes when own settlements present" do
     state = BoardState.new
     state.place_settlement(5, 5, 0)
     neighbors = state.neighbors(5, 5)
-    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, ship_supply: 1)
+    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, supply: { "ship" => 1 })
     neighbors.each { |r, c| assert_includes destinations, [ r, c ] }
     assert_not_includes destinations, [ 0, 0 ]
   end
@@ -62,7 +62,7 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
     land_neighbors.each { |(r, c)| terrain[[ r, c ]] = "G" }
     state = BoardState.new
     state.place_settlement(5, 5, 0)
-    destinations = tile.valid_destinations(board_contents: state, board: BoardStub.new(terrain), player_order: 0, ship_supply: 1)
+    destinations = tile.valid_destinations(board_contents: state, board: BoardStub.new(terrain), player_order: 0, supply: { "ship" => 1 })
     assert_includes destinations, [ 0, 0 ]
   end
 
@@ -70,14 +70,14 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(5, 5, 0)
     state.place_settlement(5, 4, 1)
-    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, ship_supply: 1)
+    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, supply: { "ship" => 1 })
     assert_not_includes destinations, [ 5, 4 ]
   end
 
   test "valid_destinations includes own ship hex when ship is on board" do
     state = BoardState.new
     state.place_ship(3, 3, 0)
-    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, ship_supply: 0)
+    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, supply: { "ship" => 0 })
     assert_includes destinations, [ 3, 3 ]
   end
 

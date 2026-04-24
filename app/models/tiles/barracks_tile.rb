@@ -4,17 +4,18 @@ module Tiles
     DESCRIPTION = "Place or remove a warrior".freeze
 
     def places_meeple? = true
+    def meeple_kind    = "warrior"
 
     def on_pickup(game_player:)
       game_player.add_warriors!(2)
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, warrior_supply: 0, ship_supply: 0)
-      warrior_supply > 0 || board_contents.warriors_for(player_order).any?
+    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
+      supply["warrior"] > 0 || board_contents.warriors_for(player_order).any?
     end
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, warrior_supply: 0, ship_supply: 0)
-      placement = warrior_supply > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, supply: Hash.new(0))
+      placement = supply["warrior"] > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
       removal = board_contents.warriors_for(player_order)
       (placement + removal).uniq
     end
