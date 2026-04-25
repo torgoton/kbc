@@ -289,7 +289,7 @@ class Game < ApplicationRecord
 
   def select_boards(options = {})
     min = options[:min_board] || 0
-    max = options[:max_board] || Boards::BoardSection::SECTIONS.size - 1
+    max = options[:max_board] || 7
     self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
     while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
@@ -334,7 +334,8 @@ class Game < ApplicationRecord
     save
   end
 
-  OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
+  #  OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
+  OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
 
