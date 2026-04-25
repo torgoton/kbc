@@ -803,7 +803,22 @@ class TurnEngine
     game_player.receive_tile!(tile[:klass], from: tile[:key])
     game_player.taken_from = (game_player.taken_from || []) + [ tile[:key] ]
     tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)
+    supply_before = game_player.supply_hash.dup
     tile_obj&.on_pickup(game_player:)
+    game_player.supply_hash.each do |kind, qty_after|
+      granted = qty_after - supply_before[kind].to_i
+      next unless granted > 0
+      @game.move_count += 1
+      @game.moves.create(
+        order: @game.move_count,
+        game_player: game_player,
+        deliberate: false,
+        action: "grant_meeple",
+        reversible: true,
+        payload: { "kind" => kind, "qty" => granted },
+        message: "#{game_player.player.handle} acquires #{ActionController::Base.helpers.pluralize(granted, kind)}"
+      )
+    end
     if tile_obj&.nomad_tile?
       if tile_obj.is_a?(Tiles::Nomad::TreasureTile)
         # Score 3 points immediately and remove the tile

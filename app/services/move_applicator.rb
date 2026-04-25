@@ -12,6 +12,8 @@ module MoveApplicator
       backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"))
     when "pick_up_tile"
       backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
+    when "grant_meeple"
+      backend.apply_grant_meeple(player_order: player_order, kind: move.payload["kind"], qty: move.payload["qty"])
     when "forfeit_tile"
       backend.apply_forfeit_tile(
         player_order: player_order,
@@ -117,6 +119,11 @@ class MoveApplicator::HashState
     player = @players[player_order]
     player["tiles"] = (player["tiles"] || []) + [ { "klass" => klass, "from" => from, "used" => true } ]
     player["taken_from"] = (player["taken_from"] || []) + [ from ]
+  end
+
+  def apply_grant_meeple(player_order:, kind:, qty:)
+    key = kind.pluralize
+    @players[player_order]["supply"][key] = (@players[player_order]["supply"][key] || 0) + qty
   end
 
   def apply_forfeit_tile(player_order:, from:, klass:, used:)
@@ -305,6 +312,16 @@ class MoveApplicator::LiveState
     gp = player_for(player_order)
     gp.remove_tile_from!(from)
     gp.taken_from = (gp.taken_from || []) - [ from ]
+    gp.save
+  end
+
+  def apply_grant_meeple(player_order:, kind:, qty:)
+    gp = player_for(player_order)
+    case kind
+    when "warrior" then gp.add_warriors!(-qty)
+    when "ship"    then gp.add_ships!(-qty)
+    when "wagon"   then gp.add_wagons!(-qty)
+    end
     gp.save
   end
 

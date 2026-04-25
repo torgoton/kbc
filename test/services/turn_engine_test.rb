@@ -106,6 +106,30 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_includes player.reload.taken_from || [], "[#{tile_row}, #{tile_col}]"
   end
 
+  test "undo of a meeple-granting tile pickup revokes the meeples" do
+    tile_row, tile_col, trigger_row, trigger_col = find_meeple_tile_trigger_pair
+    skip "No meeple tile trigger position found" unless tile_row
+
+    board = @game.instantiate
+    klass = @game.board_contents.tile_klass(tile_row, tile_col)
+    kind = Tiles::Tile.for_klass(klass).new(0).meeple_kind
+    player = @game.current_player
+    supply_before = player.reload.supply_hash[kind]
+
+    force_hand(board.terrain_at(trigger_row, trigger_col))
+    @engine.build_settlement(trigger_row, trigger_col)
+    @game.reload
+
+    assert @game.moves.exists?(action: "grant_meeple"), "expected a grant_meeple move after pickup"
+    assert_operator player.reload.supply_hash[kind], :>, supply_before
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal supply_before, player.reload.supply_hash[kind]
+    assert_not @game.moves.exists?(action: "grant_meeple")
+  end
+
   test "undo of a pickup removes the location from taken_from" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
     skip "No valid trigger position found" unless tile_row
@@ -838,6 +862,22 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   private
+
+  def find_meeple_tile_trigger_pair
+    meeple_klasses = %w[BarracksTile LighthouseTile WagonTile]
+    board = @game.instantiate
+    @game.board_contents.locations_with_remaining_tiles.each do |t_row, t_col|
+      klass = @game.board_contents.tile_klass(t_row, t_col)
+      next unless meeple_klasses.include?(klass)
+      @game.board_contents.neighbors(t_row, t_col).each do |nr, nc|
+        terrain = board.terrain_at(nr, nc)
+        if @game.board_contents.empty?(nr, nc) && %w[C D F G T].include?(terrain)
+          return [ t_row, t_col, nr, nc ]
+        end
+      end
+    end
+    nil
+  end
 
   def find_tile_trigger_pair
     board = @game.instantiate
