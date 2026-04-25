@@ -4,6 +4,11 @@
     --clr-g-text: white;
     --clr-g-link: #cccc00;
     --clr-hex-border: #000000;
+    --clr-p-a: #ffcc00;
+    --clr-p-b: #0055d4;
+    --clr-p-c: #444444;
+    --clr-p-d: #cccccc;
+    --clr-p-e: #aa00aa;
 
     --fx-hex-transparency: 10%;
     --fx-loc-transparency: 15%;
@@ -56,6 +61,16 @@ section#log {
     grid-area: game-log;
     overflow-y: auto;
     height: 100%;
+}
+
+#log .move {
+    margin: 1px;
+    padding: 1px;
+    &.a { background-color: oklch(from var(--clr-p-a) l c h / 30%); }
+    &.b { background-color: oklch(from var(--clr-p-b) l c h / 30%); }
+    &.c { background-color: oklch(from var(--clr-p-c) l c h / 30%); }
+    &.d { background-color: oklch(from var(--clr-p-d) l c h / 30%); }
+    &.e { background-color: oklch(from var(--clr-p-e) l c h / 30%); }
 }
 
 .game-section {

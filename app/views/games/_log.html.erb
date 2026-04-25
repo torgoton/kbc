@@ -1,7 +1,6 @@
 <h1>Game Log</h1>
 <% game.moves.order(created_at: :desc).each do |move| %>
-  <div class="move">
-    <p><strong>Move <%= move.order %>:</strong> <%= move.message %></p>
+  <div class="move <%= 'abcde'.chars[move.game_player.order] %>">
+    <%= move.message %>
   </div>
 <% end %>
-
