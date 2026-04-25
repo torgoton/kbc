@@ -223,10 +223,10 @@ class TurnEngine
 
     tile_obj = Tiles::Tile.from_hash(tile)
     moveable = case tile_obj.meeple_kind
-               when "ship"  then @game.board_contents.ship_at?(row, col)
-               when "wagon" then @game.board_contents.wagon_at?(row, col)
-               else false
-               end
+    when "ship"  then @game.board_contents.ship_at?(row, col)
+    when "wagon" then @game.board_contents.wagon_at?(row, col)
+    else false
+    end
     return "Not available" unless moveable
     return "Not available" unless @game.board_contents.player_at(row, col) == game_player.order
 
