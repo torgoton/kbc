@@ -69,7 +69,7 @@ class Game < ApplicationRecord
     state.to_s == "waiting"
   end
 
-  def start(safe = true)
+  def start(safe = true, options = {})
     if game_players.count < 2
       Rails.logger.warn "Cannot start game with less than 2 players"
       return false
@@ -88,8 +88,8 @@ class Game < ApplicationRecord
     self.state = "playing"
     self.move_count = 0
     self.mandatory_count = MANDATORY_COUNT
-    select_boards
-    populate_boards
+    select_boards(options)
+    populate_boards(options)
     initialize_terrain_deck
     select_goals
     select_tasks
@@ -101,19 +101,16 @@ class Game < ApplicationRecord
     save
   end
 
-  def restart
+  def restart(options = {})
     if User.count < 2
       Rails.logger.fatal "Cannot restart game with less than 2 users in the system"
       return false
     end
     self.moves.destroy_all
-    self.game_players.destroy_all
-    # Add first 2 users as players (for testing)
-    User.limit(2).each { |u| add_player(u) }
     self.discard ? self.discard.clear : self.discard = DECK.chars
     self.scores ? self.scores.clear : self.scores = {}
     @board = nil
-    start(false)
+    start(false, options)
   end
 
   def ending?
@@ -290,12 +287,17 @@ class Game < ApplicationRecord
 
   private
 
-  def select_boards
-    self.boards = (12...Boards::BoardSection::SECTIONS.size).to_a.sample(4).map { |id| [ id, rand(2) ] }
+  def select_boards(options = {})
+    min = options[:min_board] || 0
+    max = options[:max_board] || Boards::BoardSection::SECTIONS.size - 1
+    self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
+    while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
+      self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
+    end
     save
   end
 
-  def populate_boards
+  def populate_boards(options = {})
     state = BoardState.new
     instantiate_board
     @board.map.each_with_index do |board, i|
@@ -306,6 +308,9 @@ class Game < ApplicationRecord
       end
     end
     nomad_pool = Boards::Board::NOMAD_TILE_POOL.shuffle
+    if options[:no_swords]
+      nomad_pool.reject! { |t| t.include?("SwordTile") }
+    end
     @board.map.each_with_index do |board_section, i|
       board_section.silver_hexes.select { |h| h[:k] == "Nomad" }.each do |nomad_hex|
         row, col = overall_location(i, nomad_hex[:r], nomad_hex[:c])
