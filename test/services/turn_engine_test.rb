@@ -80,7 +80,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "building adjacent to a tile location picks it up and decrements qty" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    skip "No valid trigger position found" unless tile_row
+    raise "No valid trigger position found" unless tile_row
 
     force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
     player = @game.current_player
@@ -95,7 +95,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "picking up a tile records the location in taken_from" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    skip "No valid trigger position found" unless tile_row
+    raise "No valid trigger position found" unless tile_row
 
     force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
     player = @game.current_player
@@ -107,8 +107,9 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "undo of a meeple-granting tile pickup revokes the meeples" do
+    @game.restart(include_boards: [ 12 ], max_board: 12) # ensure we have a meeple-granting tile section
     tile_row, tile_col, trigger_row, trigger_col = find_meeple_tile_trigger_pair
-    skip "No meeple tile trigger position found" unless tile_row
+    raise "No meeple tile trigger position found" unless tile_row
 
     board = @game.instantiate
     klass = @game.board_contents.tile_klass(tile_row, tile_col)
@@ -132,7 +133,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "undo of a pickup removes the location from taken_from" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    skip "No valid trigger position found" unless tile_row
+    raise "No valid trigger position found" unless tile_row
 
     force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
     tile_key = "[#{tile_row}, #{tile_col}]"
@@ -149,7 +150,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "forfeiting a tile preserves taken_from (cannot re-seize the same location)" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    skip "No valid trigger position found" unless tile_row
+    raise "No valid trigger position found" unless tile_row
 
     force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
     tile_key = "[#{tile_row}, #{tile_col}]"
@@ -174,7 +175,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "player cannot pick up a second tile from a location they've already seized" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    skip "No valid trigger position found" unless tile_row
+    raise "No valid trigger position found" unless tile_row
 
     force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
     player = @game.current_player
@@ -371,6 +372,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "resettlement move deducts actual step cost from budget" do
+    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     # Find two Grass hexes at least 2 apart so cost > 1
     grass_hexes = empty_hexes_of("G", 10)
     # Find a source and a destination that are 2+ steps apart
@@ -385,7 +387,7 @@ class TurnEngineTest < ActiveSupport::TestCase
       )
       dist && dist >= 2
     end
-    skip "No suitable hex pair found" unless dest_hex
+    raise "No suitable hex pair found" unless dest_hex
 
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
@@ -413,6 +415,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "undo of resettlement move restores budget, vacated, moves, and from in current_action" do
+    @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     spots = empty_hexes_of("G", 2)
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
@@ -1034,7 +1037,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(current_action: { "type" => "barracks", "klass" => "BarracksTile" })
 
     hex = empty_hexes_of("G", 1).first
-    skip "No grass hex available" unless hex
+    raise "No grass hex available" unless hex
     @engine.execute_meeple_action(*hex)
     assert_equal "mandatory", @game.reload.current_action["type"]
 
@@ -1053,7 +1056,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     player.reload.add_warriors!(2)
     @game.board_contents_will_change!
     hex = empty_hexes_of("G", 1).first
-    skip "No grass hex available" unless hex
+    raise "No grass hex available" unless hex
     @game.board_contents.place_warrior(*hex, player.order)
     @game.save
     @game.update!(current_action: { "type" => "barracks", "klass" => "BarracksTile" })
