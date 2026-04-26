@@ -92,15 +92,3 @@ production:
     database: kbc_production
     username: kbc_prod
     password: <%= ENV["KBC_DATABASE_PASSWORD"] %>
-  cache:
-    <<: *primary_production
-    database: kbc_production_cache
-    migrations_paths: db/cache_migrate
-  queue:
-    <<: *primary_production
-    database: kbc_production_queue
-    migrations_paths: db/queue_migrate
-  cable:
-    <<: *primary_production
-    database: kbc_production_cable
-    migrations_paths: db/cable_migrate
