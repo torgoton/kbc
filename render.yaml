@@ -1,0 +1,22 @@
+databases:
+  - name: kbc
+    databaseName: kbc_prod
+    user: kbc_prod_user
+    password: <%= ENV["KBC_PROD_PASSWORD"] %>`
+
+services:
+  - type: web
+    name: kbc_web
+    runtime: ruby
+    plan: free
+    buildCommand: ./bin/render-build.sh
+    startCommand: bundle exec rails server
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kbc_prod
+          property: connectionString
+      - key: RAILS_MASTER_KEY
+        sync: false
+      - key: WEB_CONCURRENCY
+        value: 2
