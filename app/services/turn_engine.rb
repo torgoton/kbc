@@ -298,8 +298,9 @@ class TurnEngine
       @game.current_action_will_change!
       @game.current_action.delete("outpost_active")
     else
+      hand = tile_obj.fort_tile? ? @game.current_action["fort_terrain"] : game_player.hand
       destinations = tile_obj.valid_destinations(
-        board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: game_player.hand
+        board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: hand
       )
       return "Not available" unless destinations.include?([ row, col ])
     end
@@ -538,10 +539,12 @@ class TurnEngine
     action_type = @game.current_action["type"]
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
     if tile_klass
-      msg = tile_klass.new(0).action_message(
+      tile_for_msg = tile_klass.new(0)
+      hand_for_msg = tile_for_msg.fort_tile? ? @game.current_action["fort_terrain"] : @game.current_player.hand
+      msg = tile_for_msg.action_message(
         player_handle: @game.current_player.player.handle,
         terrain_names: Boards::Board::TERRAIN_NAMES,
-        hand: @game.current_player.hand
+        hand: hand_for_msg
       )
       remaining = @game.current_action["remaining"]
       remaining ? "#{msg} (#{remaining} remaining)" : msg
@@ -692,8 +695,9 @@ class TurnEngine
               )
             end
           else
+            hand = tile_obj.fort_tile? ? @game.current_action["fort_terrain"] : player.hand
             tile_obj.valid_destinations(
-              board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: player.hand
+              board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: hand
             )
           end
         else
