@@ -84,6 +84,10 @@ module Tiles
       false
     end
 
+    def fort_tile?
+      false
+    end
+
     # Returns the terrain key that constrains the move destination, or nil if unconstrained.
     # Subclasses override this (e.g. BarnTile returns hand, HarborTile returns "W").
     def move_terrain(hand:) = nil

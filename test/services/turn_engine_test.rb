@@ -1072,6 +1072,183 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.board_contents.warrior_at?(*hex)
   end
 
+  # ---------------------------------------------------------------------------
+  # activate_fort_tile
+  # ---------------------------------------------------------------------------
+
+  test "activate_fort_tile records activate_fort (non-reversible deliberate) and draw_fort_card (non-reversible non-deliberate)" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    moves = @game.moves.order(:order)
+    assert_equal 2, moves.count
+
+    fort_move = moves.first
+    assert_equal "activate_fort", fort_move.action
+    assert fort_move.deliberate
+    assert_not fort_move.reversible
+
+    draw_move = moves.last
+    assert_equal "draw_fort_card", draw_move.action
+    assert_not draw_move.deliberate
+    assert_not draw_move.reversible
+    assert_includes %w[C D F G T], draw_move.payload["card"]
+  end
+
+  test "activate_fort_tile sets current_action to fort with fort_terrain" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    assert_equal "fort", @game.current_action["type"]
+    assert_equal "FortTile", @game.current_action["klass"]
+    assert_includes %w[C D F G T], @game.current_action["fort_terrain"]
+  end
+
+  test "activate_fort_tile removes the drawn card from the deck and adds it to discard" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+    deck_size_before = @game.deck.size
+    discard_size_before = @game.discard.size
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    assert_equal deck_size_before - 1, @game.deck.size
+    assert_equal discard_size_before + 1, @game.discard.size
+    drawn = @game.current_action["fort_terrain"]
+    assert_includes @game.discard, drawn
+  end
+
+  test "undo_allowed? is false after activate_fort_tile (card draw blocks undo)" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    assert_not TurnEngine.new(@game).undo_allowed?
+  end
+
+  test "activate_fort_tile returns Not available if action is not mandatory" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+    @game.update!(current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => "G" })
+
+    result = @engine.activate_fort_tile
+
+    assert_equal "Not available", result
+    assert_equal 0, @game.reload.moves.count
+  end
+
+  # ---------------------------------------------------------------------------
+  # Fort tile build
+  # ---------------------------------------------------------------------------
+
+  test "buildable_cells during fort action returns cells of drawn terrain, not player hand" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.reload
+
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    # Force a known fort terrain that differs from hand
+    drawn = (@game.current_player.hand == "G") ? "D" : "G"
+    @game.update!(
+      mandatory_count: 0,
+      current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
+    )
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    cells.each do |r, c|
+      assert_equal drawn, @game.board.terrain_at(r, c),
+        "Expected all buildable cells to be #{drawn} terrain, got #{@game.board.terrain_at(r, c)} at [#{r},#{c}]"
+    end
+  end
+
+  test "activate_tile_build on fort terrain places settlement, marks tile used, resets action" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.reload
+
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    drawn = (@game.current_player.hand == "D") ? "G" : "D"
+    fort_spot = empty_hexes_of(drawn, 1).first
+    @game.update!(
+      mandatory_count: 0,
+      current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
+    )
+
+    TurnEngine.new(@game).activate_tile_build(*fort_spot)
+    @game.reload
+
+    assert_equal({ "type" => "mandatory" }, @game.current_action)
+    assert_not @game.board_contents.empty?(*fort_spot)
+    fort = @game.current_player.tiles.find { |t| t["klass"] == "FortTile" }
+    assert fort["used"]
+  end
+
+  test "undo of fort build restores settlement, restores supply, returns to fort current_action with fort_terrain" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.reload
+
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    drawn = (@game.current_player.hand == "D") ? "G" : "D"
+    fort_spot = empty_hexes_of(drawn, 1).first
+    @game.update!(
+      mandatory_count: 0,
+      current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
+    )
+    supply_before = @game.current_player.supply["settlements"]
+
+    TurnEngine.new(@game).activate_tile_build(*fort_spot)
+    @game.reload
+    assert TurnEngine.new(@game).undo_allowed?
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert @game.board_contents.empty?(*fort_spot)
+    assert_equal supply_before, @game.current_player.reload.supply["settlements"]
+    assert_equal "fort", @game.current_action["type"]
+    assert_equal "FortTile", @game.current_action["klass"]
+    assert_equal drawn, @game.current_action["fort_terrain"]
+    fort = @game.current_player.tiles.find { |t| t["klass"] == "FortTile" }
+    assert_equal false, fort["used"]
+  end
+
   def force_hand(terrain)
     @game.current_player.update!(hand: terrain)
   end

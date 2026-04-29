@@ -12,7 +12,22 @@
     <% activatable = my_turn && engine.tile_activatable?(tile) %>
     <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
 
-    <% if activatable %>
+    <% tile_obj_check = Tiles::Tile.for_klass(tile["klass"])&.new(0) %>
+    <% if activatable && tile_obj_check&.fort_tile? %>
+      <div data-controller="meeple-popup">
+        <div class="player-tile <%= state %> selectable"
+             title="<%= description %>"
+             data-action="click->meeple-popup#toggle">
+          <div class="tile-container <%= type %>"></div>
+        </div>
+        <div data-meeple-popup-target="popup" class="meeple-popup hidden">
+          <span class="popup-warning">Cannot be undone!</span>
+          <%= button_to "Draw & Build", activate_fort_game_path(game),
+                class: "popup-btn", data: { turbo_stream: true } %>
+          <button data-action="click->meeple-popup#cancel" class="popup-btn popup-btn-cancel">Cancel</button>
+        </div>
+      </div>
+    <% elsif activatable %>
       <%= button_to select_action_game_path(game), params: { action_type: type } do %>
         <div class="player-tile <%= state %>" title="<%= description %>">
           <div class="tile-container <%= type %>"></div>

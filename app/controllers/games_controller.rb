@@ -1,5 +1,5 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_settlement, :place_wall, :remove_meeple, :select_meeple ]
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_settlement, :place_wall, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
     @game = Game.new
@@ -139,6 +139,16 @@ class GamesController < ApplicationController
     TurnEngine.new(@game).activate_outpost
     respond_to do |format|
       format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_game_update
+  end
+
+  def activate_fort
+    return unless @game.game_players.find_by(player: Current.user) == @game.current_player
+    TurnEngine.new(@game).activate_fort_tile
+    respond_to do |format|
+      format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
     @game.broadcast_game_update

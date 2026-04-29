@@ -8,8 +8,18 @@ module MoveApplicator
       backend.apply_select_settlement(player_order: player_order, from: move.from)
     when "move_settlement"
       backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to, tile_klass: move.payload&.dig("tile_klass"), action_before: move.payload&.dig("action_before"))
+    when "activate_fort"
+      backend.apply_activate_fort(player_order: player_order)
+    when "draw_fort_card"
+      backend.apply_draw_fort_card(
+        player_order: player_order,
+        drawn_card: move.payload["card"],
+        deck_after: move.payload["deck_after"],
+        discard_after: move.payload["discard_after"]
+      )
     when "build"
-      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"))
+      fort_terrain = move.payload&.dig("tile_klass") == "FortTile" ? move.payload&.dig("card") : nil
+      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain)
     when "pick_up_tile"
       backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
     when "grant_meeple"
@@ -93,11 +103,14 @@ class MoveApplicator::HashState
     @current_action = @current_action.merge("from" => from)
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil)
     coord = Coordinate.from_key(to)
     @board.place_settlement(coord.row, coord.col, player_order)
     @players[player_order]["supply"]["settlements"] -= 1
-    if tile_klass
+    if fort_terrain
+      mark_tile_used(@players[player_order], tile_klass)
+      @current_action = { "type" => "mandatory" }
+    elsif tile_klass
       mark_tile_used(@players[player_order], tile_klass)
       remaining_after = remaining_before ? remaining_before - 1 : nil
       if remaining_after && remaining_after > 0
@@ -173,6 +186,16 @@ class MoveApplicator::HashState
   def apply_activate_outpost(player_order:)
     mark_tile_used(@players[player_order], "OutpostTile")
     @current_action = @current_action.merge("outpost_active" => true)
+  end
+
+  def apply_activate_fort(player_order:)
+    # No state change — tile is marked used on build, current_action updated by draw_fort_card
+  end
+
+  def apply_draw_fort_card(player_order:, drawn_card:, deck_after:, discard_after:)
+    @deck = deck_after.dup
+    @discard = discard_after.dup
+    @current_action = { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn_card }
   end
 
   def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil)
@@ -283,14 +306,17 @@ class MoveApplicator::LiveState
     @game = game
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
     gp = player_for(player_order)
     gp.increment_supply!
     @game.ending = false
-    if tile_klass
+    if fort_terrain
+      gp.mark_tile_unused!(tile_klass)
+      @game.current_action = { "type" => "fort", "klass" => "FortTile", "fort_terrain" => fort_terrain }
+    elsif tile_klass
       gp.mark_tile_unused!(tile_klass)
       action = { "type" => tile_klass.delete_suffix("Tile").downcase }
       action["klass"] = tile_klass if remaining_before
@@ -393,6 +419,14 @@ class MoveApplicator::LiveState
     @game.current_action_will_change!
     @game.current_action.delete("outpost_active")
     gp.save
+  end
+
+  def apply_activate_fort(player_order:)
+    # Non-reversible — never called during undo
+  end
+
+  def apply_draw_fort_card(player_order:, drawn_card:, deck_after:, discard_after:)
+    # Non-reversible — never called during undo
   end
 
   def apply_place_warrior(player_order:, to:, action_before: nil)
