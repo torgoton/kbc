@@ -1072,6 +1072,77 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.board_contents.warrior_at?(*hex)
   end
 
+  # ---------------------------------------------------------------------------
+  # activate_fort_tile
+  # ---------------------------------------------------------------------------
+
+  test "activate_fort_tile records activate_fort (non-reversible deliberate) and draw_fort_card (non-reversible non-deliberate)" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    moves = @game.moves.order(:order)
+    assert_equal 2, moves.count
+
+    fort_move = moves.first
+    assert_equal "activate_fort", fort_move.action
+    assert fort_move.deliberate
+    assert_not fort_move.reversible
+
+    draw_move = moves.last
+    assert_equal "draw_fort_card", draw_move.action
+    assert_not draw_move.deliberate
+    assert_not draw_move.reversible
+    assert_includes %w[C D F G T], draw_move.payload["card"]
+  end
+
+  test "activate_fort_tile sets current_action to fort with fort_terrain" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    assert_equal "fort", @game.current_action["type"]
+    assert_equal "FortTile", @game.current_action["klass"]
+    assert_includes %w[C D F G T], @game.current_action["fort_terrain"]
+  end
+
+  test "activate_fort_tile removes the drawn card from the deck and adds it to discard" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+    deck_size_before = @game.deck.size
+    discard_size_before = @game.discard.size
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    assert_equal deck_size_before - 1, @game.deck.size
+    assert_equal discard_size_before + 1, @game.discard.size
+    drawn = @game.current_action["fort_terrain"]
+    assert_includes @game.discard, drawn
+  end
+
+  test "undo_allowed? is false after activate_fort_tile (card draw blocks undo)" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_fort_tile
+    @game.reload
+
+    assert_not TurnEngine.new(@game).undo_allowed?
+  end
+
   def force_hand(terrain)
     @game.current_player.update!(hand: terrain)
   end

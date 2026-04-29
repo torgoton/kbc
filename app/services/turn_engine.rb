@@ -92,6 +92,39 @@ class TurnEngine
     @game.save
   end
 
+  def activate_fort_tile
+    @game.instantiate
+    game_player = @game.current_player
+    return "Not available" unless game_player.find_unused_tile("FortTile")
+    return "No settlements left" unless game_player.settlements_remaining?
+
+    @game.move_count += 1
+    @game.moves.create!(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "activate_fort",
+      reversible: false,
+      message: "#{game_player.player.handle} activated the Fort tile"
+    )
+
+    drawn_card = next_card
+    @game.discard.push(drawn_card)
+    @game.move_count += 1
+    @game.moves.create!(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: false,
+      action: "draw_fort_card",
+      reversible: false,
+      payload: { "card" => drawn_card, "deck_after" => @game.deck.dup, "discard_after" => @game.discard.dup },
+      message: "#{game_player.player.handle} drew a #{Boards::Board::TERRAIN_NAMES[drawn_card]} card"
+    )
+
+    @game.current_action = { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn_card }
+    @game.save
+  end
+
   def remove_settlement(row, col)
     @game.instantiate
     game_player = @game.current_player
