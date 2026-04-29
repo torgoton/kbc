@@ -175,6 +175,55 @@ class MoveApplicatorTest < ActiveSupport::TestCase
   end
 
   # ---------------------------------------------------------------------------
+  # activate_fort
+  # ---------------------------------------------------------------------------
+
+  test "dispatch activate_fort calls apply_activate_fort" do
+    state = minimal_state("current_action" => { "type" => "mandatory" })
+    move = fake_move(action: "activate_fort")
+
+    MoveApplicator.dispatch(state, move)
+
+    # apply_activate_fort is a no-op in HashState; just confirm no error raised
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+  end
+
+  test "dispatch draw_fort_card sets fort_terrain in current_action and updates deck" do
+    state = minimal_state(
+      "current_action" => { "type" => "mandatory" },
+      "deck" => %w[G D F],
+      "discard" => []
+    )
+    move = fake_move(
+      action: "draw_fort_card",
+      payload: { "card" => "D", "deck_after" => %w[G F], "discard_after" => [] }
+    )
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal "fort", state.current_action["type"]
+    assert_equal "FortTile", state.current_action["klass"]
+    assert_equal "D", state.current_action["fort_terrain"]
+    assert_equal %w[G F], state.deck
+  end
+
+  test "dispatch build with FortTile fort_terrain places settlement and resets current_action to mandatory" do
+    state = minimal_state(
+      "current_action" => { "type" => "fort", "klass" => "FortTile", "fort_terrain" => "D" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40 },
+                       "tiles" => [ { "klass" => "FortTile", "from" => "[3, 3]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "build", to: "[5, 5]", payload: { "card" => "D", "tile_klass" => "FortTile" })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 39, state.players[0]["supply"]["settlements"]
+    fort = state.players[0]["tiles"].find { |t| t["klass"] == "FortTile" }
+    assert fort["used"]
+  end
+
+  # ---------------------------------------------------------------------------
   # select_settlement
   # ---------------------------------------------------------------------------
 
