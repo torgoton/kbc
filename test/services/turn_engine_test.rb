@@ -1143,6 +1143,19 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not TurnEngine.new(@game).undo_allowed?
   end
 
+  test "activate_fort_tile returns Not available if action is not mandatory" do
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
+    ])
+    @game.update!(current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => "G" })
+
+    result = @engine.activate_fort_tile
+
+    assert_equal "Not available", result
+    assert_equal 0, @game.reload.moves.count
+  end
+
   # ---------------------------------------------------------------------------
   # Fort tile build
   # ---------------------------------------------------------------------------

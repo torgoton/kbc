@@ -95,6 +95,7 @@ class TurnEngine
   def activate_fort_tile
     @game.instantiate
     game_player = @game.current_player
+    return "Not available" unless @game.current_action["type"] == "mandatory"
     return "Not available" unless game_player.find_unused_tile("FortTile")
     return "No settlements left" unless game_player.settlements_remaining?
 
@@ -108,7 +109,11 @@ class TurnEngine
       message: "#{game_player.player.handle} activated the Fort tile"
     )
 
-    drawn_card = next_card
+    drawn_card = @game.deck.shift
+    if @game.deck.empty?
+      @game.deck = @game.discard.shuffle
+      @game.discard.clear
+    end
     @game.discard.push(drawn_card)
     @game.move_count += 1
     @game.moves.create!(

@@ -22,7 +22,7 @@
         </div>
         <div data-meeple-popup-target="popup" class="meeple-popup hidden">
           <span class="popup-warning">Cannot be undone!</span>
-          <%= button_to "Draw &amp; Build".html_safe, activate_fort_game_path(game),
+          <%= button_to "Draw & Build", activate_fort_game_path(game),
                 class: "popup-btn", data: { turbo_stream: true } %>
           <button data-action="click->meeple-popup#cancel" class="popup-btn popup-btn-cancel">Cancel</button>
         </div>
