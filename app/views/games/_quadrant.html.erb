@@ -77,6 +77,9 @@
                 <%= render "games/ship", color: player_color(content.player), css_class: "hex-settlement" %>
               <% elsif content.wagon? %>
                 <%= render "games/wagon", color: player_color(content.player), css_class: "hex-settlement" %>
+              <% elsif content.city_hall? %>
+                <div class="city-hall-bg" style="background-color: <%= player_color(content.player) %>"></div>
+                <%= render "games/settlement", color: player_color(content.player), css_class: "hex-settlement city-hall-settlement" %>
               <% else %>
                 <%= render "games/settlement", color: player_color(content.player), css_class: "hex-settlement" %>
               <% end %>

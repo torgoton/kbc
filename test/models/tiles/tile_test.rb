@@ -31,4 +31,21 @@ class Tiles::TileTest < ActiveSupport::TestCase
   test "places_meeple? returns false by default" do
     assert_not Tiles::Tile.new(0).places_meeple?
   end
+
+  test "places_city_hall? returns false by default" do
+    assert_not Tiles::Tile.new(0).places_city_hall?
+  end
+
+  test "selectable_settlements excludes city_hall hexes" do
+    state = BoardState.new
+    state.place_settlement(5, 5, 0)
+    state.place_city_hall_hex(6, 5, 0)
+    # Use a movement tile stub that has moves_settlement? = true and some valid destination
+    tile = Tiles::BarnTile.new(0)
+    all_grass = Object.new
+    all_grass.define_singleton_method(:terrain_at) { |r, c| "G" }
+    result = tile.selectable_settlements(player_order: 0, board_contents: state, board: all_grass, hand: "G")
+    assert_includes result, [ 5, 5 ]
+    assert_not_includes result, [ 6, 5 ]
+  end
 end

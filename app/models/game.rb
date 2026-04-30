@@ -334,8 +334,8 @@ class Game < ApplicationRecord
     save
   end
 
-  #  OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
-  OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
+  OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
+  # OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
 

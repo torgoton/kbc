@@ -716,6 +716,33 @@ ul li .hex:hover {
     height: 66%;
 }
 
+.city-hall-settlement {
+    filter: drop-shadow(0 0 5px gold) drop-shadow(0 0 2px #b8860b);
+}
+
+.city-hall-bg {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    pointer-events: none;
+}
+
+.hex.city-hall-preview::after {
+    --angle: 0deg;
+    content: "";
+    position: absolute;
+    border-radius: 5px;
+    height: 100%;
+    width: 100%;
+    background-image: conic-gradient(from var(--angle), #5a3a00, gold, #ffd700, gold, #5a3a00);
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    z-index: -1;
+    padding: 3px;
+    animation: 3s spin linear infinite;
+}
+
 .hex-wall {
     background-image: url("wall.svg");
     background-repeat: no-repeat;

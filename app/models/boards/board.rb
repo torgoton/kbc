@@ -75,7 +75,9 @@ module Boards
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
             @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))
           elsif (player = game.board_contents.player_at(row, col))
-            @content[row][col] = Settlement.new(player, meeple_type: game.board_contents.meeple_at(row, col))
+            @content[row][col] = Settlement.new(player,
+              meeple_type: game.board_contents.meeple_at(row, col),
+              city_hall: game.board_contents.city_hall_at?(row, col))
           else
             raise "Unknown board content type at [#{row}, #{col}]"
           end

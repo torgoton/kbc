@@ -116,6 +116,45 @@ class BoardStateTest < ActiveSupport::TestCase
     assert_equal [], state.settlements_for(2)
   end
 
+  # City Hall tests
+  test "place_city_hall_hex makes hex non-empty and owned by player" do
+    state = BoardState.new
+    state.place_city_hall_hex(4, 4, 0)
+    assert_not state.empty?(4, 4)
+    assert_equal 0, state.player_at(4, 4)
+  end
+
+  test "city_hall_at? returns true for city hall hex and false for others" do
+    state = BoardState.new
+    state.place_city_hall_hex(4, 4, 0)
+    state.place_settlement(5, 5, 0)
+    assert state.city_hall_at?(4, 4)
+    assert_not state.city_hall_at?(5, 5)
+    assert_not state.city_hall_at?(0, 0)
+  end
+
+  test "city_hall hexes appear in settlements_for" do
+    state = BoardState.new
+    state.place_city_hall_hex(4, 4, 0)
+    state.place_settlement(5, 5, 0)
+    assert_includes state.settlements_for(0), [ 4, 4 ]
+    assert_includes state.settlements_for(0), [ 5, 5 ]
+  end
+
+  test "city_hall hex is not available for building" do
+    state = BoardState.new
+    state.place_city_hall_hex(4, 4, 0)
+    assert_not state.available_for_building?(4, 4)
+  end
+
+  test "dump/load round-trips city_hall hex preserving city_hall flag" do
+    state = BoardState.new
+    state.place_city_hall_hex(4, 4, 0)
+    reloaded = BoardState.load(BoardState.dump(state))
+    assert reloaded.city_hall_at?(4, 4)
+    assert_equal 0, reloaded.player_at(4, 4)
+  end
+
   # Warrior tests
   test "place_warrior stores warrior at cell" do
     state = BoardState.new

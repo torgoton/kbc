@@ -134,6 +134,7 @@ class TurnEngine
     @game.instantiate
     game_player = @game.current_player
 
+    return "Not a valid target" if @game.board_contents.city_hall_at?(row, col)
     pending_orders = @game.current_action["pending_orders"] || []
     owner_order = @game.board_contents.player_at(row, col)
     return "Not a valid target" unless owner_order && pending_orders.include?(owner_order)
@@ -287,6 +288,42 @@ class TurnEngine
       message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
     )
     @game.current_action = @game.current_action.merge("from" => "[#{row}, #{col}]")
+    @game.save
+  end
+
+  def place_city_hall(row, col)
+    @game.instantiate
+    game_player = @game.current_player
+    tile = game_player.find_unused_tile("CityHallTile")
+    return "No City Hall tile" unless tile
+    tile_obj = Tiles::CityHallTile.new(0)
+    valid = tile_obj.valid_destinations(
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: game_player.order, supply: game_player.supply_hash
+    )
+    return "Not available" unless valid.include?([ row, col ])
+
+    action_before = @game.current_action.deep_dup
+    cluster = tile_obj.cluster_hexes(row, col, @game.board_contents)
+
+    @game.move_count += 1
+    @game.moves.create!(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: true,
+      action: "place_city_hall",
+      to: "[#{row}, #{col}]",
+      reversible: true,
+      payload: { "action_before" => action_before },
+      message: "#{game_player.player.handle} placed their City Hall at [#{row}, #{col}]"
+    )
+
+    @game.board_contents_will_change!
+    cluster.each { |r, c| @game.board_contents.place_city_hall_hex(r, c, game_player.order) }
+    game_player.decrement_city_hall_supply!
+    game_player.mark_tile_permanently_used!("CityHallTile")
+    @game.current_action = { "type" => "mandatory" }
+    game_player.save
     @game.save
   end
 
@@ -699,6 +736,10 @@ class TurnEngine
                 **extra_kwargs
               )
             end
+          elsif tile_obj.places_city_hall?
+            tile_obj.valid_destinations(
+              board_contents: @game.board_contents, board: @game.board, player_order: player.order, supply: player.supply_hash
+            )
           else
             hand = tile_obj.fort_tile? ? @game.current_action["fort_terrain"] : player.hand
             tile_obj.valid_destinations(
@@ -709,6 +750,21 @@ class TurnEngine
           []
         end
       end
+    end
+  end
+
+  def city_hall_clusters
+    return {} unless @game.current_action["type"] == "cityhall"
+    @game.instantiate
+    player = @game.current_player
+    tile_obj = Tiles::CityHallTile.new(0)
+    centers = tile_obj.valid_destinations(
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order, supply: player.supply_hash
+    )
+    centers.to_h do |r, c|
+      cluster = tile_obj.cluster_hexes(r, c, @game.board_contents)
+      [ "#{r},#{c}", cluster ]
     end
   end
 

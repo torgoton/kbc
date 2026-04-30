@@ -32,4 +32,12 @@ class SettlementTest < ActiveSupport::TestCase
   test "ship? is false for warrior" do
     assert_not Settlement.new(0, meeple_type: "warrior").ship?
   end
+
+  test "city_hall? defaults to false" do
+    assert_not Settlement.new(0).city_hall?
+  end
+
+  test "city_hall? is true when constructed with city_hall: true" do
+    assert Settlement.new(0, city_hall: true).city_hall?
+  end
 end

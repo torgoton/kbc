@@ -43,7 +43,7 @@ module Tiles
     def selectable_settlements(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
       return [] unless moves_settlement?
       return [] unless valid_destinations(board_contents:, board:, player_order:, hand:).any?
-      board_contents.settlements_for(player_order)
+      board_contents.settlements_for(player_order).reject { |r, c| board_contents.city_hall_at?(r, c) }
     end
 
     def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
@@ -67,6 +67,10 @@ module Tiles
     end
 
     def places_meeple?
+      false
+    end
+
+    def places_city_hall?
       false
     end
 

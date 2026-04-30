@@ -108,11 +108,32 @@ class GamePlayer < ApplicationRecord
     supply["wagons"] = wagons_remaining + 1
   end
 
+  def city_halls_remaining
+    supply["city_halls"].to_i
+  end
+
+  def city_halls_remaining?
+    city_halls_remaining > 0
+  end
+
+  def add_city_halls!(n)
+    supply["city_halls"] = city_halls_remaining + n
+  end
+
+  def decrement_city_hall_supply!
+    supply["city_halls"] = city_halls_remaining - 1
+  end
+
+  def increment_city_hall_supply!
+    supply["city_halls"] = city_halls_remaining + 1
+  end
+
   def supply_hash
     {
-      "warrior" => warriors_remaining,
-      "ship"    => ships_remaining,
-      "wagon"   => wagons_remaining
+      "warrior"   => warriors_remaining,
+      "ship"      => ships_remaining,
+      "wagon"     => wagons_remaining,
+      "city_hall" => city_halls_remaining
     }
   end
 
@@ -128,8 +149,24 @@ class GamePlayer < ApplicationRecord
     self.tiles = updated
   end
 
+  def mark_tile_permanently_used!(klass)
+    idx = (tiles || []).find_index { |t| t["klass"] == klass && !t["used"] }
+    return unless idx
+    updated = tiles.dup
+    updated[idx] = updated[idx].merge("used" => true, "permanent" => true)
+    self.tiles = updated
+  end
+
+  def mark_tile_unpermanent!(klass)
+    idx = (tiles || []).find_index { |t| t["klass"] == klass && t["permanent"] }
+    return unless idx
+    updated = tiles.dup
+    updated[idx] = updated[idx].except("permanent").merge("used" => false)
+    self.tiles = updated
+  end
+
   def reset_tiles!
-    self.tiles = (tiles || []).map { |t| t.merge("used" => false) }
+    self.tiles = (tiles || []).map { |t| t["permanent"] ? t : t.merge("used" => false) }
   end
 
   def receive_tile!(klass, from:)
