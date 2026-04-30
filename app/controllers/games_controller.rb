@@ -54,6 +54,8 @@ class GamesController < ApplicationController
       engine.place_wall(coord.row, coord.col)
     elsif tile_obj&.places_meeple?
       engine.execute_meeple_action(coord.row, coord.col)
+    elsif tile_obj&.places_city_hall?
+      engine.place_city_hall(coord.row, coord.col)
     elsif tile_obj&.builds_settlement?
       engine.activate_tile_build(coord.row, coord.col)
     else

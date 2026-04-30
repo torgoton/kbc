@@ -44,6 +44,7 @@ module Tiles
                                   budget: 4, vacated: [])
         return [] if budget <= 0
         board_contents.settlements_for(player_order).filter_map do |r, c|
+          next if board_contents.city_hall_at?(r, c)
           [ r, c ] if valid_destinations(
             from_row: r, from_col: c,
             board_contents:, board:, player_order:,

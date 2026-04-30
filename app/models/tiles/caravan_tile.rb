@@ -27,6 +27,7 @@ module Tiles
 
     def selectable_settlements(player_order:, board_contents:, board:, hand: nil)
       board_contents.settlements_for(player_order).filter_map do |r, c|
+        next if board_contents.city_hall_at?(r, c)
         [ r, c ] if valid_destinations(from_row: r, from_col: c, board_contents:, board:).any?
       end
     end

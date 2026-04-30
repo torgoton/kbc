@@ -63,6 +63,8 @@ module MoveApplicator
       backend.apply_move_wagon(player_order: player_order, from: move.from, to: move.to, action_before: move.payload&.dig("action_before"))
     when "select_wagon"
       backend.apply_select_wagon(player_order: player_order, from: move.from)
+    when "place_city_hall"
+      backend.apply_place_city_hall(player_order: player_order, to: move.to, action_before: move.payload&.dig("action_before"))
     end
   end
 end
@@ -149,7 +151,7 @@ class MoveApplicator::HashState
     @current_action = { "type" => "mandatory" }
     @current_player_order = next_order
     next_player = @players[next_order]
-    next_player["tiles"] = (next_player["tiles"] || []).map { |t| t.merge("used" => false) }
+    next_player["tiles"] = (next_player["tiles"] || []).map { |t| t["permanent"] ? t : t.merge("used" => false) }
   end
 
   def apply_score_goal(player_order:, goal:, score:)
@@ -190,6 +192,14 @@ class MoveApplicator::HashState
     return unless idx
     updated = player["tiles"].dup
     updated[idx] = updated[idx].merge("used" => true)
+    player["tiles"] = updated
+  end
+
+  def mark_tile_permanently_used(player, klass)
+    idx = player["tiles"]&.index { |t| t["klass"] == klass && t["used"] == false }
+    return unless idx
+    updated = player["tiles"].dup
+    updated[idx] = updated[idx].merge("used" => true, "permanent" => true)
     player["tiles"] = updated
   end
 
@@ -259,6 +269,15 @@ class MoveApplicator::HashState
     @current_action = @current_action.merge("from" => from)
   end
 
+  def apply_place_city_hall(player_order:, to:, action_before: nil)
+    center = Coordinate.from_key(to)
+    cluster = [ [ center.row, center.col ] ] + @board.neighbors(center.row, center.col)
+    cluster.each { |r, c| @board.place_city_hall_hex(r, c, player_order) }
+    @players[player_order]["supply"]["city_halls"] = (@players[player_order]["supply"]["city_halls"] || 0) - 1
+    mark_tile_permanently_used(@players[player_order], "CityHallTile")
+    @current_action = { "type" => "mandatory" }
+  end
+
   public
 
   def result
@@ -318,9 +337,10 @@ class MoveApplicator::LiveState
   def apply_grant_meeple(player_order:, kind:, qty:)
     gp = player_for(player_order)
     case kind
-    when "warrior" then gp.add_warriors!(-qty)
-    when "ship"    then gp.add_ships!(-qty)
-    when "wagon"   then gp.add_wagons!(-qty)
+    when "warrior"   then gp.add_warriors!(-qty)
+    when "ship"      then gp.add_ships!(-qty)
+    when "wagon"     then gp.add_wagons!(-qty)
+    when "city_hall" then gp.add_city_halls!(-qty)
     end
     gp.save
   end
@@ -491,6 +511,18 @@ class MoveApplicator::LiveState
   def apply_select_wagon(player_order:, from:)
     @game.current_action_will_change!
     @game.current_action.delete("from")
+  end
+
+  def apply_place_city_hall(player_order:, to:, action_before: nil)
+    center = Coordinate.from_key(to)
+    cluster = [ [ center.row, center.col ] ] + @game.board_contents.neighbors(center.row, center.col)
+    @game.board_contents_will_change!
+    cluster.each { |r, c| @game.board_contents.remove(r, c) }
+    gp = player_for(player_order)
+    gp.increment_city_hall_supply!
+    gp.mark_tile_unpermanent!("CityHallTile")
+    @game.current_action = action_before if action_before
+    gp.save
   end
 
   private

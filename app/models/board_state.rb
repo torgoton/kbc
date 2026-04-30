@@ -11,6 +11,15 @@ class BoardState
     @cells[[ row, col ]] = { "klass" => "Settlement", "player" => player }
   end
 
+  def place_city_hall_hex(row, col, player)
+    @cells[[ row, col ]] = { "klass" => "Settlement", "player" => player, "city_hall" => true }
+  end
+
+  def city_hall_at?(row, col)
+    cell = @cells[[ row, col ]]
+    cell&.dig("city_hall") == true
+  end
+
   def place_warrior(row, col, player)
     @cells[[ row, col ]] = { "klass" => "Settlement", "player" => player, "meeple" => "warrior" }
   end

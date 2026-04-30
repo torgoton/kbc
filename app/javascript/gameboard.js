@@ -37,6 +37,23 @@ function prepForMove() {
     const parts = actionEl.dataset.from.replace(/[\[\] ]/g, "").split(",");
     document.getElementById(`map-cell-${parts[0].trim()}-${parts[1].trim()}`)?.classList.add("selected");
   }
+
+  if (actionEl.dataset.type === "cityhall") {
+    const clusters = JSON.parse(actionEl.dataset.clusters || "{}");
+    buildable.forEach(([r, c]) => {
+      const hex = document.getElementById(`map-cell-${r}-${c}`);
+      if (!hex) return;
+      hex.addEventListener("mouseenter", () => {
+        const key = `${r},${c}`;
+        (clusters[key] || []).forEach(([hr, hc]) => {
+          document.getElementById(`map-cell-${hr}-${hc}`)?.classList.add("city-hall-preview");
+        });
+      });
+      hex.addEventListener("mouseleave", () => {
+        document.querySelectorAll(".city-hall-preview").forEach(el => el.classList.remove("city-hall-preview"));
+      });
+    });
+  }
 }
 
 function initBoardZoom() {

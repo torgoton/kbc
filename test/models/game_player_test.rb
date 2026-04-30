@@ -199,4 +199,65 @@ class GamePlayerTest < ActiveSupport::TestCase
   test "ships_remaining? is false when supply is 0" do
     assert_not @gp.ships_remaining?
   end
+
+  # --- City Hall supply ---
+
+  test "city_halls_remaining returns 0 by default" do
+    assert_equal 0, @gp.city_halls_remaining
+  end
+
+  test "add_city_halls! increases count" do
+    @gp.add_city_halls!(1)
+    assert_equal 1, @gp.city_halls_remaining
+    assert @gp.city_halls_remaining?
+  end
+
+  test "decrement_city_hall_supply! reduces count by 1" do
+    @gp.add_city_halls!(1)
+    @gp.decrement_city_hall_supply!
+    assert_equal 0, @gp.city_halls_remaining
+  end
+
+  test "increment_city_hall_supply! increases count by 1" do
+    @gp.add_city_halls!(1)
+    @gp.decrement_city_hall_supply!
+    @gp.increment_city_hall_supply!
+    assert_equal 1, @gp.city_halls_remaining
+  end
+
+  test "city_halls_remaining? is false when supply is 0" do
+    assert_not @gp.city_halls_remaining?
+  end
+
+  test "supply_hash includes city_hall key" do
+    @gp.add_city_halls!(1)
+    assert_equal 1, @gp.supply_hash["city_hall"]
+  end
+
+  # --- Permanent tile methods ---
+
+  test "mark_tile_permanently_used! sets used and permanent on the tile" do
+    @gp.tiles = [ { "klass" => "CityHallTile", "from" => "[5, 5]", "used" => false } ]
+    @gp.mark_tile_permanently_used!("CityHallTile")
+    assert @gp.tiles[0]["used"]
+    assert @gp.tiles[0]["permanent"]
+  end
+
+  test "mark_tile_unpermanent! removes permanent flag and sets used to false" do
+    @gp.tiles = [ { "klass" => "CityHallTile", "from" => "[5, 5]", "used" => true, "permanent" => true } ]
+    @gp.mark_tile_unpermanent!("CityHallTile")
+    assert_not @gp.tiles[0]["used"]
+    assert_nil @gp.tiles[0]["permanent"]
+  end
+
+  test "reset_tiles! skips permanent tiles" do
+    @gp.tiles = [
+      { "klass" => "FarmTile",     "from" => "[11, 17]", "used" => true },
+      { "klass" => "CityHallTile", "from" => "[5, 5]",   "used" => true, "permanent" => true }
+    ]
+    @gp.reset_tiles!
+    assert_not @gp.tiles[0]["used"]
+    assert @gp.tiles[1]["used"]
+    assert @gp.tiles[1]["permanent"]
+  end
 end

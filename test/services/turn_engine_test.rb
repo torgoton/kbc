@@ -864,7 +864,189 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not game3.moves.exists?(action: "score_goal")
   end
 
+  # --- City Hall ---
+
+  test "buildable_cells returns valid center hexes when city_hall action is active" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    cells = TurnEngine.new(@game).buildable_cells
+    assert_includes cells, center
+  end
+
+  test "place_city_hall places 7 hexes on the board" do
+    center, settlement_hex = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+    @game.reload
+
+    cluster = [ center ] + @game.board_contents.neighbors(*center)
+    cluster.each do |r, c|
+      assert @game.board_contents.city_hall_at?(r, c), "expected city_hall hex at [#{r},#{c}]"
+    end
+  end
+
+  test "place_city_hall decrements city_hall supply" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    player = @game.current_player
+    @engine.place_city_hall(*center)
+
+    assert_equal 0, player.reload.city_halls_remaining
+  end
+
+  test "place_city_hall marks tile permanently used" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+
+    tile = @game.current_player.reload.tiles.find { |t| t["klass"] == "CityHallTile" }
+    assert tile["used"]
+    assert tile["permanent"]
+  end
+
+  test "place_city_hall sets current_action to mandatory" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+
+    assert_equal "mandatory", @game.reload.current_action["type"]
+  end
+
+  test "place_city_hall creates a reversible deliberate move record" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+
+    move = @game.moves.find_by(action: "place_city_hall")
+    assert move
+    assert move.deliberate
+    assert move.reversible
+  end
+
+  test "undo of place_city_hall removes all 7 hexes" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    cluster = [ center ] + @game.board_contents.neighbors(*center)
+    cluster.each do |r, c|
+      assert @game.board_contents.empty?(r, c), "expected [#{r},#{c}] to be empty after undo"
+    end
+  end
+
+  test "undo of place_city_hall restores city_hall supply" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    player = @game.current_player
+    @engine.place_city_hall(*center)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+
+    assert_equal 1, player.reload.city_halls_remaining
+  end
+
+  test "undo of place_city_hall removes permanent flag from tile" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+
+    tile = @game.current_player.reload.tiles.find { |t| t["klass"] == "CityHallTile" }
+    assert_not tile["used"]
+    assert_nil tile["permanent"]
+  end
+
+  test "sword tile cannot remove a city hall hex" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+    @game.reload
+
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.update!(current_player: opponent)
+    @game.reload
+
+    # Set up sword tile action targeting one of the city_hall hexes
+    cluster_hex = center
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile",
+      "pending_orders" => [ @game.game_players.find { |gp| gp.order != opponent.order }.order ]
+    })
+
+    result = TurnEngine.new(@game).remove_settlement(*cluster_hex)
+    assert_equal "Not a valid target", result
+    assert @game.reload.board_contents.city_hall_at?(*cluster_hex)
+  end
+
   private
+
+  def setup_city_hall_scenario
+    player = @game.current_player
+    player.add_city_halls!(1)
+    player.tiles = [ { "klass" => "CityHallTile", "from" => "[2, 5]", "used" => false } ]
+    player.save!
+
+    @game.update!(current_action: { "type" => "cityhall", "klass" => "CityHallTile" })
+
+    board = @game.instantiate
+    center = find_valid_city_hall_center(board)
+    return [ nil, nil ] unless center
+
+    # Place a settlement adjacent to the cluster (but outside it)
+    neighbors_of_center = @game.board_contents.neighbors(*center)
+    outer_settlement = nil
+    neighbors_of_center.each do |nr, nc|
+      @game.board_contents.neighbors(nr, nc).each do |or_, oc|
+        cluster = Set.new([ center ] + neighbors_of_center)
+        unless cluster.include?([ or_, oc ]) || !@game.board_contents.empty?(or_, oc)
+          outer_settlement = [ or_, oc ]
+          break
+        end
+      end
+      break if outer_settlement
+    end
+    return [ nil, nil ] unless outer_settlement
+
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(*outer_settlement, player.order)
+    @game.save!
+    @game.reload
+
+    [ center, outer_settlement ]
+  end
+
+  def find_valid_city_hall_center(board)
+    (1..18).each do |r|
+      (1..18).each do |c|
+        next unless Tiles::Tile::BUILDABLE_TERRAIN.include?(board.terrain_at(r, c))
+        next unless @game.board_contents.empty?(r, c)
+        neighbors = @game.board_contents.neighbors(r, c)
+        next unless neighbors.size == 6
+        next unless neighbors.all? { |nr, nc|
+          @game.board_contents.empty?(nr, nc) && Tiles::Tile::BUILDABLE_TERRAIN.include?(board.terrain_at(nr, nc))
+        }
+        return [ r, c ]
+      end
+    end
+    nil
+  end
 
   def find_meeple_tile_trigger_pair
     meeple_klasses = %w[BarracksTile LighthouseTile WagonTile]

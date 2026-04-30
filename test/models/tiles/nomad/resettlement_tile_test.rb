@@ -170,6 +170,16 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     refute_includes result, [ 1, 1 ], "trapped settlement should not be selectable"
   end
 
+  test "selectable_settlements excludes city_hall hexes even when they have valid destinations" do
+    all_grass = Object.new.tap { |b| b.define_singleton_method(:terrain_at) { |r, c| "G" } }
+    state = BoardState.new
+    state.place_settlement(10, 10, @chris.order)
+    state.place_city_hall_hex(10, 14, @chris.order)
+    result = @tile.selectable_settlements(player_order: @chris.order, board_contents: state, board: all_grass)
+    assert_includes result, [ 10, 10 ]
+    refute_includes result, [ 10, 14 ]
+  end
+
   # --- activatable? ---
 
   test "activatable? returns true when there are selectable settlements" do

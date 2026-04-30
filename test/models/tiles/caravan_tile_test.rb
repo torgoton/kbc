@@ -93,6 +93,17 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
     assert_includes result, [ 6, 4 ], "settlement with valid slides included"
   end
 
+  test "selectable_settlements excludes city_hall hexes even when they have valid destinations" do
+    all_grass = Object.new.tap { |b| b.define_singleton_method(:terrain_at) { |r, c| "G" } }
+    state = BoardState.new
+    state.place_settlement(10, 10, 0)
+    state.place_city_hall_hex(10, 14, 0)
+    tile = Tiles::CaravanTile.new(0)
+    result = tile.selectable_settlements(player_order: 0, board_contents: state, board: all_grass)
+    assert_includes result, [ 10, 10 ]
+    assert_not_includes result, [ 10, 14 ]
+  end
+
   test "moves_settlement? returns true" do
     assert Tiles::CaravanTile.new(0).moves_settlement?
   end

@@ -37,7 +37,8 @@ class Move < ApplicationRecord
     "end_game"          => "game_end",
     "remove_settlement" => "removed",
     "activate_outpost"  => "outpost",
-    "place_wall"        => "wall"
+    "place_wall"        => "wall",
+    "place_city_hall"   => "build"
   }.freeze
 
   belongs_to :game
