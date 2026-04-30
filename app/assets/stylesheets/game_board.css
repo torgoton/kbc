@@ -991,6 +991,12 @@ ul li .hex:hover {
     flex-wrap: wrap;
 }
 
+.player-tile-popup {
+    position: relative;
+    display: inline-block;
+    color: var(--clr-g-text);
+}
+
 .player-tile {
     width: 44px;
     height: 44px;

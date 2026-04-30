@@ -14,10 +14,11 @@
 
     <% tile_obj_check = Tiles::Tile.for_klass(tile["klass"])&.new(0) %>
     <% if activatable && tile_obj_check&.fort_tile? %>
-      <div data-controller="meeple-popup">
-        <div class="player-tile <%= state %> selectable"
-             title="<%= description %>"
-             data-action="click->meeple-popup#toggle">
+      <div class="player-tile-popup"
+           data-controller="meeple-popup"
+           data-action="click->meeple-popup#toggle">
+        <div class="player-tile <%= state %>"
+             title="<%= description %>">
           <div class="tile-container <%= type %>"></div>
         </div>
         <div data-meeple-popup-target="popup" class="meeple-popup hidden">
