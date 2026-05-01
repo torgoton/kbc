@@ -7,7 +7,8 @@ module MoveApplicator
     when "select_settlement"
       backend.apply_select_settlement(player_order: player_order, from: move.from)
     when "move_settlement"
-      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to, tile_klass: move.payload&.dig("tile_klass"), action_before: move.payload&.dig("action_before"))
+      ct_before = move.payload&.key?("chosen_terrain_before") ? move.payload["chosen_terrain_before"] : :not_provided
+      backend.apply_move_settlement(player_order: player_order, from: move.from, to: move.to, tile_klass: move.payload&.dig("tile_klass"), action_before: move.payload&.dig("action_before"), chosen_terrain_before: ct_before)
     when "activate_fort"
       backend.apply_activate_fort(player_order: player_order)
     when "draw_fort_card"
@@ -19,7 +20,8 @@ module MoveApplicator
       )
     when "build"
       fort_terrain = move.payload&.dig("tile_klass") == "FortTile" ? move.payload&.dig("card") : nil
-      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain)
+      ct_before = move.payload&.key?("chosen_terrain_before") ? move.payload["chosen_terrain_before"] : :not_provided
+      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain, chosen_terrain_before: ct_before)
     when "pick_up_tile"
       backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
     when "grant_meeple"
@@ -50,7 +52,8 @@ module MoveApplicator
         tile_used: move.payload["tile_used"]
       )
     when "place_wall"
-      backend.apply_place_wall(player_order: player_order, to: move.to)
+      ct_before = move.payload&.key?("chosen_terrain_before") ? move.payload["chosen_terrain_before"] : :not_provided
+      backend.apply_place_wall(player_order: player_order, to: move.to, chosen_terrain_before: ct_before)
     when "activate_outpost"
       backend.apply_activate_outpost(player_order: player_order)
     when "place_warrior"
@@ -105,7 +108,7 @@ class MoveApplicator::HashState
     @current_action = @current_action.merge("from" => from)
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, chosen_terrain_before: :not_provided)
     coord = Coordinate.from_key(to)
     @board.place_settlement(coord.row, coord.col, player_order)
     @players[player_order]["supply"]["settlements"] -= 1
@@ -152,7 +155,7 @@ class MoveApplicator::HashState
     player["tiles"] = (player["tiles"] || []).reject { |t| t["expires_on_turn"] && t["expires_on_turn"] == (@turn_number || 0) }
     @turn_number = (@turn_number || 0) + 1
     next_order = (player_order + 1) % @players.size
-    @discard.push(card_discarded)
+    @discard.push(*Array(card_discarded))
     @players[player_order]["hand"] = card_drawn
     if reshuffled
       @deck = deck_after.dup
@@ -179,7 +182,7 @@ class MoveApplicator::HashState
     @players[owner_order]["supply"]["settlements"] += 1
   end
 
-  def apply_place_wall(player_order:, to:)
+  def apply_place_wall(player_order:, to:, chosen_terrain_before: :not_provided)
     coord = Coordinate.from_key(to)
     @board.place_wall(coord.row, coord.col)
     @stone_walls = (@stone_walls || 0) - 1
@@ -200,7 +203,7 @@ class MoveApplicator::HashState
     @current_action = { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn_card }
   end
 
-  def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil)
+  def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil, chosen_terrain_before: :not_provided)
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
@@ -325,7 +328,7 @@ class MoveApplicator::LiveState
     @game = game
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, chosen_terrain_before: :not_provided)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
@@ -347,6 +350,7 @@ class MoveApplicator::LiveState
       @game.current_action_will_change!
       @game.current_action["builds"] = builds
     end
+    restore_chosen_terrain(chosen_terrain_before)
     gp.save
   end
 
@@ -391,10 +395,11 @@ class MoveApplicator::LiveState
     @game.current_action.delete("from")
   end
 
-  def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil)
+  def apply_move_settlement(player_order:, from:, to:, tile_klass:, action_before: nil, chosen_terrain_before: :not_provided)
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*Coordinate.from_key(to), *Coordinate.from_key(from))
     @game.current_action = action_before || { "type" => tile_klass.delete_suffix("Tile").downcase, "from" => from }
+    restore_chosen_terrain(chosen_terrain_before)
     gp = player_for(player_order)
     gp.mark_tile_unused!(tile_klass)
     gp.save
@@ -425,11 +430,12 @@ class MoveApplicator::LiveState
     end
   end
 
-  def apply_place_wall(player_order:, to:)
+  def apply_place_wall(player_order:, to:, chosen_terrain_before: :not_provided)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
     @game.stone_walls += 1
+    restore_chosen_terrain(chosen_terrain_before)
     @game.save
   end
 
@@ -563,5 +569,15 @@ class MoveApplicator::LiveState
 
   def player_for(order)
     @game.game_players.find { |gp| gp.order == order }
+  end
+
+  def restore_chosen_terrain(chosen_terrain_before)
+    return if chosen_terrain_before == :not_provided
+    @game.current_action_will_change!
+    if chosen_terrain_before.nil?
+      @game.current_action.delete("chosen_terrain")
+    else
+      @game.current_action["chosen_terrain"] = chosen_terrain_before
+    end
   end
 end

@@ -4,6 +4,7 @@ module Tiles
     DESCRIPTION = "Build 1 or 2 stone walls on empty terrain spaces of the same type as your played terrain card, adjacent to at least one of your settlements.".freeze
 
     def places_wall? = true
+    def uses_played_terrain? = true
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
       terrain = hand

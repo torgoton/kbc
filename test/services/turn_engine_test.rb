@@ -212,7 +212,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.save
 
     game2 = Game.find(@game.id)
-    game2.current_player.update!(hand: "C")
+    game2.current_player.update!(hand: [ "C" ])
     engine2 = TurnEngine.new(game2)
 
     # (5,1) is Canyon on Tavern board row 5 ("FCCWGTTCCC"), not adjacent to (0,7)
@@ -233,7 +233,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.save
 
     game2 = Game.find(@game.id)
-    game2.current_player.update!(hand: "C")
+    game2.current_player.update!(hand: [ "C" ])
     engine2 = TurnEngine.new(game2)
 
     # (0,8) is Canyon and adjacent to (0,7) on even row (offset: [0,+1])
@@ -495,6 +495,29 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal paula, end_game_move.game_player
   end
 
+  test "end_turn draws 1 card when player does not hold CrossroadsTile" do
+    player = @game.current_player
+    @engine.end_turn
+    assert_equal 1, player.reload.hand.size
+  end
+
+  test "end_turn draws 2 cards when player holds CrossroadsTile" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "CrossroadsTile", "from" => "[4, 7]", "used" => false } ])
+    @engine.end_turn
+    player.reload
+    assert_equal 2, player.hand.size
+    player.hand.each { |card| assert_includes %w[C D F G T], card }
+  end
+
+  test "player acquires CrossroadsTile mid-turn and draws 2 cards at end of that turn" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "CrossroadsTile", "from" => "[4, 7]", "used" => false } ])
+    @game.update!(mandatory_count: 0)
+    @engine.end_turn
+    assert_equal 2, player.reload.hand.size
+  end
+
   test "tile_activatable? returns false for a used tile" do
     tile = { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true }
 
@@ -552,6 +575,73 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(mandatory_count: 0)
 
     assert_empty @engine.buildable_cells
+  end
+
+  test "first mandatory build with 2 cards locks chosen_terrain" do
+    @game.instantiate
+    g_hex = empty_hexes_of("G", 1).first
+    other_terrain = (@game.board.terrain_at(g_hex[0], g_hex[1]) == "G") ? "D" : "G"
+    @game.current_player.update!(hand: [ "G", other_terrain ])
+
+    TurnEngine.new(@game.reload).build_settlement(*g_hex)
+
+    @game.reload
+    assert_equal "G", @game.current_action["chosen_terrain"]
+    assert_equal [ "G", other_terrain ], @game.current_player.reload.hand
+  end
+
+  test "second mandatory build uses locked terrain and rejects other terrain" do
+    @game.instantiate
+    d_hexes = empty_hexes_of("D", 1)
+    skip "No D hexes on this board" if d_hexes.empty?
+    d_hex = d_hexes.first
+    @game.update!(current_action: { "type" => "mandatory", "chosen_terrain" => "G" })
+    @game.current_player.update!(hand: [ "G", "D" ])
+
+    result = TurnEngine.new(@game.reload).build_settlement(*d_hex)
+    assert_equal "Not available", result
+  end
+
+  test "undo of first mandatory build clears chosen_terrain" do
+    @game.instantiate
+    g_hex = empty_hexes_of("G", 1).first
+    other_terrain = "D"
+    @game.current_player.update!(hand: [ "G", other_terrain ])
+    engine = TurnEngine.new(@game.reload)
+    engine.build_settlement(*g_hex)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_nil @game.current_action["chosen_terrain"]
+    assert_equal [ "G", other_terrain ], @game.current_player.reload.hand
+  end
+
+  test "buildable_cells with 2-card hand and no chosen_terrain returns union of both terrains" do
+    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    # OasisBoard row 0 = "DDCWWTTGGG"; hand cards G and D
+    @game.current_player.update!(hand: [ "G", "D" ])
+    @game.reload
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    terrains = cells.map { |r, c| @game.board.terrain_at(r, c) }.uniq.sort
+    assert_includes terrains, "G"
+    assert_includes terrains, "D"
+  end
+
+  test "buildable_cells with 2-card hand and chosen_terrain uses only that terrain" do
+    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.current_player.update!(hand: [ "G", "D" ])
+    @game.update!(current_action: { "type" => "mandatory", "chosen_terrain" => "G" })
+    @game.reload
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    cells.each { |r, c| assert_equal "G", @game.board.terrain_at(r, c) }
   end
 
   test "buildable_cells for paddock with from returns valid move destinations" do
@@ -614,7 +704,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "barn" }, mandatory_count: 0)
     @game.current_player.update!(
-      hand: "F",
+      hand: [ "F" ],
       tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
     )
     # Place a settlement on F terrain with adjacent F terrain available
@@ -635,7 +725,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "barn", "from" => "[0, 0]" })
     @game.current_player.update!(
-      hand: "F",
+      hand: [ "F" ],
       tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
     )
     @game.instantiate
@@ -657,7 +747,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "barn", "from" => "[0, 0]" }, mandatory_count: 0)
     @game.current_player.update!(
-      hand: "F",
+      hand: [ "F" ],
       tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
     )
     @game.instantiate
@@ -677,14 +767,14 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "turn_state returns barn message when current_action is barn" do
     @game.update!(current_action: { "type" => "barn" })
-    @game.current_player.update!(hand: "G")
+    @game.current_player.update!(hand: [ "G" ])
 
     assert_match(/must move a settlement to a Grass space/, @engine.turn_state)
   end
 
   test "turn_state returns oracle message when current_action is oracle" do
     @game.update!(current_action: { "type" => "oracle" })
-    @game.current_player.update!(hand: "G")
+    @game.current_player.update!(hand: [ "G" ])
 
     assert_match(/must build on a Grass space/, @engine.turn_state)
   end
@@ -693,7 +783,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 0)
     @game.current_player.update!(
-      hand: "G",
+      hand: [ "G" ],
       tiles: [ { "klass" => "OracleTile", "from" => "[3, 7]", "used" => false } ]
     )
     @game.reload
@@ -706,6 +796,97 @@ class TurnEngineTest < ActiveSupport::TestCase
       assert_equal "G", @game.board.terrain_at(r, c)
       assert @game.board_contents.empty?(r, c)
     end
+  end
+
+  test "buildable_cells for oracle with 2-card hand returns union of both terrains" do
+    @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 0)
+    @game.current_player.update!(
+      hand: [ "G", "D" ],
+      tiles: [ { "klass" => "OracleTile", "from" => "[3, 7]", "used" => false } ]
+    )
+    @game.reload
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    terrains = cells.map { |r, c| @game.board.terrain_at(r, c) }.uniq.sort
+    assert_includes terrains, "G"
+    assert_includes terrains, "D"
+  end
+
+  test "activate_tile_build for oracle with 2-card hand locks chosen_terrain" do
+    @game.instantiate
+    g_hex = empty_hexes_of("G", 1).first
+    other_terrain = "D"
+    @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 1)
+    @game.current_player.update!(
+      hand: [ "G", other_terrain ],
+      tiles: [ { "klass" => "OracleTile", "from" => "[3, 7]", "used" => false } ]
+    )
+
+    TurnEngine.new(@game.reload).activate_tile_build(*g_hex)
+
+    @game.reload
+    assert_equal "G", @game.current_action["chosen_terrain"]
+  end
+
+  test "undo of oracle build with 2-card hand clears chosen_terrain" do
+    @game.instantiate
+    g_hex = empty_hexes_of("G", 1).first
+    other_terrain = "D"
+    @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 1)
+    @game.current_player.update!(
+      hand: [ "G", other_terrain ],
+      tiles: [ { "klass" => "OracleTile", "from" => "[3, 7]", "used" => false } ]
+    )
+    TurnEngine.new(@game.reload).activate_tile_build(*g_hex)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_nil @game.current_action["chosen_terrain"]
+  end
+
+  test "place_wall for quarry with 2-card hand locks chosen_terrain" do
+    @game.instantiate
+    # Find a G hex and an adjacent non-G hex to place a settlement (QuarryTile only targets G hexes adjacent to settlements)
+    g_hexes = empty_hexes_of("G", 2)
+    skip "Not enough G hexes" if g_hexes.size < 2
+    # Place a settlement adjacent to the first G hex by finding a non-G neighbor
+    g_hex = g_hexes.first
+    neighbor = @game.board_contents.neighbors(g_hex[0], g_hex[1]).find { |r, c|
+      @game.board_contents.available_for_building?(r, c) && @game.board.terrain_at(r, c) != nil
+    }
+    skip "No buildable neighbor" unless neighbor
+    @game.board_contents.place_settlement(*neighbor, @game.current_player.order)
+    @game.save!
+    @game.update!(current_action: { "type" => "quarry", "klass" => "QuarryTile", "walls_placed" => 0 })
+    @game.current_player.update!(
+      hand: [ "G", "D" ],
+      tiles: [ { "klass" => "QuarryTile", "from" => "[0, 0]", "used" => false } ]
+    )
+
+    TurnEngine.new(@game.reload).place_wall(*g_hex)
+
+    @game.reload
+    assert_equal "G", @game.current_action["chosen_terrain"]
+  end
+
+  test "buildable_cells for barn with 2-card hand and no from returns union settlements" do
+    @game.update!(current_action: { "type" => "barn" }, mandatory_count: 0)
+    @game.instantiate
+    g_hex = empty_hexes_of("G", 1).first
+    @game.board_contents.place_settlement(*g_hex, @game.current_player.order)
+    @game.save!
+    @game.current_player.update!(
+      hand: [ "G", "D" ],
+      tiles: [ { "klass" => "BarnTile", "from" => "[2, 6]", "used" => false } ]
+    )
+
+    cells = TurnEngine.new(@game.reload).buildable_cells
+
+    assert cells.any?
   end
 
   # ── Real-time goals ─────────────────────────────────────────────────────────
@@ -729,7 +910,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     game.board_contents.place_settlement(0, 0, opponent.order)
     game.save!
     game2 = Game.find(game.id)
-    game2.current_player.update!(hand: "D")
+    game2.current_player.update!(hand: [ "D" ])
     engine = TurnEngine.new(game2)
 
     engine.build_settlement(0, 1)
@@ -742,7 +923,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "Ambassadors: does not score when building with no adjacent opponent" do
     # (0,0)=D on OasisBoard; no opponent neighbors
     game = fresh_oasis_game(goals: [ "ambassadors" ])
-    game.current_player.update!(hand: "D")
+    game.current_player.update!(hand: [ "D" ])
     engine = TurnEngine.new(game)
 
     engine.build_settlement(0, 0)
@@ -758,7 +939,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     game.board_contents.place_settlement(0, 0, opponent.order)
     game.save!
     game2 = Game.find(game.id)
-    game2.current_player.update!(hand: "D")
+    game2.current_player.update!(hand: [ "D" ])
     engine = TurnEngine.new(game2)
 
     engine.build_settlement(0, 1)
@@ -780,7 +961,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     game.board_contents.place_settlement(9, 1, player_order)
     game.save!
     game2 = Game.find(game.id)
-    game2.current_player.update!(hand: "W", supply: { "settlements" => 40 })
+    game2.current_player.update!(hand: [ "W" ], supply: { "settlements" => 40 })
     engine = TurnEngine.new(game2)
 
     engine.build_settlement(9, 0)
@@ -792,7 +973,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "Shepherds: does not score when adjacent empty same-terrain exists" do
     # (0,0)=D on OasisBoard; (0,1)=D is adjacent and empty
     game = fresh_oasis_game(goals: [ "shepherds" ])
-    game.current_player.update!(hand: "D")
+    game.current_player.update!(hand: [ "D" ])
     engine = TurnEngine.new(game)
 
     engine.build_settlement(0, 0)
@@ -805,16 +986,16 @@ class TurnEngineTest < ActiveSupport::TestCase
     # OasisBoard row 0: "DDCWWTTGGG" — G at (0,7),(0,8),(0,9)
     # Even-row E direction: (0,7)->(0,8)->(0,9) is a straight line.
     game = fresh_oasis_game(goals: [ "families" ], mandatory_count: 3)
-    game.current_player.update!(hand: "G")
+    game.current_player.update!(hand: [ "G" ])
     engine = TurnEngine.new(game)
 
     engine.build_settlement(0, 7)
     game2 = Game.find(game.id)
-    game2.current_player.update!(hand: "G")
+    game2.current_player.update!(hand: [ "G" ])
     engine2 = TurnEngine.new(game2)
     engine2.build_settlement(0, 8)
     game3 = Game.find(game.id)
-    game3.current_player.update!(hand: "G")
+    game3.current_player.update!(hand: [ "G" ])
     engine3 = TurnEngine.new(game3)
     engine3.build_settlement(0, 9)
 
@@ -826,16 +1007,16 @@ class TurnEngineTest < ActiveSupport::TestCase
     # OasisBoard row 0: "DDCWWTTGGG", row 1: "DCWFFTTTGG"
     # (0,7)=G, (0,8)=G, (1,8)=G — (1,8) is SE of (0,8), not E, so (0,7),(0,8),(1,8) is not a line.
     game = fresh_oasis_game(goals: [ "families" ], mandatory_count: 3)
-    game.current_player.update!(hand: "G")
+    game.current_player.update!(hand: [ "G" ])
     engine = TurnEngine.new(game)
 
     engine.build_settlement(0, 7)
     game2 = Game.find(game.id)
-    game2.current_player.update!(hand: "G")
+    game2.current_player.update!(hand: [ "G" ])
     engine2 = TurnEngine.new(game2)
     engine2.build_settlement(0, 8)
     game3 = Game.find(game.id)
-    game3.current_player.update!(hand: "G")
+    game3.current_player.update!(hand: [ "G" ])
     engine3 = TurnEngine.new(game3)
     engine3.build_settlement(1, 8)
 
@@ -846,16 +1027,16 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "Families: does not score when goal is not active" do
     # Same positions as the straight-line test but no families goal
     game = fresh_oasis_game(goals: [], mandatory_count: 3)
-    game.current_player.update!(hand: "G")
+    game.current_player.update!(hand: [ "G" ])
     engine = TurnEngine.new(game)
 
     engine.build_settlement(0, 7)
     game2 = Game.find(game.id)
-    game2.current_player.update!(hand: "G")
+    game2.current_player.update!(hand: [ "G" ])
     engine2 = TurnEngine.new(game2)
     engine2.build_settlement(0, 8)
     game3 = Game.find(game.id)
-    game3.current_player.update!(hand: "G")
+    game3.current_player.update!(hand: [ "G" ])
     engine3 = TurnEngine.new(game3)
     engine3.build_settlement(0, 9)
 
@@ -1354,7 +1535,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     ])
 
     # Force a known fort terrain that differs from hand
-    drawn = (@game.current_player.hand == "G") ? "D" : "G"
+    drawn = (@game.current_player.hand.first == "G") ? "D" : "G"
     @game.update!(
       mandatory_count: 0,
       current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
@@ -1380,7 +1561,7 @@ class TurnEngineTest < ActiveSupport::TestCase
       { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
     ])
 
-    drawn = (@game.current_player.hand == "D") ? "G" : "D"
+    drawn = (@game.current_player.hand.first == "D") ? "G" : "D"
     fort_spot = empty_hexes_of(drawn, 1).first
     @game.update!(
       mandatory_count: 0,
@@ -1407,7 +1588,7 @@ class TurnEngineTest < ActiveSupport::TestCase
       { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
     ])
 
-    drawn = (@game.current_player.hand == "D") ? "G" : "D"
+    drawn = (@game.current_player.hand.first == "D") ? "G" : "D"
     fort_spot = empty_hexes_of(drawn, 1).first
     @game.update!(
       mandatory_count: 0,
@@ -1432,7 +1613,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   def force_hand(terrain)
-    @game.current_player.update!(hand: terrain)
+    @game.current_player.update!(hand: [ terrain ])
   end
 
   def empty_hexes_of(terrain, n)

@@ -811,7 +811,7 @@ class GameTest < ActiveSupport::TestCase
   test "end_turn stores card_discarded and card_drawn in payload" do
     game = games(:game2player)
     chris = game_players(:chris)
-    chris.hand = "G"
+    chris.hand = [ "G" ]
     chris.save
     game.deck = [ "C", "D", "F" ]
     game.discard = []
@@ -820,15 +820,15 @@ class GameTest < ActiveSupport::TestCase
     engine(game).end_turn
 
     move = game.moves.find_by(action: "end_turn")
-    assert_equal "G", move.payload["card_discarded"]
-    assert_equal "C", move.payload["card_drawn"]
+    assert_equal [ "G" ], move.payload["card_discarded"]
+    assert_equal [ "C" ], move.payload["card_drawn"]
     assert_equal false, move.payload["reshuffled"]
   end
 
   test "end_turn stores reshuffled true and deck_after when deck runs out mid-draw" do
     game = games(:game2player)
     chris = game_players(:chris)
-    chris.hand = "G"
+    chris.hand = [ "G" ]
     chris.save
     game.deck = [ "C" ]
     game.discard = [ "D", "F", "T" ]
@@ -837,8 +837,8 @@ class GameTest < ActiveSupport::TestCase
     engine(game).end_turn
 
     move = game.moves.find_by(action: "end_turn")
-    assert_equal "G", move.payload["card_discarded"]
-    assert_equal "C", move.payload["card_drawn"]
+    assert_equal [ "G" ], move.payload["card_discarded"]
+    assert_equal [ "C" ], move.payload["card_drawn"]
     assert_equal true, move.payload["reshuffled"]
     assert_not_empty move.payload["deck_after"]
   end
@@ -989,7 +989,7 @@ class GameTest < ActiveSupport::TestCase
     game.mandatory_count = 1
     game.save
     chris = game_players(:chris)
-    chris.update!(supply: { "settlements" => 1 }, hand: "G")
+    chris.update!(supply: { "settlements" => 1 }, hand: [ "G" ])
 
     engine(game).build_settlement(0, 7)  # OasisBoard (0,7)=G
     game.reload
@@ -1003,7 +1003,7 @@ class GameTest < ActiveSupport::TestCase
     game.mandatory_count = 1
     game.save
     chris = game_players(:chris)
-    chris.update!(supply: { "settlements" => 2 }, hand: "G")
+    chris.update!(supply: { "settlements" => 2 }, hand: [ "G" ])
 
     engine(game).build_settlement(0, 7)
     game.reload
@@ -1051,7 +1051,7 @@ class GameTest < ActiveSupport::TestCase
     game.mandatory_count = 1
     game.save
     chris = game_players(:chris)
-    chris.update!(supply: { "settlements" => 1 }, hand: "G")
+    chris.update!(supply: { "settlements" => 1 }, hand: [ "G" ])
 
     engine(game).build_settlement(0, 7)
     game.reload

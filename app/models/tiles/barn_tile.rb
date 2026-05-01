@@ -6,5 +6,6 @@ module Tiles
                   "if possible.".freeze
     def moves_settlement? = true
     def move_terrain(hand:) = hand
+    def uses_played_terrain? = true
   end
 end

@@ -28,7 +28,7 @@
 chris:
   player: chris
   game: game2player
-  hand: "T"
+  hand: <%= ["T"].to_json %>
   supply: <%= { "settlements" => 40 }.to_json %>
   tiles: <%= [].to_json %>
   order: 0
@@ -36,7 +36,7 @@ chris:
 paula:
   player: paula
   game: game2player
-  hand: "D"
+  hand: <%= ["D"].to_json %>
   supply: <%= { "settlements" => 40 }.to_json %>
   tiles: <%= [].to_json %>
   order: 1
@@ -44,7 +44,7 @@ paula:
 chris_in_paula_turn_game:
   player: chris
   game: paula_turn_game
-  hand: "T"
+  hand: <%= ["T"].to_json %>
   supply: <%= { "settlements" => 40 }.to_json %>
   tiles: <%= [].to_json %>
   order: 0
@@ -52,7 +52,7 @@ chris_in_paula_turn_game:
 paula_in_paula_turn_game:
   player: paula
   game: paula_turn_game
-  hand: "D"
+  hand: <%= ["D"].to_json %>
   supply: <%= { "settlements" => 40 }.to_json %>
   tiles: <%= [].to_json %>
   order: 1

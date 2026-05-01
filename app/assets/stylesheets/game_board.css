@@ -1194,6 +1194,12 @@ ul li .hex:hover {
     background-image: url("timberland.svg");
 }
 
+.player-card.card-shunned {
+    opacity: 0.35;
+    filter: grayscale(60%);
+    position: relative;
+}
+
 .meeple-popup {
     position: absolute;
     z-index: 100;

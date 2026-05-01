@@ -28,7 +28,20 @@ require "test_helper"
 
 class GamePlayerTest < ActiveSupport::TestCase
   setup do
-    @gp = game_players(:chris)  # supply: { "settlements" => 40 }, hand: "T"
+    @gp = game_players(:chris)  # supply: { "settlements" => 40 }, hand: ["T"]
+  end
+
+  # --- Hand ---
+
+  test "hand is an array" do
+    assert_instance_of Array, @gp.hand
+  end
+
+  test "hand stores and retrieves as array" do
+    @gp.hand = [ "G", "F" ]
+    @gp.save!
+    @gp.reload
+    assert_equal [ "G", "F" ], @gp.hand
   end
 
   # --- Supply ---
