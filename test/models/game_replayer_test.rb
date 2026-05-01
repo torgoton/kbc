@@ -45,7 +45,7 @@ class GameReplayerTest < ActiveSupport::TestCase
     snap = game.capture_snapshot
     chris_snap = snap["players"].find { |p| p["order"] == game_players(:chris).order }
 
-    assert_equal "T", chris_snap["hand"]
+    assert_equal [ "T" ], chris_snap["hand"]
     assert_equal 40, chris_snap["supply"]["settlements"]
   end
 

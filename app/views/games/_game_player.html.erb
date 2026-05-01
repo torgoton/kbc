@@ -17,8 +17,12 @@
     <% end %>
   </div>
   <div class="player-stats">
-    <% display_card = (n == 0 || (game.current_player_id == player.id)) ? player.hand : "B" %>
-    <%= content_tag :span, display_card, class: "player-card card-#{display_card}" %>
+    <% display_cards = (n == 0 || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "B" } %>
+    <% chosen = (game.current_player_id == player.id) ? game.current_action["chosen_terrain"] : nil %>
+    <% display_cards.each do |card| %>
+      <% shunned = chosen && card != chosen %>
+      <%= content_tag :span, card, class: "player-card card-#{card}#{" card-shunned" if shunned}" %>
+    <% end %>
     <div class="supply-display">
       <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
       <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>

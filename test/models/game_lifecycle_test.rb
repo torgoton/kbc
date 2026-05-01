@@ -59,7 +59,8 @@ class GameLifecycleTest < ActiveSupport::TestCase
     # Both players have full supply and a terrain card
     @game.game_players.each do |gp|
       assert_equal 40, gp.supply["settlements"]
-      assert_includes %w[C D F G T], gp.hand
+      assert_equal 1, gp.hand.size
+      assert_includes %w[C D F G T], gp.hand.first
     end
   end
 
