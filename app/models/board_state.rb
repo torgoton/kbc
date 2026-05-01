@@ -65,6 +65,15 @@ class BoardState
     cell && cell["klass"] == "Settlement" && cell["meeple"] == "wagon"
   end
 
+  def restore_piece(meeple, row, col, player)
+    case meeple
+    when "warrior" then place_warrior(row, col, player)
+    when "ship"    then place_ship(row, col, player)
+    when "wagon"   then place_wagon(row, col, player)
+    else                place_settlement(row, col, player)
+    end
+  end
+
   def warrior_blocked?(row, col)
     neighbors(row, col).any? { |nr, nc| warrior_at?(nr, nc) }
   end

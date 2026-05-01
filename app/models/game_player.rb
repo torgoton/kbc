@@ -108,6 +108,24 @@ class GamePlayer < ApplicationRecord
     supply["wagons"] = wagons_remaining + 1
   end
 
+  def return_piece_to_supply!(meeple)
+    case meeple
+    when "warrior" then increment_warrior_supply!
+    when "ship"    then increment_ship_supply!
+    when "wagon"   then increment_wagon_supply!
+    else                increment_supply!
+    end
+  end
+
+  def remove_piece_from_supply!(meeple)
+    case meeple
+    when "warrior" then decrement_warrior_supply!
+    when "ship"    then decrement_ship_supply!
+    when "wagon"   then decrement_wagon_supply!
+    else                decrement_supply!
+    end
+  end
+
   def city_halls_remaining
     supply["city_halls"].to_i
   end
