@@ -723,10 +723,10 @@ class TurnEngine
       if action == "mandatory"
         if player.settlements_remaining? && @game.mandatory_count > 0
           if @game.current_action["outpost_active"]
-            terrain = effective_terrain(player)
+            terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
             (0..19).flat_map do |r|
-              (0..19).filter_map { |c| [ r, c ] if @game.board_contents.empty?(r, c) && @game.board.terrain_at(r, c) == terrain }
-            end
+              (0..19).filter_map { |c| [ r, c ] if @game.board_contents.available_for_building?(r, c) && terrains.include?(@game.board.terrain_at(r, c)) }
+            end.uniq
           else
             terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
             terrains.flat_map { |t|

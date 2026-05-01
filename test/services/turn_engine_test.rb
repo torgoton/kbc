@@ -1312,6 +1312,25 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal all_empty_grass.sort, cells.sort
   end
 
+  test "buildable_cells with outpost_active and 2-card hand returns cells for both terrains" do
+    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.current_player.update!(hand: [ "G", "D" ], tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+    @game.reload
+    @engine.activate_outpost
+    @game.reload
+
+    cells = TurnEngine.new(@game).buildable_cells
+
+    @game.instantiate
+    terrains = cells.map { |r, c| @game.board.terrain_at(r, c) }.uniq.sort
+    assert_includes terrains, "G"
+    assert_includes terrains, "D"
+    assert cells.any?, "expected selectable hexes but got none"
+  end
+
   test "undo of activate_outpost clears outpost_active and marks tile unused" do
     force_hand("G")
     player = @game.current_player
