@@ -49,7 +49,8 @@ module MoveApplicator
         from: move.from,
         owner_order: move.payload["owner_order"],
         action_before: move.payload["action_before"],
-        tile_used: move.payload["tile_used"]
+        tile_used: move.payload["tile_used"],
+        meeple: move.payload["meeple"]
       )
     when "place_wall"
       ct_before = move.payload&.key?("chosen_terrain_before") ? move.payload["chosen_terrain_before"] : :not_provided
@@ -176,10 +177,11 @@ class MoveApplicator::HashState
     player["bonus_scores"][goal] = (player["bonus_scores"][goal] || 0) - score
   end
 
-  def apply_remove_settlement(player_order:, from:, owner_order:, action_before: nil, tile_used: nil)
+  def apply_remove_settlement(player_order:, from:, owner_order:, action_before: nil, tile_used: nil, meeple: nil)
     coord = Coordinate.from_key(from)
     @board.remove(coord.row, coord.col)
-    @players[owner_order]["supply"]["settlements"] += 1
+    key = meeple ? meeple.pluralize : "settlements"
+    @players[owner_order]["supply"][key] += 1
   end
 
   def apply_place_wall(player_order:, to:, chosen_terrain_before: :not_provided)
@@ -413,12 +415,12 @@ class MoveApplicator::LiveState
     gp.save
   end
 
-  def apply_remove_settlement(player_order:, from:, owner_order:, action_before: nil, tile_used: nil)
+  def apply_remove_settlement(player_order:, from:, owner_order:, action_before: nil, tile_used: nil, meeple: nil)
     coord = Coordinate.from_key(from)
     @game.board_contents_will_change!
-    @game.board_contents.place_settlement(coord.row, coord.col, owner_order)
+    @game.board_contents.restore_piece(meeple, coord.row, coord.col, owner_order)
     owner = player_for(owner_order)
-    owner.decrement_supply!
+    owner.remove_piece_from_supply!(meeple)
     owner.save
     if action_before
       @game.current_action = action_before

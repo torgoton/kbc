@@ -156,6 +156,7 @@ class TurnEngine
     action_before = @game.current_action.deep_dup
     remaining_orders = pending_orders - [ owner_order ]
     tile_used = remaining_orders.empty?
+    meeple = @game.board_contents.meeple_at(row, col)
 
     @game.move_count += 1
     @game.moves.create(
@@ -166,13 +167,13 @@ class TurnEngine
       from: "[#{row}, #{col}]",
       to: "player_#{owner_order}_supply",
       reversible: true,
-      payload: { "owner_order" => owner_order, "action_before" => action_before, "tile_used" => tile_used },
-      message: "#{game_player.player.handle} removed #{owner.player.handle}'s settlement"
+      payload: { "owner_order" => owner_order, "action_before" => action_before, "tile_used" => tile_used, "meeple" => meeple },
+      message: "#{game_player.player.handle} removed #{owner.player.handle}'s #{meeple || 'settlement'}"
     )
 
     @game.board_contents_will_change!
     @game.board_contents.remove(row, col)
-    owner.increment_supply!
+    owner.return_piece_to_supply!(meeple)
     apply_tile_forfeit(owner)
 
     if tile_used

@@ -1407,6 +1407,52 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal false, sword["used"], "SwordTile must be unused after undo"
   end
 
+  test "remove_settlement on a warrior returns warrior to supply, not settlement supply" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    opponent.reload.add_warriors!(2)
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    hex = empty_hexes_of("G", 1).first
+    @game.instantiate
+    @game.board_contents.place_warrior(*hex, opponent.order)
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+    @game.save!
+    @game.reload
+    warriors_before = opponent.reload.warriors_remaining
+    settlements_before = opponent.reload.settlements_remaining
+
+    @engine.remove_settlement(*hex)
+    @game.reload
+
+    assert_equal warriors_before + 1, opponent.reload.warriors_remaining, "warrior should return to supply"
+    assert_equal settlements_before, opponent.reload.settlements_remaining, "settlement supply must not change"
+  end
+
+  test "undo of remove_settlement on a warrior restores warrior to board, not a settlement" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    opponent.reload.add_warriors!(2)
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    hex = empty_hexes_of("G", 1).first
+    @game.instantiate
+    @game.board_contents.place_warrior(*hex, opponent.order)
+    @game.update!(current_action: {
+      "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ]
+    })
+    @game.save!
+    @game.reload
+
+    @engine.remove_settlement(*hex)
+    @game.reload
+    @engine.undo_last_move
+    @game.reload
+    @game.instantiate
+
+    assert @game.board_contents.warrior_at?(*hex), "warrior should be restored to board"
+    assert_not @game.board_contents.player_at(*hex) && !@game.board_contents.warrior_at?(*hex),
+      "a plain settlement must not appear"
+  end
+
   test "undo of place_warrior restores current_action to barracks tile state" do
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[0, 0]", "used" => false } ])
