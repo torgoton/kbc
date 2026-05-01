@@ -577,6 +577,20 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_empty @engine.buildable_cells
   end
 
+  test "building on the second card's terrain works and locks to that terrain" do
+    @game.instantiate
+    second_terrain = (empty_hexes_of("G", 1).any? && empty_hexes_of("D", 1).any?) ? "D" : nil
+    skip "Need both G and D hexes" unless second_terrain
+    d_hex = empty_hexes_of("D", 1).first
+    @game.current_player.update!(hand: [ "G", "D" ])
+
+    result = TurnEngine.new(@game.reload).build_settlement(*d_hex)
+
+    assert_not_equal "Not available", result
+    @game.reload
+    assert_equal "D", @game.current_action["chosen_terrain"]
+  end
+
   test "first mandatory build with 2 cards locks chosen_terrain" do
     @game.instantiate
     g_hex = empty_hexes_of("G", 1).first

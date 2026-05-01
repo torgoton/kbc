@@ -61,7 +61,10 @@ class TurnEngine
       check_families_goal(game_player) if builds.size == 3
     else
       if card_terrain.nil?
-        card_terrain = game_player.hand.find { |t| available?(game_player.order, t, row, col) }
+        card_terrain = game_player.hand.find { |t|
+          list = available_list(game_player.order, t)
+          list.any? ? list[row][col] : true
+        }
         return "Not available" unless card_terrain
         lock_terrain!(card_terrain, chosen_terrain_before)
       else
