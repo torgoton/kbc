@@ -335,6 +335,55 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 0, @game.moves.count
   end
 
+  test "select_action for paddock preserves klass" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[5, 5]", "used" => false } ])
+
+    @engine.select_action("paddock")
+    @game.reload
+
+    assert_equal "paddock", @game.current_action["type"]
+    assert_equal "PaddockTile", @game.current_action["klass"]
+  end
+
+  test "select_action for donation tile preserves klass and remaining count" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "DonationDesertTile", "from" => "[5, 5]", "used" => false } ])
+
+    @engine.select_action("donationdesert")
+    @game.reload
+
+    assert_equal "donationdesert", @game.current_action["type"]
+    assert_equal "DonationDesertTile", @game.current_action["klass"]
+    assert_equal 3, @game.current_action["remaining"]
+  end
+
+  test "select_action for quarry preserves klass and walls placed counter" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[5, 5]", "used" => false } ])
+
+    @engine.select_action("quarry")
+    @game.reload
+
+    assert_equal "quarry", @game.current_action["type"]
+    assert_equal "QuarryTile", @game.current_action["klass"]
+    assert_equal 0, @game.current_action["walls_placed"]
+  end
+
+  test "select_action for resettlement preserves klass and movement state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[5, 5]", "used" => false } ])
+
+    @engine.select_action("resettlement")
+    @game.reload
+
+    assert_equal "resettlement", @game.current_action["type"]
+    assert_equal "ResettlementTile", @game.current_action["klass"]
+    assert_equal 4, @game.current_action["budget"]
+    assert_equal [], @game.current_action["vacated"]
+    assert_equal 0, @game.current_action["moves"]
+  end
+
   test "undo of select_action marks quarry tile as unused" do
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[5, 5]", "used" => false } ])
@@ -1167,6 +1216,20 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_nil tile["permanent"]
   end
 
+  test "undo of place_city_hall restores current_action to city hall tile state" do
+    center, = setup_city_hall_scenario
+    return skip "No valid city hall position found" unless center
+
+    @engine.place_city_hall(*center)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    assert_equal "cityhall", @game.current_action["type"]
+    assert_equal "CityHallTile", @game.current_action["klass"]
+  end
+
   test "sword tile cannot remove a city hall hex" do
     center, = setup_city_hall_scenario
     return skip "No valid city hall position found" unless center
@@ -1495,6 +1558,168 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.board_contents.warrior_at?(*hex)
   end
 
+  test "select_action for lighthouse preserves klass" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[0, 0]", "used" => false } ])
+
+    @engine.select_action("lighthouse")
+    @game.reload
+
+    assert_equal "lighthouse", @game.current_action["type"]
+    assert_equal "LighthouseTile", @game.current_action["klass"]
+  end
+
+  test "select_action for sword preserves pending orders" do
+    opponent = @game.game_players.find { |gp| gp != @game.current_player }
+    @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.instantiate
+    @game.board_contents.place_settlement(2, 7, opponent.order)
+    @game.save!
+
+    @engine.select_action("sword")
+    @game.reload
+
+    assert_equal "sword", @game.current_action["type"]
+    assert_equal "SwordTile", @game.current_action["klass"]
+    assert_equal [opponent.order], @game.current_action["pending_orders"]
+  end
+
+  test "select_action for barracks preserves klass" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[0, 0]", "used" => false } ])
+
+    @engine.select_action("barracks")
+    @game.reload
+
+    assert_equal "barracks", @game.current_action["type"]
+    assert_equal "BarracksTile", @game.current_action["klass"]
+  end
+
+  test "select_meeple_for_move stores from for lighthouse action" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[0, 0]", "used" => false } ])
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile" })
+    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.save!
+    @game.board_contents_will_change!
+    @game.board_contents.place_ship(0, 3, player.order)
+    @game.save!
+
+    TurnEngine.new(@game.reload).select_meeple_for_move(0, 3)
+    @game.reload
+
+    assert_equal "[0, 3]", @game.current_action["from"]
+  end
+
+  test "undo of select_meeple_for_move clears from for lighthouse action" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[0, 0]", "used" => false } ])
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile" })
+    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.save!
+    @game.board_contents_will_change!
+    @game.board_contents.place_ship(0, 3, player.order)
+    @game.save!
+
+    engine = TurnEngine.new(@game.reload)
+    engine.select_meeple_for_move(0, 3)
+    @game.reload
+    engine.undo_last_move
+    @game.reload
+
+    assert_equal "lighthouse", @game.current_action["type"]
+    assert_equal "LighthouseTile", @game.current_action["klass"]
+    assert_nil @game.current_action["from"]
+  end
+
+  test "undo of place_ship restores current_action to lighthouse tile state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[0, 0]", "used" => false } ])
+    player.reload.add_ships!(1)
+    player.save!
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile" })
+
+    hex = valid_meeple_destination("LighthouseTile").first
+    raise "No ship hex available" unless hex
+    @engine.execute_meeple_action(*hex)
+    assert_equal "mandatory", @game.reload.current_action["type"]
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    assert_equal "lighthouse", @game.current_action["type"]
+    assert_equal "LighthouseTile", @game.current_action["klass"]
+    assert_equal false, @game.current_player.tiles.find { |t| t["klass"] == "LighthouseTile" }["used"]
+    assert_equal 1, @game.current_player.ships_remaining
+  end
+
+  test "undo of remove_ship restores current_action to lighthouse tile state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[0, 0]", "used" => false } ])
+    player.reload.add_ships!(1)
+    player.save!
+    @game.board_contents_will_change!
+    hex = valid_meeple_destination("LighthouseTile").first
+    raise "No ship hex available" unless hex
+    @game.board_contents.place_ship(*hex, player.order)
+    @game.save!
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile" })
+
+    TurnEngine.new(@game.reload).remove_meeple_action(*hex)
+    assert_equal "mandatory", @game.reload.current_action["type"]
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    assert_equal "lighthouse", @game.current_action["type"]
+    assert_equal "LighthouseTile", @game.current_action["klass"]
+    assert @game.board_contents.ship_at?(*hex)
+  end
+
+  test "undo of place_wagon restores current_action to wagon tile state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[0, 0]", "used" => false } ])
+    player.reload.add_wagons!(1)
+    player.save!
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile" })
+
+    hex = valid_meeple_destination("WagonTile").first
+    raise "No wagon hex available" unless hex
+    @engine.execute_meeple_action(*hex)
+    assert_equal "mandatory", @game.reload.current_action["type"]
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    assert_equal "wagon", @game.current_action["type"]
+    assert_equal "WagonTile", @game.current_action["klass"]
+    assert_equal false, @game.current_player.tiles.find { |t| t["klass"] == "WagonTile" }["used"]
+    assert_equal 1, @game.current_player.wagons_remaining
+  end
+
+  test "undo of remove_wagon restores current_action to wagon tile state" do
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[0, 0]", "used" => false } ])
+    player.reload.add_wagons!(1)
+    player.save!
+    @game.board_contents_will_change!
+    hex = valid_meeple_destination("WagonTile").first
+    raise "No wagon hex available" unless hex
+    @game.board_contents.place_wagon(*hex, player.order)
+    @game.save!
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile" })
+
+    TurnEngine.new(@game.reload).remove_meeple_action(*hex)
+    assert_equal "mandatory", @game.reload.current_action["type"]
+
+    TurnEngine.new(@game.reload).undo_last_move
+    @game.reload
+
+    assert_equal "wagon", @game.current_action["type"]
+    assert_equal "WagonTile", @game.current_action["klass"]
+    assert @game.board_contents.wagon_at?(*hex)
+  end
+
   # ---------------------------------------------------------------------------
   # activate_fort_tile
   # ---------------------------------------------------------------------------
@@ -1688,6 +1913,17 @@ class TurnEngineTest < ActiveSupport::TestCase
       end
     end
     spots
+  end
+
+  def valid_meeple_destination(tile_klass)
+    @game.instantiate
+    tile = Tiles::Tile.for_klass(tile_klass).new(0)
+    tile.valid_destinations(
+      board_contents: @game.board_contents,
+      board: @game.board,
+      player_order: @game.current_player.order,
+      supply: @game.current_player.supply_hash
+    )
   end
 end
 
