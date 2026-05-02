@@ -241,6 +241,12 @@ class MoveApplicator::HashState
     @board.remove(coord.row, coord.col)
     key = meeple ? meeple.pluralize : "settlements"
     @players[owner_order]["supply"][key] += 1
+    current_phase = action_before ? TurnPhase.deserialize(action_before) : TurnPhase.deserialize(@current_action)
+    if tile_used
+      @current_action = TurnPhase::MandatoryBuildPhase.new.serialize
+    elsif current_phase.respond_to?(:consume_target)
+      @current_action = current_phase.consume_target(owner_order).next_phase.serialize
+    end
   end
 
   def apply_place_wall(player_order:, to:, chosen_terrain_before: :not_provided)
@@ -740,14 +746,55 @@ class MoveApplicator::LiveState
         builds: current_phase.builds,
         outpost_active: current_phase.outpost_active?
       )
-    else
-      current_action = @game.current_action.dup
-      if chosen_terrain_before.nil?
-        current_action.delete("chosen_terrain")
-      else
-        current_action["chosen_terrain"] = chosen_terrain_before
-      end
-      @game.turn_phase = TurnPhase::LegacyPhase.new(current_action)
+    elsif current_phase.respond_to?(:chosen_terrain)
+      phase_class =
+        if current_phase.is_a?(TurnPhase::TileBuildPhase)
+          TurnPhase::TileBuildPhase
+        elsif current_phase.is_a?(TurnPhase::SettlementMovePhase)
+          TurnPhase::SettlementMovePhase
+        elsif current_phase.is_a?(TurnPhase::ResettlementPhase)
+          TurnPhase::ResettlementPhase
+        elsif current_phase.is_a?(TurnPhase::LegacyPhase)
+          TurnPhase::LegacyPhase
+        else
+          current_phase.class
+        end
+
+      @game.turn_phase =
+        case phase_class.name
+        when "TurnPhase::TileBuildPhase"
+          TurnPhase::TileBuildPhase.new(
+            action_type: current_phase.type,
+            klass_name: current_phase.klass_name,
+            chosen_terrain: chosen_terrain_before,
+            remaining: current_phase.respond_to?(:remaining) ? current_phase.remaining : nil,
+            walls_placed: current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed : nil
+          )
+        when "TurnPhase::SettlementMovePhase"
+          TurnPhase::SettlementMovePhase.new(
+            action_type: current_phase.type,
+            klass_name: current_phase.klass_name,
+            from: current_phase.from
+          )
+        when "TurnPhase::ResettlementPhase"
+          TurnPhase::ResettlementPhase.new(
+            budget: current_phase.budget,
+            vacated: current_phase.vacated,
+            moves: current_phase.moves,
+            from: current_phase.from
+          )
+        when "TurnPhase::LegacyPhase"
+          current_action = current_phase.serialize
+          current_action = current_action.deep_dup
+          if chosen_terrain_before.nil?
+            current_action.delete("chosen_terrain")
+          else
+            current_action["chosen_terrain"] = chosen_terrain_before
+          end
+          TurnPhase::LegacyPhase.new(current_action)
+        else
+          current_phase
+        end
     end
   end
 end

@@ -342,6 +342,26 @@ class GameReplayerTest < ActiveSupport::TestCase
     assert_states_equal game.capture_snapshot, game.replayed_state
   end
 
+  test "replayed_state matches current state after remove_settlement with sword" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    opponent = game_players(:paula)
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_settlement(2, 7, opponent.order)
+    end
+    game.current_action = { "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ] }
+    chris.tiles = [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ]
+    chris.save!
+    game.reload
+    game.save!
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    engine(game).remove_settlement(2, 7)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
   test "replayed_state matches current state after forfeit_tile" do
     game = game_with_known_state
     chris = game_players(:chris)
