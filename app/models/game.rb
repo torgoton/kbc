@@ -122,6 +122,14 @@ class Game < ApplicationRecord
     TurnEngine.new(self).turn_state
   end
 
+  def turn_phase
+    TurnPhase.deserialize(current_action)
+  end
+
+  def turn_phase=(phase)
+    self.current_action = phase.serialize
+  end
+
   def my_turn?(user)
     playing? && current_player&.player == user
   end
