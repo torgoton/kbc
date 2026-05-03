@@ -333,7 +333,6 @@ class GameReplayerTest < ActiveSupport::TestCase
     game = game_with_known_state
     chris = game_players(:chris)
     center = setup_city_hall_scenario(game, chris)
-    return skip "No valid city hall position found" unless center
     game.update!(base_snapshot: game.capture_snapshot)
 
     engine(game).place_city_hall(*center)
@@ -456,6 +455,9 @@ class GameReplayerTest < ActiveSupport::TestCase
   end
 
   def setup_city_hall_scenario(game, player)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    game.board_contents = BoardState.new
+    game.save!
     player.add_city_halls!(1)
     player.tiles = [ { "klass" => "CityHallTile", "from" => "[2, 5]", "used" => false } ]
     player.save!
@@ -464,7 +466,7 @@ class GameReplayerTest < ActiveSupport::TestCase
 
     board = game.instantiate
     center = find_valid_city_hall_center(game, board)
-    return nil unless center
+    raise "Expected fixed Oasis board to have a valid city hall center" unless center
 
     neighbors_of_center = game.board_contents.neighbors(*center)
     outer_settlement = nil
@@ -478,7 +480,7 @@ class GameReplayerTest < ActiveSupport::TestCase
       end
       break if outer_settlement
     end
-    return nil unless outer_settlement
+    raise "Expected fixed Oasis board to have a city hall-adjacent settlement position" unless outer_settlement
 
     game.board_contents_will_change!
     game.board_contents.place_settlement(*outer_settlement, player.order)
