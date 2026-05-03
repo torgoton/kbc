@@ -89,6 +89,7 @@ test:
 production:
   primary: &primary_production
     <<: *default
-    database: kbc_production
-    username: kbc_prod
-    password: <%= ENV["KBC_DATABASE_PASSWORD"] %>
+    host: <%= ENV["KBC_PRODUCTION_DATABASE_HOST"] %>
+    database: <%= ENV["KBC_PRODUCTION_DATABASE_NAME"] %>
+    username: <%= ENV["KBC_PRODUCTION_DATABASE_USERNAME"] %>
+    password: <%= ENV["KBC_PRODUCTION_DATABASE_PASSWORD"] %>
