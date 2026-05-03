@@ -169,6 +169,32 @@ class GameReplayerTest < ActiveSupport::TestCase
     assert_states_equal game.capture_snapshot, game.replayed_state
   end
 
+  test "replayed_state matches current state after resettlement move" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    from_hex, dest_hex = reachable_resettlement_hexes(game, "G")
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(*from_hex, chris.order) }
+    game.current_action = {
+      "type" => "resettlement",
+      "klass" => "ResettlementTile",
+      "budget" => 4,
+      "vacated" => [],
+      "moves" => 0,
+      "from" => "[#{from_hex[0]}, #{from_hex[1]}]"
+    }
+    game.save
+    chris.tiles = [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ]
+    chris.save
+    game.reload
+    game.update(base_snapshot: game.capture_snapshot)
+
+    engine(game).move_settlement(*dest_hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
   test "replayed_state matches current state after build_on_terrain (oasis action)" do
     game = game_with_known_state
     chris = game_players(:chris)
@@ -181,6 +207,156 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.update(base_snapshot: game.capture_snapshot)
 
     engine(game).activate_tile_build(0, 1)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after place_warrior" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "BarracksTile", "from" => "[2, 7]", "used" => false } ]
+    chris.add_warriors!(2)
+    chris.save!
+    game.reload
+    game.update!(current_action: { "type" => "barracks", "klass" => "BarracksTile" })
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    hex = empty_hexes_of(game, "G", 1).first
+    raise "No grass hex available" unless hex
+
+    engine(game).execute_meeple_action(*hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after remove_warrior" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "BarracksTile", "from" => "[2, 7]", "used" => false } ]
+    chris.add_warriors!(2)
+    chris.save!
+    game.reload
+    hex = empty_hexes_of(game, "G", 1).first
+    raise "No grass hex available" unless hex
+    game.board_contents = BoardState.new.tap { |s| s.place_warrior(*hex, chris.order) }
+    game.current_action = { "type" => "barracks", "klass" => "BarracksTile" }
+    game.save!
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    engine(game).remove_meeple_action(*hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after place_ship" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "LighthouseTile", "from" => "[2, 7]", "used" => false } ]
+    chris.add_ships!(1)
+    chris.save!
+    game.reload
+    game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile" })
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    hex = valid_meeple_destination(game, "LighthouseTile", chris).first
+    raise "No ship hex available" unless hex
+
+    engine(game).execute_meeple_action(*hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after remove_ship" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "LighthouseTile", "from" => "[2, 7]", "used" => false } ]
+    chris.add_ships!(1)
+    chris.save!
+    game.reload
+    hex = valid_meeple_destination(game, "LighthouseTile", chris).first
+    raise "No ship hex available" unless hex
+    game.board_contents = BoardState.new.tap { |s| s.place_ship(*hex, chris.order) }
+    game.current_action = { "type" => "lighthouse", "klass" => "LighthouseTile" }
+    game.save!
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    engine(game).remove_meeple_action(*hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after place_wagon" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "WagonTile", "from" => "[2, 7]", "used" => false } ]
+    chris.add_wagons!(1)
+    chris.save!
+    game.reload
+    game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile" })
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    hex = valid_meeple_destination(game, "WagonTile", chris).first
+    raise "No wagon hex available" unless hex
+
+    engine(game).execute_meeple_action(*hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after remove_wagon" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    chris.tiles = [ { "klass" => "WagonTile", "from" => "[2, 7]", "used" => false } ]
+    chris.add_wagons!(1)
+    chris.save!
+    game.reload
+    hex = valid_meeple_destination(game, "WagonTile", chris).first
+    raise "No wagon hex available" unless hex
+    game.board_contents = BoardState.new.tap { |s| s.place_wagon(*hex, chris.order) }
+    game.current_action = { "type" => "wagon", "klass" => "WagonTile" }
+    game.save!
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    engine(game).remove_meeple_action(*hex)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after place_city_hall" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    center = setup_city_hall_scenario(game, chris)
+    return skip "No valid city hall position found" unless center
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    engine(game).place_city_hall(*center)
+    game.reload
+
+    assert_states_equal game.capture_snapshot, game.replayed_state
+  end
+
+  test "replayed_state matches current state after remove_settlement with sword" do
+    game = game_with_known_state
+    chris = game_players(:chris)
+    opponent = game_players(:paula)
+    game.board_contents = BoardState.new.tap do |s|
+      s.place_settlement(2, 7, opponent.order)
+    end
+    game.current_action = { "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ opponent.order ] }
+    chris.tiles = [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ]
+    chris.save!
+    game.reload
+    game.save!
+    game.update!(base_snapshot: game.capture_snapshot)
+
+    engine(game).remove_settlement(2, 7)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state
@@ -224,6 +400,108 @@ class GameReplayerTest < ActiveSupport::TestCase
 
   def engine(game)
     TurnEngine.new(game)
+  end
+
+  def empty_hexes_of(game, terrain, n)
+    game.instantiate
+    cells = []
+    20.times do |row|
+      20.times do |col|
+        cells << [row, col] if game.board.terrain_at(row, col) == terrain && game.board_contents.empty?(row, col)
+      end
+    end
+    cells.first(n)
+  end
+
+  def reachable_resettlement_hexes(game, terrain)
+    from_hex = empty_hexes_of(game, terrain, 10).first
+    raise "No source hex found for #{terrain}" unless from_hex
+
+    game.instantiate
+    tile = Tiles::Nomad::ResettlementTile.new(0)
+    dest_hex = empty_hexes_of(game, terrain, 20).find do |candidate|
+      next if candidate == from_hex
+      tile.move_cost(
+        from_row: from_hex[0], from_col: from_hex[1],
+        to_row: candidate[0], to_col: candidate[1],
+        board_contents: game.board_contents, board: game.board,
+        player_order: game_players(:chris).order
+      )
+    end
+    raise "No reachable destination found for #{terrain}" unless dest_hex
+
+    [from_hex, dest_hex]
+  end
+
+  def valid_meeple_destination(game, tile_klass, player)
+    game.instantiate
+    tile = Tiles::Tile.for_klass(tile_klass).new(0)
+    tile.valid_destinations(
+      board_contents: game.board_contents,
+      board: game.board,
+      player_order: player.order,
+      supply: player.supply_hash
+    )
+  end
+
+  def valid_city_hall_center(game, player)
+    game.instantiate
+    tile = Tiles::CityHallTile.new(0)
+    tile.valid_destinations(
+      board_contents: game.board_contents,
+      board: game.board,
+      player_order: player.order,
+      supply: player.supply_hash
+    ).first
+  end
+
+  def setup_city_hall_scenario(game, player)
+    player.add_city_halls!(1)
+    player.tiles = [ { "klass" => "CityHallTile", "from" => "[2, 5]", "used" => false } ]
+    player.save!
+    game.reload
+    game.update!(current_action: { "type" => "cityhall", "klass" => "CityHallTile" })
+
+    board = game.instantiate
+    center = find_valid_city_hall_center(game, board)
+    return nil unless center
+
+    neighbors_of_center = game.board_contents.neighbors(*center)
+    outer_settlement = nil
+    neighbors_of_center.each do |nr, nc|
+      game.board_contents.neighbors(nr, nc).each do |or_, oc|
+        cluster = [ center ] + neighbors_of_center
+        unless cluster.include?([ or_, oc ]) || !game.board_contents.empty?(or_, oc)
+          outer_settlement = [ or_, oc ]
+          break
+        end
+      end
+      break if outer_settlement
+    end
+    return nil unless outer_settlement
+
+    game.board_contents_will_change!
+    game.board_contents.place_settlement(*outer_settlement, player.order)
+    game.save!
+    game.reload
+
+    center
+  end
+
+  def find_valid_city_hall_center(game, board)
+    (1..18).each do |r|
+      (1..18).each do |c|
+        next unless Tiles::Tile::BUILDABLE_TERRAIN.include?(board.terrain_at(r, c))
+        next unless game.board_contents.empty?(r, c)
+        neighbors = game.board_contents.neighbors(r, c)
+        next unless neighbors.size == 6
+        next unless neighbors.all? { |nr, nc|
+          game.board_contents.empty?(nr, nc) && Tiles::Tile::BUILDABLE_TERRAIN.include?(board.terrain_at(nr, nc))
+        }
+        return [ r, c ]
+      end
+    end
+    nil
   end
 
   # Returns a saved game with a known, deterministic initial state and a

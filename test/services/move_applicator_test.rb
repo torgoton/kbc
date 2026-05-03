@@ -236,6 +236,172 @@ class MoveApplicatorTest < ActiveSupport::TestCase
     assert_equal({ "type" => "paddock", "from" => "[5, 5]" }, state.current_action)
   end
 
+  test "dispatch select_ship stores from for lighthouse action" do
+    state = minimal_state("current_action" => { "type" => "lighthouse", "klass" => "LighthouseTile" })
+    move = fake_move(action: "select_ship", from: "[0, 3]")
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" }, state.current_action)
+  end
+
+  test "dispatch move_ship can use explicit phase_after payload" do
+    board = BoardState.new
+    board.place_ship(0, 3, 0)
+    state = minimal_state(
+      "board_contents" => BoardState.dump(board),
+      "current_action" => { "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40 },
+                       "tiles" => [ { "klass" => "LighthouseTile", "from" => "[2, 0]", "used" => false } ] } ]
+    )
+    move = fake_move(
+      action: "move_ship",
+      from: "[0, 3]",
+      to: "[0, 4]",
+      payload: {
+        "action_before" => { "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" },
+        "phase_after" => { "type" => "mandatory" }
+      }
+    )
+
+    MoveApplicator.dispatch(state, move)
+
+    assert state.board.empty?(0, 3)
+    assert state.board.ship_at?(0, 4)
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+  end
+
+  test "dispatch place_ship marks LighthouseTile used and resets current_action" do
+    state = minimal_state(
+      "current_action" => { "type" => "lighthouse", "klass" => "LighthouseTile" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40, "ships" => 1 },
+                       "tiles" => [ { "klass" => "LighthouseTile", "from" => "[2, 7]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "place_ship", to: "[0, 1]", payload: {
+      "action_before" => { "type" => "lighthouse", "klass" => "LighthouseTile" }
+    })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 0, state.players[0]["supply"]["ships"]
+    assert state.board.ship_at?(0, 1)
+    assert state.players[0]["tiles"].first["used"]
+  end
+
+  test "dispatch remove_ship marks LighthouseTile used and resets current_action" do
+    board = BoardState.new
+    board.place_ship(0, 1, 0)
+    state = minimal_state(
+      "board_contents" => BoardState.dump(board),
+      "current_action" => { "type" => "lighthouse", "klass" => "LighthouseTile" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40, "ships" => 0 },
+                       "tiles" => [ { "klass" => "LighthouseTile", "from" => "[2, 7]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "remove_ship", from: "[0, 1]", payload: {
+      "action_before" => { "type" => "lighthouse", "klass" => "LighthouseTile" }
+    })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 1, state.players[0]["supply"]["ships"]
+    assert state.board.empty?(0, 1)
+    assert state.players[0]["tiles"].first["used"]
+  end
+
+  test "dispatch place_wagon marks WagonTile used and resets current_action" do
+    state = minimal_state(
+      "current_action" => { "type" => "wagon", "klass" => "WagonTile" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40, "wagons" => 1 },
+                       "tiles" => [ { "klass" => "WagonTile", "from" => "[2, 7]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "place_wagon", to: "[0, 1]", payload: {
+      "action_before" => { "type" => "wagon", "klass" => "WagonTile" }
+    })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 0, state.players[0]["supply"]["wagons"]
+    assert state.board.wagon_at?(0, 1)
+    assert state.players[0]["tiles"].first["used"]
+  end
+
+  test "dispatch remove_wagon marks WagonTile used and resets current_action" do
+    board = BoardState.new
+    board.place_wagon(0, 1, 0)
+    state = minimal_state(
+      "board_contents" => BoardState.dump(board),
+      "current_action" => { "type" => "wagon", "klass" => "WagonTile" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40, "wagons" => 0 },
+                       "tiles" => [ { "klass" => "WagonTile", "from" => "[2, 7]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "remove_wagon", from: "[0, 1]", payload: {
+      "action_before" => { "type" => "wagon", "klass" => "WagonTile" }
+    })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 1, state.players[0]["supply"]["wagons"]
+    assert state.board.empty?(0, 1)
+    assert state.players[0]["tiles"].first["used"]
+  end
+
+  test "dispatch select_action for sword preserves pending orders from payload" do
+    state = minimal_state(
+      "players" => [
+        { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40 }, "tiles" => [] },
+        { "order" => 1, "hand" => "T", "supply" => { "settlements" => 40 }, "tiles" => [] }
+      ]
+    )
+    move = fake_move(action: "select_action", to: "sword", payload: { "klass" => "SwordTile", "pending_orders" => [1] })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [1] }, state.current_action)
+  end
+
+  test "dispatch place_warrior marks BarracksTile used and resets current_action" do
+    state = minimal_state(
+      "current_action" => { "type" => "barracks", "klass" => "BarracksTile" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40, "warriors" => 2 },
+                       "tiles" => [ { "klass" => "BarracksTile", "from" => "[2, 7]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "place_warrior", to: "[0, 1]", payload: {
+      "action_before" => { "type" => "barracks", "klass" => "BarracksTile" }
+    })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 1, state.players[0]["supply"]["warriors"]
+    assert state.board.warrior_at?(0, 1)
+    assert state.players[0]["tiles"].first["used"]
+  end
+
+  test "dispatch remove_warrior marks BarracksTile used and resets current_action" do
+    board = BoardState.new
+    board.place_warrior(0, 1, 0)
+    state = minimal_state(
+      "board_contents" => BoardState.dump(board),
+      "current_action" => { "type" => "barracks", "klass" => "BarracksTile" },
+      "players" => [ { "order" => 0, "hand" => "G", "supply" => { "settlements" => 40, "warriors" => 1 },
+                       "tiles" => [ { "klass" => "BarracksTile", "from" => "[2, 7]", "used" => false } ] } ]
+    )
+    move = fake_move(action: "remove_warrior", from: "[0, 1]", payload: {
+      "action_before" => { "type" => "barracks", "klass" => "BarracksTile" }
+    })
+
+    MoveApplicator.dispatch(state, move)
+
+    assert_equal({ "type" => "mandatory" }, state.current_action)
+    assert_equal 2, state.players[0]["supply"]["warriors"]
+    assert state.board.empty?(0, 1)
+    assert state.players[0]["tiles"].first["used"]
+  end
+
   private
 
   def minimal_state(overrides = {})
