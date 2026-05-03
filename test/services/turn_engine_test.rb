@@ -627,10 +627,8 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "building on the second card's terrain works and locks to that terrain" do
-    @game.instantiate
-    second_terrain = (empty_hexes_of("G", 1).any? && empty_hexes_of("D", 1).any?) ? "D" : nil
-    skip "Need both G and D hexes" unless second_terrain
-    d_hex = empty_hexes_of("D", 1).first
+    use_oasis_board
+    d_hex = [ 0, 0 ]
     @game.current_player.update!(hand: [ "G", "D" ])
 
     result = TurnEngine.new(@game.reload).build_settlement(*d_hex)
@@ -641,8 +639,8 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "first mandatory build with 2 cards locks chosen_terrain" do
-    @game.instantiate
-    g_hex = empty_hexes_of("G", 1).first
+    use_oasis_board
+    g_hex = [ 0, 7 ]
     other_terrain = (@game.board.terrain_at(g_hex[0], g_hex[1]) == "G") ? "D" : "G"
     @game.current_player.update!(hand: [ "G", other_terrain ])
 
@@ -654,10 +652,8 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "second mandatory build uses locked terrain and rejects other terrain" do
-    @game.instantiate
-    d_hexes = empty_hexes_of("D", 1)
-    skip "No D hexes on this board" if d_hexes.empty?
-    d_hex = d_hexes.first
+    use_oasis_board
+    d_hex = [ 0, 0 ]
     @game.update!(current_action: { "type" => "mandatory", "chosen_terrain" => "G" })
     @game.current_player.update!(hand: [ "G", "D" ])
 
@@ -912,16 +908,9 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "place_wall for quarry with 2-card hand locks chosen_terrain" do
-    @game.instantiate
-    # Find a G hex and an adjacent non-G hex to place a settlement (QuarryTile only targets G hexes adjacent to settlements)
-    g_hexes = empty_hexes_of("G", 2)
-    skip "Not enough G hexes" if g_hexes.size < 2
-    # Place a settlement adjacent to the first G hex by finding a non-G neighbor
-    g_hex = g_hexes.first
-    neighbor = @game.board_contents.neighbors(g_hex[0], g_hex[1]).find { |r, c|
-      @game.board_contents.available_for_building?(r, c) && @game.board.terrain_at(r, c) != nil
-    }
-    skip "No buildable neighbor" unless neighbor
+    use_oasis_board
+    g_hex = [ 0, 7 ]
+    neighbor = [ 0, 6 ]
     @game.board_contents.place_settlement(*neighbor, @game.current_player.order)
     @game.save!
     @game.update!(current_action: { "type" => "quarry", "klass" => "QuarryTile", "walls_placed" => 0 })
@@ -1112,7 +1101,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "buildable_cells returns valid center hexes when city_hall action is active" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     cells = TurnEngine.new(@game).buildable_cells
     assert_includes cells, center
@@ -1120,7 +1108,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "place_city_hall places 7 hexes on the board" do
     center, settlement_hex = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
     @game.reload
@@ -1133,7 +1120,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "place_city_hall decrements city_hall supply" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     player = @game.current_player
     @engine.place_city_hall(*center)
@@ -1143,7 +1129,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "place_city_hall marks tile permanently used" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
 
@@ -1154,7 +1139,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "place_city_hall sets current_action to mandatory" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
 
@@ -1163,7 +1147,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "place_city_hall creates a reversible deliberate move record" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
 
@@ -1175,7 +1158,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "undo of place_city_hall removes all 7 hexes" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
     @game.reload
@@ -1191,7 +1173,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "undo of place_city_hall restores city_hall supply" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     player = @game.current_player
     @engine.place_city_hall(*center)
@@ -1204,7 +1185,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "undo of place_city_hall removes permanent flag from tile" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
     @game.reload
@@ -1218,7 +1198,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "undo of place_city_hall restores current_action to city hall tile state" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
     @game.reload
@@ -1232,7 +1211,6 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "sword tile cannot remove a city hall hex" do
     center, = setup_city_hall_scenario
-    return skip "No valid city hall position found" unless center
 
     @engine.place_city_hall(*center)
     @game.reload
@@ -1255,7 +1233,17 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   private
 
+  def use_oasis_board
+    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.board_contents = BoardState.new
+    @game.save!
+    @game.reload
+    @game.instantiate
+    @engine = TurnEngine.new(@game)
+  end
+
   def setup_city_hall_scenario
+    use_oasis_board
     player = @game.current_player
     player.add_city_halls!(1)
     player.tiles = [ { "klass" => "CityHallTile", "from" => "[2, 5]", "used" => false } ]
@@ -1265,7 +1253,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     board = @game.instantiate
     center = find_valid_city_hall_center(board)
-    return [ nil, nil ] unless center
+    raise "Expected fixed Oasis board to have a valid city hall center" unless center
 
     # Place a settlement adjacent to the cluster (but outside it)
     neighbors_of_center = @game.board_contents.neighbors(*center)
@@ -1280,7 +1268,7 @@ class TurnEngineTest < ActiveSupport::TestCase
       end
       break if outer_settlement
     end
-    return [ nil, nil ] unless outer_settlement
+    raise "Expected fixed Oasis board to have a city hall-adjacent settlement position" unless outer_settlement
 
     @game.board_contents_will_change!
     @game.board_contents.place_settlement(*outer_settlement, player.order)
@@ -1836,8 +1824,9 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "activate_tile_build on fort terrain places settlement, marks tile used, resets action" do
-    force_hand("G")
-    spot = empty_hexes_of("G", 1).first
+    use_oasis_board
+    force_hand("D")
+    spot = [ 0, 0 ]
     @engine.build_settlement(*spot)
     @game.reload
 
@@ -1846,8 +1835,8 @@ class TurnEngineTest < ActiveSupport::TestCase
       { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
     ])
 
-    drawn = (@game.current_player.hand.first == "D") ? "G" : "D"
-    fort_spot = empty_hexes_of(drawn, 1).first
+    drawn = "G"
+    fort_spot = [ 0, 7 ]
     @game.update!(
       mandatory_count: 0,
       current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
@@ -1863,8 +1852,9 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "undo of fort build restores settlement, restores supply, returns to fort current_action with fort_terrain" do
-    force_hand("G")
-    spot = empty_hexes_of("G", 1).first
+    use_oasis_board
+    force_hand("D")
+    spot = [ 0, 0 ]
     @engine.build_settlement(*spot)
     @game.reload
 
@@ -1873,8 +1863,8 @@ class TurnEngineTest < ActiveSupport::TestCase
       { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
     ])
 
-    drawn = (@game.current_player.hand.first == "D") ? "G" : "D"
-    fort_spot = empty_hexes_of(drawn, 1).first
+    drawn = "G"
+    fort_spot = [ 0, 7 ]
     @game.update!(
       mandatory_count: 0,
       current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
