@@ -322,6 +322,18 @@ ul li .hex:hover {
     animation: tile-tooltip-in-left 0.12s ease-out;
 }
 
+.hex.right .tile-tooltip {
+    left: auto;
+    right: 0;
+    transform: none;
+    animation: tile-tooltip-in-left 0.12s ease-out;
+}
+
+.hex.top-row .tile-tooltip {
+    bottom: auto;
+    top: calc(100% + 6px);
+}
+
 @keyframes tile-tooltip-in-left {
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -956,6 +968,12 @@ ul li .hex:hover {
     gap: 4px;
 }
 
+.supply-settlements {
+    border: 2px solid #0008;
+    border-radius: 8px;
+    padding: 2px 6px;
+}
+
 .player-action-zone {
     border-top: 1px solid rgba(0, 0, 0, 0.2);
     padding-top: 4px;
@@ -1059,11 +1077,12 @@ ul li .hex:hover {
 }
 
 .first-player-marker {
-    font-size: 0.75em;
-    color: #f0c040;
-    text-shadow: 0 0 6px rgba(240, 192, 64, 0.6);
     margin-left: 0.3em;
     vertical-align: middle;
+}
+
+.first-player-marker img {
+    width: 40px;
 }
 
 .player-order {
@@ -1087,7 +1106,6 @@ ul li .hex:hover {
     font-size: 20px;
     font-weight: 700;
     min-width: 2ch;
-    text-align: right;
     line-height: 1;
 }
 
@@ -1169,7 +1187,7 @@ ul li .hex:hover {
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
-.player-card.card-B {
+.player-card.card-Z {
     background-image: url("silver/castle.svg");
 }
 

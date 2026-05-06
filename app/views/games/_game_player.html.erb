@@ -4,38 +4,16 @@
     <%= content_tag :div, class: "handle #{' my-turn' if my_turn }" do %>
       <% if player.id == game.current_player.id %>
         <%= content_tag :span, class: "player-spinner" do %>
-          <%= image_tag "tape-reel.svg" %>
+          <%= image_tag "tape-reel.svg", title: "It's your turn" %>
         <% end %>
       <% end %>
       <%= player.player.handle %>
       <% if player.order == 0 %>
-        <span class="first-player-marker" title="First player">&#9819;</span>
+        <%= content_tag :span, class: "first-player-marker", title: "First player" do %>
+          <%= image_tag "first.svg", alt: "First player" %>
+        <% end %>
       <% end %>
     <% end %>
-    <% if n == 0 %>
-      <%= button_to("Undo", undo_move_game_path(game), class: "undo-btn", disabled: !(my_turn && engine.undo_allowed?)) %>
-    <% end %>
-  </div>
-  <div class="player-stats">
-    <% display_cards = (n == 0 || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "B" } %>
-    <% chosen = (game.current_player_id == player.id) ? game.current_action["chosen_terrain"] : nil %>
-    <% display_cards.each do |card| %>
-      <% shunned = chosen && card != chosen %>
-      <%= content_tag :span, card, class: "player-card card-#{card}#{" card-shunned" if shunned}" %>
-    <% end %>
-    <div class="supply-display">
-      <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
-      <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>
-      <% player.warriors_remaining.times do %>
-        <%= render "games/warrior", color: player_color(player.order), css_class: "warrior-icon" %>
-      <% end %>
-      <% player.ships_remaining.times do %>
-        <%= render "games/ship", color: player_color(player.order), css_class: "warrior-icon" %>
-      <% end %>
-      <% player.wagons_remaining.times do %>
-        <%= render "games/wagon", color: player_color(player.order), css_class: "warrior-icon" %>
-      <% end %>
-    </div>
     <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
     <% if score_data %>
       <div class="score-container">
@@ -54,6 +32,32 @@
         </div>
       </div>
     <% end %>
+    <% if n == 0 %>
+      <%= button_to("Undo", undo_move_game_path(game), class: "undo-btn", disabled: !(my_turn && engine.undo_allowed?)) %>
+    <% end %>
+  </div>
+  <div class="player-stats">
+    <% display_cards = (n == 0 || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "Z" } %>
+    <% chosen = (game.current_player_id == player.id) ? game.current_action["chosen_terrain"] : nil %>
+    <% display_cards.each do |card| %>
+      <% shunned = chosen && card != chosen %>
+      <%= content_tag :span, card, title: Boards::Board::TERRAIN_NAMES[card], class: "player-card card-#{card}#{" card-shunned" if shunned}" %>
+    <% end %>
+    <div class="supply-display">
+      <div class="supply-settlements">
+        <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
+        <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>
+      </div>
+      <% player.warriors_remaining.times do %>
+        <%= render "games/warrior", color: player_color(player.order), css_class: "warrior-icon" %>
+      <% end %>
+      <% player.ships_remaining.times do %>
+        <%= render "games/ship", color: player_color(player.order), css_class: "warrior-icon" %>
+      <% end %>
+      <% player.wagons_remaining.times do %>
+        <%= render "games/wagon", color: player_color(player.order), css_class: "warrior-icon" %>
+      <% end %>
+    </div>
   </div>
 </div>
 <div class="player-action-zone">

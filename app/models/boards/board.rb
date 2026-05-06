@@ -12,10 +12,12 @@ module Boards
       "W" => "Water",
       "M" => "Mountain",
       "S" => "Silver",
-      "L" => "Location"
+      "L" => "Location",
+      "Z" => ""
     }
 
     TILE_CLASSES = {
+      "CastleTile"           => Tiles::CastleTile,
       "BarnTile"             => Tiles::BarnTile,
       "FarmTile"             => Tiles::FarmTile,
       "OasisTile"            => Tiles::OasisTile,
