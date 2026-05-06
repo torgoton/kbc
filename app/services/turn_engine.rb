@@ -1024,6 +1024,11 @@ class TurnEngine
     payload["tile_klass"] = tile_klass if tile_klass
     payload["remaining_before"] = remaining_before if remaining_before
     payload["chosen_terrain_before"] = chosen_terrain_before unless chosen_terrain_before == :not_provided
+    game_player.decrement_supply!
+    if game_player.settlements_remaining == 0
+      @game.end_trigger_count += 1
+      payload["triggered_ending"] = true
+    end
     @game.move_count += 1
     @game.moves.create(
       order: @game.move_count,
@@ -1036,8 +1041,6 @@ class TurnEngine
       payload: payload,
       message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]}"
     )
-    game_player.decrement_supply!
-    @game.ending = true if game_player.settlements_remaining == 0
     @game.board_contents_will_change!
     @game.board_contents.place_settlement(row, col, game_player.order)
     check_ambassadors_goal(game_player, row, col)
