@@ -21,7 +21,7 @@ module MoveApplicator
     when "build"
       fort_terrain = move.payload&.dig("tile_klass") == "FortTile" ? move.payload&.dig("card") : nil
       ct_before = move.payload&.key?("chosen_terrain_before") ? move.payload["chosen_terrain_before"] : :not_provided
-      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain, build_terrain: move.payload&.dig("card"), chosen_terrain_before: ct_before)
+      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain, build_terrain: move.payload&.dig("card"), chosen_terrain_before: ct_before, triggered_ending: move.payload&.dig("triggered_ending"))
     when "pick_up_tile"
       backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
     when "grant_meeple"
@@ -159,7 +159,7 @@ class MoveApplicator::HashState
     end
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided, triggered_ending: nil)
     coord = Coordinate.from_key(to)
     @board.place_settlement(coord.row, coord.col, player_order)
     @players[player_order]["supply"]["settlements"] -= 1
@@ -436,13 +436,13 @@ class MoveApplicator::LiveState
     @game = game
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided, triggered_ending: nil)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
     gp = player_for(player_order)
     gp.increment_supply!
-    @game.ending = false
+    @game.end_trigger_count -= 1 if triggered_ending
     if fort_terrain
       gp.mark_tile_unused!(tile_klass)
       @game.current_action = { "type" => "fort", "klass" => "FortTile", "fort_terrain" => fort_terrain }

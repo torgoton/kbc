@@ -533,7 +533,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "end_turn creates an end_game move when the last player ends and game is ending" do
     paula = @game.game_players.find { |gp| gp.order == 1 }
-    @game.update!(current_player: paula, ending: true, mandatory_count: 0)
+    @game.update!(current_player: paula, end_trigger_count: 1, mandatory_count: 0)
 
     @engine.end_turn
 
@@ -542,6 +542,81 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not end_game_move.deliberate
     assert_not end_game_move.reversible
     assert_equal paula, end_game_move.game_player
+  end
+
+  test "building the last settlement from supply sets end_trigger_count to 1" do
+    @game.current_player.update!(supply: { "settlements" => 1 })
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+
+    @engine.build_settlement(*spot)
+
+    assert_equal 1, @game.reload.end_trigger_count
+  end
+
+  test "building a non-last settlement does not change end_trigger_count" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+
+    @engine.build_settlement(*spot)
+
+    assert_equal 0, @game.reload.end_trigger_count
+  end
+
+  test "end_turn does not end game when trigger is set but current player is not last" do
+    chris = @game.game_players.find { |gp| gp.order == 0 }
+    @game.update!(current_player: chris, end_trigger_count: 1, mandatory_count: 0)
+
+    @engine.end_turn
+
+    assert_nil @game.moves.find_by(action: "end_game")
+    assert_equal "playing", @game.reload.state
+  end
+
+  test "undoing the last-settlement build decrements end_trigger_count back to 0" do
+    @game.current_player.update!(supply: { "settlements" => 1 })
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    assert_equal 1, @game.reload.end_trigger_count
+
+    @engine.undo_last_move
+
+    assert_equal 0, @game.reload.end_trigger_count
+  end
+
+  test "undoing a non-last-settlement build does not change end_trigger_count when another player triggered it" do
+    @game.update!(end_trigger_count: 1)
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+
+    @engine.undo_last_move
+
+    assert_equal 1, @game.reload.end_trigger_count
+  end
+
+  test "SwordTile returning a settlement to a triggered player does not clear end_trigger_count" do
+    # Player A builds their last settlement, triggering end
+    player_a = @game.current_player
+    player_a.update!(supply: { "settlements" => 1 })
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+    @engine.build_settlement(*spot)
+    @game.update!(mandatory_count: 0)
+    @engine.end_turn
+    assert_equal 1, @game.reload.end_trigger_count
+
+    # Player B uses SwordTile to remove player A's settlement (returns it to supply)
+    player_b = @game.current_player
+    player_b.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
+    @game.update!(
+      current_action: { "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ player_a.order ] },
+      mandatory_count: 0
+    )
+    @engine.remove_settlement(*spot)
+
+    assert_equal 1, @game.reload.end_trigger_count
   end
 
   test "end_turn draws 1 card when player does not hold CrossroadsTile" do

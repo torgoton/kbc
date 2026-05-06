@@ -9,7 +9,7 @@
 #  current_action    :json
 #  deck              :json
 #  discard           :json
-#  ending            :boolean          default(FALSE), not null
+#  end_trigger_count :integer          default(0), not null
 #  goals             :json
 #  mandatory_count   :integer
 #  move_count        :integer
@@ -994,7 +994,7 @@ class GameTest < ActiveSupport::TestCase
     engine(game).build_settlement(0, 7)  # OasisBoard (0,7)=G
     game.reload
 
-    assert game.ending, "ending must be set when last settlement is placed"
+    assert game.ending?, "ending must be set when last settlement is placed"
   end
 
   test "build_settlement does not set ending when supply remains above zero" do
@@ -1008,12 +1008,12 @@ class GameTest < ActiveSupport::TestCase
     engine(game).build_settlement(0, 7)
     game.reload
 
-    assert_not game.ending, "ending must not be set when settlements remain"
+    assert_not game.ending?, "ending must not be set when settlements remain"
   end
 
   test "end_turn keeps state playing when non-last-order player ends turn while ending" do
     game = new_started_game
-    game.update!(ending: true, mandatory_count: 0)
+    game.update!(end_trigger_count: 1, mandatory_count: 0)
     last_player_order = game.game_players.count - 1
     non_last = game.game_players.find { |gp| gp.order != last_player_order }
     game.update!(current_player: non_last)
@@ -1027,7 +1027,7 @@ class GameTest < ActiveSupport::TestCase
   test "end_turn completes game when last-order player ends turn while ending" do
     game = new_started_game
     last_gp = game.game_players.max_by(&:order)
-    game.update!(ending: true, mandatory_count: 0, current_player: last_gp)
+    game.update!(end_trigger_count: 1, mandatory_count: 0, current_player: last_gp)
 
     engine(game).end_turn
     game.reload
@@ -1055,12 +1055,12 @@ class GameTest < ActiveSupport::TestCase
 
     engine(game).build_settlement(0, 7)
     game.reload
-    assert game.ending
+    assert game.ending?
 
     engine(game).undo_last_move
     game.reload
 
-    assert_not game.ending, "ending must be cleared after undoing the last-settlement build"
+    assert_not game.ending?, "ending must be cleared after undoing the last-settlement build"
   end
 
   test "turn_state returns the same message as TurnEngine for playing games" do
