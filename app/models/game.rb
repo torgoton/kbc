@@ -297,7 +297,7 @@ class Game < ApplicationRecord
 
   def select_boards(options = {})
     min = options[:min_board] || 0
-    max = options[:max_board] || 7
+    max = options[:max_board] || Boards::Board::SECTIONS.size - 1
     self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
     while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
