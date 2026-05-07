@@ -108,6 +108,11 @@ class GamePlayer < ApplicationRecord
     supply["wagons"] = wagons_remaining + 1
   end
 
+  def adjust_meeple_supply!(kind, delta)
+    key = kind.pluralize
+    supply[key] = supply[key].to_i + delta
+  end
+
   def return_piece_to_supply!(meeple)
     case meeple
     when "warrior" then increment_warrior_supply!

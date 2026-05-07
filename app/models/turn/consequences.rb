@@ -9,6 +9,7 @@ class Turn
               when "sub_phase_pushed" then SubPhasePushed
               when "sub_phase_popped" then SubPhasePopped
               when "mandatory_remaining_decremented" then MandatoryRemainingDecremented
+              when "meeple_granted" then MeepleGranted
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
