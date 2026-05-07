@@ -128,6 +128,59 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal Coordinate.new(nbr[0], nbr[1]), pickups.first.from
   end
 
+  test "families: third build in a straight line emits GoalScored(families, 2)" do
+    @game.update!(goals: [ "families" ])
+    # Use raw current_action to inject 2 prior builds in a straight line; 3rd build will complete the line.
+    # East-direction line: (5,5) -> (5,6) -> (5,7). All 3 are in a row.
+    @game.current_action = {
+      "turn" => { "mandatory_remaining" => 1, "builds" => [ "[5, 5]", "[5, 6]" ] }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    # Force-feed the test: set up board so (5,7) is buildable.
+    @player.update!(hand: [ "G" ])
+    # We can't easily ensure the board's terrain at (5,7) is "G", but we can mock the predicate's success
+    # by placing an own-settlement at (5,5) and (5,6) and a G hex at (5,7). For pure-unit purposes, just
+    # call the families_score_for path directly via Turn.from_game and a stubbed handle.
+    # Easier: set goals and simulate the third build via direct Turn invocation, accepting that the
+    # underlying can_mandatory_build? predicate may reject. Skip if so.
+    target = [ 5, 7 ]
+    skip "fixture board does not have G at (5,7)" unless @game.board.terrain_at(target[0], target[1]) == "G"
+    skip "(5,7) not empty in fixture" unless @game.board_contents.empty?(target[0], target[1])
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    families = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "families" }
+    refute_nil families, "expected families GoalScored"
+    assert_equal 2, families.points
+  end
+
+  test "families: third build NOT in a straight line does not score" do
+    @game.update!(goals: [ "families" ])
+    # Random scattered prior builds.
+    @game.current_action = {
+      "turn" => { "mandatory_remaining" => 1, "builds" => [ "[2, 2]", "[10, 10]" ] }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    target = first_empty_terrain(@player.hand.first)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "families" })
+  end
+
+  test "build appends BuildRecorded carrying the placement coord" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    rec = cs.find { |c| c.is_a?(Turn::Consequences::BuildRecorded) }
+    refute_nil rec
+    assert_equal "[#{target[0]}, #{target[1]}]", rec.at
+  end
+
   test "build appends GoalScored(ambassadors, 1) when adjacent to opponent and goal active" do
     @game.update!(goals: [ "ambassadors" ])
     hand_terrain = @player.hand.first

@@ -10,14 +10,15 @@
 # (and the legacy storage layer it serializes to) ever sees the "[r, c]"
 # string form.
 class Turn
-  attr_reader :player_order, :sub_phase, :mandatory_remaining
+  attr_reader :player_order, :sub_phase, :mandatory_remaining, :builds_this_turn
 
   DEFAULT_MANDATORY = 3
 
-  def initialize(player_order:, sub_phase: nil, mandatory_remaining: DEFAULT_MANDATORY)
+  def initialize(player_order:, sub_phase: nil, mandatory_remaining: DEFAULT_MANDATORY, builds_this_turn: [])
     @player_order = player_order
     @sub_phase = sub_phase
     @mandatory_remaining = mandatory_remaining
+    @builds_this_turn = builds_this_turn
   end
 
   def self.from_game(game)
@@ -25,14 +26,16 @@ class Turn
     new(
       player_order: game.current_player&.order,
       sub_phase: parse_sub_phase(raw["sub_phase"]),
-      mandatory_remaining: raw.fetch("mandatory_remaining", DEFAULT_MANDATORY)
+      mandatory_remaining: raw.fetch("mandatory_remaining", DEFAULT_MANDATORY),
+      builds_this_turn: parse_builds(raw["builds"])
     )
   end
 
   def to_h
     {
       "sub_phase" => sub_phase ? sub_phase_payload(sub_phase) : nil,
-      "mandatory_remaining" => mandatory_remaining
+      "mandatory_remaining" => mandatory_remaining,
+      "builds_this_turn" => builds_this_turn.map { |r, c| Coordinate.new(r, c).to_key }
     }
   end
 
@@ -115,6 +118,7 @@ class Turn
     grants = pickups.flat_map { |pickup| meeple_grant_for(pickup) }
     immediate = pickups.flat_map { |pickup| immediate_score_for(pickup, gp) }
     goals = goal_scores_for(game, gp, terrain, row, col)
+    families = families_score_for(game, gp, row, col)
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
@@ -122,8 +126,34 @@ class Turn
       *grants,
       *immediate,
       *goals,
+      *families,
+      Turn::Consequences::BuildRecorded.new(at: Coordinate.new(row, col).to_key),
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
+  end
+
+  def families_score_for(game, gp, row, col)
+    return [] unless Array(game.goals).include?("families")
+    sequence = builds_this_turn + [ [ row, col ] ]
+    return [] unless sequence.size == 3
+    return [] unless straight_line?(sequence)
+    [ goal_scored(gp, "families", 2) ]
+  end
+
+  def straight_line?(positions)
+    a, b, c = positions
+    [ [ a, b, c ], [ a, c, b ], [ b, a, c ] ].any? { |p1, p2, p3| in_same_direction?(p1, p2, p3) }
+  end
+
+  def in_same_direction?(p1, p2, p3)
+    Tiles::PaddockTile::STRAIGHT_LINES.any? do |steps|
+      dr1, dc1 = steps[p1[0] % 2]
+      mid = [ p1[0] + dr1, p1[1] + dc1 ]
+      next false unless mid == p2
+      dr2, dc2 = steps[p2[0] % 2]
+      far = [ p2[0] + dr2, p2[1] + dc2 ]
+      far == p3
+    end
   end
 
   def goal_scores_for(game, gp, terrain, row, col)
@@ -178,6 +208,10 @@ class Turn
       when Turn::SubPhases::TileBuildPhase::TYPE
         Turn::SubPhases::TileBuildPhase.from_h(hash["state"] || {})
       end
+    end
+
+    def parse_builds(raw)
+      Array(raw).map { |key| coord = Coordinate.from_key(key); [ coord.row, coord.col ] }
     end
   end
 end
