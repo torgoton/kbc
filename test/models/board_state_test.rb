@@ -267,4 +267,60 @@ class BoardStateTest < ActiveSupport::TestCase
     state.place_ship(3, 4, 0)
     assert_includes state.settlements_for(0), [ 3, 4 ]
   end
+
+  # can_mandatory_build? — Kingdom Builder mandatory adjacency rule.
+  # Use a minimal Board stub that returns whatever terrain we want per-coordinate.
+  class TerrainStub
+    def initialize(default: "G", overrides: {})
+      @default = default
+      @overrides = overrides
+    end
+    def terrain_at(row, col) = @overrides[[ row, col ]] || @default
+  end
+
+  test "can_mandatory_build? allows any empty matching-terrain hex when player has no adjacencies" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G")
+    assert state.can_mandatory_build?(board, 0, "G", 5, 5)
+  end
+
+  test "can_mandatory_build? rejects non-matching terrain" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G", overrides: { [ 5, 5 ] => "F" })
+    refute state.can_mandatory_build?(board, 0, "G", 5, 5)
+  end
+
+  test "can_mandatory_build? rejects occupied hex" do
+    state = BoardState.new
+    state.place_settlement(5, 5, 1)
+    board = TerrainStub.new(default: "G")
+    refute state.can_mandatory_build?(board, 0, "G", 5, 5)
+  end
+
+  test "can_mandatory_build? rejects warrior-blocked hex" do
+    state = BoardState.new
+    state.place_warrior(5, 5, 1)  # warrior at (5,5)
+    board = TerrainStub.new(default: "G")
+    # (5,4) is adjacent to the warrior and so is warrior-blocked
+    refute state.can_mandatory_build?(board, 0, "G", 5, 4)
+  end
+
+  test "can_mandatory_build? requires adjacency once a player adjacency exists" do
+    state = BoardState.new
+    state.place_settlement(5, 5, 0)  # player 0 has a settlement
+    board = TerrainStub.new(default: "G")
+    # An adjacent G hex is buildable; a far G hex is not.
+    adj_r, adj_c = state.neighbors(5, 5).first
+    far_r, far_c = 15, 15
+    assert state.can_mandatory_build?(board, 0, "G", adj_r, adj_c)
+    refute state.can_mandatory_build?(board, 0, "G", far_r, far_c)
+  end
+
+  test "can_mandatory_build? ignores other players' adjacencies" do
+    state = BoardState.new
+    state.place_settlement(5, 5, 1)  # opponent settlement only
+    board = TerrainStub.new(default: "G")
+    # Player 0 has no adjacencies, so any G hex is buildable.
+    assert state.can_mandatory_build?(board, 0, "G", 15, 15)
+  end
 end
