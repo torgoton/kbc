@@ -8,8 +8,8 @@ class Turn
       end
 
       def unapply!(game)
-        return unless game.current_action.is_a?(Hash) && game.current_action["turn"].is_a?(Hash)
-        game.current_action["turn"]["sub_phase"] = nil
+        return unless game.current_action.is_a?(Hash)
+        game.current_action.delete("turn")
       end
     end
   end
