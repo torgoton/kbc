@@ -111,6 +111,37 @@ class TurnTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
+  test "build appends a TilePickedUp for each adjacent location hex with qty > 0" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "OracleTile", 2)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    pickups = cs.select { |c| c.is_a?(Turn::Consequences::TilePickedUp) }
+    assert_equal 1, pickups.size
+    assert_equal "OracleTile", pickups.first.klass
+    assert_equal Coordinate.new(nbr[0], nbr[1]), pickups.first.from
+  end
+
+  test "build does not append TilePickedUp for tiles in player's taken_from" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "OracleTile", 2)
+    @game.save!
+    @player.update!(taken_from: [ "[#{nbr[0]}, #{nbr[1]}]" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::TilePickedUp) })
+  end
+
   test "build errors when target is not adjacency-valid" do
     hand_terrain = @player.hand.first
     seed = first_empty_terrain(hand_terrain)
@@ -133,7 +164,8 @@ class TurnTest < ActiveSupport::TestCase
         }
       }
     }
-    consequences = turn.handle(:build, game: @game, row: 0, col: 0) # likely not Grass
+    far_r, far_c = first_empty_terrain_other_than("G")
+    consequences = turn.handle(:build, game: @game, row: far_r, col: far_c)
     assert_kind_of Turn::Consequences::Error, consequences.first
     refute(consequences.any? { |c| c.is_a?(Turn::Consequences::SubPhasePopped) })
   end

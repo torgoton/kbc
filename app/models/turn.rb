@@ -108,8 +108,13 @@ class Turn
     return [ error("not a valid mandatory build target") ] unless
       game.board_contents.can_mandatory_build?(game.board, player_order, terrain, row, col)
 
+    pickups = game.board_contents.pickup_targets_for(row, col, gp.taken_from).map do |coord, klass|
+      Turn::Consequences::TilePickedUp.new(from: coord, klass: klass, player: player_order)
+    end
+
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
+      *pickups,
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
   end
