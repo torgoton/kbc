@@ -79,9 +79,49 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
-  test "build with no active sub_phase returns Error" do
-    consequences = turn.handle(:build, game: @game, row: 0, col: 0)
-    assert_kind_of Turn::Consequences::Error, consequences.first
+  test "from_game defaults mandatory_remaining to 3 when current_action is empty" do
+    @game.current_action = {}
+    assert_equal 3, Turn.from_game(@game).mandatory_remaining
+  end
+
+  test "from_game reads mandatory_remaining from current_action.turn" do
+    @game.current_action = { "turn" => { "mandatory_remaining" => 1 } }
+    assert_equal 1, Turn.from_game(@game).mandatory_remaining
+  end
+
+  test "build with no sub_phase emits SettlementPlaced + MandatoryRemainingDecremented" do
+    row, col = first_empty_terrain(@player.hand.first)
+    cs = turn.handle(:build, game: @game, row: row, col: col)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SettlementPlaced) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::MandatoryRemainingDecremented) })
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+  end
+
+  test "build errors when mandatory_remaining is 0" do
+    @game.current_action = { "turn" => { "mandatory_remaining" => 0 } }
+    row, col = first_empty_terrain(@player.hand.first)
+    cs = turn.handle(:build, game: @game, row: row, col: col)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "build errors when terrain does not match player hand" do
+    hand_terrain = @player.hand.first
+    row, col = first_empty_terrain_other_than(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: row, col: col)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "build errors when target is not adjacency-valid" do
+    hand_terrain = @player.hand.first
+    seed = first_empty_terrain(hand_terrain)
+    @game.board_contents.place_settlement(seed[0], seed[1], 0)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    far = first_empty_terrain_not_adjacent_to(seed, hand_terrain)
+    cs = turn.handle(:build, game: @game, row: far[0], col: far[1])
+    assert_kind_of Turn::Consequences::Error, cs.first
   end
 
   test "build that errors does not append SubPhasePopped" do
@@ -106,12 +146,42 @@ class TurnTest < ActiveSupport::TestCase
   private
 
   def first_empty_grass
+    first_empty_terrain("G")
+  end
+
+  def first_empty_terrain(terrain)
     20.times do |row|
       20.times do |col|
-        next unless @game.board.terrain_at(row, col) == "G"
+        next unless @game.board.terrain_at(row, col) == terrain
         return [ row, col ] if @game.board_contents.empty?(row, col)
       end
     end
-    raise "no empty grass hex"
+    raise "no empty #{terrain} hex"
+  end
+
+  def first_empty_terrain_other_than(terrain)
+    20.times do |row|
+      20.times do |col|
+        t = @game.board.terrain_at(row, col)
+        next if t.nil? || t == terrain
+        return [ row, col ] if @game.board_contents.empty?(row, col)
+      end
+    end
+    raise "no empty non-#{terrain} hex"
+  end
+
+  def first_empty_terrain_not_adjacent_to(seed, terrain)
+    seed_r, seed_c = seed
+    neighbor_set = @game.board_contents.neighbors(seed_r, seed_c).to_set
+    20.times do |r|
+      20.times do |c|
+        next unless @game.board.terrain_at(r, c) == terrain
+        next unless @game.board_contents.empty?(r, c)
+        next if [ r, c ] == seed
+        next if neighbor_set.include?([ r, c ])
+        return [ r, c ]
+      end
+    end
+    raise "no far #{terrain} hex"
   end
 end
