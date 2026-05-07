@@ -175,6 +175,15 @@ class BoardState
     neighbors(row, col).select { |nr, nc| block.call(nr, nc) }
   end
 
+  def pickup_targets_for(row, col, taken_from)
+    neighbors(row, col).filter_map do |nr, nc|
+      next if tile_qty(nr, nc) <= 0
+      key = "[#{nr}, #{nc}]"
+      next if taken_from&.include?(key)
+      [ Coordinate.new(nr, nc), tile_klass(nr, nc) ]
+    end
+  end
+
   def locations_with_remaining_tiles
     @cells.filter_map { |(row, col), cell| [ row, col ] if cell["klass"] != "Settlement" && cell["qty"].to_i > 0 }
   end

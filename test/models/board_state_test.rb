@@ -323,4 +323,47 @@ class BoardStateTest < ActiveSupport::TestCase
     # Player 0 has no adjacencies, so any G hex is buildable.
     assert state.can_mandatory_build?(board, 0, "G", 15, 15)
   end
+
+  # pickup_targets_for — adjacent location hexes with qty > 0 and not in taken_from.
+
+  test "pickup_targets_for returns adjacent location hexes with qty > 0" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_tile(nr, nc, "FarmTile", 2)
+    targets = state.pickup_targets_for(5, 5, nil)
+    assert_equal 1, targets.size
+    coord, klass = targets.first
+    assert_equal Coordinate.new(nr, nc), coord
+    assert_equal "FarmTile", klass
+  end
+
+  test "pickup_targets_for skips hexes already in taken_from" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_tile(nr, nc, "FarmTile", 2)
+    targets = state.pickup_targets_for(5, 5, [ "[#{nr}, #{nc}]" ])
+    assert_empty targets
+  end
+
+  test "pickup_targets_for skips hexes with qty 0" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_tile(nr, nc, "FarmTile", 0)
+    assert_empty state.pickup_targets_for(5, 5, nil)
+  end
+
+  test "pickup_targets_for skips settlement neighbors (non-tile cells)" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_settlement(nr, nc, 0)
+    assert_empty state.pickup_targets_for(5, 5, nil)
+  end
+
+  test "pickup_targets_for handles multiple adjacent tiles" do
+    state = BoardState.new
+    nbrs = state.neighbors(5, 5).first(2)
+    nbrs.each { |r, c| state.place_tile(r, c, "OracleTile", 1) }
+    targets = state.pickup_targets_for(5, 5, nil)
+    assert_equal 2, targets.size
+  end
 end
