@@ -35,6 +35,13 @@
 
 /coverage
 
+# AI config and notes
+.codex
+AGENTS.md
+CLAUDE.md
+CONTEXT.md
+/docs/superpowers
+
 /.worktrees
 /.superpowers
 
