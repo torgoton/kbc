@@ -223,28 +223,27 @@ class Game < ApplicationRecord
       partial: "games/log",
       locals: { game: self }
     )
-    # - each player
-    game_players.each do |gp|
-      broadcast_update_to(
-        "game_#{id}",
-        target: "game_player_#{gp.id}",
-        partial: "games/game_player",
-        locals: { game: self, player: gp, n: 1, engine: engine, scores: scores }
-      )
-    end
-
     # private stuff - each player
-    game_players.each do |gp|
-      gp.reload
-      my_turn = gp == current_player
+    game_players.each do |viewer|
+      viewer.reload
+      my_turn = viewer == current_player
+      game_players.each do |displayed_player|
+        displayed_player.reload
+        broadcast_update_to(
+          "game_player_#{viewer.id}_private", # player's private channel
+          target: "game_player_#{displayed_player.id}",
+          partial: "games/game_player",
+          locals: {
+            game: self,
+            player: displayed_player,
+            n: viewer == displayed_player ? 0 : 1,
+            engine: engine,
+            scores: scores
+          }
+        )
+      end
       broadcast_update_to(
-        "game_player_#{gp.id}_private", # player's private channel
-        target: "game_player_#{gp.id}",
-        partial: "games/game_player",
-        locals: { game: self, player: gp, n: 0, engine: engine, scores: scores }
-      )
-      broadcast_update_to(
-        "game_player_#{gp.id}_private",
+        "game_player_#{viewer.id}_private",
         target: "end-turn-area",
         partial: "games/end_turn",
         locals: { game: self, engine: engine, my_turn: my_turn }

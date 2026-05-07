@@ -1117,6 +1117,66 @@ class GameTest < ActiveSupport::TestCase
     end
   end
 
+  test "broadcast_game_update does not publish personalized player panels to the public game stream" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.moves.create!(
+      game_player: chris,
+      action: "build",
+      order: 1,
+      deliberate: true,
+      reversible: true
+    )
+
+    broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}") do
+      game.broadcast_game_update
+    end
+
+    assert broadcasts.none? { |broadcast| broadcast.to_s.include?(%(target="game_player_#{chris.id}")) },
+      "public game stream must not overwrite Chris's private player panel"
+  end
+
+  test "broadcast_game_update sends each user a private personalized player area" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    game.update!(
+      boards: [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ],
+      board_contents: BoardState.new,
+      mandatory_count: 0,
+      current_action: { "type" => "mandatory" }
+    )
+    chris.update!(
+      hand: [ "T" ],
+      tiles: [
+        { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
+      ]
+    )
+    game.moves.create!(
+      game_player: chris,
+      action: "build",
+      order: 1,
+      deliberate: true,
+      reversible: true
+    )
+
+    broadcasts = capture_turbo_stream_broadcasts("game_player_#{chris.id}_private") do
+      game.broadcast_game_update
+    end
+
+    chris_panel = broadcasts.find { |broadcast| broadcast.to_s.include?(%(target="game_player_#{chris.id}")) }
+    paula_panel = broadcasts.find { |broadcast| broadcast.to_s.include?(%(target="game_player_#{paula.id}")) }
+
+    assert chris_panel, "expected Chris's private stream to update his own panel"
+    assert paula_panel, "expected Chris's private stream to update Paula's opponent panel"
+    assert_includes chris_panel.to_s, "Undo"
+    assert_not_includes paula_panel.to_s, "Undo"
+    assert_includes chris_panel.to_s, %(action="/games/#{game.id}/select_action")
+    assert_includes chris_panel.to_s, "tile-activatable"
+    assert_includes chris_panel.to_s, "card-T"
+    assert_not_includes chris_panel.to_s, "card-Z"
+  end
+
   test "broadcast_sound emits a play_sound turbo stream to the game channel" do
     game = games(:game2player)
     broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}") do
