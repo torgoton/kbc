@@ -10,15 +10,16 @@
 # (and the legacy storage layer it serializes to) ever sees the "[r, c]"
 # string form.
 class Turn
-  attr_reader :player_order, :sub_phase, :mandatory_remaining, :builds_this_turn
+  attr_reader :player_order, :sub_phase, :mandatory_remaining, :builds_this_turn, :outpost_active
 
   DEFAULT_MANDATORY = 3
 
-  def initialize(player_order:, sub_phase: nil, mandatory_remaining: DEFAULT_MANDATORY, builds_this_turn: [])
+  def initialize(player_order:, sub_phase: nil, mandatory_remaining: DEFAULT_MANDATORY, builds_this_turn: [], outpost_active: false)
     @player_order = player_order
     @sub_phase = sub_phase
     @mandatory_remaining = mandatory_remaining
     @builds_this_turn = builds_this_turn
+    @outpost_active = outpost_active
   end
 
   def self.from_game(game)
@@ -27,7 +28,8 @@ class Turn
       player_order: game.current_player&.order,
       sub_phase: parse_sub_phase(raw["sub_phase"]),
       mandatory_remaining: raw.fetch("mandatory_remaining", DEFAULT_MANDATORY),
-      builds_this_turn: parse_builds(raw["builds"])
+      builds_this_turn: parse_builds(raw["builds"]),
+      outpost_active: raw.fetch("outpost_active", false)
     )
   end
 
@@ -35,7 +37,8 @@ class Turn
     {
       "sub_phase" => sub_phase ? sub_phase_payload(sub_phase) : nil,
       "mandatory_remaining" => mandatory_remaining,
-      "builds_this_turn" => builds_this_turn.map { |r, c| Coordinate.new(r, c).to_key }
+      "builds_this_turn" => builds_this_turn.map { |r, c| Coordinate.new(r, c).to_key },
+      "outpost_active" => outpost_active
     }
   end
 
@@ -45,6 +48,8 @@ class Turn
       handle_select_action(game:, **params)
     when :build
       handle_build(game:, **params)
+    when :activate_outpost
+      handle_activate_outpost(game:)
     else
       [ error("unsupported turn action: #{action_name}") ]
     end
@@ -98,6 +103,19 @@ class Turn
     consequences
   end
 
+  def handle_activate_outpost(game:)
+    return [ error("outpost already active") ] if outpost_active
+
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+    return [ error("no unused OutpostTile") ] unless gp.find_unused_tile("OutpostTile")
+
+    [
+      Turn::Consequences::OutpostActivated.new(prior_active: outpost_active),
+      Turn::Consequences::TileConsumed.new(klass: "OutpostTile", player: player_order)
+    ]
+  end
+
   def handle_mandatory_build(game:, row:, col:)
     return [ error("no builds remaining this turn") ] if mandatory_remaining <= 0
 
@@ -109,7 +127,7 @@ class Turn
 
     game.instantiate
     return [ error("not a valid mandatory build target") ] unless
-      game.board_contents.can_mandatory_build?(game.board, player_order, terrain, row, col)
+      game.board_contents.can_mandatory_build?(game.board, player_order, terrain, row, col, skip_adjacency: outpost_active)
 
     pickups = game.board_contents.pickup_targets_for(row, col, gp.taken_from).map do |coord, klass|
       Turn::Consequences::TilePickedUp.new(from: coord, klass: klass, player: player_order)
@@ -119,6 +137,7 @@ class Turn
     immediate = pickups.flat_map { |pickup| immediate_score_for(pickup, gp) }
     goals = goal_scores_for(game, gp, terrain, row, col)
     families = families_score_for(game, gp, row, col)
+    outpost_consume = outpost_active ? [ Turn::Consequences::OutpostDeactivated.new(prior_active: true) ] : []
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
@@ -127,6 +146,7 @@ class Turn
       *immediate,
       *goals,
       *families,
+      *outpost_consume,
       Turn::Consequences::BuildRecorded.new(at: Coordinate.new(row, col).to_key),
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]

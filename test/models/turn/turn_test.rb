@@ -79,6 +79,50 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
+  test "activate_outpost emits OutpostActivated + TileConsumed when player owns an unused OutpostTile" do
+    @player.update!(tiles: [ { "klass" => "OutpostTile", "from" => "[3, 4]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:activate_outpost, game: @game)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::OutpostActivated) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::TileConsumed) && c.klass == "OutpostTile" })
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+  end
+
+  test "activate_outpost returns Error when player has no unused OutpostTile" do
+    @player.update!(tiles: [])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:activate_outpost, game: @game)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "build with outpost_active skips adjacency and emits OutpostDeactivated" do
+    hand_terrain = @player.hand.first
+    seed = first_empty_terrain(hand_terrain)
+    @game.board_contents.place_settlement(seed[0], seed[1], 0)  # gives player adjacency, normally restricting builds
+    @game.current_action = { "turn" => { "outpost_active" => true } }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    far = first_empty_terrain_not_adjacent_to(seed, hand_terrain)
+    cs = turn.handle(:build, game: @game, row: far[0], col: far[1])
+
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SettlementPlaced) })
+    deactivate = cs.find { |c| c.is_a?(Turn::Consequences::OutpostDeactivated) }
+    refute_nil deactivate, "expected OutpostDeactivated"
+    assert_equal true, deactivate.prior_active
+  end
+
+  test "build without outpost_active does NOT emit OutpostDeactivated" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::OutpostDeactivated) })
+  end
+
   test "from_game defaults mandatory_remaining to 3 when current_action is empty" do
     @game.current_action = {}
     assert_equal 3, Turn.from_game(@game).mandatory_remaining
