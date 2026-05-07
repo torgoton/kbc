@@ -78,8 +78,9 @@ class Turn
   def handle_build(game:, **params)
     return [ error("no active sub-phase") ] unless sub_phase
 
+    prior_state = sub_phase_payload(sub_phase)
     consequences = sub_phase.handle(:build, game:, player_order:, **params)
-    consequences << Turn::Consequences::SubPhasePopped.new if sub_phase.complete?
+    consequences << Turn::Consequences::SubPhasePopped.new(prior_state: prior_state) if sub_phase.complete?
     consequences
   end
 

@@ -75,6 +75,8 @@ class TurnTest < ActiveSupport::TestCase
     assert(consequences.any? { |c| c.is_a?(Turn::Consequences::SettlementPlaced) })
     assert(consequences.any? { |c| c.is_a?(Turn::Consequences::TileConsumed) })
     assert_kind_of Turn::Consequences::SubPhasePopped, consequences.last
+    assert_equal Turn::SubPhases::TileBuildPhase::TYPE, consequences.last.prior_state["type"]
+    assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
   test "build with no active sub_phase returns Error" do

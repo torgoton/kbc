@@ -78,7 +78,7 @@ class ConsequenceApplierTest < ActiveSupport::TestCase
     @game.reload
     assert_equal "tile_build", @game.current_action.dig("turn", "sub_phase", "type")
 
-    ConsequenceApplier.apply!(@game, [ Turn::Consequences::SubPhasePopped.new ])
+    ConsequenceApplier.apply!(@game, [ Turn::Consequences::SubPhasePopped.new(prior_state: { "type" => "tile_build", "state" => {} }) ])
     @game.reload
     assert_nil @game.current_action.dig("turn", "sub_phase")
   end
