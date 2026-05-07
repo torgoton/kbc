@@ -146,6 +146,26 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal @player.order, grants.first.player
   end
 
+  test "build appends GoalScored + TileDiscarded for a Treasure pickup" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "TreasureTile", 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    score = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) }
+    discard = cs.find { |c| c.is_a?(Turn::Consequences::TileDiscarded) }
+    refute_nil score, "expected GoalScored for treasure"
+    refute_nil discard, "expected TileDiscarded for treasure"
+    assert_equal "treasure", score.goal
+    assert_equal 3, score.points
+    assert_equal "TreasureTile", discard.klass
+  end
+
   test "build does not append MeepleGranted for non-granting tiles" do
     hand_terrain = @player.hand.first
     target = first_empty_terrain(hand_terrain)

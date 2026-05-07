@@ -113,11 +113,13 @@ class Turn
     end
 
     grants = pickups.flat_map { |pickup| meeple_grant_for(pickup) }
+    immediate = pickups.flat_map { |pickup| immediate_score_for(pickup, gp) }
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
       *pickups,
       *grants,
+      *immediate,
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
   end
@@ -126,6 +128,16 @@ class Turn
     grant = Tiles::Tile.for_klass(pickup.klass)&.new(0)&.meeple_grant
     return [] unless grant
     [ Turn::Consequences::MeepleGranted.new(player: player_order, kind: grant["kind"], qty: grant["qty"]) ]
+  end
+
+  def immediate_score_for(pickup, gp)
+    score = Tiles::Tile.for_klass(pickup.klass)&.new(0)&.immediate_score
+    return [] unless score
+    prior = gp.bonus_scores&.dig(score["goal"]) || 0
+    [
+      Turn::Consequences::GoalScored.new(player: player_order, goal: score["goal"], points: score["points"], prior_score: prior),
+      Turn::Consequences::TileDiscarded.new(player: player_order, klass: pickup.klass, from: pickup.from.to_key, used: true)
+    ]
   end
 
   def error(msg)
