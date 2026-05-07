@@ -46,8 +46,8 @@ class TurnRoundTripTest < ActiveSupport::TestCase
     cs2 = turn.handle(:build, game: @game, row: row, col: col)
     ConsequenceApplier.apply!(@game, cs2)
 
-    all_consequences = cs1 + cs2
-    ConsequenceApplier.unapply!(@game.reload, all_consequences)
+    ConsequenceApplier.unapply!(@game.reload)
+    ConsequenceApplier.unapply!(@game.reload)
 
     assert_equal before, snapshot
   end
