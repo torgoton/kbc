@@ -22,8 +22,7 @@ class Turn::Consequences::TileConsumedTest < ActiveSupport::TestCase
 
   test "unapply! marks the tile unused again" do
     gp = player(0)
-    gp.tiles = []
-    gp.receive_tile!("FarmTile", from: "[2, 3]")
+    gp.tiles = [ { "klass" => "FarmTile", "from" => "[2, 3]", "used" => false } ]
     c = Turn::Consequences::TileConsumed.new(klass: "FarmTile", player: 0)
     c.apply!(@game)
     refute_nil gp.tiles.find { |t| t["klass"] == "FarmTile" && t["used"] }
