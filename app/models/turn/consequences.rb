@@ -13,6 +13,8 @@ class Turn
               when "goal_scored" then GoalScored
               when "tile_discarded" then TileDiscarded
               when "build_recorded" then BuildRecorded
+              when "outpost_activated" then OutpostActivated
+              when "outpost_deactivated" then OutpostDeactivated
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
