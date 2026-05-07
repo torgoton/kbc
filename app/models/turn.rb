@@ -114,14 +114,33 @@ class Turn
 
     grants = pickups.flat_map { |pickup| meeple_grant_for(pickup) }
     immediate = pickups.flat_map { |pickup| immediate_score_for(pickup, gp) }
+    goals = goal_scores_for(game, gp, terrain, row, col)
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
       *pickups,
       *grants,
       *immediate,
+      *goals,
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
+  end
+
+  def goal_scores_for(game, gp, terrain, row, col)
+    active = Array(game.goals)
+    out = []
+    if active.include?("ambassadors") && game.board_contents.ambassadors_match?(player_order, row, col)
+      out << goal_scored(gp, "ambassadors", 1)
+    end
+    if active.include?("shepherds") && game.board_contents.shepherds_match?(game.board, terrain, row, col)
+      out << goal_scored(gp, "shepherds", 2)
+    end
+    out
+  end
+
+  def goal_scored(gp, goal, points)
+    prior = gp.bonus_scores&.dig(goal) || 0
+    Turn::Consequences::GoalScored.new(player: player_order, goal: goal, points: points, prior_score: prior)
   end
 
   def meeple_grant_for(pickup)

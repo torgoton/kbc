@@ -128,6 +128,49 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal Coordinate.new(nbr[0], nbr[1]), pickups.first.from
   end
 
+  test "build appends GoalScored(ambassadors, 1) when adjacent to opponent and goal active" do
+    @game.update!(goals: [ "ambassadors" ])
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_settlement(nbr[0], nbr[1], 1) # opponent
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    score = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "ambassadors" }
+    refute_nil score
+    assert_equal 1, score.points
+  end
+
+  test "build does NOT score ambassadors when goal is inactive" do
+    @game.update!(goals: [])
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_settlement(nbr[0], nbr[1], 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "ambassadors" })
+  end
+
+  test "build appends GoalScored(shepherds, 2) when no adjacent same-terrain empty and goal active" do
+    @game.update!(goals: [ "shepherds" ])
+    hand_terrain = @player.hand.first
+    # Find a hex of hand_terrain whose neighbors are all NOT hand_terrain (or all occupied).
+    target = first_isolated_terrain_hex(hand_terrain)
+    skip "no isolated #{hand_terrain} hex on this board" unless target
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    score = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "shepherds" }
+    refute_nil score
+    assert_equal 2, score.points
+  end
+
   test "build appends MeepleGranted when picking up a meeple-granting tile" do
     hand_terrain = @player.hand.first
     target = first_empty_terrain(hand_terrain)
@@ -251,6 +294,21 @@ class TurnTest < ActiveSupport::TestCase
       end
     end
     raise "no empty non-#{terrain} hex"
+  end
+
+  def first_isolated_terrain_hex(terrain)
+    20.times do |row|
+      20.times do |col|
+        next unless @game.board.terrain_at(row, col) == terrain
+        next unless @game.board_contents.empty?(row, col)
+        if @game.board_contents.neighbors(row, col).none? { |nr, nc|
+             @game.board.terrain_at(nr, nc) == terrain && @game.board_contents.empty?(nr, nc)
+           }
+          return [ row, col ]
+        end
+      end
+    end
+    nil
   end
 
   def first_empty_terrain_not_adjacent_to(seed, terrain)
