@@ -366,4 +366,46 @@ class BoardStateTest < ActiveSupport::TestCase
     targets = state.pickup_targets_for(5, 5, nil)
     assert_equal 2, targets.size
   end
+
+  # ambassadors_match? — true iff the build is adjacent to any opponent's settlement.
+
+  test "ambassadors_match? is true when an opponent settlement is adjacent" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_settlement(nr, nc, 1)
+    assert state.ambassadors_match?(0, 5, 5)
+  end
+
+  test "ambassadors_match? is false when the only adjacent settlement is the player's own" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_settlement(nr, nc, 0)
+    refute state.ambassadors_match?(0, 5, 5)
+  end
+
+  test "ambassadors_match? is false when no neighbors are settled" do
+    refute BoardState.new.ambassadors_match?(0, 5, 5)
+  end
+
+  # shepherds_match? — true iff no adjacent hex on the same terrain is empty.
+  # Intent: built settlement has no further matching-terrain growth space.
+
+  test "shepherds_match? is true when no adjacent matching-terrain hex is empty" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "F")  # no neighbors are G
+    assert state.shepherds_match?(board, "G", 5, 5)
+  end
+
+  test "shepherds_match? is false when an adjacent matching-terrain hex is empty" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G")
+    refute state.shepherds_match?(board, "G", 5, 5)
+  end
+
+  test "shepherds_match? is true when adjacent matching hexes are all occupied" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G")
+    state.neighbors(5, 5).each { |r, c| state.place_settlement(r, c, 1) }
+    assert state.shepherds_match?(board, "G", 5, 5)
+  end
 end

@@ -184,6 +184,19 @@ class BoardState
     end
   end
 
+  def ambassadors_match?(player_order, row, col)
+    neighbors(row, col).any? do |nr, nc|
+      p = player_at(nr, nc)
+      p && p != player_order
+    end
+  end
+
+  def shepherds_match?(board, terrain, row, col)
+    neighbors(row, col).none? do |nr, nc|
+      empty?(nr, nc) && board.terrain_at(nr, nc) == terrain
+    end
+  end
+
   def locations_with_remaining_tiles
     @cells.filter_map { |(row, col), cell| [ row, col ] if cell["klass"] != "Settlement" && cell["qty"].to_i > 0 }
   end
