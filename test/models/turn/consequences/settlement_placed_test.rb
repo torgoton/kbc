@@ -28,6 +28,29 @@ class Turn::Consequences::SettlementPlacedTest < ActiveSupport::TestCase
     assert_equal before, player(1).settlements_remaining
   end
 
+  test "unapply! removes the settlement from the board" do
+    c = consequence(at: Coordinate.new(5, 7), player: 0)
+    c.apply!(@game)
+    c.unapply!(@game)
+    assert_nil @game.board_contents.player_at(5, 7)
+  end
+
+  test "unapply! restores the player's supply" do
+    before = player(0).settlements_remaining
+    c = consequence(player: 0)
+    c.apply!(@game)
+    c.unapply!(@game)
+    assert_equal before, player(0).settlements_remaining
+  end
+
+  test "unapply! leaves other players' supply unchanged" do
+    before = player(1).settlements_remaining
+    c = consequence(player: 0)
+    c.apply!(@game)
+    c.unapply!(@game)
+    assert_equal before, player(1).settlements_remaining
+  end
+
   test "equality is by value" do
     a = consequence(at: Coordinate.new(5, 7), player: 0, terrain: "G")
     b = consequence(at: Coordinate.new(5, 7), player: 0, terrain: "G")
