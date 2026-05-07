@@ -30,4 +30,34 @@ class Turn::Consequences::TilePickedUpTest < ActiveSupport::TestCase
     consequence(player: 0).apply!(@game)
     assert_equal [ "[3, 4]" ], player(0).taken_from
   end
+
+  test "unapply! restores the tile qty on the source hex" do
+    c = consequence(player: 0)
+    c.apply!(@game)
+    assert_equal 1, @game.board_contents.tile_qty(3, 4)
+    c.unapply!(@game)
+    assert_equal 2, @game.board_contents.tile_qty(3, 4)
+  end
+
+  test "unapply! removes the tile from the player" do
+    gp = player(0)
+    gp.tiles = []
+    gp.taken_from = []
+    c = consequence(player: 0)
+    c.apply!(@game)
+    assert(gp.tiles.any? { |t| t["klass"] == "FarmTile" && t["from"] == "[3, 4]" })
+    c.unapply!(@game)
+    refute(gp.tiles.any? { |t| t["klass"] == "FarmTile" && t["from"] == "[3, 4]" })
+  end
+
+  test "unapply! pops the source coord from taken_from" do
+    gp = player(0)
+    gp.tiles = []
+    gp.taken_from = []
+    c = consequence(player: 0)
+    c.apply!(@game)
+    assert_includes gp.taken_from, "[3, 4]"
+    c.unapply!(@game)
+    refute_includes (gp.taken_from || []), "[3, 4]"
+  end
 end
