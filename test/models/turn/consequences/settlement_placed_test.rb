@@ -51,6 +51,16 @@ class Turn::Consequences::SettlementPlacedTest < ActiveSupport::TestCase
     assert_equal before, player(1).settlements_remaining
   end
 
+  test "to_h round-trips through from_h" do
+    c = consequence(at: Coordinate.new(5, 7), player: 0, terrain: "G")
+    h = c.to_h
+    assert_equal "settlement_placed", h["type"]
+    assert_equal "[5, 7]", h["at"]
+    assert_equal 0, h["player"]
+    assert_equal "G", h["terrain"]
+    assert_equal c, Turn::Consequences::SettlementPlaced.from_h(h)
+  end
+
   test "equality is by value" do
     a = consequence(at: Coordinate.new(5, 7), player: 0, terrain: "G")
     b = consequence(at: Coordinate.new(5, 7), player: 0, terrain: "G")

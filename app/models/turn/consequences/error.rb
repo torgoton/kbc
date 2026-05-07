@@ -8,6 +8,14 @@ class Turn
       end
 
       def error? = true
+
+      def to_h
+        { "type" => "error", "message" => message }
+      end
+
+      def self.from_h(h)
+        new(message: h["message"])
+      end
     end
   end
 end

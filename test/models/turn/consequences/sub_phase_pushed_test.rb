@@ -25,6 +25,18 @@ class Turn::Consequences::SubPhasePushedTest < ActiveSupport::TestCase
     assert_not_nil @game.current_action.dig("turn", "sub_phase")
   end
 
+  test "to_h round-trips through from_h" do
+    c = Turn::Consequences::SubPhasePushed.new(
+      phase_type: "tile_build",
+      state: { "restricted_terrain" => "G", "tile_klass" => "FarmTile" }
+    )
+    h = c.to_h
+    assert_equal "sub_phase_pushed", h["type"]
+    assert_equal "tile_build", h["phase_type"]
+    assert_equal({ "restricted_terrain" => "G", "tile_klass" => "FarmTile" }, h["state"])
+    assert_equal c, Turn::Consequences::SubPhasePushed.from_h(h)
+  end
+
   test "unapply! clears the active sub_phase" do
     c = Turn::Consequences::SubPhasePushed.new(
       phase_type: "tile_build",
