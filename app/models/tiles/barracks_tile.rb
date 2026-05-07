@@ -5,6 +5,7 @@ module Tiles
 
     def places_meeple? = true
     def meeple_kind    = "warrior"
+    def meeple_grant   = { "kind" => "warrior", "qty" => 2 }
 
     def on_pickup(game_player:)
       game_player.add_warriors!(2)
