@@ -10,24 +10,29 @@
 # (and the legacy storage layer it serializes to) ever sees the "[r, c]"
 # string form.
 class Turn
-  attr_reader :player_order, :sub_phase
+  attr_reader :player_order, :sub_phase, :mandatory_remaining
 
-  def initialize(player_order:, sub_phase: nil)
+  DEFAULT_MANDATORY = 3
+
+  def initialize(player_order:, sub_phase: nil, mandatory_remaining: DEFAULT_MANDATORY)
     @player_order = player_order
     @sub_phase = sub_phase
+    @mandatory_remaining = mandatory_remaining
   end
 
   def self.from_game(game)
     raw = (game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil) || {}
     new(
       player_order: game.current_player&.order,
-      sub_phase: parse_sub_phase(raw["sub_phase"])
+      sub_phase: parse_sub_phase(raw["sub_phase"]),
+      mandatory_remaining: raw.fetch("mandatory_remaining", DEFAULT_MANDATORY)
     )
   end
 
   def to_h
     {
-      "sub_phase" => sub_phase ? sub_phase_payload(sub_phase) : nil
+      "sub_phase" => sub_phase ? sub_phase_payload(sub_phase) : nil,
+      "mandatory_remaining" => mandatory_remaining
     }
   end
 
@@ -76,12 +81,37 @@ class Turn
   end
 
   def handle_build(game:, **params)
-    return [ error("no active sub-phase") ] unless sub_phase
+    if sub_phase
+      handle_sub_phase_build(game:, **params)
+    else
+      handle_mandatory_build(game:, **params)
+    end
+  end
 
+  def handle_sub_phase_build(game:, **params)
     prior_state = sub_phase_payload(sub_phase)
     consequences = sub_phase.handle(:build, game:, player_order:, **params)
     consequences << Turn::Consequences::SubPhasePopped.new(prior_state: prior_state) if sub_phase.complete?
     consequences
+  end
+
+  def handle_mandatory_build(game:, row:, col:)
+    return [ error("no builds remaining this turn") ] if mandatory_remaining <= 0
+
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    terrain = gp.hand&.first
+    return [ error("no terrain card in hand") ] unless terrain
+
+    game.instantiate
+    return [ error("not a valid mandatory build target") ] unless
+      game.board_contents.can_mandatory_build?(game.board, player_order, terrain, row, col)
+
+    [
+      Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
+      Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
+    ]
   end
 
   def error(msg)

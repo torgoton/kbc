@@ -7,9 +7,10 @@ class Turn::ConsequencesTest < ActiveSupport::TestCase
     picked = Turn::Consequences::TilePickedUp.new(from: Coordinate.new(3, 4), klass: "FarmTile", player: 0)
     pushed = Turn::Consequences::SubPhasePushed.new(phase_type: "tile_build", state: { "x" => "y" })
     popped = Turn::Consequences::SubPhasePopped.new(prior_state: { "type" => "tile_build", "state" => {} })
+    decremented = Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: 3)
     err = Turn::Consequences::Error.new(message: "nope")
 
-    [ placed, consumed, picked, pushed, popped, err ].each do |c|
+    [ placed, consumed, picked, pushed, popped, decremented, err ].each do |c|
       assert_equal c, Turn::Consequences.from_h(c.to_h)
     end
   end
