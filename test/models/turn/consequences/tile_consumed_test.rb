@@ -31,5 +31,11 @@ class Turn::Consequences::TileConsumedTest < ActiveSupport::TestCase
     refute_nil gp.tiles.find { |t| t["klass"] == "FarmTile" }
   end
 
+  test "to_h round-trips through from_h" do
+    c = Turn::Consequences::TileConsumed.new(klass: "FarmTile", player: 0)
+    assert_equal({ "type" => "tile_consumed", "klass" => "FarmTile", "player" => 0 }, c.to_h)
+    assert_equal c, Turn::Consequences::TileConsumed.from_h(c.to_h)
+  end
+
   def player(order) = @game.game_players.find { |gp| gp.order == order }
 end

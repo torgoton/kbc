@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_06_183402) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_07_214153) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -219,6 +219,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_183402) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "turn_clicks", force: :cascade do |t|
+    t.json "consequences", default: [], null: false
+    t.datetime "created_at", null: false
+    t.bigint "game_id", null: false
+    t.integer "order", null: false
+    t.datetime "updated_at", null: false
+    t.index ["game_id", "order"], name: "index_turn_clicks_on_game_id_and_order", unique: true
+    t.index ["game_id"], name: "index_turn_clicks_on_game_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.boolean "approved", default: false
     t.datetime "created_at", null: false
@@ -241,4 +251,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_183402) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "turn_clicks", "games"
 end

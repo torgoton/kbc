@@ -50,6 +50,14 @@ class Turn::Consequences::TilePickedUpTest < ActiveSupport::TestCase
     refute(gp.tiles.any? { |t| t["klass"] == "FarmTile" && t["from"] == "[3, 4]" })
   end
 
+  test "to_h round-trips through from_h" do
+    c = Turn::Consequences::TilePickedUp.new(from: Coordinate.new(3, 4), klass: "FarmTile", player: 0)
+    h = c.to_h
+    assert_equal "tile_picked_up", h["type"]
+    assert_equal "[3, 4]", h["from"]
+    assert_equal c, Turn::Consequences::TilePickedUp.from_h(h)
+  end
+
   test "unapply! pops the source coord from taken_from" do
     gp = player(0)
     gp.tiles = []

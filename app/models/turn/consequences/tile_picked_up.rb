@@ -24,6 +24,14 @@ class Turn
 
         game.board_contents.increment_tile(from.row, from.col)
       end
+
+      def to_h
+        { "type" => "tile_picked_up", "from" => from.to_key, "klass" => klass, "player" => player }
+      end
+
+      def self.from_h(h)
+        new(from: Coordinate.from_key(h["from"]), klass: h["klass"], player: h["player"])
+      end
     end
   end
 end

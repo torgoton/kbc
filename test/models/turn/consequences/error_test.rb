@@ -14,4 +14,10 @@ class Turn::Consequences::ErrorTest < ActiveSupport::TestCase
   test "error? is true" do
     assert Turn::Consequences::Error.new(message: "nope").error?
   end
+
+  test "to_h round-trips through from_h" do
+    c = Turn::Consequences::Error.new(message: "nope")
+    assert_equal({ "type" => "error", "message" => "nope" }, c.to_h)
+    assert_equal c, Turn::Consequences::Error.from_h(c.to_h)
+  end
 end

@@ -8,6 +8,14 @@ class Turn
       def unapply!(game)
         game.game_players.find { |gp| gp.order == player }.mark_tile_unused!(klass)
       end
+
+      def to_h
+        { "type" => "tile_consumed", "klass" => klass, "player" => player }
+      end
+
+      def self.from_h(h)
+        new(klass: h["klass"], player: h["player"])
+      end
     end
   end
 end

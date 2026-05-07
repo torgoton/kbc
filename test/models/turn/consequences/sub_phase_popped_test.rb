@@ -32,6 +32,14 @@ class Turn::Consequences::SubPhasePoppedTest < ActiveSupport::TestCase
     assert_equal @prior, @game.current_action.dig("turn", "sub_phase")
   end
 
+  test "to_h round-trips through from_h" do
+    c = Turn::Consequences::SubPhasePopped.new(prior_state: @prior)
+    h = c.to_h
+    assert_equal "sub_phase_popped", h["type"]
+    assert_equal @prior, h["prior_state"]
+    assert_equal c, Turn::Consequences::SubPhasePopped.from_h(h)
+  end
+
   test "equality is by value" do
     a = Turn::Consequences::SubPhasePopped.new(prior_state: @prior)
     b = Turn::Consequences::SubPhasePopped.new(prior_state: @prior)

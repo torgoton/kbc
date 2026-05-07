@@ -11,6 +11,14 @@ class Turn
         game.current_action["turn"] ||= {}
         game.current_action["turn"]["sub_phase"] = prior_state
       end
+
+      def to_h
+        { "type" => "sub_phase_popped", "prior_state" => prior_state }
+      end
+
+      def self.from_h(h)
+        new(prior_state: h["prior_state"])
+      end
     end
   end
 end

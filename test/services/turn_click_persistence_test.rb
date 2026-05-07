@@ -1,6 +1,6 @@
 require "test_helper"
 
-class TurnRoundTripTest < ActiveSupport::TestCase
+class TurnClickPersistenceTest < ActiveSupport::TestCase
   def setup
     @game = Game.create!(state: "waiting")
     @game.add_player(users(:chris))
@@ -22,33 +22,31 @@ class TurnRoundTripTest < ActiveSupport::TestCase
       current_action: @game.current_action.deep_dup,
       players: @game.game_players.map { |g|
         g.reload
-        {
-          order: g.order,
-          supply: g.settlements_remaining,
-          tiles: g.tiles&.deep_dup,
-          taken_from: g.taken_from&.dup
-        }
+        { order: g.order, supply: g.settlements_remaining, tiles: g.tiles&.deep_dup, taken_from: g.taken_from&.dup }
       }
     }
   end
 
-  test "select_action then build round-trips back to the starting snapshot" do
+  test "Farm flow records two TurnClicks and unwinds across request boundaries" do
     before = snapshot
 
     turn = Turn.from_game(@game)
-    cs1 = turn.handle(:select_action, game: @game, tile: :farm)
-    ConsequenceApplier.apply!(@game, cs1)
+    cs = turn.handle(:select_action, game: @game, tile: :farm)
+    ConsequenceApplier.apply!(@game, cs)
 
     @game.reload
     @game.instantiate
     turn = Turn.from_game(@game)
     row, col = first_empty_grass
-    cs2 = turn.handle(:build, game: @game, row: row, col: col)
-    ConsequenceApplier.apply!(@game, cs2)
+    cs = turn.handle(:build, game: @game, row: row, col: col)
+    ConsequenceApplier.apply!(@game, cs)
+
+    assert_equal 2, TurnClick.where(game: @game).count
 
     ConsequenceApplier.unapply!(@game.reload)
     ConsequenceApplier.unapply!(@game.reload)
 
+    assert_equal 0, TurnClick.where(game: @game).count
     assert_equal before, snapshot
   end
 
