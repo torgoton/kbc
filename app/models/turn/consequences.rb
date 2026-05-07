@@ -11,6 +11,7 @@ class Turn
               when "mandatory_remaining_decremented" then MandatoryRemainingDecremented
               when "meeple_granted" then MeepleGranted
               when "goal_scored" then GoalScored
+              when "tile_discarded" then TileDiscarded
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
