@@ -408,4 +408,24 @@ class BoardStateTest < ActiveSupport::TestCase
     state.neighbors(5, 5).each { |r, c| state.place_settlement(r, c, 1) }
     assert state.shepherds_match?(board, "G", 5, 5)
   end
+
+  # can_mandatory_build? with skip_adjacency:true bypasses the adjacency clause (Outpost).
+
+  test "can_mandatory_build? with skip_adjacency: true accepts a non-adjacent hex when player has adjacencies" do
+    state = BoardState.new
+    state.place_settlement(5, 5, 0)  # player 0 has a settlement; adjacency-required mode would activate
+    board = TerrainStub.new(default: "G")
+    far_r, far_c = 15, 15
+    refute state.can_mandatory_build?(board, 0, "G", far_r, far_c)
+    assert state.can_mandatory_build?(board, 0, "G", far_r, far_c, skip_adjacency: true)
+  end
+
+  test "can_mandatory_build? with skip_adjacency still requires terrain match and emptiness" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G", overrides: { [ 5, 5 ] => "F" })
+    refute state.can_mandatory_build?(board, 0, "G", 5, 5, skip_adjacency: true)
+
+    state.place_settlement(5, 6, 1)
+    refute state.can_mandatory_build?(board, 0, "G", 5, 6, skip_adjacency: true)
+  end
 end

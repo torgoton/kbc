@@ -82,9 +82,10 @@ class BoardState
     empty?(row, col) && !warrior_blocked?(row, col)
   end
 
-  def can_mandatory_build?(board, player_order, terrain, row, col)
+  def can_mandatory_build?(board, player_order, terrain, row, col, skip_adjacency: false)
     return false unless available_for_building?(row, col)
     return false unless board.terrain_at(row, col) == terrain
+    return true if skip_adjacency
 
     if any_player_adjacency_to_terrain?(board, player_order, terrain)
       adjacent_to_player?(player_order, row, col)
