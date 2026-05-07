@@ -82,4 +82,39 @@ class ConsequenceApplierTest < ActiveSupport::TestCase
     @game.reload
     assert_nil @game.current_action.dig("turn", "sub_phase")
   end
+
+  test "unapply! reverses a single SettlementPlaced and persists" do
+    before = player(0).settlements_remaining
+    cs = [ Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 7), player: 0, terrain: "G") ]
+    ConsequenceApplier.apply!(@game, cs)
+    ConsequenceApplier.unapply!(@game.reload, cs)
+
+    @game.reload
+    @game.instantiate
+    assert_nil @game.board_contents.player_at(5, 7)
+    assert_equal before, player(0).reload.settlements_remaining
+  end
+
+  test "unapply! reverses consequences in reverse order" do
+    @game.board_contents.place_tile(3, 4, "OracleTile", 2)
+    @game.save!
+
+    cs = [
+      Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 7), player: 0, terrain: "G"),
+      Turn::Consequences::TilePickedUp.new(from: Coordinate.new(3, 4), klass: "OracleTile", player: 0)
+    ]
+    ConsequenceApplier.apply!(@game, cs)
+    ConsequenceApplier.unapply!(@game.reload, cs)
+
+    @game.reload
+    @game.instantiate
+    assert_nil @game.board_contents.player_at(5, 7)
+    assert_equal 2, @game.board_contents.tile_qty(3, 4)
+    refute(player(0).reload.tiles.any? { |t| t["klass"] == "OracleTile" })
+  end
+
+  test "unapply! is safe with Error consequences" do
+    cs = [ Turn::Consequences::Error.new(message: "nope") ]
+    assert_nothing_raised { ConsequenceApplier.unapply!(@game, cs) }
+  end
 end

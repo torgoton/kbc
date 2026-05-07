@@ -12,6 +12,10 @@ class ConsequenceApplier
     new(game, consequences).apply!
   end
 
+  def self.unapply!(game, consequences)
+    new(game, consequences).unapply!
+  end
+
   def initialize(game, consequences)
     @game = game
     @consequences = Array(consequences)
@@ -23,6 +27,15 @@ class ConsequenceApplier
 
     Game.transaction do
       @consequences.each { |c| c.apply!(@game) }
+      @game.save!
+      @game.game_players.each(&:save!)
+    end
+    @game
+  end
+
+  def unapply!
+    Game.transaction do
+      @consequences.reverse_each { |c| c.unapply!(@game) }
       @game.save!
       @game.game_players.each(&:save!)
     end
