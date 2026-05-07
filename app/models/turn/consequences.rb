@@ -12,6 +12,7 @@ class Turn
               when "meeple_granted" then MeepleGranted
               when "goal_scored" then GoalScored
               when "tile_discarded" then TileDiscarded
+              when "build_recorded" then BuildRecorded
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
