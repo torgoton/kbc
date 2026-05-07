@@ -4,6 +4,9 @@ class Turn
       def apply!(_game)
       end
 
+      def unapply!(_game)
+      end
+
       def error? = true
     end
   end
