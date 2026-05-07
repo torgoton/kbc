@@ -112,11 +112,20 @@ class Turn
       Turn::Consequences::TilePickedUp.new(from: coord, klass: klass, player: player_order)
     end
 
+    grants = pickups.flat_map { |pickup| meeple_grant_for(pickup) }
+
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
       *pickups,
+      *grants,
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
+  end
+
+  def meeple_grant_for(pickup)
+    grant = Tiles::Tile.for_klass(pickup.klass)&.new(0)&.meeple_grant
+    return [] unless grant
+    [ Turn::Consequences::MeepleGranted.new(player: player_order, kind: grant["kind"], qty: grant["qty"]) ]
   end
 
   def error(msg)

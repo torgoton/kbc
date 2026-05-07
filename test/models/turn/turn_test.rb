@@ -128,6 +128,37 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal Coordinate.new(nbr[0], nbr[1]), pickups.first.from
   end
 
+  test "build appends MeepleGranted when picking up a meeple-granting tile" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "BarracksTile", 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    grants = cs.select { |c| c.is_a?(Turn::Consequences::MeepleGranted) }
+    assert_equal 1, grants.size
+    assert_equal "warrior", grants.first.kind
+    assert_equal 2, grants.first.qty
+    assert_equal @player.order, grants.first.player
+  end
+
+  test "build does not append MeepleGranted for non-granting tiles" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "OracleTile", 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::MeepleGranted) })
+  end
+
   test "build does not append TilePickedUp for tiles in player's taken_from" do
     hand_terrain = @player.hand.first
     target = first_empty_terrain(hand_terrain)
