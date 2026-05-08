@@ -6,11 +6,11 @@ class Turn::Consequences::IrreversibleBoundaryTest < ActiveSupport::TestCase
   end
 
   test "apply! is a no-op (marker only)" do
-    Turn::Consequences::IrreversibleBoundary.new.apply!(@game)
+    assert_nothing_raised { Turn::Consequences::IrreversibleBoundary.new.apply!(@game) }
   end
 
   test "unapply! is a no-op (caller should never reach this)" do
-    Turn::Consequences::IrreversibleBoundary.new.unapply!(@game)
+    assert_nothing_raised { Turn::Consequences::IrreversibleBoundary.new.unapply!(@game) }
   end
 
   test "to_h round-trips through from_h" do
