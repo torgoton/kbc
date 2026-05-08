@@ -27,6 +27,7 @@ class Turn
       when "nomad_tiles_expired" then NomadTilesExpired
       when "nomad_tile_expiry_set" then NomadTileExpirySet
       when "settlement_moved" then SettlementMoved
+      when "piece_removed" then PieceRemoved
       when "meeple_placed" then MeeplePlaced
       when "meeple_removed" then MeepleRemoved
       else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"

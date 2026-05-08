@@ -54,7 +54,7 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
-    when :select_settlement, :move_settlement, :place_meeple, :end_tile_action
+    when :select_settlement, :move_settlement, :place_meeple, :remove_settlement, :end_tile_action
       handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
@@ -83,6 +83,8 @@ class Turn
       activate_build(game:, klass_name:, terrain: instance.build_terrain)
     elsif instance.builds_settlement?
       activate_build(game:, klass_name:, terrain: nil)
+    elsif instance.is_a?(Tiles::Nomad::SwordTile)
+      activate_targeted_removal(game:)
     elsif instance.is_a?(Tiles::Nomad::ResettlementTile)
       activate_resettlement(game:)
     elsif instance.moves_settlement?
@@ -137,6 +139,29 @@ class Turn
     [
       Turn::Consequences::SubPhasePushed.new(
         phase_type: Turn::SubPhases::ResettlementPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_targeted_removal(game:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(Turn::SubPhases::TargetedRemovalPhase::TILE_KLASS)
+    return [ error("no unused SwordTile available") ] unless held
+
+    pending_orders = game.game_players
+      .reject { |player| player.order == player_order }
+      .select { |player| game.board_contents.settlements_for(player.order).any? }
+      .map(&:order)
+      .sort
+    return [ error("no opponents with settlements") ] if pending_orders.empty?
+
+    pushed = Turn::SubPhases::TargetedRemovalPhase.new(pending_orders: pending_orders)
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::TargetedRemovalPhase::TYPE,
         state: pushed.to_h
       )
     ]
@@ -421,6 +446,8 @@ class Turn
         Turn::SubPhases::SettlementMovePhase.from_h(hash["state"] || {})
       when Turn::SubPhases::ResettlementPhase::TYPE
         Turn::SubPhases::ResettlementPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::TargetedRemovalPhase::TYPE
+        Turn::SubPhases::TargetedRemovalPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::MeeplePlacementPhase::TYPE
         Turn::SubPhases::MeeplePlacementPhase.from_h(hash["state"] || {})
       end
