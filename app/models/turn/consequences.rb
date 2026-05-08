@@ -29,6 +29,9 @@ class Turn
       when "settlement_moved" then SettlementMoved
       when "piece_removed" then PieceRemoved
       when "wall_placed" then WallPlaced
+      when "city_hall_placed" then CityHallPlaced
+      when "city_hall_supply_decremented" then CityHallSupplyDecremented
+      when "permanent_tile_consumed" then PermanentTileConsumed
       when "meeple_placed" then MeeplePlaced
       when "meeple_removed" then MeepleRemoved
       else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
