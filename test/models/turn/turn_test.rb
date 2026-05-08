@@ -21,8 +21,8 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal @player.order, turn.player_order
   end
 
-  test "select_action(:farm) emits SubPhasePushed with TileBuildPhase state" do
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+  test "select_action(FarmTile) emits SubPhasePushed with TileBuildPhase state" do
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
 
     assert_equal 1, consequences.size
     pushed = consequences.first
@@ -33,17 +33,17 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "[3, 4]", pushed.state["tile_source"]
   end
 
-  test "select_action(:farm) with no Farm tile returns Error" do
+  test "select_action(FarmTile) with no Farm tile returns Error" do
     @player.update!(tiles: [])
     @game.reload
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
-  test "select_action(:farm) when Farm already used returns Error" do
+  test "select_action(FarmTile) when Farm already used returns Error" do
     @player.update!(tiles: [ { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true } ])
     @game.reload
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
@@ -56,7 +56,127 @@ class TurnTest < ActiveSupport::TestCase
         }
       }
     }
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
+    assert_kind_of Turn::Consequences::Error, consequences.first
+  end
+
+  test "select_action works for any builds_settlement? tile with fixed build_terrain" do
+    [
+      [ "OasisTile", "D" ],
+      [ "GardenTile", "F" ],
+      [ "MonasteryTile", "C" ],
+      [ "ForestersLodgeTile", "T" ]
+    ].each do |klass, terrain|
+      @player.update!(tiles: [ { "klass" => klass, "from" => "[2, 2]", "used" => false } ])
+      @game.reload
+      cs = turn.handle(:select_action, game: @game, tile: klass)
+      pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+      refute_nil pushed, "expected SubPhasePushed for #{klass}"
+      assert_equal terrain, pushed.state["restricted_terrain"], "wrong terrain for #{klass}"
+      assert_equal klass, pushed.state["tile_klass"]
+    end
+  end
+
+  test "select_action routes Village/Tower/Tavern to TileBuildPhase with restricted_terrain: nil" do
+    %w[VillageTile TowerTile TavernTile].each do |klass|
+      @player.update!(tiles: [ { "klass" => klass, "from" => "[2, 2]", "used" => false } ])
+      @game.reload
+      cs = turn.handle(:select_action, game: @game, tile: klass)
+      pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+      refute_nil pushed, "expected SubPhasePushed for #{klass}"
+      assert_nil pushed.state["restricted_terrain"], "#{klass} should not have a fixed terrain"
+      assert_equal klass, pushed.state["tile_klass"]
+    end
+  end
+
+  test "select_action errors for unknown tile klass" do
+    consequences = turn.handle(:select_action, game: @game, tile: "NonsenseTile")
+    assert_kind_of Turn::Consequences::Error, consequences.first
+  end
+
+  test "select_action(BarracksTile) emits SubPhasePushed with MeeplePlacementPhase state and kind: warrior" do
+    @player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[2, 3]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:select_action, game: @game, tile: "BarracksTile")
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal Turn::SubPhases::MeeplePlacementPhase::TYPE, pushed.phase_type
+    assert_equal "BarracksTile", pushed.state["tile_klass"]
+    assert_equal "warrior", pushed.state["kind"]
+  end
+
+  test "select_action(LighthouseTile) routes through MeeplePlacementPhase with kind: ship" do
+    @player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[2, 3]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:select_action, game: @game, tile: "LighthouseTile")
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal "ship", pushed.state["kind"]
+  end
+
+  test "place_meeple is dispatched to active MeeplePlacementPhase" do
+    @player.update!(supply: { "settlements" => 40, "warriors" => 2 })
+    @game.current_action = {
+      "turn" => {
+        "sub_phase" => {
+          "type" => "meeple_placement",
+          "state" => { "tile_klass" => "BarracksTile", "kind" => "warrior" }
+        }
+      }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    target = first_buildable_hex
+    cs = turn.handle(:place_meeple, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) }, "expected place_meeple to succeed: #{cs.inspect}")
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::MeeplePlaced) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SubPhasePopped) })
+  end
+
+  test "select_action(PaddockTile) emits SubPhasePushed with SettlementMovePhase state" do
+    @player.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 3]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:select_action, game: @game, tile: "PaddockTile")
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal Turn::SubPhases::SettlementMovePhase::TYPE, pushed.phase_type
+    assert_equal "PaddockTile", pushed.state["tile_klass"]
+    assert_nil pushed.state["source"]
+  end
+
+  test "select_settlement is dispatched to active SettlementMovePhase" do
+    @game.board_contents.place_settlement(5, 5, @player.order)
+    @game.current_action = {
+      "turn" => {
+        "sub_phase" => {
+          "type" => "settlement_move",
+          "state" => { "tile_klass" => "PaddockTile", "source" => nil }
+        }
+      }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:select_settlement, game: @game, row: 5, col: 5)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SubPhaseStateUpdated) })
+  end
+
+  test "move_settlement without active SettlementMovePhase returns Error" do
+    cs = turn.handle(:move_settlement, game: @game, row: 5, col: 5)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "select_action errors for a tile that does not build_settlement" do
+    # OutpostTile has its own activate path; passing it through select_action should error.
+    @player.update!(tiles: [ { "klass" => "OutpostTile", "from" => "[2, 2]", "used" => false } ])
+    @game.reload
+    consequences = turn.handle(:select_action, game: @game, tile: "OutpostTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
@@ -77,6 +197,59 @@ class TurnTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::SubPhasePopped, consequences.last
     assert_equal Turn::SubPhases::TileBuildPhase::TYPE, consequences.last.prior_state["type"]
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
+  end
+
+  test "build that empties player supply appends EndTriggered" do
+    @player.update!(supply: { "settlements" => 1 })
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    triggered = cs.find { |c| c.is_a?(Turn::Consequences::EndTriggered) }
+    refute_nil triggered
+    assert_equal @player.order, triggered.player
+  end
+
+  test "build that does not empty supply does NOT append EndTriggered" do
+    @player.update!(supply: { "settlements" => 5 })
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::EndTriggered) })
+  end
+
+  test "end_turn at the last player's turn appends GameCompleted when ending?" do
+    @game.update!(end_trigger_count: 1)  # ending? is true
+    last_order = @game.game_players.count - 1
+    @game.current_player = @game.game_players.find { |gp| gp.order == last_order }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = Turn.from_game(@game).handle(:end_turn, game: @game)
+    completed = cs.find { |c| c.is_a?(Turn::Consequences::GameCompleted) }
+    refute_nil completed, "expected GameCompleted at last player's end_turn when ending?"
+  end
+
+  test "end_turn does NOT append GameCompleted when not ending?" do
+    last_order = @game.game_players.count - 1
+    @game.current_player = @game.game_players.find { |gp| gp.order == last_order }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = Turn.from_game(@game).handle(:end_turn, game: @game)
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GameCompleted) })
+  end
+
+  test "end_turn does NOT append GameCompleted when ending? but not last player" do
+    @game.update!(end_trigger_count: 1)
+    @game.current_player = @game.game_players.find { |gp| gp.order == 0 }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = Turn.from_game(@game).handle(:end_turn, game: @game)
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GameCompleted) })
   end
 
   test "end_turn emits HandRefreshed + CurrentPlayerAdvanced + TurnReset + IrreversibleBoundary" do
@@ -103,6 +276,65 @@ class TurnTest < ActiveSupport::TestCase
 
     reset = cs.find { |c| c.is_a?(Turn::Consequences::TurnReset) }
     refute_nil reset
+  end
+
+  test "end_turn emits NomadTilesExpired for tiles whose expires_on_turn matches the ending turn" do
+    @game.update!(turn_number: 4)
+    @player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "DonationGrassTile", "from" => "[5, 6]", "used" => true, "expires_on_turn" => 4 }
+    ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    expired = cs.find { |c| c.is_a?(Turn::Consequences::NomadTilesExpired) }
+    refute_nil expired
+    assert_equal @player.order, expired.player
+    assert_equal 1, expired.expired_tiles.size
+    assert_equal "DonationGrassTile", expired.expired_tiles.first["klass"]
+  end
+
+  test "end_turn does NOT emit NomadTilesExpired when no tiles have matching expires_on_turn" do
+    @game.update!(turn_number: 4)
+    @player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "DonationGrassTile", "from" => "[5, 6]", "used" => true, "expires_on_turn" => 7 }
+    ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::NomadTilesExpired) })
+  end
+
+  test "end_turn emits TilesReset for the next player" do
+    next_player = @game.game_players.find { |g| g.order != @player.order }
+    next_player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "OracleTile", "from" => "[5, 6]", "used" => true, "permanent" => true }
+    ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    reset = cs.find { |c| c.is_a?(Turn::Consequences::TilesReset) }
+    refute_nil reset
+    assert_equal next_player.order, reset.player
+    assert_equal 2, reset.prior_tiles.size
+  end
+
+  test "end_turn draws 2 cards when player holds a CrossroadsTile" do
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @player.update!(hand: [ "T" ], tiles: [ { "klass" => "CrossroadsTile", "from" => "[5, 5]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    refresh = cs.find { |c| c.is_a?(Turn::Consequences::HandRefreshed) }
+    assert_equal [ "G", "F" ], refresh.hand_after
+    assert_equal [ "T" ], refresh.deck_after
+    assert_equal [ "C", "T" ], refresh.discard_after
   end
 
   test "end_turn reshuffles when deck has only the drawn card" do
@@ -444,6 +676,16 @@ class TurnTest < ActiveSupport::TestCase
       end
     end
     raise "no empty #{terrain} hex"
+  end
+
+  def first_buildable_hex
+    20.times do |r|
+      20.times do |c|
+        next unless [ "C", "D", "F", "G", "T" ].include?(@game.board.terrain_at(r, c))
+        return [ r, c ] if @game.board_contents.empty?(r, c)
+      end
+    end
+    raise "no buildable hex"
   end
 
   def first_empty_terrain_other_than(terrain)

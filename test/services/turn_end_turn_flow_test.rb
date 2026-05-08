@@ -41,6 +41,41 @@ class TurnEndTurnFlowTest < ActiveSupport::TestCase
     end
   end
 
+  test "end_turn draws 2 cards when player holds CrossroadsTile and resets next player tiles" do
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @player.update!(hand: [ "T" ], tiles: [ { "klass" => "CrossroadsTile", "from" => "[5, 5]", "used" => false } ])
+    next_player = @game.game_players.find { |g| g.order != @player.order }
+    next_player.update!(tiles: [ { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true } ])
+    @game.reload
+    @game.instantiate
+
+    turn = Turn.from_game(@game)
+    ConsequenceApplier.apply!(@game, turn.handle(:end_turn, game: @game))
+
+    @player.reload
+    assert_equal [ "G", "F" ], @player.hand
+    next_player.reload
+    assert_equal false, next_player.tiles.first["used"]
+  end
+
+  test "end_turn drops nomad tiles whose expires_on_turn matches the ending turn" do
+    @game.update!(turn_number: 4)
+    @player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "DonationGrassTile", "from" => "[5, 6]", "used" => true, "expires_on_turn" => 4 }
+    ])
+    @game.reload
+    @game.instantiate
+
+    turn = Turn.from_game(@game)
+    ConsequenceApplier.apply!(@game, turn.handle(:end_turn, game: @game))
+
+    @player.reload
+    klasses = @player.tiles.map { |t| t["klass"] }
+    assert_includes klasses, "FarmTile"
+    refute_includes klasses, "DonationGrassTile"
+  end
+
   test "end_turn refreshes hand by drawing one card" do
     @game.update!(deck: [ "G", "F" ], discard: [ "C" ])
     @player.update!(hand: [ "T" ])

@@ -31,7 +31,7 @@ class TurnClickPersistenceTest < ActiveSupport::TestCase
     before = snapshot
 
     turn = Turn.from_game(@game)
-    cs = turn.handle(:select_action, game: @game, tile: :farm)
+    cs = turn.handle(:select_action, game: @game, tile: "FarmTile")
     ConsequenceApplier.apply!(@game, cs)
 
     @game.reload

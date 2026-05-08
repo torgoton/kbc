@@ -54,6 +54,8 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
+    when :select_settlement, :move_settlement, :place_meeple
+      handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
     end
@@ -61,27 +63,77 @@ class Turn
 
   private
 
+  def handle_sub_phase_action(action_name, game:, **params)
+    return [ error("no active sub-phase") ] unless sub_phase
+    prior_state = sub_phase_payload(sub_phase)
+    consequences = sub_phase.handle(action_name, game:, player_order:, **params)
+    consequences << Turn::Consequences::SubPhasePopped.new(prior_state: prior_state) if sub_phase.complete?
+    consequences
+  end
+
   def handle_select_action(game:, tile:)
     return [ error("a sub-phase is already active") ] if sub_phase
 
-    case tile
-    when :farm
-      handle_farm_activation(game:)
+    klass_name = tile.to_s
+    tile_class = Tiles::Tile.for_klass(klass_name)
+    return [ error("unknown tile: #{klass_name}") ] unless tile_class
+
+    instance = tile_class.new(0)
+    if instance.builds_settlement? && instance.build_terrain
+      activate_build(game:, klass_name:, terrain: instance.build_terrain)
+    elsif instance.builds_settlement?
+      activate_build(game:, klass_name:, terrain: nil)
+    elsif instance.moves_settlement?
+      activate_settlement_move(game:, klass_name:)
+    elsif instance.places_meeple?
+      activate_meeple_placement(game:, klass_name:, kind: instance.meeple_kind)
     else
-      [ error("unsupported tile: #{tile}") ]
+      [ error("tile #{klass_name} is not activatable via select_action") ]
     end
   end
 
-  def handle_farm_activation(game:)
+  def activate_meeple_placement(game:, klass_name:, kind:)
     gp = game.game_players.find { |g| g.order == player_order }
     return [ error("no current player") ] unless gp
 
-    held = gp.find_unused_tile("FarmTile")
-    return [ error("no unused Farm tile available") ] unless held
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+
+    pushed = Turn::SubPhases::MeeplePlacementPhase.new(tile_klass: klass_name, kind: kind)
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::MeeplePlacementPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_settlement_move(game:, klass_name:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+
+    pushed = Turn::SubPhases::SettlementMovePhase.new(tile_klass: klass_name, source: nil)
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::SettlementMovePhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_build(game:, klass_name:, terrain:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
 
     pushed = Turn::SubPhases::TileBuildPhase.new(
-      restricted_terrain: "G",
-      tile_klass: "FarmTile",
+      restricted_terrain: terrain,
+      tile_klass: klass_name,
       tile_source: Coordinate.from_key(held["from"])
     )
     [
@@ -115,25 +167,35 @@ class Turn
     deck_before = (game.deck || []).dup
     discard_before = (game.discard || []).dup
 
-    # Discard the player's hand, then draw one card. If the deck is empty after
-    # the draw, reshuffle from discard. Randomness is decided here so the
-    # consequence carries deterministic before/after state.
+    # Discard the player's hand, then draw one card (or two if they hold a
+    # CrossroadsTile). Reshuffle from discard whenever the deck would be empty.
+    # Randomness is decided here so the consequence carries deterministic
+    # before/after state.
+    draw_count = has_crossroads_tile?(gp) ? 2 : 1
     discard_after = discard_before + hand_before
-    pool = deck_before
-    if pool.empty?
-      pool = discard_after.shuffle
-      discard_after = []
+    pool = deck_before.dup
+    drawn = []
+    draw_count.times do
+      if pool.empty? && discard_after.any?
+        pool = discard_after.shuffle
+        discard_after = []
+      end
+      break if pool.empty?
+      drawn << pool.shift
     end
-    drawn = pool.first
-    deck_after = pool[1..]
+    deck_after = pool
     if deck_after.empty? && discard_after.any?
       deck_after = discard_after.shuffle
       discard_after = []
     end
-    hand_after = drawn.nil? ? [] : [ drawn ]
+    hand_after = drawn
 
     next_order = (player_order + 1) % game.game_players.count
+    next_player = game.game_players.find { |g| g.order == next_order }
     prior_turn_state = game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil
+    completed = game_complete_for(game)
+    tiles_reset = next_player ? [ Turn::Consequences::TilesReset.new(player: next_order, prior_tiles: (next_player.tiles || []).deep_dup) ] : []
+    expired = expired_nomad_tiles_for(gp, game)
 
     [
       Turn::Consequences::HandRefreshed.new(
@@ -146,9 +208,29 @@ class Turn
         discard_after: discard_after
       ),
       Turn::Consequences::CurrentPlayerAdvanced.new(prior_order: player_order, next_order: next_order),
+      *tiles_reset,
+      *expired,
       Turn::Consequences::TurnReset.new(prior_turn_number: game.turn_number, prior_turn_state: prior_turn_state),
+      *completed,
       Turn::Consequences::IrreversibleBoundary.new
     ]
+  end
+
+  def expired_nomad_tiles_for(gp, game)
+    expired = (gp.tiles || []).select { |t| t["expires_on_turn"] == game.turn_number }
+    return [] if expired.empty?
+    [ Turn::Consequences::NomadTilesExpired.new(player: player_order, expired_tiles: expired.deep_dup) ]
+  end
+
+  def has_crossroads_tile?(gp)
+    (gp.tiles || []).any? { |t| t["klass"] == "CrossroadsTile" }
+  end
+
+  def game_complete_for(game)
+    return [] unless game.ending?
+    last_order = game.game_players.count - 1
+    return [] unless player_order == last_order
+    [ Turn::Consequences::GameCompleted.new(prior_state: game.state, prior_scores: game.scores) ]
   end
 
   def handle_activate_fort(game:)
@@ -224,9 +306,11 @@ class Turn
     goals = goal_scores_for(game, gp, terrain, row, col)
     families = families_score_for(game, gp, row, col)
     outpost_consume = outpost_active ? [ Turn::Consequences::OutpostDeactivated.new(prior_active: true) ] : []
+    end_trigger = Turn::Consequences::EndTriggered.maybe(game: game, player_order: player_order)
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
+      *end_trigger,
       *pickups,
       *grants,
       *immediate,
@@ -315,6 +399,10 @@ class Turn
         Turn::SubPhases::TileBuildPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::FortPhase::TYPE
         Turn::SubPhases::FortPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::SettlementMovePhase::TYPE
+        Turn::SubPhases::SettlementMovePhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::MeeplePlacementPhase::TYPE
+        Turn::SubPhases::MeeplePlacementPhase.from_h(hash["state"] || {})
       end
     end
 

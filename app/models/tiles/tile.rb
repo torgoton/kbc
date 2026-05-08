@@ -112,6 +112,10 @@ module Tiles
     # Subclasses override this (e.g. BarnTile returns hand, HarborTile returns "W").
     def move_terrain(hand:) = nil
 
+    # True for tiles whose meeple can be moved via a select-source-then-destination
+    # flow (Lighthouse ship, Wagon). False for placement-only tiles (Barracks).
+    def meeple_movable? = false
+
     # Human-readable description of what the player must do with this tile.
     def action_message(player_handle:, terrain_names:, hand: nil)
       if moves_settlement?

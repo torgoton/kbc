@@ -24,7 +24,7 @@ class ReplayConsequenceStreamTest < ActiveSupport::TestCase
     snapshot = @game.capture_snapshot
 
     stream = []
-    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: :farm)
+    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: "FarmTile")
     ConsequenceApplier.apply!(@game, activation)
     stream.concat(activation)
 

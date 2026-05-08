@@ -5,6 +5,7 @@ module Tiles
 
     def places_meeple? = true
     def meeple_kind    = "ship"
+    def meeple_movable? = true
     def meeple_grant   = { "kind" => "ship", "qty" => 1 }
 
     def on_pickup(game_player:)

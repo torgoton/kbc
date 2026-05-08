@@ -51,6 +51,26 @@ class Turn::SubPhases::FortPhaseTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
+  test "handle(:build) appends EndTriggered when this build empties player supply" do
+    @player.update!(supply: { "settlements" => 1 })
+    target = first_empty_terrain("G")
+    phase = fort_phase(fort_terrain: "G", builds_remaining: 2)
+    cs = phase.handle(:build, game: @game, player_order: 0, row: target[0], col: target[1])
+
+    triggered = cs.find { |c| c.is_a?(Turn::Consequences::EndTriggered) }
+    refute_nil triggered
+    assert_equal 0, triggered.player
+  end
+
+  test "handle(:build) does NOT append EndTriggered when supply remains > 0" do
+    @player.update!(supply: { "settlements" => 5 })
+    target = first_empty_terrain("G")
+    phase = fort_phase(fort_terrain: "G", builds_remaining: 2)
+    cs = phase.handle(:build, game: @game, player_order: 0, row: target[0], col: target[1])
+
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::EndTriggered) })
+  end
+
   test "handle(:build) errors when target is occupied" do
     target = first_empty_terrain("G")
     @game.board_contents.place_settlement(target[0], target[1], 1)

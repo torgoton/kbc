@@ -36,7 +36,7 @@ class TurnRoundTripTest < ActiveSupport::TestCase
     before = snapshot
 
     turn = Turn.from_game(@game)
-    cs1 = turn.handle(:select_action, game: @game, tile: :farm)
+    cs1 = turn.handle(:select_action, game: @game, tile: "FarmTile")
     ConsequenceApplier.apply!(@game, cs1)
 
     @game.reload

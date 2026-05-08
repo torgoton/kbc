@@ -21,6 +21,13 @@ class Turn
               when "hand_refreshed" then HandRefreshed
               when "current_player_advanced" then CurrentPlayerAdvanced
               when "turn_reset" then TurnReset
+              when "end_triggered" then EndTriggered
+              when "game_completed" then GameCompleted
+              when "tiles_reset" then TilesReset
+              when "nomad_tiles_expired" then NomadTilesExpired
+              when "settlement_moved" then SettlementMoved
+              when "meeple_placed" then MeeplePlaced
+              when "meeple_removed" then MeepleRemoved
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)

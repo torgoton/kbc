@@ -42,7 +42,8 @@ class Turn
         @complete = (@builds_remaining <= 0)
 
         consequences = [
-          Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: fort_terrain)
+          Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: fort_terrain),
+          *Turn::Consequences::EndTriggered.maybe(game: game, player_order: player_order)
         ]
         # Only emit SubPhaseStateUpdated if not completing — the completion path
         # emits SubPhasePopped at the Turn layer, which restores prior state on undo.
