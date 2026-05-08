@@ -134,6 +134,7 @@ class Turn
 
     next_order = (player_order + 1) % game.game_players.count
     prior_turn_state = game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil
+    completed = game_complete_for(game)
 
     [
       Turn::Consequences::HandRefreshed.new(
@@ -147,8 +148,16 @@ class Turn
       ),
       Turn::Consequences::CurrentPlayerAdvanced.new(prior_order: player_order, next_order: next_order),
       Turn::Consequences::TurnReset.new(prior_turn_number: game.turn_number, prior_turn_state: prior_turn_state),
+      *completed,
       Turn::Consequences::IrreversibleBoundary.new
     ]
+  end
+
+  def game_complete_for(game)
+    return [] unless game.ending?
+    last_order = game.game_players.count - 1
+    return [] unless player_order == last_order
+    [ Turn::Consequences::GameCompleted.new(prior_state: game.state, prior_scores: game.scores) ]
   end
 
   def handle_activate_fort(game:)
@@ -224,9 +233,11 @@ class Turn
     goals = goal_scores_for(game, gp, terrain, row, col)
     families = families_score_for(game, gp, row, col)
     outpost_consume = outpost_active ? [ Turn::Consequences::OutpostDeactivated.new(prior_active: true) ] : []
+    end_trigger = end_trigger_for(gp)
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
+      *end_trigger,
       *pickups,
       *grants,
       *immediate,
@@ -236,6 +247,11 @@ class Turn
       Turn::Consequences::BuildRecorded.new(at: Coordinate.new(row, col).to_key),
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
+  end
+
+  def end_trigger_for(gp)
+    return [] unless gp.settlements_remaining == 1  # this build will drop to 0
+    [ Turn::Consequences::EndTriggered.new(player: player_order) ]
   end
 
   def families_score_for(game, gp, row, col)

@@ -79,6 +79,59 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
+  test "build that empties player supply appends EndTriggered" do
+    @player.update!(supply: { "settlements" => 1 })
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    triggered = cs.find { |c| c.is_a?(Turn::Consequences::EndTriggered) }
+    refute_nil triggered
+    assert_equal @player.order, triggered.player
+  end
+
+  test "build that does not empty supply does NOT append EndTriggered" do
+    @player.update!(supply: { "settlements" => 5 })
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::EndTriggered) })
+  end
+
+  test "end_turn at the last player's turn appends GameCompleted when ending?" do
+    @game.update!(end_trigger_count: 1)  # ending? is true
+    last_order = @game.game_players.count - 1
+    @game.current_player = @game.game_players.find { |gp| gp.order == last_order }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = Turn.from_game(@game).handle(:end_turn, game: @game)
+    completed = cs.find { |c| c.is_a?(Turn::Consequences::GameCompleted) }
+    refute_nil completed, "expected GameCompleted at last player's end_turn when ending?"
+  end
+
+  test "end_turn does NOT append GameCompleted when not ending?" do
+    last_order = @game.game_players.count - 1
+    @game.current_player = @game.game_players.find { |gp| gp.order == last_order }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = Turn.from_game(@game).handle(:end_turn, game: @game)
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GameCompleted) })
+  end
+
+  test "end_turn does NOT append GameCompleted when ending? but not last player" do
+    @game.update!(end_trigger_count: 1)
+    @game.current_player = @game.game_players.find { |gp| gp.order == 0 }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = Turn.from_game(@game).handle(:end_turn, game: @game)
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GameCompleted) })
+  end
+
   test "end_turn emits HandRefreshed + CurrentPlayerAdvanced + TurnReset + IrreversibleBoundary" do
     @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
     @player.update!(hand: [ "T" ])
