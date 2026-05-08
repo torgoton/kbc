@@ -42,13 +42,18 @@ class Turn
 
       def handle_build(game:, player_order:, row:, col:)
         game.instantiate_board unless game.board
-
-        return error("hex outside restricted terrain #{restricted_terrain}") unless game.board.terrain_at(row, col) == restricted_terrain
         return error("hex (#{row}, #{col}) is not empty") unless game.board_contents.empty?(row, col)
 
+        if restricted_terrain
+          return error("hex outside restricted terrain #{restricted_terrain}") unless game.board.terrain_at(row, col) == restricted_terrain
+        else
+          return error("hex (#{row}, #{col}) not in #{tile_klass} valid_destinations") unless valid_destination?(game, player_order, row, col)
+        end
+
+        terrain = restricted_terrain || game.board.terrain_at(row, col)
         consequences = [
           Turn::Consequences::SettlementPlaced.new(
-            at: Coordinate.new(row, col), player: player_order, terrain: restricted_terrain
+            at: Coordinate.new(row, col), player: player_order, terrain: terrain
           ),
           *Turn::Consequences::EndTriggered.maybe(game: game, player_order: player_order)
         ]
@@ -69,6 +74,18 @@ class Turn
 
       def error(msg)
         [ Turn::Consequences::Error.new(message: msg) ]
+      end
+
+      def valid_destination?(game, player_order, row, col)
+        klass = Tiles::Tile.for_klass(tile_klass)
+        return false unless klass
+        instance = klass.new(0)
+        instance.valid_destinations(
+          board_contents: game.board_contents,
+          board: game.board,
+          player_order: player_order,
+          hand: nil
+        ).include?([ row, col ])
       end
     end
   end

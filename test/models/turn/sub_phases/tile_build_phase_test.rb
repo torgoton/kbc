@@ -113,4 +113,46 @@ class Turn::SubPhases::TileBuildPhaseTest < ActiveSupport::TestCase
 
     refute(consequences.any? { |c| c.is_a?(Turn::Consequences::EndTriggered) })
   end
+
+  test "with restricted_terrain: nil, handle(:build) accepts a hex returned by tile.valid_destinations" do
+    # Set up a Village scenario: player(0) has 3 settlements clustered, build target adjacent to all 3.
+    cluster = three_clustered_grass_with_common_neighbor
+    cluster[:settlements].each { |r, c| @game.board_contents.place_settlement(r, c, 0) }
+    @game.save!
+
+    phase = Turn::SubPhases::TileBuildPhase.new(
+      restricted_terrain: nil, tile_klass: "VillageTile", tile_source: Coordinate.new(0, 0)
+    )
+    target_r, target_c = cluster[:target]
+    cs = phase.handle(:build, game: @game, player_order: 0, row: target_r, col: target_c)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SettlementPlaced) })
+  end
+
+  test "with restricted_terrain: nil, handle(:build) errors on a hex NOT in valid_destinations" do
+    phase = Turn::SubPhases::TileBuildPhase.new(
+      restricted_terrain: nil, tile_klass: "VillageTile", tile_source: Coordinate.new(0, 0)
+    )
+    # No player(0) settlements exist; Village requires adjacency to 3 → no valid targets anywhere.
+    cs = phase.handle(:build, game: @game, player_order: 0, row: 5, col: 5)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  private
+
+  # Find 3 grass hexes adjacent to a single common neighbor (also grass + empty),
+  # so a Village build at the common neighbor is valid.
+  def three_clustered_grass_with_common_neighbor
+    20.times do |r|
+      20.times do |c|
+        next unless @game.board.terrain_at(r, c) == "G"
+        next unless @game.board_contents.empty?(r, c)
+        nbrs = @game.board_contents.neighbors(r, c).select { |nr, nc|
+          @game.board.terrain_at(nr, nc) == "G" && @game.board_contents.empty?(nr, nc)
+        }
+        next if nbrs.size < 3
+        return { target: [ r, c ], settlements: nbrs.first(3) }
+      end
+    end
+    raise "no Village-eligible grass cluster on this board"
+  end
 end
