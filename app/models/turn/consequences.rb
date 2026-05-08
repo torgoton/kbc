@@ -18,6 +18,7 @@ class Turn
               when "irreversible_boundary" then IrreversibleBoundary
               when "card_drawn" then CardDrawn
               when "sub_phase_state_updated" then SubPhaseStateUpdated
+              when "hand_refreshed" then HandRefreshed
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
