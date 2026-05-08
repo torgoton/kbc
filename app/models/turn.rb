@@ -54,7 +54,7 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
-    when :select_settlement, :move_settlement, :place_meeple, :remove_settlement, :end_tile_action
+    when :select_settlement, :move_settlement, :place_meeple, :remove_settlement, :place_wall, :end_tile_action
       handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
@@ -83,6 +83,8 @@ class Turn
       activate_build(game:, klass_name:, terrain: instance.build_terrain)
     elsif instance.builds_settlement?
       activate_build(game:, klass_name:, terrain: nil)
+    elsif instance.places_wall?
+      activate_wall_placement(game:, klass_name:)
     elsif instance.is_a?(Tiles::Nomad::SwordTile)
       activate_targeted_removal(game:)
     elsif instance.is_a?(Tiles::Nomad::ResettlementTile)
@@ -162,6 +164,23 @@ class Turn
     [
       Turn::Consequences::SubPhasePushed.new(
         phase_type: Turn::SubPhases::TargetedRemovalPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_wall_placement(game:, klass_name:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+    return [ error("no stone walls left") ] if game.stone_walls <= 0
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+
+    pushed = Turn::SubPhases::WallPlacementPhase.new
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::WallPlacementPhase::TYPE,
         state: pushed.to_h
       )
     ]
@@ -448,6 +467,8 @@ class Turn
         Turn::SubPhases::ResettlementPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::TargetedRemovalPhase::TYPE
         Turn::SubPhases::TargetedRemovalPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::WallPlacementPhase::TYPE
+        Turn::SubPhases::WallPlacementPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::MeeplePlacementPhase::TYPE
         Turn::SubPhases::MeeplePlacementPhase.from_h(hash["state"] || {})
       end
