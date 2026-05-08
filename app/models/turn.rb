@@ -353,6 +353,8 @@ class Turn
         Turn::SubPhases::TileBuildPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::FortPhase::TYPE
         Turn::SubPhases::FortPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::SettlementMovePhase::TYPE
+        Turn::SubPhases::SettlementMovePhase.from_h(hash["state"] || {})
       end
     end
 
