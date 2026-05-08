@@ -79,6 +79,52 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
+  test "activate_fort emits TileConsumed + CardDrawn + SubPhasePushed(FortPhase) + IrreversibleBoundary" do
+    @player.update!(tiles: [ { "klass" => "FortTile", "from" => "[3, 4]", "used" => false } ])
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:activate_fort, game: @game)
+
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::TileConsumed) && c.klass == "FortTile" })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::IrreversibleBoundary) })
+
+    drawn = cs.find { |c| c.is_a?(Turn::Consequences::CardDrawn) }
+    refute_nil drawn
+    assert_equal "G", drawn.card  # top of deck
+    assert_equal [ "F", "T" ], drawn.deck_after
+    assert_equal [ "C", "G" ], drawn.discard_after
+
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal Turn::SubPhases::FortPhase::TYPE, pushed.phase_type
+    assert_equal "G", pushed.state["fort_terrain"]
+    assert_equal 2, pushed.state["builds_remaining"]
+  end
+
+  test "activate_fort returns Error when no unused FortTile" do
+    @player.update!(tiles: [])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:activate_fort, game: @game)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "activate_fort reshuffles when deck has only the drawn card" do
+    @player.update!(tiles: [ { "klass" => "FortTile", "from" => "[3, 4]", "used" => false } ])
+    @game.update!(deck: [ "G" ], discard: [ "F", "T" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:activate_fort, game: @game)
+    drawn = cs.find { |c| c.is_a?(Turn::Consequences::CardDrawn) }
+    assert_equal "G", drawn.card
+    assert_equal [ "F", "T" ].sort, drawn.deck_after.sort
+    assert_equal [ "G" ], drawn.discard_after
+  end
+
   test "activate_outpost emits OutpostActivated + TileConsumed when player owns an unused OutpostTile" do
     @player.update!(tiles: [ { "klass" => "OutpostTile", "from" => "[3, 4]", "used" => false } ])
     @game.reload

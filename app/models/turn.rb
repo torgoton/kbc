@@ -50,6 +50,8 @@ class Turn
       handle_build(game:, **params)
     when :activate_outpost
       handle_activate_outpost(game:)
+    when :activate_fort
+      handle_activate_fort(game:)
     else
       [ error("unsupported turn action: #{action_name}") ]
     end
@@ -101,6 +103,44 @@ class Turn
     consequences = sub_phase.handle(:build, game:, player_order:, **params)
     consequences << Turn::Consequences::SubPhasePopped.new(prior_state: prior_state) if sub_phase.complete?
     consequences
+  end
+
+  def handle_activate_fort(game:)
+    return [ error("a sub-phase is already active") ] if sub_phase
+
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+    return [ error("no unused FortTile") ] unless gp.find_unused_tile("FortTile")
+    return [ error("no settlements remaining") ] unless gp.settlements_remaining > 0
+
+    deck_before = (game.deck || []).dup
+    discard_before = (game.discard || []).dup
+    return [ error("deck is empty") ] if deck_before.empty? && discard_before.empty?
+
+    drawn = deck_before.first
+    remaining_deck = deck_before[1..]
+    if remaining_deck.empty?
+      remaining_deck = discard_before.shuffle
+      discard_after = [ drawn ]
+    else
+      discard_after = discard_before + [ drawn ]
+    end
+    deck_after = remaining_deck
+
+    pushed = Turn::SubPhases::FortPhase.new(fort_terrain: drawn, builds_remaining: 2)
+
+    [
+      Turn::Consequences::TileConsumed.new(klass: "FortTile", player: player_order),
+      Turn::Consequences::CardDrawn.new(
+        card: drawn,
+        deck_before: deck_before,
+        discard_before: discard_before,
+        deck_after: deck_after,
+        discard_after: discard_after
+      ),
+      Turn::Consequences::SubPhasePushed.new(phase_type: Turn::SubPhases::FortPhase::TYPE, state: pushed.to_h),
+      Turn::Consequences::IrreversibleBoundary.new
+    ]
   end
 
   def handle_activate_outpost(game:)
