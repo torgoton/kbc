@@ -20,6 +20,7 @@ class Turn
               when "sub_phase_state_updated" then SubPhaseStateUpdated
               when "hand_refreshed" then HandRefreshed
               when "current_player_advanced" then CurrentPlayerAdvanced
+              when "turn_reset" then TurnReset
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
