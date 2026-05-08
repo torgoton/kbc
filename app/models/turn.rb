@@ -64,24 +64,28 @@ class Turn
   def handle_select_action(game:, tile:)
     return [ error("a sub-phase is already active") ] if sub_phase
 
-    case tile
-    when :farm
-      handle_farm_activation(game:)
+    klass_name = tile.to_s
+    tile_class = Tiles::Tile.for_klass(klass_name)
+    return [ error("unknown tile: #{klass_name}") ] unless tile_class
+
+    instance = tile_class.new(0)
+    if instance.builds_settlement? && instance.build_terrain
+      activate_fixed_terrain_build(game:, klass_name:, terrain: instance.build_terrain)
     else
-      [ error("unsupported tile: #{tile}") ]
+      [ error("tile #{klass_name} is not activatable via select_action") ]
     end
   end
 
-  def handle_farm_activation(game:)
+  def activate_fixed_terrain_build(game:, klass_name:, terrain:)
     gp = game.game_players.find { |g| g.order == player_order }
     return [ error("no current player") ] unless gp
 
-    held = gp.find_unused_tile("FarmTile")
-    return [ error("no unused Farm tile available") ] unless held
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
 
     pushed = Turn::SubPhases::TileBuildPhase.new(
-      restricted_terrain: "G",
-      tile_klass: "FarmTile",
+      restricted_terrain: terrain,
+      tile_klass: klass_name,
       tile_source: Coordinate.from_key(held["from"])
     )
     [

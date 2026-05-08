@@ -26,7 +26,7 @@ class FarmSliceThroughNewStackTest < ActiveSupport::TestCase
     settlements_before = @player.settlements_remaining
 
     # 1. Activate Farm.
-    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: :farm)
+    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: "FarmTile")
     ConsequenceApplier.apply!(@game, activation)
     Broadcaster.publish(@game, activation)
 
@@ -56,7 +56,7 @@ class FarmSliceThroughNewStackTest < ActiveSupport::TestCase
   end
 
   test "build emits a board broadcast" do
-    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: :farm)
+    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: "FarmTile")
     ConsequenceApplier.apply!(@game, activation)
     @game.reload
     @game.instantiate
@@ -75,7 +75,7 @@ class FarmSliceThroughNewStackTest < ActiveSupport::TestCase
     @game.reload
     settlements_before = @player.settlements_remaining
 
-    consequences = Turn.from_game(@game).handle(:select_action, game: @game, tile: :farm)
+    consequences = Turn.from_game(@game).handle(:select_action, game: @game, tile: "FarmTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
     assert_raises(ConsequenceApplier::ApplyError) do
       ConsequenceApplier.apply!(@game, consequences)
@@ -87,7 +87,7 @@ class FarmSliceThroughNewStackTest < ActiveSupport::TestCase
   end
 
   test "build on a non-Grass hex during Farm sub-phase is rejected and sub-phase remains active" do
-    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: :farm)
+    activation = Turn.from_game(@game).handle(:select_action, game: @game, tile: "FarmTile")
     ConsequenceApplier.apply!(@game, activation)
     @game.reload
     @game.instantiate

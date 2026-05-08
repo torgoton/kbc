@@ -21,8 +21,8 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal @player.order, turn.player_order
   end
 
-  test "select_action(:farm) emits SubPhasePushed with TileBuildPhase state" do
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+  test "select_action(FarmTile) emits SubPhasePushed with TileBuildPhase state" do
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
 
     assert_equal 1, consequences.size
     pushed = consequences.first
@@ -33,17 +33,17 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "[3, 4]", pushed.state["tile_source"]
   end
 
-  test "select_action(:farm) with no Farm tile returns Error" do
+  test "select_action(FarmTile) with no Farm tile returns Error" do
     @player.update!(tiles: [])
     @game.reload
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
-  test "select_action(:farm) when Farm already used returns Error" do
+  test "select_action(FarmTile) when Farm already used returns Error" do
     @player.update!(tiles: [ { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true } ])
     @game.reload
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
@@ -56,7 +56,37 @@ class TurnTest < ActiveSupport::TestCase
         }
       }
     }
-    consequences = turn.handle(:select_action, game: @game, tile: :farm)
+    consequences = turn.handle(:select_action, game: @game, tile: "FarmTile")
+    assert_kind_of Turn::Consequences::Error, consequences.first
+  end
+
+  test "select_action works for any builds_settlement? tile with fixed build_terrain" do
+    [
+      [ "OasisTile", "D" ],
+      [ "GardenTile", "F" ],
+      [ "MonasteryTile", "C" ],
+      [ "ForestersLodgeTile", "T" ]
+    ].each do |klass, terrain|
+      @player.update!(tiles: [ { "klass" => klass, "from" => "[2, 2]", "used" => false } ])
+      @game.reload
+      cs = turn.handle(:select_action, game: @game, tile: klass)
+      pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+      refute_nil pushed, "expected SubPhasePushed for #{klass}"
+      assert_equal terrain, pushed.state["restricted_terrain"], "wrong terrain for #{klass}"
+      assert_equal klass, pushed.state["tile_klass"]
+    end
+  end
+
+  test "select_action errors for unknown tile klass" do
+    consequences = turn.handle(:select_action, game: @game, tile: "NonsenseTile")
+    assert_kind_of Turn::Consequences::Error, consequences.first
+  end
+
+  test "select_action errors for a tile that does not build_settlement" do
+    # OutpostTile has its own activate path; passing it through select_action should error.
+    @player.update!(tiles: [ { "klass" => "OutpostTile", "from" => "[2, 2]", "used" => false } ])
+    @game.reload
+    consequences = turn.handle(:select_action, game: @game, tile: "OutpostTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
