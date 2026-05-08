@@ -36,11 +36,19 @@ class Turn
       private
 
       def handle_place(game:, player_order:, row:, col:)
-        return error("hex (#{row}, #{col}) is not empty") unless game.board_contents.empty?(row, col)
-
         klass = Tiles::Tile.for_klass(tile_klass)
         return error("unknown tile #{tile_klass}") unless klass
-        valid = klass.new(0).valid_destinations(
+        instance = klass.new(0)
+
+        if game.board_contents.empty?(row, col)
+          handle_place_empty(game:, player_order:, instance:, row:, col:)
+        else
+          handle_click_on_occupied(game:, player_order:, instance:, row:, col:)
+        end
+      end
+
+      def handle_place_empty(game:, player_order:, instance:, row:, col:)
+        valid = instance.valid_destinations(
           board_contents: game.board_contents, board: game.board,
           player_order: player_order, supply: supply_hash_for(game, player_order)
         )
@@ -49,6 +57,18 @@ class Turn
         @complete = true
         [
           Turn::Consequences::MeeplePlaced.new(at: Coordinate.new(row, col), kind: kind, player: player_order),
+          Turn::Consequences::TileConsumed.new(klass: tile_klass, player: player_order)
+        ]
+      end
+
+      def handle_click_on_occupied(game:, player_order:, instance:, row:, col:)
+        return error("not your meeple") unless game.board_contents.player_at(row, col) == player_order
+        return error("not a #{kind}") unless game.board_contents.meeple_at(row, col) == kind
+        return error("move flow not yet supported for #{tile_klass}") if instance.meeple_movable?
+
+        @complete = true
+        [
+          Turn::Consequences::MeepleRemoved.new(at: Coordinate.new(row, col), kind: kind, player: player_order),
           Turn::Consequences::TileConsumed.new(klass: tile_klass, player: player_order)
         ]
       end

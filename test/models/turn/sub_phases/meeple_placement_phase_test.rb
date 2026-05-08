@@ -34,9 +34,42 @@ class Turn::SubPhases::MeeplePlacementPhaseTest < ActiveSupport::TestCase
     assert p.complete?
   end
 
-  test "place_meeple at a non-empty hex errors" do
+  test "place_meeple at a non-empty non-meeple hex errors" do
     target = first_buildable_hex
     @game.board_contents.place_settlement(target[0], target[1], 0)
+    @game.save!
+
+    p = phase
+    cs = p.handle(:place_meeple, game: @game, player_order: 0, row: target[0], col: target[1])
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "place_meeple on own warrior emits MeepleRemoved + TileConsumed (Barracks remove)" do
+    target = first_buildable_hex
+    @game.board_contents.place_warrior(target[0], target[1], 0)
+    @game.save!
+
+    p = phase  # Barracks (warrior, !meeple_movable?)
+    cs = p.handle(:place_meeple, game: @game, player_order: 0, row: target[0], col: target[1])
+
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::MeepleRemoved) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::TileConsumed) && c.klass == "BarracksTile" })
+    assert p.complete?
+  end
+
+  test "place_meeple on own ship for movable tile (Lighthouse) errors (deferred to slice 3i.7)" do
+    target = first_buildable_hex
+    @game.board_contents.place_ship(target[0], target[1], 0)
+    @game.save!
+
+    p = phase(tile_klass: "LighthouseTile", kind: "ship")
+    cs = p.handle(:place_meeple, game: @game, player_order: 0, row: target[0], col: target[1])
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "place_meeple on opponent meeple errors" do
+    target = first_buildable_hex
+    @game.board_contents.place_warrior(target[0], target[1], 1)
     @game.save!
 
     p = phase
