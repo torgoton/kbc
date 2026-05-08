@@ -111,7 +111,7 @@ class Turn
     gp = game.game_players.find { |g| g.order == player_order }
     return [ error("no current player") ] unless gp
 
-    hand_before = (gp.hand || []).dup
+    hand_before = Array(gp.hand)
     deck_before = (game.deck || []).dup
     discard_before = (game.discard || []).dup
 
