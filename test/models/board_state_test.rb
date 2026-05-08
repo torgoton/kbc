@@ -323,4 +323,109 @@ class BoardStateTest < ActiveSupport::TestCase
     # Player 0 has no adjacencies, so any G hex is buildable.
     assert state.can_mandatory_build?(board, 0, "G", 15, 15)
   end
+
+  # pickup_targets_for — adjacent location hexes with qty > 0 and not in taken_from.
+
+  test "pickup_targets_for returns adjacent location hexes with qty > 0" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_tile(nr, nc, "FarmTile", 2)
+    targets = state.pickup_targets_for(5, 5, nil)
+    assert_equal 1, targets.size
+    coord, klass = targets.first
+    assert_equal Coordinate.new(nr, nc), coord
+    assert_equal "FarmTile", klass
+  end
+
+  test "pickup_targets_for skips hexes already in taken_from" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_tile(nr, nc, "FarmTile", 2)
+    targets = state.pickup_targets_for(5, 5, [ "[#{nr}, #{nc}]" ])
+    assert_empty targets
+  end
+
+  test "pickup_targets_for skips hexes with qty 0" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_tile(nr, nc, "FarmTile", 0)
+    assert_empty state.pickup_targets_for(5, 5, nil)
+  end
+
+  test "pickup_targets_for skips settlement neighbors (non-tile cells)" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_settlement(nr, nc, 0)
+    assert_empty state.pickup_targets_for(5, 5, nil)
+  end
+
+  test "pickup_targets_for handles multiple adjacent tiles" do
+    state = BoardState.new
+    nbrs = state.neighbors(5, 5).first(2)
+    nbrs.each { |r, c| state.place_tile(r, c, "OracleTile", 1) }
+    targets = state.pickup_targets_for(5, 5, nil)
+    assert_equal 2, targets.size
+  end
+
+  # ambassadors_match? — true iff the build is adjacent to any opponent's settlement.
+
+  test "ambassadors_match? is true when an opponent settlement is adjacent" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_settlement(nr, nc, 1)
+    assert state.ambassadors_match?(0, 5, 5)
+  end
+
+  test "ambassadors_match? is false when the only adjacent settlement is the player's own" do
+    state = BoardState.new
+    nr, nc = state.neighbors(5, 5).first
+    state.place_settlement(nr, nc, 0)
+    refute state.ambassadors_match?(0, 5, 5)
+  end
+
+  test "ambassadors_match? is false when no neighbors are settled" do
+    refute BoardState.new.ambassadors_match?(0, 5, 5)
+  end
+
+  # shepherds_match? — true iff no adjacent hex on the same terrain is empty.
+  # Intent: built settlement has no further matching-terrain growth space.
+
+  test "shepherds_match? is true when no adjacent matching-terrain hex is empty" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "F")  # no neighbors are G
+    assert state.shepherds_match?(board, "G", 5, 5)
+  end
+
+  test "shepherds_match? is false when an adjacent matching-terrain hex is empty" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G")
+    refute state.shepherds_match?(board, "G", 5, 5)
+  end
+
+  test "shepherds_match? is true when adjacent matching hexes are all occupied" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G")
+    state.neighbors(5, 5).each { |r, c| state.place_settlement(r, c, 1) }
+    assert state.shepherds_match?(board, "G", 5, 5)
+  end
+
+  # can_mandatory_build? with skip_adjacency:true bypasses the adjacency clause (Outpost).
+
+  test "can_mandatory_build? with skip_adjacency: true accepts a non-adjacent hex when player has adjacencies" do
+    state = BoardState.new
+    state.place_settlement(5, 5, 0)  # player 0 has a settlement; adjacency-required mode would activate
+    board = TerrainStub.new(default: "G")
+    far_r, far_c = 15, 15
+    refute state.can_mandatory_build?(board, 0, "G", far_r, far_c)
+    assert state.can_mandatory_build?(board, 0, "G", far_r, far_c, skip_adjacency: true)
+  end
+
+  test "can_mandatory_build? with skip_adjacency still requires terrain match and emptiness" do
+    state = BoardState.new
+    board = TerrainStub.new(default: "G", overrides: { [ 5, 5 ] => "F" })
+    refute state.can_mandatory_build?(board, 0, "G", 5, 5, skip_adjacency: true)
+
+    state.place_settlement(5, 6, 1)
+    refute state.can_mandatory_build?(board, 0, "G", 5, 6, skip_adjacency: true)
+  end
 end

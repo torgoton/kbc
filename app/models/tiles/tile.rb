@@ -76,6 +76,14 @@ module Tiles
 
     def meeple_kind = nil
 
+    # Returns { "kind" => "warrior"|"ship"|"wagon", "qty" => n } or nil.
+    # Subclasses that grant meeples on pickup override this.
+    def meeple_grant = nil
+
+    # Returns { "goal" => "...", "points" => n } or nil.
+    # Subclasses that score immediately on pickup (e.g. Treasure) override this.
+    def immediate_score = nil
+
     def on_pickup(game_player:)
       nil
     end

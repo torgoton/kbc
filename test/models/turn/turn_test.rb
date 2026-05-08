@@ -79,6 +79,137 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
+  test "end_turn emits HandRefreshed + CurrentPlayerAdvanced + TurnReset + IrreversibleBoundary" do
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @player.update!(hand: [ "T" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::IrreversibleBoundary) })
+
+    refresh = cs.find { |c| c.is_a?(Turn::Consequences::HandRefreshed) }
+    refute_nil refresh
+    assert_equal [ "T" ], refresh.hand_before
+    assert_equal [ "G" ], refresh.hand_after
+    assert_equal [ "C", "T" ], refresh.discard_after
+
+    advance = cs.find { |c| c.is_a?(Turn::Consequences::CurrentPlayerAdvanced) }
+    refute_nil advance
+    assert_equal @player.order, advance.prior_order
+    assert_equal((@player.order + 1) % 2, advance.next_order)
+
+    reset = cs.find { |c| c.is_a?(Turn::Consequences::TurnReset) }
+    refute_nil reset
+  end
+
+  test "end_turn reshuffles when deck has only the drawn card" do
+    @game.update!(deck: [ "G" ], discard: [ "F", "T" ])
+    @player.update!(hand: [ "C" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    refresh = cs.find { |c| c.is_a?(Turn::Consequences::HandRefreshed) }
+    # After draw, deck would be empty; reshuffle from discard.
+    assert_equal [ "G" ], refresh.hand_after
+    assert_equal [ "F", "T", "C" ].sort, refresh.deck_after.sort + refresh.discard_after
+    # The drawn-card stays in discard for next reshuffle? Check existing pattern.
+    assert refresh.discard_after.empty?, "discard should be empty after reshuffle"
+  end
+
+  test "activate_fort emits TileConsumed + CardDrawn + SubPhasePushed(FortPhase) + IrreversibleBoundary" do
+    @player.update!(tiles: [ { "klass" => "FortTile", "from" => "[3, 4]", "used" => false } ])
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:activate_fort, game: @game)
+
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::TileConsumed) && c.klass == "FortTile" })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::IrreversibleBoundary) })
+
+    drawn = cs.find { |c| c.is_a?(Turn::Consequences::CardDrawn) }
+    refute_nil drawn
+    assert_equal "G", drawn.card  # top of deck
+    assert_equal [ "F", "T" ], drawn.deck_after
+    assert_equal [ "C", "G" ], drawn.discard_after
+
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal Turn::SubPhases::FortPhase::TYPE, pushed.phase_type
+    assert_equal "G", pushed.state["fort_terrain"]
+    assert_equal 2, pushed.state["builds_remaining"]
+  end
+
+  test "activate_fort returns Error when no unused FortTile" do
+    @player.update!(tiles: [])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:activate_fort, game: @game)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "activate_fort reshuffles when deck has only the drawn card" do
+    @player.update!(tiles: [ { "klass" => "FortTile", "from" => "[3, 4]", "used" => false } ])
+    @game.update!(deck: [ "G" ], discard: [ "F", "T" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:activate_fort, game: @game)
+    drawn = cs.find { |c| c.is_a?(Turn::Consequences::CardDrawn) }
+    assert_equal "G", drawn.card
+    assert_equal [ "F", "T" ].sort, drawn.deck_after.sort
+    assert_equal [ "G" ], drawn.discard_after
+  end
+
+  test "activate_outpost emits OutpostActivated + TileConsumed when player owns an unused OutpostTile" do
+    @player.update!(tiles: [ { "klass" => "OutpostTile", "from" => "[3, 4]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:activate_outpost, game: @game)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::OutpostActivated) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::TileConsumed) && c.klass == "OutpostTile" })
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+  end
+
+  test "activate_outpost returns Error when player has no unused OutpostTile" do
+    @player.update!(tiles: [])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:activate_outpost, game: @game)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "build with outpost_active skips adjacency and emits OutpostDeactivated" do
+    hand_terrain = @player.hand.first
+    seed = first_empty_terrain(hand_terrain)
+    @game.board_contents.place_settlement(seed[0], seed[1], 0)  # gives player adjacency, normally restricting builds
+    @game.current_action = { "turn" => { "outpost_active" => true } }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    far = first_empty_terrain_not_adjacent_to(seed, hand_terrain)
+    cs = turn.handle(:build, game: @game, row: far[0], col: far[1])
+
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SettlementPlaced) })
+    deactivate = cs.find { |c| c.is_a?(Turn::Consequences::OutpostDeactivated) }
+    refute_nil deactivate, "expected OutpostDeactivated"
+    assert_equal true, deactivate.prior_active
+  end
+
+  test "build without outpost_active does NOT emit OutpostDeactivated" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::OutpostDeactivated) })
+  end
+
   test "from_game defaults mandatory_remaining to 3 when current_action is empty" do
     @game.current_action = {}
     assert_equal 3, Turn.from_game(@game).mandatory_remaining
@@ -111,6 +242,161 @@ class TurnTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
+  test "build appends a TilePickedUp for each adjacent location hex with qty > 0" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "OracleTile", 2)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    pickups = cs.select { |c| c.is_a?(Turn::Consequences::TilePickedUp) }
+    assert_equal 1, pickups.size
+    assert_equal "OracleTile", pickups.first.klass
+    assert_equal Coordinate.new(nbr[0], nbr[1]), pickups.first.from
+  end
+
+  test "families: third build NOT in a straight line does not score" do
+    @game.update!(goals: [ "families" ])
+    # Random scattered prior builds.
+    @game.current_action = {
+      "turn" => { "mandatory_remaining" => 1, "builds" => [ "[2, 2]", "[10, 10]" ] }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    target = first_empty_terrain(@player.hand.first)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "families" })
+  end
+
+  test "build appends BuildRecorded carrying the placement coord" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    rec = cs.find { |c| c.is_a?(Turn::Consequences::BuildRecorded) }
+    refute_nil rec
+    assert_equal "[#{target[0]}, #{target[1]}]", rec.at
+  end
+
+  test "build appends GoalScored(ambassadors, 1) when adjacent to opponent and goal active" do
+    @game.update!(goals: [ "ambassadors" ])
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_settlement(nbr[0], nbr[1], 1) # opponent
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    score = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "ambassadors" }
+    refute_nil score
+    assert_equal 1, score.points
+  end
+
+  test "build does NOT score ambassadors when goal is inactive" do
+    @game.update!(goals: [])
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_settlement(nbr[0], nbr[1], 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "ambassadors" })
+  end
+
+  test "build appends GoalScored(shepherds, 2) when no adjacent same-terrain empty and goal active" do
+    @game.update!(goals: [ "shepherds" ])
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    # Force shepherds_match?: occupy every neighbor so none are empty matching-terrain.
+    @game.board_contents.neighbors(target[0], target[1]).each do |nr, nc|
+      @game.board_contents.place_settlement(nr, nc, 1)
+    end
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    score = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) && c.goal == "shepherds" }
+    refute_nil score
+    assert_equal 2, score.points
+  end
+
+  test "build appends MeepleGranted when picking up a meeple-granting tile" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "BarracksTile", 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    grants = cs.select { |c| c.is_a?(Turn::Consequences::MeepleGranted) }
+    assert_equal 1, grants.size
+    assert_equal "warrior", grants.first.kind
+    assert_equal 2, grants.first.qty
+    assert_equal @player.order, grants.first.player
+  end
+
+  test "build appends GoalScored + TileDiscarded for a Treasure pickup" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "TreasureTile", 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+
+    score = cs.find { |c| c.is_a?(Turn::Consequences::GoalScored) }
+    discard = cs.find { |c| c.is_a?(Turn::Consequences::TileDiscarded) }
+    refute_nil score, "expected GoalScored for treasure"
+    refute_nil discard, "expected TileDiscarded for treasure"
+    assert_equal "treasure", score.goal
+    assert_equal 3, score.points
+    assert_equal "TreasureTile", discard.klass
+  end
+
+  test "build does not append MeepleGranted for non-granting tiles" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "OracleTile", 1)
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::MeepleGranted) })
+  end
+
+  test "build does not append TilePickedUp for tiles in player's taken_from" do
+    hand_terrain = @player.hand.first
+    target = first_empty_terrain(hand_terrain)
+    nbr = @game.board_contents.neighbors(target[0], target[1]).first
+    @game.board_contents.place_tile(nbr[0], nbr[1], "OracleTile", 2)
+    @game.save!
+    @player.update!(taken_from: [ "[#{nbr[0]}, #{nbr[1]}]" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:build, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::TilePickedUp) })
+  end
+
   test "build errors when target is not adjacency-valid" do
     hand_terrain = @player.hand.first
     seed = first_empty_terrain(hand_terrain)
@@ -133,7 +419,8 @@ class TurnTest < ActiveSupport::TestCase
         }
       }
     }
-    consequences = turn.handle(:build, game: @game, row: 0, col: 0) # likely not Grass
+    far_r, far_c = first_empty_terrain_other_than("G")
+    consequences = turn.handle(:build, game: @game, row: far_r, col: far_c)
     assert_kind_of Turn::Consequences::Error, consequences.first
     refute(consequences.any? { |c| c.is_a?(Turn::Consequences::SubPhasePopped) })
   end
@@ -168,6 +455,21 @@ class TurnTest < ActiveSupport::TestCase
       end
     end
     raise "no empty non-#{terrain} hex"
+  end
+
+  def first_isolated_terrain_hex(terrain)
+    20.times do |row|
+      20.times do |col|
+        next unless @game.board.terrain_at(row, col) == terrain
+        next unless @game.board_contents.empty?(row, col)
+        if @game.board_contents.neighbors(row, col).none? { |nr, nc|
+             @game.board.terrain_at(nr, nc) == terrain && @game.board_contents.empty?(nr, nc)
+           }
+          return [ row, col ]
+        end
+      end
+    end
+    nil
   end
 
   def first_empty_terrain_not_adjacent_to(seed, terrain)

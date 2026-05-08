@@ -5,6 +5,7 @@
 #  id           :bigint           not null, primary key
 #  consequences :json             not null
 #  order        :integer          not null
+#  reversible   :boolean          default(TRUE), not null
 #  created_at   :datetime         not null
 #  updated_at   :datetime         not null
 #  game_id      :bigint           not null

@@ -82,9 +82,10 @@ class BoardState
     empty?(row, col) && !warrior_blocked?(row, col)
   end
 
-  def can_mandatory_build?(board, player_order, terrain, row, col)
+  def can_mandatory_build?(board, player_order, terrain, row, col, skip_adjacency: false)
     return false unless available_for_building?(row, col)
     return false unless board.terrain_at(row, col) == terrain
+    return true if skip_adjacency
 
     if any_player_adjacency_to_terrain?(board, player_order, terrain)
       adjacent_to_player?(player_order, row, col)
@@ -173,6 +174,28 @@ class BoardState
 
   def neighbors_where(row, col, &block)
     neighbors(row, col).select { |nr, nc| block.call(nr, nc) }
+  end
+
+  def pickup_targets_for(row, col, taken_from)
+    neighbors(row, col).filter_map do |nr, nc|
+      next if tile_qty(nr, nc) <= 0
+      key = "[#{nr}, #{nc}]"
+      next if taken_from&.include?(key)
+      [ Coordinate.new(nr, nc), tile_klass(nr, nc) ]
+    end
+  end
+
+  def ambassadors_match?(player_order, row, col)
+    neighbors(row, col).any? do |nr, nc|
+      p = player_at(nr, nc)
+      p && p != player_order
+    end
+  end
+
+  def shepherds_match?(board, terrain, row, col)
+    neighbors(row, col).none? do |nr, nc|
+      empty?(nr, nc) && board.terrain_at(nr, nc) == terrain
+    end
   end
 
   def locations_with_remaining_tiles

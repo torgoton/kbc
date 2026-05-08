@@ -8,6 +8,8 @@ class ConsequenceApplier
     end
   end
 
+  class NotReversibleError < StandardError; end
+
   def self.apply!(game, consequences)
     new(game, consequences).apply!
   end
@@ -37,6 +39,7 @@ class ConsequenceApplier
   def unapply!
     click = TurnClick.most_recent_for(@game)
     return @game unless click
+    raise NotReversibleError, "click ##{click.order} is non-reversible" unless click.reversible
 
     consequences = click.consequences.map { |h| Turn::Consequences.from_h(h) }
 
@@ -53,6 +56,7 @@ class ConsequenceApplier
 
   def record_click!
     next_order = (TurnClick.where(game_id: @game.id).maximum(:order) || 0) + 1
-    TurnClick.create!(game: @game, order: next_order, consequences: @consequences.map(&:to_h))
+    reversible = @consequences.none? { |c| c.is_a?(Turn::Consequences::IrreversibleBoundary) }
+    TurnClick.create!(game: @game, order: next_order, consequences: @consequences.map(&:to_h), reversible: reversible)
   end
 end

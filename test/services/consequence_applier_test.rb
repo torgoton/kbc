@@ -152,6 +152,34 @@ class ConsequenceApplierTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply! marks click reversible: false when IrreversibleBoundary is in the list" do
+    ConsequenceApplier.apply!(@game, [
+      Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 7), player: 0, terrain: "G"),
+      Turn::Consequences::IrreversibleBoundary.new
+    ])
+    click = TurnClick.most_recent_for(@game)
+    assert_equal false, click.reversible
+  end
+
+  test "apply! marks click reversible: true by default" do
+    ConsequenceApplier.apply!(@game, [
+      Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 7), player: 0, terrain: "G")
+    ])
+    assert_equal true, TurnClick.most_recent_for(@game).reversible
+  end
+
+  test "unapply! raises NotReversibleError on a non-reversible click" do
+    ConsequenceApplier.apply!(@game, [
+      Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 7), player: 0, terrain: "G"),
+      Turn::Consequences::IrreversibleBoundary.new
+    ])
+    assert_raises(ConsequenceApplier::NotReversibleError) do
+      ConsequenceApplier.unapply!(@game.reload)
+    end
+    # Click stays — not consumed.
+    assert_equal 1, TurnClick.where(game: @game).count
+  end
+
   test "unapply! only consumes one click at a time" do
     ConsequenceApplier.apply!(@game, [ Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 7), player: 0, terrain: "G") ])
     ConsequenceApplier.apply!(@game, [ Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(5, 8), player: 0, terrain: "G") ])

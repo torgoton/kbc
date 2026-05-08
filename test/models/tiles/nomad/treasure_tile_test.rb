@@ -12,4 +12,8 @@ class Tiles::Nomad::TreasureTileTest < ActiveSupport::TestCase
   test "DESCRIPTION is set" do
     assert_includes Tiles::Nomad::TreasureTile::DESCRIPTION, "3 points"
   end
+
+  test "immediate_score returns 3 points for the treasure goal" do
+    assert_equal({ "goal" => "treasure", "points" => 3 }, @tile.immediate_score)
+  end
 end
