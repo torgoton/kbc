@@ -54,7 +54,7 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
-    when :select_settlement, :move_settlement, :place_meeple
+    when :select_settlement, :move_settlement, :place_meeple, :end_tile_action
       handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
@@ -83,6 +83,8 @@ class Turn
       activate_build(game:, klass_name:, terrain: instance.build_terrain)
     elsif instance.builds_settlement?
       activate_build(game:, klass_name:, terrain: nil)
+    elsif instance.is_a?(Tiles::Nomad::ResettlementTile)
+      activate_resettlement(game:)
     elsif instance.moves_settlement?
       activate_settlement_move(game:, klass_name:)
     elsif instance.places_meeple?
@@ -119,6 +121,22 @@ class Turn
     [
       Turn::Consequences::SubPhasePushed.new(
         phase_type: Turn::SubPhases::SettlementMovePhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_resettlement(game:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(Turn::SubPhases::ResettlementPhase::TILE_KLASS)
+    return [ error("no unused ResettlementTile available") ] unless held
+
+    pushed = Turn::SubPhases::ResettlementPhase.new
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::ResettlementPhase::TYPE,
         state: pushed.to_h
       )
     ]
@@ -401,6 +419,8 @@ class Turn
         Turn::SubPhases::FortPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::SettlementMovePhase::TYPE
         Turn::SubPhases::SettlementMovePhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::ResettlementPhase::TYPE
+        Turn::SubPhases::ResettlementPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::MeeplePlacementPhase::TYPE
         Turn::SubPhases::MeeplePlacementPhase.from_h(hash["state"] || {})
       end
