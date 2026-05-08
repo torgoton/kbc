@@ -12,6 +12,37 @@ class TurnBarracksFlowTest < ActiveSupport::TestCase
     @player.update!(supply: { "settlements" => 40, "warriors" => 2 })
   end
 
+  test "activate Barracks on own warrior removes it (full E2E + unwind)" do
+    target = first_buildable_hex
+    @game.board_contents.place_warrior(target[0], target[1], @player.order)
+    @player.update!(
+      tiles: [ { "klass" => "BarracksTile", "from" => "[2, 3]", "used" => false } ],
+      supply: { "settlements" => 40, "warriors" => 0 }  # warrior is on the board
+    )
+    @game.save!
+
+    snapshot_before = snapshot
+
+    turn = Turn.from_game(@game.reload)
+    @game.instantiate
+    ConsequenceApplier.apply!(@game, turn.handle(:select_action, game: @game, tile: "BarracksTile"))
+
+    turn = Turn.from_game(@game.reload)
+    @game.instantiate
+    cs = turn.handle(:place_meeple, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+    ConsequenceApplier.apply!(@game, cs)
+
+    @game.reload
+    @game.instantiate
+    assert_nil @game.board_contents.player_at(target[0], target[1])
+    @player.reload
+    assert_equal 1, @player.warriors_remaining
+
+    2.times { ConsequenceApplier.unapply!(@game.reload) }
+    assert_equal snapshot_before, snapshot
+  end
+
   test "activate Barracks, place warrior, full unwind" do
     @player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[2, 3]", "used" => false } ])
     snapshot_before = snapshot

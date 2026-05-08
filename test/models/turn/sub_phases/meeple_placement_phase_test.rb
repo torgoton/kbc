@@ -77,11 +77,11 @@ class Turn::SubPhases::MeeplePlacementPhaseTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
-  test "place_meeple at a hex outside the tile's valid_destinations errors" do
+  test "place_meeple at an unbuildable (e.g. water) hex errors" do
+    target = first_water_hex
     p = phase
-    cs = p.handle(:place_meeple, game: @game, player_order: 0, row: 0, col: 0)
-    # (0, 0) on the board may not be buildable terrain; the check rejects either way.
-    assert_kind_of Turn::Consequences::Error, cs.first if cs.first.is_a?(Turn::Consequences::Error)
+    cs = p.handle(:place_meeple, game: @game, player_order: 0, row: target[0], col: target[1])
+    assert_kind_of Turn::Consequences::Error, cs.first
   end
 
   test "unsupported action returns Error" do
@@ -100,5 +100,14 @@ class Turn::SubPhases::MeeplePlacementPhaseTest < ActiveSupport::TestCase
       end
     end
     raise "no buildable hex"
+  end
+
+  def first_water_hex
+    20.times do |r|
+      20.times do |c|
+        return [ r, c ] if @game.board.terrain_at(r, c) == "W" && @game.board_contents.empty?(r, c)
+      end
+    end
+    raise "no water hex"
   end
 end
