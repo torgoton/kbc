@@ -54,7 +54,7 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
-    when :select_settlement, :move_settlement, :place_meeple
+    when :select_settlement, :move_settlement, :place_meeple, :remove_settlement, :place_wall, :place_city_hall, :end_tile_action
       handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
@@ -83,6 +83,14 @@ class Turn
       activate_build(game:, klass_name:, terrain: instance.build_terrain)
     elsif instance.builds_settlement?
       activate_build(game:, klass_name:, terrain: nil)
+    elsif instance.places_city_hall?
+      activate_city_hall(game:, klass_name:)
+    elsif instance.places_wall?
+      activate_wall_placement(game:, klass_name:)
+    elsif instance.is_a?(Tiles::Nomad::SwordTile)
+      activate_targeted_removal(game:)
+    elsif instance.is_a?(Tiles::Nomad::ResettlementTile)
+      activate_resettlement(game:)
     elsif instance.moves_settlement?
       activate_settlement_move(game:, klass_name:)
     elsif instance.places_meeple?
@@ -119,6 +127,79 @@ class Turn
     [
       Turn::Consequences::SubPhasePushed.new(
         phase_type: Turn::SubPhases::SettlementMovePhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_resettlement(game:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(Turn::SubPhases::ResettlementPhase::TILE_KLASS)
+    return [ error("no unused ResettlementTile available") ] unless held
+
+    pushed = Turn::SubPhases::ResettlementPhase.new
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::ResettlementPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_targeted_removal(game:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(Turn::SubPhases::TargetedRemovalPhase::TILE_KLASS)
+    return [ error("no unused SwordTile available") ] unless held
+
+    pending_orders = game.game_players
+      .reject { |player| player.order == player_order }
+      .select { |player| game.board_contents.settlements_for(player.order).any? }
+      .map(&:order)
+      .sort
+    return [ error("no opponents with settlements") ] if pending_orders.empty?
+
+    pushed = Turn::SubPhases::TargetedRemovalPhase.new(pending_orders: pending_orders)
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::TargetedRemovalPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_wall_placement(game:, klass_name:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+    return [ error("no stone walls left") ] if game.stone_walls <= 0
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+
+    pushed = Turn::SubPhases::WallPlacementPhase.new
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::WallPlacementPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
+  end
+
+  def activate_city_hall(game:, klass_name:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+    return [ error("no City Hall supply") ] unless gp.city_halls_remaining?
+
+    pushed = Turn::SubPhases::CityHallPhase.new
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::CityHallPhase::TYPE,
         state: pushed.to_h
       )
     ]
@@ -401,6 +482,14 @@ class Turn
         Turn::SubPhases::FortPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::SettlementMovePhase::TYPE
         Turn::SubPhases::SettlementMovePhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::ResettlementPhase::TYPE
+        Turn::SubPhases::ResettlementPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::TargetedRemovalPhase::TYPE
+        Turn::SubPhases::TargetedRemovalPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::WallPlacementPhase::TYPE
+        Turn::SubPhases::WallPlacementPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::CityHallPhase::TYPE
+        Turn::SubPhases::CityHallPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::MeeplePlacementPhase::TYPE
         Turn::SubPhases::MeeplePlacementPhase.from_h(hash["state"] || {})
       end

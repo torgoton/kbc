@@ -31,24 +31,45 @@ class Turn::SubPhases::SettlementMovePhaseTest < ActiveSupport::TestCase
   end
 
   test "select_settlement on own settlement emits SubPhaseStateUpdated with source set" do
-    @game.board_contents.place_settlement(5, 5, 0)
+    src = first_paddock_movable_source
+    @game.board_contents.place_settlement(src[0], src[1], 0)
     p = phase
-    cs = p.handle(:select_settlement, game: @game, player_order: 0, row: 5, col: 5)
+    cs = p.handle(:select_settlement, game: @game, player_order: 0, row: src[0], col: src[1])
     update = cs.find { |c| c.is_a?(Turn::Consequences::SubPhaseStateUpdated) }
     refute_nil update
-    assert_equal "[5, 5]", update.new_state["source"]
+    assert_equal "[#{src[0]}, #{src[1]}]", update.new_state["source"]
   end
 
   test "select_settlement on opponent settlement errors" do
-    @game.board_contents.place_settlement(5, 5, 1)
+    src = first_paddock_movable_source
+    @game.board_contents.place_settlement(src[0], src[1], 1)
     p = phase
-    cs = p.handle(:select_settlement, game: @game, player_order: 0, row: 5, col: 5)
+    cs = p.handle(:select_settlement, game: @game, player_order: 0, row: src[0], col: src[1])
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
   test "select_settlement on empty hex errors" do
     p = phase
     cs = p.handle(:select_settlement, game: @game, player_order: 0, row: 5, col: 5)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "select_settlement on own settlement without a valid tile destination errors" do
+    src = first_paddock_movable_source
+    @game.board_contents.place_settlement(src[0], src[1], 0)
+    @game.game_players.find { |gp| gp.order == 0 }.update!(hand: [])
+
+    cs = phase(tile_klass: "BarnTile").handle(:select_settlement, game: @game, player_order: 0, row: src[0], col: src[1])
+
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
+  test "select_settlement on a city hall settlement errors even when it has destinations" do
+    src = first_paddock_movable_source
+    @game.board_contents.place_city_hall_hex(src[0], src[1], 0)
+
+    cs = phase.handle(:select_settlement, game: @game, player_order: 0, row: src[0], col: src[1])
+
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
@@ -74,6 +95,25 @@ class Turn::SubPhases::SettlementMovePhaseTest < ActiveSupport::TestCase
     refute_nil consumed
     assert_equal "PaddockTile", consumed.klass
     assert p.complete?
+  end
+
+  test "Turn completion emits only SettlementMoved TileConsumed and SubPhasePopped" do
+    src = first_paddock_movable_source
+    dst = paddock_destination_for(src)
+    @game.board_contents.place_settlement(src[0], src[1], 0)
+    @game.current_action = {
+      "turn" => {
+        "sub_phase" => {
+          "type" => Turn::SubPhases::SettlementMovePhase::TYPE,
+          "state" => { "tile_klass" => "PaddockTile", "source" => "[#{src[0]}, #{src[1]}]" }
+        }
+      }
+    }
+    @game.save!
+
+    cs = Turn.from_game(@game.reload).handle(:move_settlement, game: @game, row: dst[0], col: dst[1])
+
+    assert_equal [ Turn::Consequences::SettlementMoved, Turn::Consequences::TileConsumed, Turn::Consequences::SubPhasePopped ], cs.map(&:class)
   end
 
   test "move_settlement to a non-valid destination errors" do

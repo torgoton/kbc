@@ -43,8 +43,10 @@ class Turn
 
       def handle_select(game:, player_order:, row:, col:)
         return error("source already selected") if source
-        return error("hex (#{row}, #{col}) is empty") if game.board_contents.empty?(row, col)
-        return error("not your settlement") unless game.board_contents.player_at(row, col) == player_order
+
+        klass = tile_class
+        return error("unknown tile #{tile_klass}") unless klass
+        return error("not a selectable settlement") unless selectable_settlements(klass, game, player_order).include?([ row, col ])
 
         prior = to_h
         @source = Coordinate.new(row, col)
@@ -54,12 +56,13 @@ class Turn
       def handle_move(game:, player_order:, row:, col:)
         return error("no source selected") unless source
 
-        klass = Tiles::Tile.for_klass(tile_klass)
+        klass = tile_class
         return error("unknown tile #{tile_klass}") unless klass
         valid = klass.new(0).valid_destinations(
           from_row: source.row, from_col: source.col,
           board_contents: game.board_contents, board: game.board,
-          player_order: player_order
+          player_order: player_order,
+          hand: game.game_players.find { |gp| gp.order == player_order }&.hand&.first
         )
         return error("not a valid destination") unless valid.include?([ row, col ])
 
@@ -72,6 +75,23 @@ class Turn
 
       def error(msg)
         [ Turn::Consequences::Error.new(message: msg) ]
+      end
+
+      def tile_class
+        Tiles::Tile.for_klass(tile_klass)
+      end
+
+      def selectable_settlements(klass, game, player_order)
+        klass.new(0).selectable_settlements(
+          player_order: player_order,
+          board_contents: game.board_contents,
+          board: game.board,
+          hand: player_for(game, player_order)&.hand&.first
+        )
+      end
+
+      def player_for(game, player_order)
+        game.game_players.find { |gp| gp.order == player_order }
       end
     end
   end
