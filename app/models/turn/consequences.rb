@@ -16,6 +16,7 @@ class Turn
               when "outpost_activated" then OutpostActivated
               when "outpost_deactivated" then OutpostDeactivated
               when "irreversible_boundary" then IrreversibleBoundary
+              when "card_drawn" then CardDrawn
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
