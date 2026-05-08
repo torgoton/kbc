@@ -7,7 +7,7 @@
     <% description = Tiles::Tile.for_klass(tile["klass"])&.new(0)&.description %>
     <% type = tile["klass"].delete_suffix("Tile").downcase %>
     <% used = engine.tile_used?(tile) %>
-    <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
+    <% active = my_turn && !used && engine.current_action_type == type && marked_active_type != type %>
     <% marked_active_type = type if active %>
     <% activatable = my_turn && engine.tile_activatable?(tile) %>
     <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
@@ -52,7 +52,7 @@
       <% used = engine.tile_used?(tile) %>
 
       <% if tile_obj.outpost_tile? %>
-        <% outpost_on = game.current_action["outpost_active"] %>
+        <% outpost_on = engine.outpost_active? %>
         <% selectable = my_turn && engine.outpost_activatable?(tile) %>
         <% state = outpost_on ? "tile-active" : used ? "tile-used" : selectable ? "tile-activatable" : "tile-inactive" %>
         <% if selectable %>
@@ -68,7 +68,7 @@
         <% end %>
 
       <% else %>
-        <% active = my_turn && !used && game.current_action["type"] == type %>
+        <% active = my_turn && !used && engine.current_action_type == type %>
         <% activatable = my_turn && engine.tile_activatable?(tile) %>
         <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
         <% if activatable %>
@@ -82,11 +82,8 @@
             <div class="tile-container <%= type %>"></div>
           </div>
         <% end %>
-        <% if active && game.current_action["remaining"] %>
-          <span class="tile-progress"><%= game.current_action["remaining"] %> left</span>
-        <% end %>
-        <% if active && game.current_action["budget"] %>
-          <span class="tile-progress"><%= game.current_action["budget"] %> steps left</span>
+        <% if active && (progress = engine.tile_progress(tile)) %>
+          <span class="tile-progress"><%= progress %></span>
         <% end %>
       <% end %>
     <% end %>

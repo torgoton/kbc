@@ -1,9 +1,9 @@
 <span class="turn-state-text">
   <%= engine.turn_state %>
-  <span class="mandatory-count"><%= game.mandatory_count %></span>
+  <span class="mandatory-count"><%= engine.mandatory_remaining %></span>
   <span id="current-action"
-    data-type="<%= game.current_action&.dig('type') %>"
-    data-from="<%= game.current_action&.dig('from') %>"
+    data-type="<%= engine.current_action_type %>"
+    data-from="<%= engine.current_action_from %>"
     data-buildable="<%= engine.buildable_cells.to_json %>"
     data-clusters="<%= engine.city_hall_clusters.to_json %>">
   </span>
