@@ -79,6 +79,47 @@ class TurnTest < ActiveSupport::TestCase
     assert_equal "G", consequences.last.prior_state.dig("state", "restricted_terrain")
   end
 
+  test "end_turn emits HandRefreshed + CurrentPlayerAdvanced + TurnReset + IrreversibleBoundary" do
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @player.update!(hand: [ "T" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::IrreversibleBoundary) })
+
+    refresh = cs.find { |c| c.is_a?(Turn::Consequences::HandRefreshed) }
+    refute_nil refresh
+    assert_equal [ "T" ], refresh.hand_before
+    assert_equal [ "G" ], refresh.hand_after
+    assert_equal [ "C", "T" ], refresh.discard_after
+
+    advance = cs.find { |c| c.is_a?(Turn::Consequences::CurrentPlayerAdvanced) }
+    refute_nil advance
+    assert_equal @player.order, advance.prior_order
+    assert_equal((@player.order + 1) % 2, advance.next_order)
+
+    reset = cs.find { |c| c.is_a?(Turn::Consequences::TurnReset) }
+    refute_nil reset
+  end
+
+  test "end_turn reshuffles when deck has only the drawn card" do
+    @game.update!(deck: [ "G" ], discard: [ "F", "T" ])
+    @player.update!(hand: [ "C" ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    refresh = cs.find { |c| c.is_a?(Turn::Consequences::HandRefreshed) }
+    # After draw, deck would be empty; reshuffle from discard.
+    assert_equal [ "G" ], refresh.hand_after
+    assert_equal [ "F", "T", "C" ].sort, refresh.deck_after.sort + refresh.discard_after
+    # The drawn-card stays in discard for next reshuffle? Check existing pattern.
+    assert refresh.discard_after.empty?, "discard should be empty after reshuffle"
+  end
+
   test "activate_fort emits TileConsumed + CardDrawn + SubPhasePushed(FortPhase) + IrreversibleBoundary" do
     @player.update!(tiles: [ { "klass" => "FortTile", "from" => "[3, 4]", "used" => false } ])
     @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])

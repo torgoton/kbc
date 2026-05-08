@@ -52,6 +52,8 @@ class Turn
       handle_activate_outpost(game:)
     when :activate_fort
       handle_activate_fort(game:)
+    when :end_turn
+      handle_end_turn(game:)
     else
       [ error("unsupported turn action: #{action_name}") ]
     end
@@ -103,6 +105,50 @@ class Turn
     consequences = sub_phase.handle(:build, game:, player_order:, **params)
     consequences << Turn::Consequences::SubPhasePopped.new(prior_state: prior_state) if sub_phase.complete?
     consequences
+  end
+
+  def handle_end_turn(game:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    hand_before = (gp.hand || []).dup
+    deck_before = (game.deck || []).dup
+    discard_before = (game.discard || []).dup
+
+    # Discard the player's hand, then draw one card. If the deck is empty after
+    # the draw, reshuffle from discard. Randomness is decided here so the
+    # consequence carries deterministic before/after state.
+    discard_after = discard_before + hand_before
+    pool = deck_before
+    if pool.empty?
+      pool = discard_after.shuffle
+      discard_after = []
+    end
+    drawn = pool.first
+    deck_after = pool[1..]
+    if deck_after.empty? && discard_after.any?
+      deck_after = discard_after.shuffle
+      discard_after = []
+    end
+    hand_after = drawn.nil? ? [] : [ drawn ]
+
+    next_order = (player_order + 1) % game.game_players.count
+    prior_turn_state = game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil
+
+    [
+      Turn::Consequences::HandRefreshed.new(
+        player: player_order,
+        hand_before: hand_before,
+        hand_after: hand_after,
+        deck_before: deck_before,
+        deck_after: deck_after,
+        discard_before: discard_before,
+        discard_after: discard_after
+      ),
+      Turn::Consequences::CurrentPlayerAdvanced.new(prior_order: player_order, next_order: next_order),
+      Turn::Consequences::TurnReset.new(prior_turn_number: game.turn_number, prior_turn_state: prior_turn_state),
+      Turn::Consequences::IrreversibleBoundary.new
+    ]
   end
 
   def handle_activate_fort(game:)
