@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_07_214153) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_08_031655) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -224,6 +224,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_07_214153) do
     t.datetime "created_at", null: false
     t.bigint "game_id", null: false
     t.integer "order", null: false
+    t.boolean "reversible", default: true, null: false
     t.datetime "updated_at", null: false
     t.index ["game_id", "order"], name: "index_turn_clicks_on_game_id_and_order", unique: true
     t.index ["game_id"], name: "index_turn_clicks_on_game_id"
