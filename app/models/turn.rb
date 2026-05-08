@@ -383,6 +383,8 @@ class Turn
         Turn::SubPhases::FortPhase.from_h(hash["state"] || {})
       when Turn::SubPhases::SettlementMovePhase::TYPE
         Turn::SubPhases::SettlementMovePhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::MeeplePlacementPhase::TYPE
+        Turn::SubPhases::MeeplePlacementPhase.from_h(hash["state"] || {})
       end
     end
 
