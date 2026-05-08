@@ -23,6 +23,7 @@ class Turn
               when "turn_reset" then TurnReset
               when "end_triggered" then EndTriggered
               when "game_completed" then GameCompleted
+              when "tiles_reset" then TilesReset
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)

@@ -158,6 +158,22 @@ class TurnTest < ActiveSupport::TestCase
     refute_nil reset
   end
 
+  test "end_turn emits TilesReset for the next player" do
+    next_player = @game.game_players.find { |g| g.order != @player.order }
+    next_player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "OracleTile", "from" => "[5, 6]", "used" => true, "permanent" => true }
+    ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    reset = cs.find { |c| c.is_a?(Turn::Consequences::TilesReset) }
+    refute_nil reset
+    assert_equal next_player.order, reset.player
+    assert_equal 2, reset.prior_tiles.size
+  end
+
   test "end_turn draws 2 cards when player holds a CrossroadsTile" do
     @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
     @player.update!(hand: [ "T" ], tiles: [ { "klass" => "CrossroadsTile", "from" => "[5, 5]", "used" => false } ])

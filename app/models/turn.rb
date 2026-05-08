@@ -139,8 +139,10 @@ class Turn
     hand_after = drawn
 
     next_order = (player_order + 1) % game.game_players.count
+    next_player = game.game_players.find { |g| g.order == next_order }
     prior_turn_state = game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil
     completed = game_complete_for(game)
+    tiles_reset = next_player ? [ Turn::Consequences::TilesReset.new(player: next_order, prior_tiles: (next_player.tiles || []).deep_dup) ] : []
 
     [
       Turn::Consequences::HandRefreshed.new(
@@ -153,6 +155,7 @@ class Turn
         discard_after: discard_after
       ),
       Turn::Consequences::CurrentPlayerAdvanced.new(prior_order: player_order, next_order: next_order),
+      *tiles_reset,
       Turn::Consequences::TurnReset.new(prior_turn_number: game.turn_number, prior_turn_state: prior_turn_state),
       *completed,
       Turn::Consequences::IrreversibleBoundary.new
