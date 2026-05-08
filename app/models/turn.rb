@@ -54,7 +54,7 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
-    when :select_settlement, :move_settlement
+    when :select_settlement, :move_settlement, :place_meeple
       handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
@@ -85,9 +85,27 @@ class Turn
       activate_build(game:, klass_name:, terrain: nil)
     elsif instance.moves_settlement?
       activate_settlement_move(game:, klass_name:)
+    elsif instance.places_meeple?
+      activate_meeple_placement(game:, klass_name:, kind: instance.meeple_kind)
     else
       [ error("tile #{klass_name} is not activatable via select_action") ]
     end
+  end
+
+  def activate_meeple_placement(game:, klass_name:, kind:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+
+    pushed = Turn::SubPhases::MeeplePlacementPhase.new(tile_klass: klass_name, kind: kind)
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::MeeplePlacementPhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
   end
 
   def activate_settlement_move(game:, klass_name:)

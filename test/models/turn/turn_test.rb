@@ -94,6 +94,49 @@ class TurnTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
+  test "select_action(BarracksTile) emits SubPhasePushed with MeeplePlacementPhase state and kind: warrior" do
+    @player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[2, 3]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:select_action, game: @game, tile: "BarracksTile")
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal Turn::SubPhases::MeeplePlacementPhase::TYPE, pushed.phase_type
+    assert_equal "BarracksTile", pushed.state["tile_klass"]
+    assert_equal "warrior", pushed.state["kind"]
+  end
+
+  test "select_action(LighthouseTile) routes through MeeplePlacementPhase with kind: ship" do
+    @player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[2, 3]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:select_action, game: @game, tile: "LighthouseTile")
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal "ship", pushed.state["kind"]
+  end
+
+  test "place_meeple is dispatched to active MeeplePlacementPhase" do
+    @player.update!(supply: { "settlements" => 40, "warriors" => 2 })
+    @game.current_action = {
+      "turn" => {
+        "sub_phase" => {
+          "type" => "meeple_placement",
+          "state" => { "tile_klass" => "BarracksTile", "kind" => "warrior" }
+        }
+      }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    target = first_buildable_hex
+    cs = turn.handle(:place_meeple, game: @game, row: target[0], col: target[1])
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::Error) }, "expected place_meeple to succeed: #{cs.inspect}")
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::MeeplePlaced) })
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SubPhasePopped) })
+  end
+
   test "select_action(PaddockTile) emits SubPhasePushed with SettlementMovePhase state" do
     @player.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 3]", "used" => false } ])
     @game.reload
@@ -633,6 +676,16 @@ class TurnTest < ActiveSupport::TestCase
       end
     end
     raise "no empty #{terrain} hex"
+  end
+
+  def first_buildable_hex
+    20.times do |r|
+      20.times do |c|
+        next unless [ "C", "D", "F", "G", "T" ].include?(@game.board.terrain_at(r, c))
+        return [ r, c ] if @game.board_contents.empty?(r, c)
+      end
+    end
+    raise "no buildable hex"
   end
 
   def first_empty_terrain_other_than(terrain)
