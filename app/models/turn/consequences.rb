@@ -24,6 +24,7 @@ class Turn
               when "end_triggered" then EndTriggered
               when "game_completed" then GameCompleted
               when "tiles_reset" then TilesReset
+              when "nomad_tiles_expired" then NomadTilesExpired
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)

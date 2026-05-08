@@ -158,6 +158,36 @@ class TurnTest < ActiveSupport::TestCase
     refute_nil reset
   end
 
+  test "end_turn emits NomadTilesExpired for tiles whose expires_on_turn matches the ending turn" do
+    @game.update!(turn_number: 4)
+    @player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "DonationGrassTile", "from" => "[5, 6]", "used" => true, "expires_on_turn" => 4 }
+    ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    expired = cs.find { |c| c.is_a?(Turn::Consequences::NomadTilesExpired) }
+    refute_nil expired
+    assert_equal @player.order, expired.player
+    assert_equal 1, expired.expired_tiles.size
+    assert_equal "DonationGrassTile", expired.expired_tiles.first["klass"]
+  end
+
+  test "end_turn does NOT emit NomadTilesExpired when no tiles have matching expires_on_turn" do
+    @game.update!(turn_number: 4)
+    @player.update!(tiles: [
+      { "klass" => "FarmTile", "from" => "[3, 4]", "used" => true },
+      { "klass" => "DonationGrassTile", "from" => "[5, 6]", "used" => true, "expires_on_turn" => 7 }
+    ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    refute(cs.any? { |c| c.is_a?(Turn::Consequences::NomadTilesExpired) })
+  end
+
   test "end_turn emits TilesReset for the next player" do
     next_player = @game.game_players.find { |g| g.order != @player.order }
     next_player.update!(tiles: [

@@ -143,6 +143,7 @@ class Turn
     prior_turn_state = game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil
     completed = game_complete_for(game)
     tiles_reset = next_player ? [ Turn::Consequences::TilesReset.new(player: next_order, prior_tiles: (next_player.tiles || []).deep_dup) ] : []
+    expired = expired_nomad_tiles_for(gp, game)
 
     [
       Turn::Consequences::HandRefreshed.new(
@@ -156,10 +157,17 @@ class Turn
       ),
       Turn::Consequences::CurrentPlayerAdvanced.new(prior_order: player_order, next_order: next_order),
       *tiles_reset,
+      *expired,
       Turn::Consequences::TurnReset.new(prior_turn_number: game.turn_number, prior_turn_state: prior_turn_state),
       *completed,
       Turn::Consequences::IrreversibleBoundary.new
     ]
+  end
+
+  def expired_nomad_tiles_for(gp, game)
+    expired = (gp.tiles || []).select { |t| t["expires_on_turn"] == game.turn_number }
+    return [] if expired.empty?
+    [ Turn::Consequences::NomadTilesExpired.new(player: player_order, expired_tiles: expired.deep_dup) ]
   end
 
   def has_crossroads_tile?(gp)
