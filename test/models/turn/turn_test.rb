@@ -94,6 +94,41 @@ class TurnTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
 
+  test "select_action(PaddockTile) emits SubPhasePushed with SettlementMovePhase state" do
+    @player.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 3]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+    cs = turn.handle(:select_action, game: @game, tile: "PaddockTile")
+    pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+    refute_nil pushed
+    assert_equal Turn::SubPhases::SettlementMovePhase::TYPE, pushed.phase_type
+    assert_equal "PaddockTile", pushed.state["tile_klass"]
+    assert_nil pushed.state["source"]
+  end
+
+  test "select_settlement is dispatched to active SettlementMovePhase" do
+    @game.board_contents.place_settlement(5, 5, @player.order)
+    @game.current_action = {
+      "turn" => {
+        "sub_phase" => {
+          "type" => "settlement_move",
+          "state" => { "tile_klass" => "PaddockTile", "source" => nil }
+        }
+      }
+    }
+    @game.save!
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:select_settlement, game: @game, row: 5, col: 5)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SubPhaseStateUpdated) })
+  end
+
+  test "move_settlement without active SettlementMovePhase returns Error" do
+    cs = turn.handle(:move_settlement, game: @game, row: 5, col: 5)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
   test "select_action errors for a tile that does not build_settlement" do
     # OutpostTile has its own activate path; passing it through select_action should error.
     @player.update!(tiles: [ { "klass" => "OutpostTile", "from" => "[2, 2]", "used" => false } ])

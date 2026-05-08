@@ -54,12 +54,22 @@ class Turn
       handle_activate_fort(game:)
     when :end_turn
       handle_end_turn(game:)
+    when :select_settlement, :move_settlement
+      handle_sub_phase_action(action_name, game:, **params)
     else
       [ error("unsupported turn action: #{action_name}") ]
     end
   end
 
   private
+
+  def handle_sub_phase_action(action_name, game:, **params)
+    return [ error("no active sub-phase") ] unless sub_phase
+    prior_state = sub_phase_payload(sub_phase)
+    consequences = sub_phase.handle(action_name, game:, player_order:, **params)
+    consequences << Turn::Consequences::SubPhasePopped.new(prior_state: prior_state) if sub_phase.complete?
+    consequences
+  end
 
   def handle_select_action(game:, tile:)
     return [ error("a sub-phase is already active") ] if sub_phase
@@ -73,9 +83,27 @@ class Turn
       activate_build(game:, klass_name:, terrain: instance.build_terrain)
     elsif instance.builds_settlement?
       activate_build(game:, klass_name:, terrain: nil)
+    elsif instance.moves_settlement?
+      activate_settlement_move(game:, klass_name:)
     else
       [ error("tile #{klass_name} is not activatable via select_action") ]
     end
+  end
+
+  def activate_settlement_move(game:, klass_name:)
+    gp = game.game_players.find { |g| g.order == player_order }
+    return [ error("no current player") ] unless gp
+
+    held = gp.find_unused_tile(klass_name)
+    return [ error("no unused #{klass_name} available") ] unless held
+
+    pushed = Turn::SubPhases::SettlementMovePhase.new(tile_klass: klass_name, source: nil)
+    [
+      Turn::Consequences::SubPhasePushed.new(
+        phase_type: Turn::SubPhases::SettlementMovePhase::TYPE,
+        state: pushed.to_h
+      )
+    ]
   end
 
   def activate_build(game:, klass_name:, terrain:)
