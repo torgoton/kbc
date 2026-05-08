@@ -9,7 +9,11 @@ class Turn
 
       def unapply!(game)
         return unless game.current_action.is_a?(Hash) && game.current_action["turn"].is_a?(Hash)
-        game.current_action["turn"]["outpost_active"] = prior_active
+        if prior_active
+          game.current_action["turn"]["outpost_active"] = true
+        else
+          game.current_action["turn"].delete("outpost_active")
+        end
       end
 
       def to_h

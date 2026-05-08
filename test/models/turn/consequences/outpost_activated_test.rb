@@ -17,12 +17,20 @@ class Turn::Consequences::OutpostActivatedTest < ActiveSupport::TestCase
     assert_equal true, @game.current_action.dig("turn", "outpost_active")
   end
 
-  test "unapply! restores prior_active" do
+  test "unapply! deletes the key when prior_active was false (clean round-trip)" do
     @game.current_action = { "turn" => {} }
     c = Turn::Consequences::OutpostActivated.new(prior_active: false)
     c.apply!(@game)
     c.unapply!(@game)
-    assert_equal false, @game.current_action.dig("turn", "outpost_active")
+    refute @game.current_action.dig("turn").key?("outpost_active")
+  end
+
+  test "unapply! restores prior_active = true when it was previously active" do
+    @game.current_action = { "turn" => { "outpost_active" => true } }
+    c = Turn::Consequences::OutpostActivated.new(prior_active: true)
+    c.apply!(@game)
+    c.unapply!(@game)
+    assert_equal true, @game.current_action.dig("turn", "outpost_active")
   end
 
   test "to_h round-trips through from_h" do
