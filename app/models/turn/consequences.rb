@@ -19,6 +19,7 @@ class Turn
               when "card_drawn" then CardDrawn
               when "sub_phase_state_updated" then SubPhaseStateUpdated
               when "hand_refreshed" then HandRefreshed
+              when "current_player_advanced" then CurrentPlayerAdvanced
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
