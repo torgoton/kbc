@@ -233,7 +233,7 @@ class Turn
     goals = goal_scores_for(game, gp, terrain, row, col)
     families = families_score_for(game, gp, row, col)
     outpost_consume = outpost_active ? [ Turn::Consequences::OutpostDeactivated.new(prior_active: true) ] : []
-    end_trigger = end_trigger_for(gp)
+    end_trigger = Turn::Consequences::EndTriggered.maybe(game: game, player_order: player_order)
 
     [
       Turn::Consequences::SettlementPlaced.new(at: Coordinate.new(row, col), player: player_order, terrain: terrain),
@@ -247,11 +247,6 @@ class Turn
       Turn::Consequences::BuildRecorded.new(at: Coordinate.new(row, col).to_key),
       Turn::Consequences::MandatoryRemainingDecremented.new(prior_remaining: mandatory_remaining)
     ]
-  end
-
-  def end_trigger_for(gp)
-    return [] unless gp.settlements_remaining == 1  # this build will drop to 0
-    [ Turn::Consequences::EndTriggered.new(player: player_order) ]
   end
 
   def families_score_for(game, gp, row, col)

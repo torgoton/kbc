@@ -49,7 +49,8 @@ class Turn
         consequences = [
           Turn::Consequences::SettlementPlaced.new(
             at: Coordinate.new(row, col), player: player_order, terrain: restricted_terrain
-          )
+          ),
+          *Turn::Consequences::EndTriggered.maybe(game: game, player_order: player_order)
         ]
 
         game.board_contents.neighbors(row, col).each do |nr, nc|

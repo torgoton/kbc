@@ -95,4 +95,22 @@ class Turn::SubPhases::TileBuildPhaseTest < ActiveSupport::TestCase
     consequences = phase.handle(:nonsense, game: @game, player_order: 0)
     assert_kind_of Turn::Consequences::Error, consequences.first
   end
+
+  test "handle(:build) appends EndTriggered when this build empties player supply" do
+    gp = @game.game_players.find { |g| g.order == 0 }
+    gp.update!(supply: { "settlements" => 1 })
+    row, col = first_empty_grass
+    consequences = phase.handle(:build, game: @game, player_order: 0, row:, col:)
+
+    refute_nil consequences.find { |c| c.is_a?(Turn::Consequences::EndTriggered) }
+  end
+
+  test "handle(:build) does NOT append EndTriggered when supply remains > 0" do
+    gp = @game.game_players.find { |g| g.order == 0 }
+    gp.update!(supply: { "settlements" => 5 })
+    row, col = first_empty_grass
+    consequences = phase.handle(:build, game: @game, player_order: 0, row:, col:)
+
+    refute(consequences.any? { |c| c.is_a?(Turn::Consequences::EndTriggered) })
+  end
 end
