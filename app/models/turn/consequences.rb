@@ -27,6 +27,7 @@ class Turn
               when "nomad_tiles_expired" then NomadTilesExpired
               when "settlement_moved" then SettlementMoved
               when "meeple_placed" then MeeplePlaced
+              when "meeple_removed" then MeepleRemoved
               else raise ArgumentError, "unknown consequence type: #{hash["type"].inspect}"
               end
       klass.from_h(hash)
