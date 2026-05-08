@@ -79,12 +79,14 @@ class Turn
       def valid_destination?(game, player_order, row, col)
         klass = Tiles::Tile.for_klass(tile_klass)
         return false unless klass
+        gp = game.game_players.find { |g| g.order == player_order }
+        hand = gp&.hand.is_a?(Array) ? gp.hand.first : gp&.hand
         instance = klass.new(0)
         instance.valid_destinations(
           board_contents: game.board_contents,
           board: game.board,
           player_order: player_order,
-          hand: nil
+          hand: hand
         ).include?([ row, col ])
       end
     end

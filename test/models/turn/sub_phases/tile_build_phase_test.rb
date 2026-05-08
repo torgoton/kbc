@@ -137,6 +137,38 @@ class Turn::SubPhases::TileBuildPhaseTest < ActiveSupport::TestCase
     assert_kind_of Turn::Consequences::Error, cs.first
   end
 
+  test "Oracle uses player's hand terrain via valid_destinations (adjacent-if-possible rule)" do
+    gp = @game.game_players.find { |g| g.order == 0 }
+    gp.update!(hand: "G")
+    target_r, target_c = nil, nil
+    20.times { |r| 20.times { |c|
+      target_r, target_c = r, c if @game.board.terrain_at(r, c) == "G" && @game.board_contents.empty?(r, c)
+    } }
+    refute_nil target_r
+
+    phase = Turn::SubPhases::TileBuildPhase.new(
+      restricted_terrain: nil, tile_klass: "OracleTile", tile_source: Coordinate.new(2, 3)
+    )
+    cs = phase.handle(:build, game: @game, player_order: 0, row: target_r, col: target_c)
+    assert(cs.any? { |c| c.is_a?(Turn::Consequences::SettlementPlaced) })
+  end
+
+  test "Oracle build on a non-hand-terrain hex errors" do
+    gp = @game.game_players.find { |g| g.order == 0 }
+    gp.update!(hand: "G")
+    far_r, far_c = nil, nil
+    20.times { |r| 20.times { |c|
+      far_r, far_c = r, c if @game.board.terrain_at(r, c) == "F" && @game.board_contents.empty?(r, c)
+    } }
+    refute_nil far_r
+
+    phase = Turn::SubPhases::TileBuildPhase.new(
+      restricted_terrain: nil, tile_klass: "OracleTile", tile_source: Coordinate.new(2, 3)
+    )
+    cs = phase.handle(:build, game: @game, player_order: 0, row: far_r, col: far_c)
+    assert_kind_of Turn::Consequences::Error, cs.first
+  end
+
   private
 
   # Find 3 grass hexes adjacent to a single common neighbor (also grass + empty),
