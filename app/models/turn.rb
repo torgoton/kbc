@@ -227,6 +227,8 @@ class Turn
       case hash["type"]
       when Turn::SubPhases::TileBuildPhase::TYPE
         Turn::SubPhases::TileBuildPhase.from_h(hash["state"] || {})
+      when Turn::SubPhases::FortPhase::TYPE
+        Turn::SubPhases::FortPhase.from_h(hash["state"] || {})
       end
     end
 
