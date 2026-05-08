@@ -158,6 +158,19 @@ class TurnTest < ActiveSupport::TestCase
     refute_nil reset
   end
 
+  test "end_turn draws 2 cards when player holds a CrossroadsTile" do
+    @game.update!(deck: [ "G", "F", "T" ], discard: [ "C" ])
+    @player.update!(hand: [ "T" ], tiles: [ { "klass" => "CrossroadsTile", "from" => "[5, 5]", "used" => false } ])
+    @game.reload
+    @game.instantiate
+
+    cs = turn.handle(:end_turn, game: @game)
+    refresh = cs.find { |c| c.is_a?(Turn::Consequences::HandRefreshed) }
+    assert_equal [ "G", "F" ], refresh.hand_after
+    assert_equal [ "T" ], refresh.deck_after
+    assert_equal [ "C", "T" ], refresh.discard_after
+  end
+
   test "end_turn reshuffles when deck has only the drawn card" do
     @game.update!(deck: [ "G" ], discard: [ "F", "T" ])
     @player.update!(hand: [ "C" ])

@@ -115,22 +115,28 @@ class Turn
     deck_before = (game.deck || []).dup
     discard_before = (game.discard || []).dup
 
-    # Discard the player's hand, then draw one card. If the deck is empty after
-    # the draw, reshuffle from discard. Randomness is decided here so the
-    # consequence carries deterministic before/after state.
+    # Discard the player's hand, then draw one card (or two if they hold a
+    # CrossroadsTile). Reshuffle from discard whenever the deck would be empty.
+    # Randomness is decided here so the consequence carries deterministic
+    # before/after state.
+    draw_count = has_crossroads_tile?(gp) ? 2 : 1
     discard_after = discard_before + hand_before
-    pool = deck_before
-    if pool.empty?
-      pool = discard_after.shuffle
-      discard_after = []
+    pool = deck_before.dup
+    drawn = []
+    draw_count.times do
+      if pool.empty? && discard_after.any?
+        pool = discard_after.shuffle
+        discard_after = []
+      end
+      break if pool.empty?
+      drawn << pool.shift
     end
-    drawn = pool.first
-    deck_after = pool[1..]
+    deck_after = pool
     if deck_after.empty? && discard_after.any?
       deck_after = discard_after.shuffle
       discard_after = []
     end
-    hand_after = drawn.nil? ? [] : [ drawn ]
+    hand_after = drawn
 
     next_order = (player_order + 1) % game.game_players.count
     prior_turn_state = game.current_action.is_a?(Hash) ? game.current_action["turn"] : nil
@@ -151,6 +157,10 @@ class Turn
       *completed,
       Turn::Consequences::IrreversibleBoundary.new
     ]
+  end
+
+  def has_crossroads_tile?(gp)
+    (gp.tiles || []).any? { |t| t["klass"] == "CrossroadsTile" }
   end
 
   def game_complete_for(game)
