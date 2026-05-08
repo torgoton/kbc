@@ -59,7 +59,8 @@ class Turn
         valid = klass.new(0).valid_destinations(
           from_row: source.row, from_col: source.col,
           board_contents: game.board_contents, board: game.board,
-          player_order: player_order
+          player_order: player_order,
+          hand: game.game_players.find { |gp| gp.order == player_order }&.hand&.first
         )
         return error("not a valid destination") unless valid.include?([ row, col ])
 
