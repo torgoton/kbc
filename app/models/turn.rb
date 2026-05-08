@@ -70,13 +70,15 @@ class Turn
 
     instance = tile_class.new(0)
     if instance.builds_settlement? && instance.build_terrain
-      activate_fixed_terrain_build(game:, klass_name:, terrain: instance.build_terrain)
+      activate_build(game:, klass_name:, terrain: instance.build_terrain)
+    elsif instance.builds_settlement?
+      activate_build(game:, klass_name:, terrain: nil)
     else
       [ error("tile #{klass_name} is not activatable via select_action") ]
     end
   end
 
-  def activate_fixed_terrain_build(game:, klass_name:, terrain:)
+  def activate_build(game:, klass_name:, terrain:)
     gp = game.game_players.find { |g| g.order == player_order }
     return [ error("no current player") ] unless gp
 

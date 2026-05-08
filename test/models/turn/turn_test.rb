@@ -77,6 +77,18 @@ class TurnTest < ActiveSupport::TestCase
     end
   end
 
+  test "select_action routes Village/Tower/Tavern to TileBuildPhase with restricted_terrain: nil" do
+    %w[VillageTile TowerTile TavernTile].each do |klass|
+      @player.update!(tiles: [ { "klass" => klass, "from" => "[2, 2]", "used" => false } ])
+      @game.reload
+      cs = turn.handle(:select_action, game: @game, tile: klass)
+      pushed = cs.find { |c| c.is_a?(Turn::Consequences::SubPhasePushed) }
+      refute_nil pushed, "expected SubPhasePushed for #{klass}"
+      assert_nil pushed.state["restricted_terrain"], "#{klass} should not have a fixed terrain"
+      assert_equal klass, pushed.state["tile_klass"]
+    end
+  end
+
   test "select_action errors for unknown tile klass" do
     consequences = turn.handle(:select_action, game: @game, tile: "NonsenseTile")
     assert_kind_of Turn::Consequences::Error, consequences.first
