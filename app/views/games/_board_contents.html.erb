@@ -1,4 +1,3 @@
 <div id="board-contents">
-  <%= render partial: "games/board", locals: { game: game } %>
+  <%= render partial: "games/board", locals: { game: game, engine: TurnViewAdapter.new(game) } %>
 </div>
-

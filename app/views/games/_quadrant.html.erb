@@ -47,7 +47,7 @@
               <% end %>
               <div class="tile-tooltip"><%= content.description.html_safe %></div>
             <% when Settlement %>
-              <% meeple_tile_active = %w[BarracksTile LighthouseTile WagonTile].include?(game.current_action["klass"]) %>
+              <% meeple_tile_active = engine.meeple_tile_active? %>
               <% show_popup = meeple_tile_active && content.player == game.current_player.order %>
               <% if show_popup && (content.warrior? || content.ship? || content.wagon?) %>
                 <div data-controller="meeple-popup"

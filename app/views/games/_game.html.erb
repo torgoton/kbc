@@ -20,7 +20,7 @@
       <%= render partial: "games/scoring", locals: { game: } %>
       <div id="board-viewport">
         <div id="board">
-          <%= render partial: "games/board", locals: { game: } %>
+          <%= render partial: "games/board", locals: { game:, engine: } %>
         </div>
       </div>
     </main>
