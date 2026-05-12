@@ -1,2 +1,27 @@
 #!/usr/bin/env ruby
+require "socket"
+require "uri"
+
+def redis_endpoint
+  uri = URI.parse(ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/1"))
+  [uri.host, uri.port]
+rescue URI::InvalidURIError
+  ["127.0.0.1", 6379]
+end
+
+def port_open?(host, port, timeout: 1)
+  Socket.tcp(host, port, connect_timeout: timeout) { true }
+rescue StandardError
+  false
+end
+
+if ENV["CONTAINERIZED"] != "1"
+  host, port = redis_endpoint
+
+  unless port_open?(host, port)
+    warn "Valkey is not listening on #{host}:#{port}. Start it first, or run make up CONTAINERIZED=1."
+    exit 1
+  end
+end
+
 exec "./bin/rails", "server", *ARGV
