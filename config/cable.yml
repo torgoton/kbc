@@ -4,7 +4,7 @@
 # to make the web console appear.
 development:
   adapter: redis
-  url: redis://localhost:6379/1
+  url: <%= ENV.fetch("REDIS_URL", "redis://localhost:6379/1") %>
 
 test:
   adapter: test

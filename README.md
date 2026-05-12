@@ -2,7 +2,7 @@
 
 ## Developer Notes
 
-- until containerized, ensure Valkey or Redis server is running
+- run the whole stack with `make up` (or `docker compose up --build`)
 
 # README
 
