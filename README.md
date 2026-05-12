@@ -4,7 +4,8 @@ A browser-based implementation of the [Kingdom Builder](https://new.queen-games.
 
 **Live:** [kbc.chrisschumann.dev](https://kbc.chrisschumann.dev) — accounts are required to play. If you'd like to try it, click the "Request an account" link or reach out directly to request one.
 
-- run the whole stack with `make up` (or `docker compose up --build`)
+- run the whole stack with `make up CONTAINERIZED=1` (or `make up-container` / `docker compose up --build`)
+- local `make up` / `bin/dev` requires Valkey to already be listening on the configured Redis port
 
 ---
 
