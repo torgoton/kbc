@@ -1,16 +1,12 @@
-# On linux
-# - ensure valkey is running before starting the app
-# - maybe shut it down when stopping
+ifeq ($(CONTAINERIZED),1)
+up: up-container
 
+down: down-container
+
+tail: tail-container
+else
 up:
-	@if [ "$(shell systemctl is-active valkey)" != "active" ]; then \
-		echo "valkey is not running. Starting valkey..."; \
-		systemctl start valkey; \
-	else \
-		echo "valkey is already running."; \
-	fi
-	@echo "Starting the application..."
-	bundle exec rails server --binding=0.0.0.0
+	@bin/dev
 
 down:
 	@echo "Stopping the application..."
@@ -19,4 +15,16 @@ down:
 tail:
 	@echo "Tailing the application logs..."
 	tail -f log/*.log
+endif
+
+up-container:
+	@docker compose up --build
+
+down-container:
+	@echo "Stopping the application..."
+	@docker compose down
+
+tail-container:
+	@echo "Tailing the application logs..."
+	@docker compose logs -f web
 

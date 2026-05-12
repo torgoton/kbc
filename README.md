@@ -2,7 +2,8 @@
 
 ## Developer Notes
 
-- until containerized, ensure Valkey or Redis server is running
+- run the whole stack with `make up CONTAINERIZED=1` (or `make up-container` / `docker compose up --build`)
+- local `make up` / `bin/dev` requires Valkey to already be listening on the configured Redis port
 
 # README
 
