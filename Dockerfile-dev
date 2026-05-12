@@ -2,6 +2,10 @@ FROM ruby:3.4
 
 WORKDIR /usr/src/app
 
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git pkg-config libpq-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY Gemfile* .
 RUN bundle install
 
@@ -9,8 +13,7 @@ COPY . .
 
 # Expose the port the app runs on
 EXPOSE 3000
-# Set the environment variable for Rails
 ENV RAILS_ENV=development
 
-# To start the app with just this file, uncomment the next line
-# CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+ENTRYPOINT ["/usr/src/app/bin/docker-entrypoint"]
+CMD ["./bin/rails", "server", "--binding=0.0.0.0", "--port=3000"]
