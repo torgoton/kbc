@@ -7,7 +7,7 @@
    viewBox="0 0 101.6 101.6"
    version="1.1"
    id="svg1"
-   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
    sodipodi:docname="icon.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -25,7 +25,7 @@
      inkscape:document-units="in"
      showgrid="true"
      inkscape:zoom="2.0833333"
-     inkscape:cx="192"
+     inkscape:cx="192.24"
      inkscape:cy="192"
      inkscape:window-width="1920"
      inkscape:window-height="1011"
@@ -67,7 +67,7 @@
      id="layer1">
     <path
        sodipodi:type="star"
-       style="fill:#ffae2a;stroke:#000000;stroke-width:2.54;stroke-dasharray:none;fill-opacity:1"
+       style="fill:#7ab800;stroke:#000000;stroke-width:2.54;stroke-dasharray:none;fill-opacity:1"
        id="path3"
        inkscape:flatsided="true"
        sodipodi:sides="6"
@@ -85,7 +85,10 @@
        style="font-size:33.4397px;line-height:0.85;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.208998"
        x="49.663727"
        y="34.924999"
-       id="text3"><tspan
+       id="text3"
+       inkscape:export-filename="icon.png"
+       inkscape:export-xdpi="96"
+       inkscape:export-ydpi="96"><tspan
          sodipodi:role="line"
          id="tspan3"
          style="font-weight:bold;font-size:33.4397px;line-height:0.85;stroke-width:0.208998"
