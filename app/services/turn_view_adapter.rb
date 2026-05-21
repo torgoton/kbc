@@ -3,12 +3,9 @@ class TurnViewAdapter
 
   def initialize(game)
     @game = game
-    @legacy = TurnEngine.new(game)
   end
 
   def turn_state
-    return @legacy.turn_state unless turn_backed?
-
     if turn.sub_phase
       tile = tile_for_sub_phase
       return "#{player.player.handle} must act" unless tile
@@ -28,7 +25,6 @@ class TurnViewAdapter
   end
 
   def buildable_cells
-    return @legacy.buildable_cells unless turn_backed?
     return [] unless @game.playing?
 
     @game.instantiate
@@ -58,7 +54,6 @@ class TurnViewAdapter
   end
 
   def tile_activatable?(tile_hash)
-    return @legacy.tile_activatable?(tile_hash) unless turn_backed?
     return false if tile_hash["used"]
 
     tile_class = Tiles::Tile.for_klass(tile_hash["klass"])
@@ -82,13 +77,10 @@ class TurnViewAdapter
   end
 
   def turn_endable?
-    return @legacy.turn_endable? unless turn_backed?
-
     @game.playing? && !turn.sub_phase && (turn.mandatory_remaining <= 0 || !player.settlements_remaining?)
   end
 
   def tile_action_endable?
-    return @legacy.tile_action_endable? unless turn_backed?
     return false unless @game.playing?
 
     case turn.sub_phase
@@ -102,14 +94,11 @@ class TurnViewAdapter
   end
 
   def undo_allowed?
-    return @legacy.undo_allowed? unless turn_click_backed?
-
     click = TurnClick.most_recent_for(@game)
     click&.reversible? || false
   end
 
   def city_hall_clusters
-    return @legacy.city_hall_clusters unless turn_backed?
     return {} unless turn.sub_phase.is_a?(Turn::SubPhases::CityHallPhase)
 
     city_hall_centers.to_h do |row, col|
@@ -122,13 +111,10 @@ class TurnViewAdapter
   end
 
   def mandatory_remaining
-    return @game.mandatory_count unless turn_backed?
-
     turn.mandatory_remaining
   end
 
   def outpost_activatable?(tile_hash)
-    return @legacy.outpost_activatable?(tile_hash) unless turn_backed?
     return false if tile_hash["used"]
     return false if turn.outpost_active
     return false if turn.sub_phase && !turn.sub_phase.is_a?(Turn::SubPhases::TileBuildPhase)
@@ -137,22 +123,18 @@ class TurnViewAdapter
   end
 
   def current_action_type
-    return @game.current_action&.dig("type") unless turn_backed?
     return "mandatory" unless turn.sub_phase
 
     active_tile_klass&.delete_suffix("Tile")&.downcase
   end
 
   def current_action_from
-    return @game.current_action&.dig("from") unless turn_backed?
     return nil unless turn.sub_phase.respond_to?(:source)
 
     turn.sub_phase.source&.to_key
   end
 
   def chosen_terrain
-    return @game.current_action&.dig("chosen_terrain") unless turn_backed?
-
     case turn.sub_phase
     when Turn::SubPhases::WallPlacementPhase
       turn.sub_phase.chosen_terrain
@@ -162,8 +144,6 @@ class TurnViewAdapter
   end
 
   def outpost_active?
-    return @game.current_action&.dig("outpost_active") unless turn_backed?
-
     turn.outpost_active
   end
 
@@ -172,7 +152,6 @@ class TurnViewAdapter
   end
 
   def tile_progress(tile_hash)
-    return legacy_tile_progress(tile_hash) unless turn_backed?
     return nil unless active_tile?(tile_hash)
 
     case turn.sub_phase
@@ -186,14 +165,6 @@ class TurnViewAdapter
   end
 
   private
-
-  def turn_backed?
-    @game.current_action.is_a?(Hash) && @game.current_action["turn"].is_a?(Hash)
-  end
-
-  def turn_click_backed?
-    TurnClick.where(game_id: @game.id).exists?
-  end
 
   def turn
     @turn ||= Turn.from_game(@game)
@@ -218,8 +189,11 @@ class TurnViewAdapter
   end
 
   def mandatory_cells_for(terrain)
-    list = TurnEngine.new(@game).available_list(player.order, terrain)
-    (0..19).flat_map { |row| (0..19).filter_map { |col| [ row, col ] if list[row][col] } }
+    (0..19).flat_map do |row|
+      (0..19).filter_map do |col|
+        [ row, col ] if @game.board_contents.can_mandatory_build?(@game.board, player.order, terrain, row, col)
+      end
+    end
   end
 
   def tile_build_cells(phase)
@@ -358,15 +332,5 @@ class TurnViewAdapter
     @game.game_players
       .reject { |game_player| game_player.order == player.order }
       .select { |game_player| @game.board_contents.settlements_for(game_player.order).any? }
-  end
-
-  def legacy_tile_progress(tile_hash)
-    return nil unless active_tile?(tile_hash)
-
-    if @game.current_action["remaining"]
-      "#{@game.current_action['remaining']} left"
-    elsif @game.current_action["budget"]
-      "#{@game.current_action['budget']} steps left"
-    end
   end
 end

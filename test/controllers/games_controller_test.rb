@@ -22,8 +22,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "mandatory tile renders as tile-used when the turn is endable" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.mandatory_count = 0
-    game.save
+    game.update!(current_action: { "turn" => { "mandatory_remaining" => 0 } })
     chris.tiles = [ { "klass" => "MandatoryTile", "used" => false } ]
     chris.save
 
@@ -87,41 +86,55 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action dispatches to select_settlement when paddock action has no from" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.current_action = { "type" => "paddock" }
+    game.boards = [ [ 5, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "settlement_move", "state" => { "tile_klass" => "PaddockTile", "source" => nil } } } }
     game.save
+    chris.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[6, 5]", "used" => false } ])
 
     post action_game_url(game), params: { build_row: 5, build_col: 5 }
 
     game.reload
-    assert_equal "[5, 5]", game.current_action["from"], "select_settlement must have set from"
+    assert_equal "[5, 5]", game.current_action.dig("turn", "sub_phase", "state", "source"), "select_settlement must have set from"
   end
 
   test "POST action dispatches to move_settlement when paddock action has from set" do
-    game = games(:game2player)
-    chris = game_players(:chris)
-    game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
-    game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
-    game.save
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+    game.instantiate
+    chris = game.current_player
 
-    post action_game_url(game), params: { build_row: 5, build_col: 7 }
+    src, dst = find_paddock_move(game, chris.order)
+
+    game.update!(
+      board_contents: game.board_contents.tap { |bc| bc.place_settlement(src[0], src[1], chris.order) },
+      current_action: { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "settlement_move", "state" => { "tile_klass" => "PaddockTile", "source" => "[#{src[0]}, #{src[1]}]" } } } }
+    )
+    chris.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[6, 5]", "used" => false } ])
+
+    post action_game_url(game), params: { build_row: dst[0], build_col: dst[1] }
 
     game.reload
-    assert game.board_contents.empty?(5, 5), "settlement must have moved"
-    assert_equal chris.order, game.board_contents.player_at(5, 7)
+    assert game.board_contents.empty?(src[0], src[1]), "settlement must have moved"
+    assert_equal chris.order, game.board_contents.player_at(dst[0], dst[1])
   end
 
   test "POST action dispatches to select_settlement when harbor action has no from" do
     game = games(:game2player)
     chris = game_players(:chris)
-    game.current_action = { "type" => "harbor" }
+    game.boards = [ [ 7, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "settlement_move", "state" => { "tile_klass" => "HarborTile", "source" => nil } } } }
     game.save
+    chris.update!(tiles: [ { "klass" => "HarborTile", "from" => "[6, 5]", "used" => false } ])
 
     post action_game_url(game), params: { build_row: 5, build_col: 5 }
 
     game.reload
-    assert_equal "[5, 5]", game.current_action["from"], "select_settlement must have set from"
+    assert_equal "[5, 5]", game.current_action.dig("turn", "sub_phase", "state", "source"), "select_settlement must have set from"
   end
 
   test "POST action dispatches to move_settlement when harbor action has from set" do
@@ -129,8 +142,9 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     chris = game_players(:chris)
     game.boards = [ [ 7, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
-    game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "settlement_move", "state" => { "tile_klass" => "HarborTile", "source" => "[5, 5]" } } } }
     game.save
+    chris.update!(tiles: [ { "klass" => "HarborTile", "from" => "[6, 5]", "used" => false } ])
 
     post action_game_url(game), params: { build_row: 0, build_col: 5 }
 
@@ -286,7 +300,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     chris = game_players(:chris)
     game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 0, 0 ], [ 1, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(3, 5, chris.order) }
-    game.current_action = { "type" => "quarry", "walls_placed" => 0 }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "wall_placement", "state" => { "walls_placed" => 0, "chosen_terrain" => nil } } } }
     game.save
     chris.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[2, 0]", "used" => false } ])
 
@@ -300,13 +314,13 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     chris = game_players(:chris)
     game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 0, 0 ], [ 1, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(3, 5, chris.order) }
-    game.current_action = { "type" => "quarry", "walls_placed" => 0 }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "wall_placement", "state" => { "walls_placed" => 0, "chosen_terrain" => nil } } } }
     game.save
     chris.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[2, 0]", "used" => false } ])
 
     post action_game_url(game), params: { build_row: 3, build_col: 6 }
 
-    assert_equal "mandatory", game.reload.current_action["type"], "quarry action must auto-end when no valid placements remain"
+    assert_nil game.reload.current_action.dig("turn", "sub_phase"), "quarry action must auto-end when no valid placements remain"
   end
 
   test "GET new renders the new game form" do
@@ -338,7 +352,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     chris = game_players(:chris)
     game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
-    game.current_action = { "type" => "oasis" }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "tile_build", "state" => { "tile_klass" => "OasisTile", "restricted_terrain" => "D", "tile_source" => "[2, 7]" } } } }
     game.save
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
@@ -351,10 +365,9 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action with donation tile current_action dispatches activate_tile_build" do
     game = games(:game2player)
     chris = game_players(:chris)
-    # OasisBoard has Desert at [0,0]; place settlement elsewhere so fallback path is used
     game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
-    game.current_action = { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 }
+    game.current_action = { "turn" => { "mandatory_remaining" => 0, "sub_phase" => { "type" => "tile_build", "state" => { "tile_klass" => "DonationDesertTile", "restricted_terrain" => "D", "tile_source" => "[0, 5]" } } } }
     game.save
     chris.tiles = [ { "klass" => "DonationDesertTile", "from" => "[0, 5]", "used" => false } ]
     chris.save
@@ -472,6 +485,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+  def find_paddock_move(game, player_order)
+    20.times do |r|
+      20.times do |c|
+        next unless game.board_contents.empty?(r, c) && game.board.terrain_at(r, c)
+        dsts = Tiles::PaddockTile.new(0).valid_destinations(
+          from_row: r, from_col: c, board_contents: game.board_contents, board: game.board, player_order: player_order
+        )
+        return [ [ r, c ], dsts.first ] if dsts.any?
+      end
+    end
+    raise "no Paddock-movable source on this board"
+  end
 
   def first_empty_terrain(game, terrain)
     20.times do |row|

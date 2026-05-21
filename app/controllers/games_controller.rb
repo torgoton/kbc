@@ -27,27 +27,19 @@ class GamesController < ApplicationController
     render :show, locals: { game: @game, my_player: @my_player }
   end
 
-  # ACTION - do a part of a turn by a player. Either
-  # 1. move a piece from the board to my supply as part of the mandatory action
-  # 2. use a tile that I have to build a settlement on the board
-  # 3. use a tile that I have to move a piece on the board
   def action
     return unless @game.game_players.find_by(player: Current.user) == @game.current_player
 
     Rails.logger.debug("TURN ACTION PARAMS: #{action_params.inspect}")
 
+    @game.instantiate
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
-    if turn_stack_action?
-      apply_turn_action!(turn_action_for_click, row: coord.row, col: coord.col)
-    else
-      apply_legacy_action!(coord)
-    end
+    apply_turn_action!(turn_action_for_click, row: coord.row, col: coord.col)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
     animate_build_settlement(@game, @game.current_player, coord.row, coord.col)
-    # update all clients
     @game.broadcast_game_update
   end
 
@@ -66,12 +58,7 @@ class GamesController < ApplicationController
     Rails.logger.debug("END TURN action")
     current_gp = @game.game_players.find_by(player: Current.user)
     if current_gp == @game.current_player
-      if turn_stack_backed?
-        apply_turn_action!(:end_turn) if TurnViewAdapter.new(@game).turn_endable?
-      else
-        engine = TurnEngine.new(@game)
-        engine.end_turn if engine.turn_endable?
-      end
+      apply_turn_action!(:end_turn) if TurnViewAdapter.new(@game).turn_endable?
     end
     respond_to do |format|
       format.html { redirect_to @game }
@@ -86,14 +73,12 @@ class GamesController < ApplicationController
       redirect_to dashboard_path, notice: "Game not found"
       return
     end
-    # Join the game
     @game.add_player(Current.user)
     unless @game.save
       redirect_to dashboard_path, error: "Unable to join game"
       Rails.logger.error "ERROR saving game: #{@game.errors.inspect}"
       return
     end
-    # MVP: 2 players every game, so just start it now
     @game.start
     @game.broadcast_game_update
     redirect_to game_path(@game)
@@ -101,12 +86,7 @@ class GamesController < ApplicationController
 
   def undo_move
     Rails.logger.debug("UNDO MOVE action")
-    if TurnClick.where(game_id: @game.id).exists?
-      ConsequenceApplier.unapply!(@game) if TurnViewAdapter.new(@game).undo_allowed?
-    else
-      engine = TurnEngine.new(@game)
-      engine.undo_last_move if engine.undo_allowed?
-    end
+    ConsequenceApplier.unapply!(@game) if TurnViewAdapter.new(@game).undo_allowed?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -118,7 +98,7 @@ class GamesController < ApplicationController
   def end_tile_action
     current_gp = @game.game_players.find_by(player: Current.user)
     return unless current_gp == @game.current_player
-    turn_stack_backed? ? apply_turn_action!(:end_tile_action) : TurnEngine.new(@game).end_tile_action
+    apply_turn_action!(:end_tile_action)
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -129,7 +109,7 @@ class GamesController < ApplicationController
   def activate_outpost
     current_gp = @game.game_players.find_by(player: Current.user)
     return unless current_gp == @game.current_player
-    turn_stack_backed? ? apply_turn_action!(:activate_outpost) : TurnEngine.new(@game).activate_outpost
+    apply_turn_action!(:activate_outpost)
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -139,7 +119,7 @@ class GamesController < ApplicationController
 
   def activate_fort
     return unless @game.game_players.find_by(player: Current.user) == @game.current_player
-    turn_stack_backed? ? apply_turn_action!(:activate_fort) : TurnEngine.new(@game).activate_fort_tile
+    apply_turn_action!(:activate_fort)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -151,11 +131,7 @@ class GamesController < ApplicationController
     current_gp = @game.game_players.find_by(player: Current.user)
     return unless current_gp == @game.current_player
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
-    if turn_stack_backed?
-      apply_turn_action!(:remove_settlement, row: coord.row, col: coord.col)
-    else
-      TurnEngine.new(@game).remove_settlement(coord.row, coord.col)
-    end
+    apply_turn_action!(:remove_settlement, row: coord.row, col: coord.col)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -167,11 +143,7 @@ class GamesController < ApplicationController
     current_gp = @game.game_players.find_by(player: Current.user)
     return unless current_gp == @game.current_player
     coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
-    if turn_stack_backed?
-      apply_turn_action!(:place_wall, row: coord.row, col: coord.col)
-    else
-      TurnEngine.new(@game).place_wall(coord.row, coord.col)
-    end
+    apply_turn_action!(:place_wall, row: coord.row, col: coord.col)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -182,11 +154,7 @@ class GamesController < ApplicationController
   def remove_meeple
     return unless @game.game_players.find_by(player: Current.user) == @game.current_player
     coord = Coordinate.new(params[:row], params[:col])
-    if turn_stack_backed?
-      apply_turn_action!(:place_meeple, row: coord.row, col: coord.col)
-    else
-      TurnEngine.new(@game).remove_meeple_action(coord.row, coord.col)
-    end
+    apply_turn_action!(:place_meeple, row: coord.row, col: coord.col)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -197,11 +165,7 @@ class GamesController < ApplicationController
   def select_meeple
     return unless @game.game_players.find_by(player: Current.user) == @game.current_player
     coord = Coordinate.new(params[:row], params[:col])
-    if turn_stack_backed?
-      apply_turn_action!(:place_meeple, row: coord.row, col: coord.col)
-    else
-      TurnEngine.new(@game).select_meeple_for_move(coord.row, coord.col)
-    end
+    apply_turn_action!(:place_meeple, row: coord.row, col: coord.col)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -222,14 +186,6 @@ class GamesController < ApplicationController
 
   def create_game_params
     { state: "waiting" }
-  end
-
-  def turn_stack_action?
-    turn_stack_backed? || @game.current_action&.dig("type") == "mandatory"
-  end
-
-  def turn_stack_backed?
-    @game.current_action.is_a?(Hash) && @game.current_action["turn"].is_a?(Hash)
   end
 
   def select_action_tile_klass
@@ -263,33 +219,5 @@ class GamesController < ApplicationController
   rescue ConsequenceApplier::ApplyError => e
     Rails.logger.warn("Turn action rejected: #{e.message}")
     nil
-  end
-
-  def apply_legacy_action!(coord)
-    engine = TurnEngine.new(@game)
-    action_type = @game.current_action["type"]
-    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
-    tile_klass = Tiles::Tile.for_klass(klass_name) if action_type != "mandatory"
-    tile_obj = tile_klass&.new(0)
-
-    if tile_obj&.moves_settlement?
-      if @game.current_action["from"]
-        engine.move_settlement(coord.row, coord.col)
-      else
-        engine.select_settlement(coord.row, coord.col)
-      end
-    elsif tile_obj&.sword_tile?
-      engine.remove_settlement(coord.row, coord.col)
-    elsif tile_obj&.places_wall?
-      engine.place_wall(coord.row, coord.col)
-    elsif tile_obj&.places_meeple?
-      engine.execute_meeple_action(coord.row, coord.col)
-    elsif tile_obj&.places_city_hall?
-      engine.place_city_hall(coord.row, coord.col)
-    elsif tile_obj&.builds_settlement?
-      engine.activate_tile_build(coord.row, coord.col)
-    else
-      engine.build_settlement(coord.row, coord.col)
-    end
   end
 end

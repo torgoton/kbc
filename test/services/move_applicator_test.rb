@@ -356,11 +356,11 @@ class MoveApplicatorTest < ActiveSupport::TestCase
         { "order" => 1, "hand" => "T", "supply" => { "settlements" => 40 }, "tiles" => [] }
       ]
     )
-    move = fake_move(action: "select_action", to: "sword", payload: { "klass" => "SwordTile", "pending_orders" => [1] })
+    move = fake_move(action: "select_action", to: "sword", payload: { "klass" => "SwordTile", "pending_orders" => [ 1 ] })
 
     MoveApplicator.dispatch(state, move)
 
-    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [1] }, state.current_action)
+    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ 1 ] }, state.current_action)
   end
 
   test "dispatch place_warrior marks BarracksTile used and resets current_action" do

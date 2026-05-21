@@ -11,12 +11,6 @@ class TurnViewAdapterTest < ActiveSupport::TestCase
     @player = @game.current_player
   end
 
-  test "turn_state falls back to TurnEngine for legacy current_action" do
-    @game.update!(current_action: { "type" => "mandatory" })
-
-    assert_equal TurnEngine.new(@game).turn_state, TurnViewAdapter.new(@game).turn_state
-  end
-
   test "mandatory Turn state exposes remaining count turn_state and buildable cells" do
     @player.update!(hand: [ "G" ])
     @game.update!(current_action: { "turn" => { "mandatory_remaining" => 2 } })

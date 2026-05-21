@@ -453,7 +453,7 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
   end
 
   def consume_target(owner_order)
-    remaining = pending_orders - [owner_order]
+    remaining = pending_orders - [ owner_order ]
     if remaining.empty?
       TurnPhase::TransitionResult.new(
         next_phase: TurnPhase::MandatoryBuildPhase.new,

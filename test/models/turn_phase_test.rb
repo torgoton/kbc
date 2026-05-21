@@ -104,14 +104,14 @@ class TurnPhaseTest < ActiveSupport::TestCase
       "type" => "resettlement",
       "klass" => "ResettlementTile",
       "budget" => 3,
-      "vacated" => ["[2, 3]"],
+      "vacated" => [ "[2, 3]" ],
       "moves" => 1,
       "from" => "[5, 5]"
     })
 
     assert_instance_of TurnPhase::ResettlementPhase, phase
     assert_equal 3, phase.budget
-    assert_equal ["[2, 3]"], phase.vacated
+    assert_equal [ "[2, 3]" ], phase.vacated
     assert_equal 1, phase.moves
     assert_equal "[5, 5]", phase.from
   end
@@ -132,12 +132,12 @@ class TurnPhaseTest < ActiveSupport::TestCase
   end
 
   test "targeted removal phase removes one pending order at a time" do
-    phase = TurnPhase.deserialize({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [1, 2] })
+    phase = TurnPhase.deserialize({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ 1, 2 ] })
 
     result = phase.consume_target(1)
 
     assert_instance_of TurnPhase::TargetedRemovalPhase, result.next_phase
-    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [2] }, result.next_phase.serialize)
+    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ 2 ] }, result.next_phase.serialize)
     assert_equal false, result.action_completed
   end
 
