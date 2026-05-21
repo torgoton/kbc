@@ -45,12 +45,43 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-tile.tile-used .tile-container.mandatory", count: 0
   end
 
-  test "select_action sets current_action type on the game" do
+  test "select_action starts the turn stack sub-phase" do
     game = games(:game2player)
+    game_players(:chris).update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 18]", "used" => false } ])
+
     post select_action_game_url(game), params: { action_type: "paddock" }
 
     assert_response :redirect
-    assert_equal "paddock", game.reload.current_action["type"]
+    assert_equal "settlement_move", game.reload.current_action.dig("turn", "sub_phase", "type")
+    assert_equal "PaddockTile", game.current_action.dig("turn", "sub_phase", "state", "tile_klass")
+  end
+
+  test "Farm select_action and board action flow through the turn stack" do
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+    chris = game.game_players.find_by!(player: users(:chris))
+    game.update!(current_player: chris)
+    chris.update!(tiles: [ { "klass" => "FarmTile", "from" => "[3, 4]", "used" => false } ])
+
+    post select_action_game_url(game), params: { action_type: "farm" }
+
+    game.reload
+    assert_equal "tile_build", game.current_action.dig("turn", "sub_phase", "type")
+    assert_equal "FarmTile", game.current_action.dig("turn", "sub_phase", "state", "tile_klass")
+
+    game.instantiate
+    row, col = first_empty_terrain(game, "G")
+
+    post action_game_url(game), params: { build_row: row, build_col: col }
+
+    game.reload
+    assert_equal chris.order, game.board_contents.player_at(row, col)
+    assert_nil game.current_action.dig("turn", "sub_phase")
+    assert chris.reload.tiles.find { |tile| tile["klass"] == "FarmTile" }["used"]
+    assert_equal 2, TurnClick.where(game: game).count
   end
 
   test "POST action dispatches to select_settlement when paddock action has no from" do
@@ -438,6 +469,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_turbo_stream_broadcasts("game_#{game.id}") do
       post join_game_url(game)
     end
+  end
+
+  private
+
+  def first_empty_terrain(game, terrain)
+    20.times do |row|
+      20.times do |col|
+        return [ row, col ] if game.board.terrain_at(row, col) == terrain && game.board_contents.empty?(row, col)
+      end
+    end
+    raise "no empty #{terrain} hex"
   end
 end
 
