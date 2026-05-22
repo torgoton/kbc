@@ -1,6 +1,11 @@
 require "test_helper"
 
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
+  setup do
+    # Clear the cache before each test to ensure a clean state and to work around rate limiting.
+    Rails.cache.clear
+  end
+
   if ENV["CAPYBARA_SERVER_PORT"]
     served_by host: "rails-app", port: ENV["CAPYBARA_SERVER_PORT"]
 

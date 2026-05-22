@@ -30,8 +30,7 @@ class FortTileTest < ApplicationSystemTestCase
     assert_selector "form[action='#{activate_fort_game_path(@game)}']", visible: false
     page.execute_script("document.querySelector(\"form[action='#{activate_fort_game_path(@game)}']\").requestSubmit()")
 
-    assert_equal "fort", @game.reload.current_action["type"]
-    assert_equal "FortTile", @game.current_action["klass"]
-    assert_includes %w[D F G], @game.current_action["fort_terrain"]
+    assert_selector "#current-action[data-type='fort']", visible: false
+    assert_text "Chris drew a Desert card"
   end
 end
