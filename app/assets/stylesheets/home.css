@@ -15,3 +15,61 @@
 .display-box h1 {
     margin: 0;
 }
+
+.home-title {
+    font-size: 4rem;
+    text-align: center;
+}
+
+.home-auth-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 2rem auto 1.5rem;
+    max-width: 52rem;
+    position: relative;
+}
+
+.home-auth-grid::before {
+    background-color: var(--clr-g-link);
+    content: "";
+    height: 100%;
+    left: 50%;
+    position: absolute;
+    top: 0;
+    width: 2px;
+}
+
+.home-auth-panel {
+    padding: 1rem;
+}
+
+.home-auth-panel h2 {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.home-auth-panel form {
+    text-align: center;
+}
+
+#sign-in-panel input#email_address,
+#sign-in-panel input#password {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 18rem;
+}
+
+.home-about-link {
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .home-auth-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .home-auth-grid::before {
+        display: none;
+    }
+}

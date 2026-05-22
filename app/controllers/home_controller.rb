@@ -3,5 +3,6 @@ class HomeController < ApplicationController
 
   def index
     redirect_to dashboard_path if authenticated?
+    @user = User.new
   end
 end

@@ -1,33 +1,50 @@
 <%= render "fancy" %>
 
 <div class="fancy-box">
-  <h1>KBC</h1>
   <div class="fancy-section">
     <%= tag.div(flash[:alert], class: "flash-alert") if flash[:alert] %>
     <%= tag.div(flash[:notice], class: "flash-notice") if flash[:notice] %>
-    <h2>Sign in</h2>
-    <%= form_with url: session_path do |form| %>
-      <%= form.email_field :email_address,
-        required: true,
-        autofocus: true,
-        autocomplete: "username",
-        placeholder: "Enter your email address",
-        value: params[:email_address]
-      %><br>
-      <%= form.password_field :password,
-        required: true,
-        autocomplete: "current-password",
-        placeholder: "Enter your password",
-        maxlength: 24
-      %><br>
-      <%= form.submit "Sign in" %>
-    <% end %>
-  <br>
 
-  <%= link_to "Forgot password?", new_password_path %>
-  </div>
-  <div class="fancy-section">
-    <h3><%= link_to("Request an account", new_user_path) %></h3>
-    <h3><%= link_to "Credits / About", credits_path %></h3>
+    <h1 class="home-title">KBC</h1>
+
+    <div class="home-auth-grid">
+      <section class="home-auth-panel" id="sign-up-panel">
+        <h2>Sign Up</h2>
+        <%= form_with(model: @user, data: { turbo: false }) do |form| %>
+          <div>
+            <%= form.email_field :email_address, required: true, autocomplete: "email_address", placeholder: "Enter your email address", value: params[:email_address] %><br>
+            <%= form.text_field :handle, required: true, placeholder: "Enter your desired handle", value: params[:handle] %><br>
+            <%= form.password_field :password, required: true, placeholder: "Create a password", value: params[:password] %><br>
+            <%= form.submit %>
+          </div>
+        <% end %>
+      </section>
+
+      <section class="home-auth-panel" id="sign-in-panel">
+        <h2>Sign in</h2>
+        <%= form_with url: session_path do |form| %>
+          <%= form.email_field :email_address,
+            required: true,
+            autocomplete: "username",
+            placeholder: "Enter your email address",
+            value: params[:email_address]
+          %><br>
+          <%= form.password_field :password,
+            required: true,
+            autocomplete: "current-password",
+            placeholder: "Enter your password",
+            maxlength: 24
+          %><br>
+          <%= form.submit "Sign In" %>
+        <% end %>
+        <br>
+
+        <%= link_to "Forgot password?", new_password_path %>
+      </section>
+    </div>
+
+    <div class="home-about-link">
+      <%= link_to "Credits / About", credits_path %>
+    </div>
   </div>
 </div>

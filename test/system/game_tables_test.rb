@@ -3,9 +3,11 @@ require "application_system_test_case"
 class GameTablesTest < ApplicationSystemTestCase
   def sign_in(email_address:, password: "password")
     visit root_url
-    fill_in "Enter your email address", with: email_address
-    fill_in "Enter your password", with: password
-    click_on "Sign in"
+    within "#sign-in-panel" do
+      fill_in "Enter your email address", with: email_address
+      fill_in "Enter your password", with: password
+      click_on "Sign In"
+    end
     assert_selector "h1", text: "KBC Dashboard"
   end
 

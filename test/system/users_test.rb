@@ -3,9 +3,11 @@ require "application_system_test_case"
 class UsersTest < ApplicationSystemTestCase
   def sign_in(email_address:, password:)
     visit root_url
-    fill_in "Enter your email address", with: email_address
-    fill_in "Enter your password", with: password
-    click_on "Sign in"
+    within "#sign-in-panel" do
+      fill_in "Enter your email address", with: email_address
+      fill_in "Enter your password", with: password
+      click_on "Sign In"
+    end
   end
 
   test "user can sign in and reach the dashboard" do
@@ -15,9 +17,11 @@ class UsersTest < ApplicationSystemTestCase
 
   test "invalid credentials show an alert" do
     visit root_url
-    fill_in "Enter your email address", with: "nobody@example.com"
-    fill_in "Enter your password", with: "wrong"
-    click_on "Sign in"
+    within "#sign-in-panel" do
+      fill_in "Enter your email address", with: "nobody@example.com"
+      fill_in "Enter your password", with: "wrong"
+      click_on "Sign In"
+    end
     assert_selector ".flash-alert"
   end
 

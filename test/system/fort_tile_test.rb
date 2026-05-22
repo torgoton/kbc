@@ -20,9 +20,11 @@ class FortTileTest < ApplicationSystemTestCase
 
   test "current player can open the Fort warning and activate the tile" do
     visit root_path
-    fill_in "Enter your email address", with: "chris@example.com"
-    fill_in "Enter your password", with: "password"
-    click_on "Sign in"
+    within "#sign-in-panel" do
+      fill_in "Enter your email address", with: "chris@example.com"
+      fill_in "Enter your password", with: "password"
+      click_on "Sign In"
+    end
     assert_selector "h1", text: "KBC Dashboard"
 
     visit game_path(@game)
