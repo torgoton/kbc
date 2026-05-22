@@ -119,7 +119,7 @@ class Game < ApplicationRecord
 
   def turn_state
     return "Waiting for players" if waiting?
-    TurnViewAdapter.new(self).turn_state
+    TurnEngine.new(self).turn_state
   end
 
   def turn_phase
@@ -191,7 +191,7 @@ class Game < ApplicationRecord
   def broadcast_game_update
     @board = nil # reset the board so we can re-construct it from the game state
     instantiate
-    engine = TurnViewAdapter.new(self)
+    engine = TurnEngine.new(self)
     scores = live_scores
 
     # public stuff
@@ -214,7 +214,7 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "board",
       partial: "games/board",
-      locals: { game: self, engine: engine }
+      locals: { game: self }
     )
     # - game log
     broadcast_update_to(
