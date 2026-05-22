@@ -82,30 +82,6 @@ class BoardState
     empty?(row, col) && !warrior_blocked?(row, col)
   end
 
-  def can_mandatory_build?(board, player_order, terrain, row, col, skip_adjacency: false)
-    return false unless available_for_building?(row, col)
-    return false unless board.terrain_at(row, col) == terrain
-    return true if skip_adjacency
-
-    if any_player_adjacency_to_terrain?(board, player_order, terrain)
-      adjacent_to_player?(player_order, row, col)
-    else
-      true
-    end
-  end
-
-  def any_player_adjacency_to_terrain?(board, player_order, terrain)
-    settlements_for(player_order).any? do |sr, sc|
-      neighbors(sr, sc).any? do |nr, nc|
-        empty?(nr, nc) && board.terrain_at(nr, nc) == terrain && !warrior_blocked?(nr, nc)
-      end
-    end
-  end
-
-  def adjacent_to_player?(player_order, row, col)
-    neighbors(row, col).any? { |nr, nc| player_at(nr, nc) == player_order }
-  end
-
   def move_settlement(from_row, from_col, to_row, to_col)
     cell = @cells.delete([ from_row, from_col ])
     @cells[[ to_row, to_col ]] = cell
@@ -174,28 +150,6 @@ class BoardState
 
   def neighbors_where(row, col, &block)
     neighbors(row, col).select { |nr, nc| block.call(nr, nc) }
-  end
-
-  def pickup_targets_for(row, col, taken_from)
-    neighbors(row, col).filter_map do |nr, nc|
-      next if tile_qty(nr, nc) <= 0
-      key = "[#{nr}, #{nc}]"
-      next if taken_from&.include?(key)
-      [ Coordinate.new(nr, nc), tile_klass(nr, nc) ]
-    end
-  end
-
-  def ambassadors_match?(player_order, row, col)
-    neighbors(row, col).any? do |nr, nc|
-      p = player_at(nr, nc)
-      p && p != player_order
-    end
-  end
-
-  def shepherds_match?(board, terrain, row, col)
-    neighbors(row, col).none? do |nr, nc|
-      empty?(nr, nc) && board.terrain_at(nr, nc) == terrain
-    end
   end
 
   def locations_with_remaining_tiles
