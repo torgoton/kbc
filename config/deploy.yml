@@ -35,7 +35,15 @@ env:
   secret:
     - RAILS_MASTER_KEY
     - DATABASE_URL
+    - SMTP_PASSWORD
   clear:
+    APP_HOST: kbc.chrisschumann.dev
+    MAIL_FROM: kbc@mail.chrisschumann.dev
+    SMTP_ADDRESS: smtp.resend.com
+    SMTP_PORT: 587
+    SMTP_USERNAME: resend
+    SMTP_DOMAIN: mail.chrisschumann.dev
+
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     SOLID_QUEUE_IN_PUMA: true

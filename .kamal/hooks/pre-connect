@@ -1,0 +1,26 @@
+#!/bin/sh
+
+secrets_file=".kamal/secrets.local"
+required_secrets="KAMAL_REGISTRY_PASSWORD RAILS_MASTER_KEY DATABASE_URL SMTP_PASSWORD"
+
+if [ ! -f "$secrets_file" ]; then
+  echo "Missing $secrets_file; aborting deploy." >&2
+  exit 1
+fi
+
+set -a
+. "$secrets_file"
+set +a
+
+missing=0
+
+for secret in $required_secrets; do
+  eval "value=\${$secret:-}"
+
+  if [ -z "$value" ]; then
+    echo "Missing $secret in $secrets_file; aborting deploy." >&2
+    missing=1
+  fi
+done
+
+exit "$missing"
