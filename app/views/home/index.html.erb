@@ -12,7 +12,7 @@
         <h2>Sign Up</h2>
         <%= form_with(model: @user, data: { turbo: false }) do |form| %>
           <div>
-            <%= form.email_field :email_address, required: true, autocomplete: "email_address", placeholder: "Enter your email address", value: params[:email_address] %><br>
+            <%= form.email_field :email_address, required: true, autocomplete: "email", placeholder: "Enter your email address", value: params[:email_address] %><br>
             <%= form.text_field :handle, required: true, placeholder: "Enter your desired handle", value: params[:handle] %><br>
             <%= form.password_field :password, required: true, placeholder: "Create a password", value: params[:password] %><br>
             <%= form.submit %>
@@ -22,7 +22,7 @@
 
       <section class="home-auth-panel" id="sign-in-panel">
         <h2>Sign in</h2>
-        <%= form_with url: session_path do |form| %>
+        <%= form_with url: session_path, data: { turbo: false } do |form| %>
           <%= form.email_field :email_address,
             required: true,
             autocomplete: "username",

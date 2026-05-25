@@ -3,16 +3,19 @@ require "application_system_test_case"
 class GameTablesTest < ApplicationSystemTestCase
   def sign_in(email_address:, password: "password")
     visit root_url
-    within "#sign-in-panel" do
-      fill_in "Enter your email address", with: email_address
-      fill_in "Enter your password", with: password
-      click_on "Sign In"
-    end
+    sign_in_panel = find("#sign-in-panel")
+    email_field = sign_in_panel.find("input[name='email_address']")
+    password_field = sign_in_panel.find("input[name='password']")
+    set_field(email_field, email_address)
+    set_field(password_field, password)
+    assert_equal email_address, email_field.value
+    assert_equal password, password_field.value
+    submit_form sign_in_panel.find("form")
     assert_selector "h1", text: "KBC Dashboard"
   end
 
   def sign_out
-    click_on "Log out"
+    submit_form find("#logout_btn form")
     assert_selector "h2", text: "Sign in"
   end
 
@@ -23,7 +26,7 @@ class GameTablesTest < ApplicationSystemTestCase
 
     click_on "Open a new table"
     assert_selector "h1", text: "New Game"
-    click_on "Create Game"
+    submit_form find("form")
 
     assert_selector "h1", text: "KBC Dashboard"
     created_game = Game.where.not(id: existing_game_ids).sole
@@ -35,7 +38,7 @@ class GameTablesTest < ApplicationSystemTestCase
 
     assert_text "Game #{created_game.id}"
     within(:xpath, "//tr[.//td[contains(., 'Game #{created_game.id}')]]") do
-      click_on "Join"
+      submit_form find("form")
     end
 
     assert_selector "#game-area"

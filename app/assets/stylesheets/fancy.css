@@ -9,11 +9,13 @@
   display: flex;
   width: 120vw;
   height: 120vh;
+  pointer-events: none;
   --s: 100px;
   --m: 2px;
   --f: calc(1.732 * var(--s) + 4 * var(--m) - 1px);
   top: calc(var(--s) * -0.5);
   left: calc(var(--s) * -0.5);
+  z-index: 0;
 }
 
 .fancy-box {
@@ -24,6 +26,8 @@
   margin: 20px auto;
   padding: 1rem;
   font-size: 1.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .fancy-box .flash-alert {

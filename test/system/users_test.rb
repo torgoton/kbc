@@ -3,11 +3,14 @@ require "application_system_test_case"
 class UsersTest < ApplicationSystemTestCase
   def sign_in(email_address:, password:)
     visit root_url
-    within "#sign-in-panel" do
-      fill_in "Enter your email address", with: email_address
-      fill_in "Enter your password", with: password
-      click_on "Sign In"
-    end
+    sign_in_panel = find("#sign-in-panel")
+    email_field = sign_in_panel.find("input[name='email_address']")
+    password_field = sign_in_panel.find("input[name='password']")
+    set_field(email_field, email_address)
+    set_field(password_field, password)
+    assert_equal email_address, email_field.value
+    assert_equal password, password_field.value
+    submit_form sign_in_panel.find("form")
   end
 
   test "user can sign in and reach the dashboard" do
@@ -31,10 +34,13 @@ class UsersTest < ApplicationSystemTestCase
     email_address = "newplayer-#{token}@example.com"
 
     visit new_user_url
-    fill_in "Enter your desired handle", with: handle
-    fill_in "Enter your email address", with: email_address
-    fill_in "Create a password", with: "secret123"
-    click_on "Create User"
+    set_field(find("input[name='user[handle]']"), handle)
+    set_field(find("input[name='user[email_address]']"), email_address)
+    set_field(find("input[name='user[password]']"), "secret123")
+    assert_field "user_handle", with: handle
+    assert_field "user_email_address", with: email_address
+    assert_field "user_password", with: "secret123"
+    submit_form find("form")
 
     assert_text "not yet been approved"
 

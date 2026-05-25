@@ -2,7 +2,18 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 
+let fancyDanceInterval;
+
+function stop_fancy_dance() {
+  if (fancyDanceInterval) {
+    window.clearInterval(fancyDanceInterval);
+    fancyDanceInterval = undefined;
+  }
+}
+
 function fancy_dance() {
+  stop_fancy_dance();
+
   const fancy = document.getElementById('fancy-background');
 
   console.log('onpageshow', fancy);
@@ -14,11 +25,12 @@ function fancy_dance() {
       cell.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
     });
 
-    window.setInterval(() => {
+    fancyDanceInterval = window.setInterval(() => {
       cells[Math.floor(Math.random() * cells.length)].style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
       }
     , 100);
   }
 }
 
+document.addEventListener('turbo:before-render', stop_fancy_dance);
 document.addEventListener('turbo:load', fancy_dance);

@@ -13,11 +13,10 @@
     <% end %>
 
     <div>
-      <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "email_address", placeholder: "Enter your email address", value: params[:email_address] %><br>
+      <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "email", placeholder: "Enter your email address", value: params[:email_address] %><br>
       <%= form.text_field :handle, required: true, placeholder: "Enter your desired handle", value: params[:handle] %><br>
       <%= form.password_field :password, required: true, placeholder: "Create a password", value: params[:password] %><br>
       <%= form.submit %>
     </div>
   <% end %>
 </div>
-
