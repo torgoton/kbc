@@ -21,7 +21,7 @@ module MoveApplicator
     when "build"
       fort_terrain = move.payload&.dig("tile_klass") == "FortTile" ? move.payload&.dig("card") : nil
       ct_before = move.payload&.key?("chosen_terrain_before") ? move.payload["chosen_terrain_before"] : :not_provided
-      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain, build_terrain: move.payload&.dig("card"), chosen_terrain_before: ct_before, triggered_ending: move.payload&.dig("triggered_ending"))
+      backend.apply_build(player_order: player_order, to: move.to, tile_klass: move.payload&.dig("tile_klass"), remaining_before: move.payload&.dig("remaining_before"), fort_terrain: fort_terrain, build_terrain: move.payload&.dig("card"), chosen_terrain_before: ct_before, triggered_ending: move.payload&.dig("triggered_ending"), action_before: move.payload&.dig("action_before"))
     when "pick_up_tile"
       backend.apply_pick_up_tile(player_order: player_order, from: move.from, klass: move.payload["klass"])
     when "grant_meeple"
@@ -159,7 +159,7 @@ class MoveApplicator::HashState
     end
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided, triggered_ending: nil)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided, triggered_ending: nil, action_before: nil)
     coord = Coordinate.from_key(to)
     @board.place_settlement(coord.row, coord.col, player_order)
     @players[player_order]["supply"]["settlements"] -= 1
@@ -449,7 +449,7 @@ class MoveApplicator::LiveState
     @game = game
   end
 
-  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided, triggered_ending: nil)
+  def apply_build(player_order:, to:, tile_klass:, remaining_before: nil, fort_terrain: nil, build_terrain: nil, chosen_terrain_before: :not_provided, triggered_ending: nil, action_before: nil)
     coord = Coordinate.from_key(to)
     @game.board_contents_will_change!
     @game.board_contents.remove(coord.row, coord.col)
@@ -461,22 +461,30 @@ class MoveApplicator::LiveState
       @game.current_action = { "type" => "fort", "klass" => "FortTile", "fort_terrain" => fort_terrain }
     elsif tile_klass
       gp.mark_tile_unused!(tile_klass)
-      current_phase = @game.turn_phase
-      tile_action_type = tile_klass.delete_suffix("Tile").downcase
-      @game.turn_phase = TurnPhase::TileBuildPhase.new(
-        action_type: tile_action_type,
-        klass_name: tile_klass,
-        chosen_terrain: current_phase.respond_to?(:chosen_terrain) ? current_phase.chosen_terrain : nil,
-        remaining: remaining_before,
-        walls_placed: current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed : nil
-      )
+      if action_before
+        @game.turn_phase = TurnPhase.deserialize(action_before)
+      else
+        current_phase = @game.turn_phase
+        tile_action_type = tile_klass.delete_suffix("Tile").downcase
+        @game.turn_phase = TurnPhase::TileBuildPhase.new(
+          action_type: tile_action_type,
+          klass_name: tile_klass,
+          chosen_terrain: current_phase.respond_to?(:chosen_terrain) ? current_phase.chosen_terrain : nil,
+          remaining: remaining_before,
+          walls_placed: current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed : nil
+        )
+      end
     else
       @game.mandatory_count += 1
-      current_phase = @game.turn_phase
-      @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(
-        chosen_terrain: (chosen_terrain_before == :not_provided ? nil : chosen_terrain_before),
-        builds: current_phase.is_a?(TurnPhase::MandatoryBuildPhase) ? current_phase.builds[0..-2] : []
-      )
+      if action_before
+        @game.turn_phase = TurnPhase.deserialize(action_before)
+      else
+        current_phase = @game.turn_phase
+        @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(
+          chosen_terrain: (chosen_terrain_before == :not_provided ? nil : chosen_terrain_before),
+          builds: current_phase.is_a?(TurnPhase::MandatoryBuildPhase) ? current_phase.builds[0..-2] : []
+        )
+      end
     end
     restore_chosen_terrain(chosen_terrain_before)
     gp.save
@@ -790,7 +798,8 @@ class MoveApplicator::LiveState
             klass_name: current_phase.klass_name,
             chosen_terrain: chosen_terrain_before,
             remaining: current_phase.respond_to?(:remaining) ? current_phase.remaining : nil,
-            walls_placed: current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed : nil
+            walls_placed: current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed : nil,
+            outpost_active: current_phase.respond_to?(:outpost_active?) && current_phase.outpost_active?
           )
         when "TurnPhase::SettlementMovePhase"
           TurnPhase::SettlementMovePhase.new(

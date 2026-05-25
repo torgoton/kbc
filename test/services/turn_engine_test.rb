@@ -1521,6 +1521,36 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 0, @game.moves.count
   end
 
+  test "undo of an Outpost build restores the active Outpost build state" do
+    @game.update!(boards: [ [ 1, 0 ], [ 0, 0 ], [ 0, 0 ], [ 0, 0 ] ], board_contents: BoardState.new)
+    force_hand("G")
+    player = @game.current_player
+    player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_outpost
+    @game.reload
+    TurnEngine.new(@game).build_settlement(0, 7)
+    @game.reload
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    outpost = player.reload.tiles.find { |t| t["klass"] == "OutpostTile" }
+    assert outpost["used"]
+    assert @game.current_action["outpost_active"]
+    assert_includes TurnEngine.new(@game).buildable_cells, [ 4, 4 ]
+
+    TurnEngine.new(@game).undo_last_move
+    @game.reload
+
+    outpost = player.reload.tiles.find { |t| t["klass"] == "OutpostTile" }
+    assert_equal false, outpost["used"]
+    assert_nil @game.current_action["outpost_active"]
+  end
+
   test "remove_settlement forfeits opponent tile when removed settlement was its only adjacency to tile location" do
     @game.boards = [ [ 5, 0 ], [ 0, 0 ], [ 1, 0 ], [ 4, 0 ] ]
     opponent = @game.game_players.find { |gp| gp != @game.current_player }

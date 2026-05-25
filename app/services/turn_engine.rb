@@ -1054,7 +1054,7 @@ class TurnEngine
   end
 
   def build_on_terrain(terrain, row, col, game_player, tile_klass: nil, remaining_before: nil, chosen_terrain_before: :not_provided)
-    payload = { "card" => terrain }
+    payload = { "card" => terrain, "action_before" => @game.turn_phase.serialize }
     payload["tile_klass"] = tile_klass if tile_klass
     payload["remaining_before"] = remaining_before if remaining_before
     payload["chosen_terrain_before"] = chosen_terrain_before unless chosen_terrain_before == :not_provided
