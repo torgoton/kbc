@@ -299,15 +299,16 @@ class MoveApplicator::HashState
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
-    if phase_after
+    if action_before
+      @current_action = TurnPhase.deserialize(action_before).serialize
+    elsif phase_after
       @current_action = phase_after.deep_dup
     elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::ResettlementPhase)
-      phase = TurnPhase.deserialize(action_before || @current_action)
+      phase = TurnPhase.deserialize(@current_action)
       @current_action = TurnPhase::ResettlementPhase.new(
         budget: phase.budget.to_i - 1,
         vacated: phase.vacated + [ from ],
-        moves: phase.moves.to_i + 1,
-        from: to
+        moves: phase.moves.to_i + 1
       ).serialize
     elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::MeepleMovementPhase)
       phase = TurnPhase.deserialize(action_before || @current_action)
@@ -591,7 +592,18 @@ class MoveApplicator::LiveState
     @game.board_contents_will_change!
     @game.board_contents.move_settlement(*Coordinate.from_key(to), *Coordinate.from_key(from))
     @game.turn_phase = if action_before
-      TurnPhase.deserialize(action_before)
+      phase = TurnPhase.deserialize(action_before)
+      if phase.is_a?(TurnPhase::ResettlementPhase)
+        phase
+      else
+        TurnPhase::SettlementMovePhase.new(
+          action_type: tile_klass.delete_suffix("Tile").downcase,
+          klass_name: tile_klass,
+          from: from
+        )
+      end
+    elsif phase_after
+      TurnPhase.deserialize(phase_after)
     else
       TurnPhase::SettlementMovePhase.new(
         action_type: tile_klass.delete_suffix("Tile").downcase,

@@ -806,6 +806,29 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal expected.sort, cells.sort
   end
 
+  test "buildable_cells for resettlement with from returns only adjacent step destinations" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_settlement(4, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[3, 4]", "used" => false } ])
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0, "from" => "[4, 3]"
+    })
+
+    cells = @engine.buildable_cells
+
+    @game.instantiate
+    assert_includes cells, [ 3, 3 ]
+    assert_not_includes cells, [ 1, 2 ]
+    cells.each do |r, c|
+      assert_includes @game.board_contents.neighbors(4, 3), [ r, c ]
+    end
+  end
+
   test "buildable_cells for paddock without from returns settlements with valid moves" do
     force_hand("G")
     @engine.build_settlement(*empty_hexes_of("G", 1).first)
@@ -1870,29 +1893,59 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "resettlement logs each step and forfeits a location tile after moving away" do
     @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     player = @game.current_player
+    source_tile = Tiles::Nomad::ResettlementTile.new(0)
     @game.board_contents = BoardState.new.tap do |state|
       state.place_tile(2, 4, "OasisTile", 2)
       state.place_settlement(4, 3, player.order)
+      state.place_settlement(2, 7, player.order)
     end
     @game.save!
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[3, 4]", "used" => false } ])
     @game.update!(current_action: {
       "type" => "resettlement", "klass" => "ResettlementTile",
-      "budget" => 4, "vacated" => [], "moves" => 0, "from" => "[4, 3]"
+      "budget" => 4, "vacated" => [], "moves" => 0
     })
+    @game.instantiate
 
     engine = TurnEngine.new(@game.reload)
-    engine.move_settlement(3, 3)
-    engine.move_settlement(2, 3)
-    engine.move_settlement(1, 2)
+    first_step = source_tile.valid_destinations(
+      from_row: 4, from_col: 3,
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order,
+      budget: 4,
+      vacated: []
+    ).first
+    second_step = source_tile.valid_destinations(
+      from_row: 2, from_col: 7,
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order,
+      budget: 4,
+      vacated: []
+    ).first
+    assert first_step
+    assert second_step
+
+    engine.select_settlement(4, 3)
+    @game.reload
+    engine.move_settlement(*first_step)
+    @game.reload
+    assert_equal 3, @game.current_action["budget"]
+    assert_nil @game.current_action["from"]
+
+    engine.select_settlement(2, 7)
+    @game.reload
+    engine.move_settlement(*second_step)
     @game.reload
 
-    assert @game.board_contents.player_at(1, 2)
+    assert @game.board_contents.player_at(*second_step)
     assert @game.moves.where(action: "move_settlement").all?(&:deliberate?)
-    assert_equal [[ "[4, 3]", "[3, 3]" ], [ "[3, 3]", "[2, 3]" ], [ "[2, 3]", "[1, 2]" ]],
+    assert_equal [
+      [ "[4, 3]", Coordinate.new(*first_step).to_key ],
+      [ "[2, 7]", Coordinate.new(*second_step).to_key ],
+    ],
       @game.moves.where(action: "move_settlement").order(:order).pluck(:from, :to)
-    assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
-    assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
+    assert_nil @game.current_action["from"]
+    assert_equal 2, @game.current_action["budget"]
   end
 
   test "select_action for sword preserves pending orders" do

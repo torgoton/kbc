@@ -577,8 +577,7 @@ class TurnEngine
           TurnPhase::ResettlementPhase.new(
             budget: budget,
             vacated: vacated,
-            moves: moves,
-            from: Coordinate.new(row, col).to_key
+            moves: moves
           )
         end
       log_piece_movement_steps(
@@ -920,23 +919,21 @@ class TurnEngine
             hand_arg = effective_terrain(player) || player.hand.first
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
-              extra_kwargs = {}
               if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
-                extra_kwargs = {
-                  budget: current_phase.respond_to?(:budget) ? current_phase.budget.to_i : 0,
-                  vacated: current_phase.respond_to?(:vacated) ? current_phase.vacated || [] : []
-                }
-              end
-              if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-                player.hand.flat_map { |t|
-                  tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: t, **extra_kwargs)
-                }.uniq
+                resettlement_step_destinations(from, current_phase)
               else
-                tile_obj.valid_destinations(
-                  from_row: from.row, from_col: from.col,
-                  board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: hand_arg,
-                  **extra_kwargs
-                )
+                extra_kwargs = {}
+                if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
+                  player.hand.flat_map { |t|
+                    tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: t, **extra_kwargs)
+                  }.uniq
+                else
+                  tile_obj.valid_destinations(
+                    from_row: from.row, from_col: from.col,
+                    board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: hand_arg,
+                    **extra_kwargs
+                  )
+                end
               end
             else
               extra_kwargs = {}
@@ -1395,6 +1392,18 @@ class TurnEngine
       meeple_movement_terrain(tile_obj).include?(@game.board.terrain_at(row, col)) &&
       @game.board_contents.empty?(row, col) &&
       !@game.board_contents.warrior_blocked?(row, col)
+  end
+
+  def resettlement_step_destinations(from_coord, current_phase)
+    @game.board_contents.neighbors(from_coord.row, from_coord.col).select do |row, col|
+      valid_movement_path?(
+        [ [ row, col ] ],
+        from_coord.row, from_coord.col,
+        budget: current_phase.budget.to_i,
+        allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
+        vacated: current_phase.respond_to?(:vacated) ? current_phase.vacated || [] : []
+      )
+    end
   end
 
   def meeple_movement_terrain(tile_obj)
