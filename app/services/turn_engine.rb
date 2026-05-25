@@ -223,7 +223,7 @@ class TurnEngine
     @game.save
   end
 
-  def execute_meeple_action(row, col, path: nil)
+  def execute_meeple_action(row, col)
     @game.instantiate
     game_player = @game.current_player
     tile_klass = current_action_tile_klass
@@ -234,19 +234,17 @@ class TurnEngine
 
     current_phase = @game.turn_phase
 
+    movement_step = false
     if current_phase.from
       # complete a ship or wagon move to destination
       from_coord = Coordinate.from_key(current_phase.from)
-      destinations = tile_obj.valid_destinations(
-        from_row: from_coord.row, from_col: from_coord.col,
-        board_contents: @game.board_contents, board: @game.board,
-        player_order: game_player.order
-      )
-      return "Not available" unless destinations.include?([ row, col ])
-      case tile_obj.meeple_kind
-      when "ship"  then move_ship(row, col, game_player, tile_klass:, phase_after: TurnPhase::MandatoryBuildPhase.new.serialize, path:)
-      when "wagon" then move_wagon(row, col, game_player, tile_klass:, phase_after: TurnPhase::MandatoryBuildPhase.new.serialize, path:)
+      return "Not available" unless meeple_step_available?(from_coord, row, col, tile_obj)
+      movement_result = case tile_obj.meeple_kind
+      when "ship"  then move_ship(row, col, game_player, tile_klass:)
+      when "wagon" then move_wagon(row, col, game_player, tile_klass:)
       end
+      return movement_result if movement_result.is_a?(String)
+      movement_step = true
     elsif @game.board_contents.wagon_at?(row, col) &&
           @game.board_contents.player_at(row, col) == game_player.order
       return "Not available"  # handled by popup: remove_meeple_action or select_meeple_for_move
@@ -269,8 +267,10 @@ class TurnEngine
       end
     end
 
-    game_player.mark_tile_used!(tile_klass)
-    reset_to_mandatory
+    unless movement_step && @game.turn_phase.is_a?(TurnPhase::MeepleMovementPhase)
+      game_player.mark_tile_used!(tile_klass)
+      reset_to_mandatory
+    end
     game_player.save
     @game.save
   end
@@ -474,7 +474,9 @@ class TurnEngine
       elsif tile_obj&.places_meeple? && %w[ship wagon].include?(tile_obj.meeple_kind)
         TurnPhase::MeepleMovementPhase.new(
           action_type: type,
-          klass_name: klass_name
+          klass_name: klass_name,
+          budget: 3,
+          moves: 0
         )
       elsif tile_obj&.places_meeple? && tile_obj.meeple_kind == "warrior"
         TurnPhase::MeepleActionPhase.new(
@@ -543,7 +545,7 @@ class TurnEngine
     @game.save
   end
 
-  def move_settlement(row, col, path: nil)
+  def move_settlement(row, col)
     @game.instantiate
     current_phase = @game.turn_phase
     from = current_phase.from
@@ -555,18 +557,19 @@ class TurnEngine
       lock_terrain!(@game.board.terrain_at(row, col), chosen_terrain_before)
     end
     if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
-      route = movement_path(
-        from_coord.row, from_coord.col, row, col,
-        provided_path: path,
+      route = [[ row, col ]]
+      return "Not available" unless valid_movement_path?(
+        route,
+        from_coord.row,
+        from_coord.col,
         budget: current_phase.budget.to_i,
-        vacated: current_phase.vacated || [],
-        allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN
+        allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
+        vacated: current_phase.vacated || []
       )
-      return "Not available" unless route
 
-      budget = current_phase.budget.to_i - route.size
-      vacated = (current_phase.vacated || []) + ([ from ] + route[0...-1].map { |r, c| Coordinate.new(r, c).to_key })
-      moves = current_phase.moves.to_i + route.size
+      budget = current_phase.budget.to_i - 1
+      vacated = (current_phase.vacated || []) + [ from ]
+      moves = current_phase.moves.to_i + 1
       next_phase =
         if budget <= 0
           TurnPhase::MandatoryBuildPhase.new
@@ -574,7 +577,8 @@ class TurnEngine
           TurnPhase::ResettlementPhase.new(
             budget: budget,
             vacated: vacated,
-            moves: moves
+            moves: moves,
+            from: Coordinate.new(row, col).to_key
           )
         end
       log_piece_movement_steps(
@@ -739,6 +743,7 @@ class TurnEngine
   def tile_action_endable?
     @game.playing? && (
       (@game.turn_phase.is_a?(TurnPhase::ResettlementPhase) && @game.turn_phase.moves.to_i >= 1) ||
+      (@game.turn_phase.is_a?(TurnPhase::MeepleMovementPhase) && @game.turn_phase.moves.to_i >= 1) ||
       (@game.turn_phase.is_a?(TurnPhase::TileBuildPhase) && @game.turn_phase.walls_placed.to_i >= 1)
     )
   end
@@ -886,11 +891,13 @@ class TurnEngine
           if tile_obj.places_meeple?
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
-              tile_obj.valid_destinations(
-                from_row: from.row, from_col: from.col,
-                board_contents: @game.board_contents, board: @game.board,
-                player_order: player.order
-              )
+              if current_phase.respond_to?(:budget) && current_phase.budget.to_i <= 0
+                []
+              else
+                @game.board_contents.neighbors(from.row, from.col).select do |row, col|
+                  meeple_step_available?(from, row, col, tile_obj)
+                end
+              end
             else
               tile_obj.valid_destinations(
                 board_contents: @game.board_contents, board: @game.board,
@@ -1083,7 +1090,9 @@ class TurnEngine
 
   def apply_tile_forfeit(game_player)
     return if (game_player.tiles || []).empty?
+    active_tile_klass = @game.turn_phase.type == "mandatory" ? nil : current_action_tile_klass
     game_player.tiles = game_player.tiles.reject do |tile|
+      next false if tile["klass"] == active_tile_klass
       # Rule: Nomad tiles expire by turn, never by location
       next false if Tiles::Tile.for_klass(tile["klass"])&.new(0)&.nomad_tile?
       loc = tile["from"]
@@ -1341,28 +1350,6 @@ class TurnEngine
     before
   end
 
-  def movement_path(from_row, from_col, to_row, to_col, provided_path: nil, budget:, allowed_terrains:, vacated: [])
-    explicit_path = normalize_movement_path(provided_path, from_row, from_col, to_row, to_col)
-    return explicit_path if explicit_path && valid_movement_path?(explicit_path, from_row, from_col, budget:, allowed_terrains:, vacated:)
-
-    shortest_movement_path(from_row, from_col, to_row, to_col, budget:, allowed_terrains:, vacated:)
-  end
-
-  def normalize_movement_path(path, from_row, from_col, to_row, to_col)
-    return nil if path.blank?
-
-    coords = path.map do |entry|
-      if entry.is_a?(String)
-        Coordinate.from_key(entry).to_a
-      else
-        [ Integer(entry[0]), Integer(entry[1]) ]
-      end
-    end
-    coords.shift if coords.first == [ from_row, from_col ]
-    coords << [ to_row, to_col ] unless coords.last == [ to_row, to_col ]
-    coords
-  end
-
   def valid_movement_path?(path, from_row, from_col, budget:, allowed_terrains:, vacated:)
     return false if path.empty? || path.size > budget
 
@@ -1400,6 +1387,22 @@ class TurnEngine
       end
     end
     nil
+  end
+
+  def meeple_step_available?(from_coord, row, col, tile_obj)
+    @game.turn_phase.budget.to_i > 0 &&
+      @game.board_contents.neighbors(from_coord.row, from_coord.col).include?([ row, col ]) &&
+      meeple_movement_terrain(tile_obj).include?(@game.board.terrain_at(row, col)) &&
+      @game.board_contents.empty?(row, col) &&
+      !@game.board_contents.warrior_blocked?(row, col)
+  end
+
+  def meeple_movement_terrain(tile_obj)
+    case tile_obj.meeple_kind
+    when "ship" then [ "W" ]
+    when "wagon" then Tiles::WagonTile::SUITABLE_TERRAIN
+    else []
+    end
   end
 
   def place_warrior(row, col, game_player, tile_klass:)
@@ -1478,23 +1481,17 @@ class TurnEngine
     apply_tile_forfeit(game_player)
   end
 
-  def move_ship(row, col, game_player, tile_klass:, phase_after: nil, path: nil)
+  def move_ship(row, col, game_player, tile_klass:)
     from = @game.turn_phase.from
     action_before = @game.turn_phase.serialize
     from_coord = Coordinate.from_key(from)
-    route = movement_path(
-      from_coord.row, from_coord.col, row, col,
-      provided_path: path,
-      budget: 3,
-      allowed_terrains: [ "W" ]
-    )
-    return "Not available" unless route
+    phase_after = meeple_phase_after_step(row, col, tile_klass)
 
     log_piece_movement_steps(
       action: "move_ship",
       game_player: game_player,
       from_row: from_coord.row, from_col: from_coord.col,
-      path: route,
+      path: [[ row, col ]],
       payload: { "klass" => tile_klass },
       action_before: action_before,
       phase_after: phase_after,
@@ -1540,27 +1537,42 @@ class TurnEngine
     apply_tile_forfeit(game_player)
   end
 
-  def move_wagon(row, col, game_player, tile_klass:, phase_after: nil, path: nil)
+  def move_wagon(row, col, game_player, tile_klass:)
     from = @game.turn_phase.from
     action_before = @game.turn_phase.serialize
     from_coord = Coordinate.from_key(from)
-    route = movement_path(
-      from_coord.row, from_coord.col, row, col,
-      provided_path: path,
-      budget: 3,
-      allowed_terrains: Tiles::WagonTile::SUITABLE_TERRAIN
-    )
-    return "Not available" unless route
+    phase_after = meeple_phase_after_step(row, col, tile_klass)
 
     log_piece_movement_steps(
       action: "move_wagon",
       game_player: game_player,
       from_row: from_coord.row, from_col: from_coord.col,
-      path: route,
+      path: [[ row, col ]],
       payload: { "klass" => tile_klass },
       action_before: action_before,
       phase_after: phase_after,
       message_piece: "wagon"
     )
+  end
+
+  def meeple_phase_after_step(row, col, tile_klass)
+    current_phase = @game.turn_phase
+    budget = current_phase.budget.to_i - 1
+    moves = current_phase.moves.to_i + 1
+    if budget <= 0
+      @game.current_player.mark_tile_used!(tile_klass)
+      @game.turn_phase = TurnPhase::MandatoryBuildPhase.new
+      TurnPhase::MandatoryBuildPhase.new.serialize
+    else
+      next_phase = TurnPhase::MeepleMovementPhase.new(
+        action_type: current_phase.type,
+        klass_name: current_phase.klass_name,
+        from: Coordinate.new(row, col).to_key,
+        budget: budget,
+        moves: moves
+      )
+      @game.turn_phase = next_phase
+      nil
+    end
   end
 end

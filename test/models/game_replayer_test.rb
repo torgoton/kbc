@@ -189,7 +189,14 @@ class GameReplayerTest < ActiveSupport::TestCase
     game.reload
     game.update(base_snapshot: game.capture_snapshot)
 
-    engine(game).move_settlement(*dest_hex)
+    route = engine(game).send(
+      :shortest_movement_path,
+      from_hex[0], from_hex[1], dest_hex[0], dest_hex[1],
+      budget: 4,
+      allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
+      vacated: []
+    )
+    engine(game).move_settlement(*route.first)
     game.reload
 
     assert_states_equal game.capture_snapshot, game.replayed_state

@@ -126,7 +126,7 @@ class TurnPhaseTest < ActiveSupport::TestCase
 
     assert_instance_of TurnPhase::MeepleMovementPhase, result.next_phase
     assert_equal(
-      { "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" },
+      { "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0, "from" => "[0, 3]" },
       result.next_phase.serialize
     )
   end

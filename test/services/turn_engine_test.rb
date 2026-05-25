@@ -420,7 +420,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 3, @game.current_action["remaining"]
   end
 
-  test "resettlement move deducts actual step cost from budget" do
+  test "resettlement move deducts one step from budget" do
     @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     # Find two Grass hexes at least 2 apart so cost > 1
     grass_hexes = empty_hexes_of("G", 10)
@@ -448,19 +448,19 @@ class TurnEngineTest < ActiveSupport::TestCase
       "budget" => 4, "vacated" => [], "moves" => 0
     })
     @game.instantiate
-    expected_cost = Tiles::Nomad::ResettlementTile.new(0).move_cost(
-      from_row: from_hex[0], from_col: from_hex[1],
-      to_row: dest_hex[0], to_col: dest_hex[1],
-      board_contents: @game.board_contents, board: @game.board,
-      player_order: player.order
+    path = @engine.send(
+      :shortest_movement_path,
+      from_hex[0], from_hex[1], dest_hex[0], dest_hex[1],
+      budget: 4,
+      allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
+      vacated: []
     )
-
     @engine.select_settlement(*from_hex)
     @game.reload
-    @engine.move_settlement(*dest_hex)
+    @engine.move_settlement(*path.first)
     @game.reload
 
-    assert_equal 4 - expected_cost, @game.current_action["budget"]
+    assert_equal 3, @game.current_action["budget"]
   end
 
   test "undo of resettlement move restores budget, vacated, moves, and from in current_action" do
@@ -479,7 +479,14 @@ class TurnEngineTest < ActiveSupport::TestCase
     })
     @engine.select_settlement(*spots[0])
     @game.reload
-    @engine.move_settlement(*spots[1])
+    step = @engine.send(
+      :shortest_movement_path,
+      spots[0][0], spots[0][1], spots[1][0], spots[1][1],
+      budget: 4,
+      allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
+      vacated: []
+    ).first
+    @engine.move_settlement(*step)
     @game.reload
     assert_equal 3, @game.current_action["budget"]
 
@@ -1753,9 +1760,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
     @game.save!
     player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" })
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0, "from" => "[0, 3]" })
 
-    TurnEngine.new(@game.reload).execute_meeple_action(0, 4, path: [[ 1, 3 ], [ 0, 4 ]])
+    engine = TurnEngine.new(@game.reload)
+    engine.execute_meeple_action(1, 3)
+    engine.execute_meeple_action(0, 4)
+    engine.end_tile_action
     @game.reload
 
     assert @game.board_contents.ship_at?(0, 4)
@@ -1767,6 +1777,24 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
   end
 
+  test "moving a lighthouse ship cannot move more than one space" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_ship(0, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[6, 16]", "used" => false } ])
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0, "from" => "[0, 3]" })
+
+    result = TurnEngine.new(@game.reload).execute_meeple_action(2, 3)
+    @game.reload
+
+    assert_equal "Not available", result
+    assert @game.board_contents.ship_at?(0, 3)
+    assert_not @game.moves.exists?(action: "move_ship")
+  end
+
   test "moving a wagon past a location picks up then forfeits the tile and logs each step" do
     @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     player = @game.current_player
@@ -1776,9 +1804,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
     @game.save!
     player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "from" => "[4, 3]" })
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "budget" => 3, "moves" => 0, "from" => "[4, 3]" })
 
-    TurnEngine.new(@game.reload).execute_meeple_action(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    engine = TurnEngine.new(@game.reload)
+    engine.execute_meeple_action(3, 3)
+    engine.execute_meeple_action(2, 3)
+    engine.execute_meeple_action(1, 2)
     @game.reload
 
     assert @game.board_contents.wagon_at?(1, 2)
@@ -1799,15 +1830,17 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
     @game.save!
     player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "from" => "[4, 3]" })
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "budget" => 3, "moves" => 0, "from" => "[4, 3]" })
 
     engine = TurnEngine.new(@game.reload)
-    engine.execute_meeple_action(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    engine.execute_meeple_action(3, 3)
+    engine.execute_meeple_action(2, 3)
+    engine.execute_meeple_action(1, 2)
     engine.undo_last_move
     @game.reload
 
     assert @game.board_contents.wagon_at?(2, 3)
-    assert_equal({ "type" => "wagon", "klass" => "WagonTile", "from" => "[2, 3]" }, @game.current_action)
+    assert_equal({ "type" => "wagon", "klass" => "WagonTile", "budget" => 1, "moves" => 2, "from" => "[2, 3]" }, @game.current_action)
     assert_includes player.reload.tiles, { "klass" => "OasisTile", "from" => "[2, 4]", "used" => true }
   end
 
@@ -1820,9 +1853,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     end
     @game.save!
     player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "from" => "[4, 3]" })
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "budget" => 3, "moves" => 0, "from" => "[4, 3]" })
 
-    TurnEngine.new(@game.reload).execute_meeple_action(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    engine = TurnEngine.new(@game.reload)
+    engine.execute_meeple_action(3, 3)
+    engine.execute_meeple_action(2, 3)
+    engine.execute_meeple_action(1, 2)
     @game.reload
 
     picked_up = player.reload.tiles.find { |tile| tile["klass"] == "SwordTile" && tile["from"] == "[2, 4]" }
@@ -1845,7 +1881,10 @@ class TurnEngineTest < ActiveSupport::TestCase
       "budget" => 4, "vacated" => [], "moves" => 0, "from" => "[4, 3]"
     })
 
-    TurnEngine.new(@game.reload).move_settlement(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    engine = TurnEngine.new(@game.reload)
+    engine.move_settlement(3, 3)
+    engine.move_settlement(2, 3)
+    engine.move_settlement(1, 2)
     @game.reload
 
     assert @game.board_contents.player_at(1, 2)

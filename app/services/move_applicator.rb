@@ -114,7 +114,9 @@ class MoveApplicator::HashState
       elsif tile&.places_meeple? && %w[ship wagon].include?(tile.meeple_kind)
         TurnPhase::MeepleMovementPhase.new(
           action_type: type,
-          klass_name: klass
+          klass_name: klass,
+          budget: 3,
+          moves: 0
         )
       elsif tile&.places_meeple? && tile.meeple_kind == "warrior"
         TurnPhase::MeepleActionPhase.new(
@@ -300,19 +302,21 @@ class MoveApplicator::HashState
     if phase_after
       @current_action = phase_after.deep_dup
     elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::ResettlementPhase)
-      phase = TurnPhase.deserialize(@current_action)
+      phase = TurnPhase.deserialize(action_before || @current_action)
       @current_action = TurnPhase::ResettlementPhase.new(
-        budget: phase.budget,
-        vacated: phase.vacated,
-        moves: phase.moves,
+        budget: phase.budget.to_i - 1,
+        vacated: phase.vacated + [ from ],
+        moves: phase.moves.to_i + 1,
         from: to
       ).serialize
     elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::MeepleMovementPhase)
-      phase = TurnPhase.deserialize(@current_action)
+      phase = TurnPhase.deserialize(action_before || @current_action)
       @current_action = TurnPhase::MeepleMovementPhase.new(
         action_type: phase.type,
         klass_name: phase.klass_name,
-        from: to
+        from: to,
+        budget: phase.budget.to_i - 1,
+        moves: phase.moves.to_i + 1
       ).serialize
     else
       @current_action = TurnPhase.deserialize(@current_action).transition(
@@ -383,11 +387,13 @@ class MoveApplicator::HashState
       mark_tile_used(@players[player_order], "LighthouseTile")
       @current_action = phase_after.deep_dup
     else
-      phase = TurnPhase.deserialize(@current_action)
+      phase = TurnPhase.deserialize(action_before || @current_action)
       @current_action = TurnPhase::MeepleMovementPhase.new(
         action_type: phase.type,
         klass_name: phase.klass_name,
-        from: to
+        from: to,
+        budget: phase.budget.to_i - 1,
+        moves: phase.moves.to_i + 1
       ).serialize
     end
   end
@@ -428,11 +434,13 @@ class MoveApplicator::HashState
       mark_tile_used(@players[player_order], "WagonTile")
       @current_action = phase_after.deep_dup
     else
-      phase = TurnPhase.deserialize(@current_action)
+      phase = TurnPhase.deserialize(action_before || @current_action)
       @current_action = TurnPhase::MeepleMovementPhase.new(
         action_type: phase.type,
         klass_name: phase.klass_name,
-        from: to
+        from: to,
+        budget: phase.budget.to_i - 1,
+        moves: phase.moves.to_i + 1
       ).serialize
     end
   end
@@ -726,7 +734,9 @@ class MoveApplicator::LiveState
     if current_phase.is_a?(TurnPhase::MeepleMovementPhase)
       @game.turn_phase = TurnPhase::MeepleMovementPhase.new(
         action_type: current_phase.type,
-        klass_name: current_phase.klass_name
+        klass_name: current_phase.klass_name,
+        budget: current_phase.budget,
+        moves: current_phase.moves
       )
     else
       current_action = @game.current_action.dup
@@ -773,7 +783,9 @@ class MoveApplicator::LiveState
     if current_phase.is_a?(TurnPhase::MeepleMovementPhase)
       @game.turn_phase = TurnPhase::MeepleMovementPhase.new(
         action_type: current_phase.type,
-        klass_name: current_phase.klass_name
+        klass_name: current_phase.klass_name,
+        budget: current_phase.budget,
+        moves: current_phase.moves
       )
     else
       current_action = @game.current_action.dup

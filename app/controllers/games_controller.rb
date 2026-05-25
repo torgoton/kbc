@@ -44,7 +44,7 @@ class GamesController < ApplicationController
     tile_obj = tile_klass&.new(0)
     if tile_obj&.moves_settlement?
       if @game.current_action["from"]
-        engine.move_settlement(coord.row, coord.col, path: action_params[:path])
+        engine.move_settlement(coord.row, coord.col)
       else
         engine.select_settlement(coord.row, coord.col)
       end
@@ -53,7 +53,7 @@ class GamesController < ApplicationController
     elsif tile_obj&.places_wall?
       engine.place_wall(coord.row, coord.col)
     elsif tile_obj&.places_meeple?
-      engine.execute_meeple_action(coord.row, coord.col, path: action_params[:path])
+      engine.execute_meeple_action(coord.row, coord.col)
     elsif tile_obj&.places_city_hall?
       engine.place_city_hall(coord.row, coord.col)
     elsif tile_obj&.builds_settlement?
@@ -210,7 +210,7 @@ class GamesController < ApplicationController
   end
 
   def action_params
-    params.permit(:id, :build_row, :build_col, path: [])
+    params.permit(:id, :build_row, :build_col)
   end
 
   def create_game_params

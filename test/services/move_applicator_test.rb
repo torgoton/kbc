@@ -242,7 +242,7 @@ class MoveApplicatorTest < ActiveSupport::TestCase
 
     MoveApplicator.dispatch(state, move)
 
-    assert_equal({ "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" }, state.current_action)
+    assert_equal({ "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0, "from" => "[0, 3]" }, state.current_action)
   end
 
   test "dispatch move_ship can use explicit phase_after payload" do

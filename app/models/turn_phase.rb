@@ -374,20 +374,24 @@ class TurnPhase::ResettlementPhase < TurnPhase
 end
 
 class TurnPhase::MeepleMovementPhase < TurnPhase
-  attr_reader :action_type, :klass_value, :from_value
+  attr_reader :action_type, :klass_value, :from_value, :budget_value, :moves_value
 
   def self.from_hash(hash)
     new(
       action_type: hash.fetch("type"),
       klass_name: hash["klass"],
-      from: hash["from"]
+      from: hash["from"],
+      budget: hash["budget"] || 3,
+      moves: hash["moves"] || 0
     )
   end
 
-  def initialize(action_type:, klass_name:, from: nil)
+  def initialize(action_type:, klass_name:, from: nil, budget: 3, moves: 0)
     @action_type = action_type
     @klass_value = klass_name
     @from_value = from
+    @budget_value = budget
+    @moves_value = moves
   end
 
   def type
@@ -402,6 +406,14 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
     from_value
   end
 
+  def budget
+    budget_value
+  end
+
+  def moves
+    moves_value
+  end
+
   def transition(event, facts)
     case event
     when TurnPhase::Events::SourceSelected
@@ -409,7 +421,9 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
         next_phase: self.class.new(
           action_type: action_type,
           klass_name: klass_name,
-          from: event.coordinate_key
+          from: event.coordinate_key,
+          budget: budget,
+          moves: moves
         ),
         source_cleared: false
       )
@@ -427,6 +441,8 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
   def serialize
     hash = { "type" => action_type }
     hash["klass"] = klass_name if klass_name
+    hash["budget"] = budget
+    hash["moves"] = moves
     hash["from"] = from if from
     hash
   end
