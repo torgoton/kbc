@@ -10,7 +10,7 @@
  */
 
  :root {
-    --clr-ds-table: #004d00;
+    --clr-ds-table: #004d00; /* the color of the "table" */
     --clr-ds-text: white;
     --clr-ds-link: #cccc00;
  }
@@ -18,8 +18,10 @@
  * { box-sizing: border-box; }
 
  body {
+    /* font-size: 16px; - this is the default for all browsers. */
+    /* We'll use rem units for font sizes to ensure scalability and accessibility. */
     margin: 0;
-    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-family: "Atkinson Hyperlegible Next", sans-serif, system-ui;
     color: var(--clr-ds-text);
     min-height: 100vh;
     overflow-x: hidden;
@@ -28,4 +30,3 @@
 a {
     color: var(--clr-ds-link);
 }
-

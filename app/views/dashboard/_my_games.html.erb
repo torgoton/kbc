@@ -2,16 +2,25 @@
 <% games.each do |game| %>
   <div class="game-row <%= 'my-turn' if game.my_turn?(Current.user) %>">
     <% if game.playing? %>
-      <%= link_to game_path(game), class: "game-row" do %>
-        <div>Game <%= game.id %> &mdash; <%= game.turn_state %></div>
-        <div class="player-handles">Players: <%= game.player_handles %></div>
+      <span class="pulser">
+        <% if game.my_turn?(Current.user) %>
+          ●
+        <% else %>
+          &nbsp;
+        <% end %>
+      </span>
+      <%= link_to game_path(game) do %>
+        <span>
+          Game <%= game.id %> with <%= game.player_handles %> &mdash; <%= game.turn_state %>
+        </span>
       <% end %>
     <% else %>
-      <div>Game <%= game.id %> &mdash; <%= game.turn_state %></div>
-      <div class="player-handles">Players: <%= game.player_handles %></div>
+      <span>
+        Game <%= game.id %> with <%= game.player_handles %> &mdash; <%= game.turn_state %>
+      </span>
     <% end %>
   </div>
   <br/>
 <% end %>
 <br/>
-<%= link_to "Open a new table", new_game_path %>
+<h3><%= link_to "Open a new table", new_game_path %></h3>

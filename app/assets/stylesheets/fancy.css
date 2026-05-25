@@ -17,14 +17,12 @@
 }
 
 .fancy-box {
-  background-color: inherit;
   border-radius: 15px;
   filter: drop-shadow(-20px 20px 20px black);
   width: 80%;
   margin: 20px auto;
   padding: 2rem;
-  font-family: "Atkinson Hyperlegible Next", sans-serif, system-ui;
-  font-size: 120%;
+  font-size: 1.5rem;
 }
 
 .fancy-box .flash-alert {
@@ -39,6 +37,10 @@
 
 .fancy-box h1, .fancy-box h2, .fancy-box h3, .fancy-box h4, .fancy-box h5, .fancy-box h6 {
   margin: 0;
+}
+
+.fancy-box input {
+  font-size: 1.5rem;
 }
 
 .fancy-hexfield {
@@ -68,11 +70,9 @@
 }
 
 .fancy-section {
-  background-color: var(--clr-ds-table);
   border: black 2px solid;
   border-radius: 10px;
   margin: 1rem;
   padding: 1rem;
   width: auto;
 }
-
