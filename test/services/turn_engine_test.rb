@@ -1724,6 +1724,138 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal "LighthouseTile", @game.current_action["klass"]
   end
 
+  test "placing a lighthouse ship adjacent to an oasis location picks up an Oasis tile" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.board_contents.place_tile(2, 4, "OasisTile", 2)
+    @game.save!
+    @engine = TurnEngine.new(@game.reload)
+
+    player = @game.current_player
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[6, 16]", "used" => false } ])
+    player.reload.add_ships!(1)
+
+    @engine.select_action("lighthouse")
+    @engine.execute_meeple_action(1, 4)
+    @game.reload
+
+    assert @game.board_contents.ship_at?(1, 4)
+    assert_equal 1, @game.board_contents.tile_qty(2, 4)
+    assert_includes player.reload.tiles, { "klass" => "OasisTile", "from" => "[2, 4]", "used" => true }
+    assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]", deliberate: false)
+  end
+
+  test "moving a lighthouse ship past a location picks up then forfeits the tile and logs each step" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_tile(2, 4, "OasisTile", 2)
+      state.place_ship(0, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[6, 16]", "used" => false } ])
+    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile", "from" => "[0, 3]" })
+
+    TurnEngine.new(@game.reload).execute_meeple_action(0, 4, path: [[ 1, 3 ], [ 0, 4 ]])
+    @game.reload
+
+    assert @game.board_contents.ship_at?(0, 4)
+    assert_empty player.reload.tiles.reject { |tile| tile["klass"] == "LighthouseTile" }
+    assert @game.moves.where(action: "move_ship").all?(&:deliberate?)
+    assert_equal [[ "[0, 3]", "[1, 3]" ], [ "[1, 3]", "[0, 4]" ]],
+      @game.moves.where(action: "move_ship").order(:order).pluck(:from, :to)
+    assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
+    assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
+  end
+
+  test "moving a wagon past a location picks up then forfeits the tile and logs each step" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_tile(2, 4, "OasisTile", 2)
+      state.place_wagon(4, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "from" => "[4, 3]" })
+
+    TurnEngine.new(@game.reload).execute_meeple_action(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    @game.reload
+
+    assert @game.board_contents.wagon_at?(1, 2)
+    assert_empty player.reload.tiles.reject { |tile| tile["klass"] == "WagonTile" }
+    assert @game.moves.where(action: "move_wagon").all?(&:deliberate?)
+    assert_equal [[ "[4, 3]", "[3, 3]" ], [ "[3, 3]", "[2, 3]" ], [ "[2, 3]", "[1, 2]" ]],
+      @game.moves.where(action: "move_wagon").order(:order).pluck(:from, :to)
+    assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
+    assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
+  end
+
+  test "undo after a multi-step wagon move reverses only the last step" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_tile(2, 4, "OasisTile", 2)
+      state.place_wagon(4, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "from" => "[4, 3]" })
+
+    engine = TurnEngine.new(@game.reload)
+    engine.execute_meeple_action(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    engine.undo_last_move
+    @game.reload
+
+    assert @game.board_contents.wagon_at?(2, 3)
+    assert_equal({ "type" => "wagon", "klass" => "WagonTile", "from" => "[2, 3]" }, @game.current_action)
+    assert_includes player.reload.tiles, { "klass" => "OasisTile", "from" => "[2, 4]", "used" => true }
+  end
+
+  test "moving a wagon away from a picked up Nomad tile does not forfeit it" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_tile(2, 4, "SwordTile", 1)
+      state.place_wagon(4, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
+    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "from" => "[4, 3]" })
+
+    TurnEngine.new(@game.reload).execute_meeple_action(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    @game.reload
+
+    picked_up = player.reload.tiles.find { |tile| tile["klass"] == "SwordTile" && tile["from"] == "[2, 4]" }
+    assert picked_up
+    assert picked_up["used"]
+    assert_not @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
+  end
+
+  test "resettlement logs each step and forfeits a location tile after moving away" do
+    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    player = @game.current_player
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_tile(2, 4, "OasisTile", 2)
+      state.place_settlement(4, 3, player.order)
+    end
+    @game.save!
+    player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[3, 4]", "used" => false } ])
+    @game.update!(current_action: {
+      "type" => "resettlement", "klass" => "ResettlementTile",
+      "budget" => 4, "vacated" => [], "moves" => 0, "from" => "[4, 3]"
+    })
+
+    TurnEngine.new(@game.reload).move_settlement(1, 2, path: [[ 3, 3 ], [ 2, 3 ], [ 1, 2 ]])
+    @game.reload
+
+    assert @game.board_contents.player_at(1, 2)
+    assert @game.moves.where(action: "move_settlement").all?(&:deliberate?)
+    assert_equal [[ "[4, 3]", "[3, 3]" ], [ "[3, 3]", "[2, 3]" ], [ "[2, 3]", "[1, 2]" ]],
+      @game.moves.where(action: "move_settlement").order(:order).pluck(:from, :to)
+    assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
+    assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
+  end
+
   test "select_action for sword preserves pending orders" do
     opponent = @game.game_players.find { |gp| gp != @game.current_player }
     @game.current_player.update!(tiles: [ { "klass" => "SwordTile", "from" => "[0, 0]", "used" => false } ])
@@ -1736,7 +1868,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     assert_equal "sword", @game.current_action["type"]
     assert_equal "SwordTile", @game.current_action["klass"]
-    assert_equal [opponent.order], @game.current_action["pending_orders"]
+    assert_equal [ opponent.order ], @game.current_action["pending_orders"]
   end
 
   test "select_action for barracks preserves klass" do

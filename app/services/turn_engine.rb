@@ -223,7 +223,7 @@ class TurnEngine
     @game.save
   end
 
-  def execute_meeple_action(row, col)
+  def execute_meeple_action(row, col, path: nil)
     @game.instantiate
     game_player = @game.current_player
     tile_klass = current_action_tile_klass
@@ -244,8 +244,8 @@ class TurnEngine
       )
       return "Not available" unless destinations.include?([ row, col ])
       case tile_obj.meeple_kind
-      when "ship"  then move_ship(row, col, game_player, tile_klass:, phase_after: TurnPhase::MandatoryBuildPhase.new.serialize)
-      when "wagon" then move_wagon(row, col, game_player, tile_klass:, phase_after: TurnPhase::MandatoryBuildPhase.new.serialize)
+      when "ship"  then move_ship(row, col, game_player, tile_klass:, phase_after: TurnPhase::MandatoryBuildPhase.new.serialize, path:)
+      when "wagon" then move_wagon(row, col, game_player, tile_klass:, phase_after: TurnPhase::MandatoryBuildPhase.new.serialize, path:)
       end
     elsif @game.board_contents.wagon_at?(row, col) &&
           @game.board_contents.player_at(row, col) == game_player.order
@@ -543,7 +543,7 @@ class TurnEngine
     @game.save
   end
 
-  def move_settlement(row, col)
+  def move_settlement(row, col, path: nil)
     @game.instantiate
     current_phase = @game.turn_phase
     from = current_phase.from
@@ -554,30 +554,19 @@ class TurnEngine
     if tile_obj&.uses_played_terrain? && chosen_terrain_before.nil? && @game.current_player.hand.size > 1
       lock_terrain!(@game.board.terrain_at(row, col), chosen_terrain_before)
     end
-    action_before = current_phase.serialize
-    @game.move_count += 1
-    payload = { "tile_klass" => tile_klass_name, "action_before" => action_before, "chosen_terrain_before" => chosen_terrain_before }
     if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
-      step_cost = tile_obj.move_cost(
-        from_row: from_coord.row, from_col: from_coord.col,
-        to_row: row, to_col: col,
-        board_contents: @game.board_contents, board: @game.board,
-        player_order: @game.current_player.order,
+      route = movement_path(
+        from_coord.row, from_coord.col, row, col,
+        provided_path: path,
         budget: current_phase.budget.to_i,
-        vacated: current_phase.vacated || []
-      ) || 1
-    end
-    @game.board_contents_will_change!
-    @game.board_contents.move_settlement(*from_coord, row, col)
+        vacated: current_phase.vacated || [],
+        allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN
+      )
+      return "Not available" unless route
 
-    if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
-      budget = current_phase.budget.to_i - step_cost
-      vacated = (current_phase.vacated || []) + [ from ]
-      moves = current_phase.moves.to_i + 1
-      # Rule: Resettlement picks up tiles at each step; forfeits location tiles no longer adjacent
-      # (Nomad tiles are exempt from location-based forfeit per the nomad_tile? guard in apply_tile_forfeit)
-      apply_tile_forfeit(@game.current_player)
-      apply_tile_pickup(@game.current_player, row, col)
+      budget = current_phase.budget.to_i - route.size
+      vacated = (current_phase.vacated || []) + ([ from ] + route[0...-1].map { |r, c| Coordinate.new(r, c).to_key })
+      moves = current_phase.moves.to_i + route.size
       next_phase =
         if budget <= 0
           TurnPhase::MandatoryBuildPhase.new
@@ -588,17 +577,18 @@ class TurnEngine
             moves: moves
           )
         end
-      payload["phase_after"] = next_phase.serialize
-      @game.moves.create(
-        order: @game.move_count,
-        game_player: @game.current_player,
-        deliberate: true,
+      log_piece_movement_steps(
         action: "move_settlement",
-        from: from,
-        to: Coordinate.new(row, col).to_key,
-        reversible: true,
-        payload: payload,
-        message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
+        game_player: @game.current_player,
+        from_row: from_coord.row, from_col: from_coord.col,
+        path: route,
+        payload: {
+          "tile_klass" => tile_klass_name,
+          "chosen_terrain_before" => chosen_terrain_before
+        },
+        action_before: current_phase.serialize,
+        phase_after: next_phase.serialize,
+        message_piece: "settlement"
       )
       if budget <= 0
         @game.current_player.mark_tile_used!(tile_klass_name.demodulize)
@@ -611,6 +601,13 @@ class TurnEngine
         @game.turn_phase = phase_result.next_phase
       end
     else
+      payload = {
+        "tile_klass" => tile_klass_name,
+        "action_before" => current_phase.serialize,
+        "chosen_terrain_before" => chosen_terrain_before,
+        "phase_after" => TurnPhase::MandatoryBuildPhase.new.serialize
+      }
+      @game.move_count += 1
       payload["phase_after"] = TurnPhase::MandatoryBuildPhase.new.serialize
       @game.moves.create(
         order: @game.move_count,
@@ -623,6 +620,8 @@ class TurnEngine
         payload: payload,
         message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
       )
+      @game.board_contents_will_change!
+      @game.board_contents.move_settlement(*from_coord, row, col)
       phase_result = current_phase.transition(
         TurnPhase::Events::DestinationChosen.new,
         TurnPhase::Facts::DestinationChoice.new(next_phase: TurnPhase::MandatoryBuildPhase.new)
@@ -1090,11 +1089,11 @@ class TurnEngine
       loc = tile["from"]
       next false unless loc
       loc_coord = Coordinate.from_key(loc)
+      klass = @game.board_contents.tile_klass(*loc_coord) || tile["klass"]
       should_forfeit = @game.board_contents.settlements_for(game_player.order).none? do |s_row, s_col|
         @game.board_contents.neighbors(s_row, s_col).any? { |nr, nc| Coordinate.new(nr, nc).to_key == loc }
       end
-      if should_forfeit && @game.board_contents.tile_klass(*loc_coord)
-        klass = @game.board_contents.tile_klass(*loc_coord)
+      if should_forfeit
         @game.move_count += 1
         @game.moves.create(
           order: @game.move_count,
@@ -1299,6 +1298,110 @@ class TurnEngine
     (current_phase.respond_to?(:chosen_terrain) ? current_phase.chosen_terrain : nil) || (player.hand.size == 1 ? player.hand.first : nil)
   end
 
+  def log_piece_movement_steps(action:, game_player:, from_row:, from_col:, path:, payload:, action_before:, phase_after:, message_piece:)
+    current = Coordinate.new(from_row, from_col)
+    vacated_this_route = []
+    path.each_with_index do |(to_row, to_col), index|
+      destination = Coordinate.new(to_row, to_col)
+      step_payload = payload.dup
+      step_payload["action_before"] = step_action_before(action_before, current.to_key, index, vacated_this_route)
+      step_payload["phase_after"] = phase_after if index == path.size - 1
+
+      @game.move_count += 1
+      @game.moves.create(
+        order: @game.move_count,
+        game_player: game_player,
+        deliberate: true,
+        action: action,
+        from: current.to_key,
+        to: destination.to_key,
+        reversible: true,
+        payload: step_payload,
+        message: "#{game_player.player.handle} moved their #{message_piece} to #{destination.to_key}"
+      )
+      @game.board_contents_will_change!
+      @game.board_contents.move_settlement(current.row, current.col, destination.row, destination.col)
+      apply_tile_forfeit(game_player)
+      apply_tile_pickup(game_player, destination.row, destination.col)
+      vacated_this_route << current.to_key
+      current = destination
+    end
+  end
+
+  def step_action_before(action_before, from_key, step_index, vacated_this_route)
+    return action_before if step_index.zero?
+
+    before = action_before.deep_dup
+    before["from"] = from_key
+    if before["type"] == "resettlement"
+      before["budget"] = before["budget"].to_i - step_index
+      before["moves"] = before["moves"].to_i + step_index
+      before["vacated"] = Array(before["vacated"]) + vacated_this_route
+    end
+    before
+  end
+
+  def movement_path(from_row, from_col, to_row, to_col, provided_path: nil, budget:, allowed_terrains:, vacated: [])
+    explicit_path = normalize_movement_path(provided_path, from_row, from_col, to_row, to_col)
+    return explicit_path if explicit_path && valid_movement_path?(explicit_path, from_row, from_col, budget:, allowed_terrains:, vacated:)
+
+    shortest_movement_path(from_row, from_col, to_row, to_col, budget:, allowed_terrains:, vacated:)
+  end
+
+  def normalize_movement_path(path, from_row, from_col, to_row, to_col)
+    return nil if path.blank?
+
+    coords = path.map do |entry|
+      if entry.is_a?(String)
+        Coordinate.from_key(entry).to_a
+      else
+        [ Integer(entry[0]), Integer(entry[1]) ]
+      end
+    end
+    coords.shift if coords.first == [ from_row, from_col ]
+    coords << [ to_row, to_col ] unless coords.last == [ to_row, to_col ]
+    coords
+  end
+
+  def valid_movement_path?(path, from_row, from_col, budget:, allowed_terrains:, vacated:)
+    return false if path.empty? || path.size > budget
+
+    vacated_set = vacated.to_set
+    current = [ from_row, from_col ]
+    path.all? do |row, col|
+      key = Coordinate.new(row, col).to_key
+      valid = @game.board_contents.neighbors(*current).include?([ row, col ]) &&
+        allowed_terrains.include?(@game.board.terrain_at(row, col)) &&
+        ((@game.board_contents.empty?(row, col) || vacated_set.include?(key)) && !@game.board_contents.warrior_blocked?(row, col))
+      current = [ row, col ]
+      valid
+    end
+  end
+
+  def shortest_movement_path(from_row, from_col, to_row, to_col, budget:, allowed_terrains:, vacated:)
+    vacated_set = vacated.to_set
+    queue = [ [ from_row, from_col, [] ] ]
+    visited = Set.new([[ from_row, from_col ]])
+
+    until queue.empty?
+      row, col, path = queue.shift
+      @game.board_contents.neighbors(row, col).each do |next_row, next_col|
+        next if visited.include?([ next_row, next_col ])
+        key = Coordinate.new(next_row, next_col).to_key
+        next unless allowed_terrains.include?(@game.board.terrain_at(next_row, next_col))
+        next unless (@game.board_contents.empty?(next_row, next_col) || vacated_set.include?(key)) && !@game.board_contents.warrior_blocked?(next_row, next_col)
+
+        next_path = path + [[ next_row, next_col ]]
+        return next_path if next_row == to_row && next_col == to_col
+        next if next_path.size >= budget
+
+        visited << [ next_row, next_col ]
+        queue << [ next_row, next_col, next_path ]
+      end
+    end
+    nil
+  end
+
   def place_warrior(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
     @game.move_count += 1
@@ -1334,6 +1437,7 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.remove(row, col)
     game_player.increment_warrior_supply!
+    apply_tile_forfeit(game_player)
   end
 
   def place_ship(row, col, game_player, tile_klass:)
@@ -1352,6 +1456,7 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.place_ship(row, col, game_player.order)
     game_player.decrement_ship_supply!
+    apply_tile_pickup(game_player, row, col)
   end
 
   def remove_ship(row, col, game_player, tile_klass:)
@@ -1370,26 +1475,31 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.remove(row, col)
     game_player.increment_ship_supply!
+    apply_tile_forfeit(game_player)
   end
 
-  def move_ship(row, col, game_player, tile_klass:, phase_after: nil)
+  def move_ship(row, col, game_player, tile_klass:, phase_after: nil, path: nil)
     from = @game.turn_phase.from
     action_before = @game.turn_phase.serialize
     from_coord = Coordinate.from_key(from)
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
-      action: "move_ship",
-      from: from,
-      to: "[#{row}, #{col}]",
-      reversible: true,
-      payload: { "klass" => tile_klass, "action_before" => action_before, "phase_after" => phase_after },
-      message: "#{game_player.player.handle} moved their ship to [#{row}, #{col}]"
+    route = movement_path(
+      from_coord.row, from_coord.col, row, col,
+      provided_path: path,
+      budget: 3,
+      allowed_terrains: [ "W" ]
     )
-    @game.board_contents_will_change!
-    @game.board_contents.move_settlement(from_coord.row, from_coord.col, row, col)
+    return "Not available" unless route
+
+    log_piece_movement_steps(
+      action: "move_ship",
+      game_player: game_player,
+      from_row: from_coord.row, from_col: from_coord.col,
+      path: route,
+      payload: { "klass" => tile_klass },
+      action_before: action_before,
+      phase_after: phase_after,
+      message_piece: "ship"
+    )
   end
 
   def place_wagon(row, col, game_player, tile_klass:)
@@ -1408,6 +1518,7 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.place_wagon(row, col, game_player.order)
     game_player.decrement_wagon_supply!
+    apply_tile_pickup(game_player, row, col)
   end
 
   def remove_wagon(row, col, game_player, tile_klass:)
@@ -1426,25 +1537,30 @@ class TurnEngine
     @game.board_contents_will_change!
     @game.board_contents.remove(row, col)
     game_player.increment_wagon_supply!
+    apply_tile_forfeit(game_player)
   end
 
-  def move_wagon(row, col, game_player, tile_klass:, phase_after: nil)
+  def move_wagon(row, col, game_player, tile_klass:, phase_after: nil, path: nil)
     from = @game.turn_phase.from
     action_before = @game.turn_phase.serialize
     from_coord = Coordinate.from_key(from)
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
-      action: "move_wagon",
-      from: from,
-      to: "[#{row}, #{col}]",
-      reversible: true,
-      payload: { "klass" => tile_klass, "action_before" => action_before, "phase_after" => phase_after },
-      message: "#{game_player.player.handle} moved their wagon to [#{row}, #{col}]"
+    route = movement_path(
+      from_coord.row, from_coord.col, row, col,
+      provided_path: path,
+      budget: 3,
+      allowed_terrains: Tiles::WagonTile::SUITABLE_TERRAIN
     )
-    @game.board_contents_will_change!
-    @game.board_contents.move_settlement(from_coord.row, from_coord.col, row, col)
+    return "Not available" unless route
+
+    log_piece_movement_steps(
+      action: "move_wagon",
+      game_player: game_player,
+      from_row: from_coord.row, from_col: from_coord.col,
+      path: route,
+      payload: { "klass" => tile_klass },
+      action_before: action_before,
+      phase_after: phase_after,
+      message_piece: "wagon"
+    )
   end
 end

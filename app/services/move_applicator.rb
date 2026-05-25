@@ -299,6 +299,21 @@ class MoveApplicator::HashState
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
     if phase_after
       @current_action = phase_after.deep_dup
+    elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::ResettlementPhase)
+      phase = TurnPhase.deserialize(@current_action)
+      @current_action = TurnPhase::ResettlementPhase.new(
+        budget: phase.budget,
+        vacated: phase.vacated,
+        moves: phase.moves,
+        from: to
+      ).serialize
+    elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::MeepleMovementPhase)
+      phase = TurnPhase.deserialize(@current_action)
+      @current_action = TurnPhase::MeepleMovementPhase.new(
+        action_type: phase.type,
+        klass_name: phase.klass_name,
+        from: to
+      ).serialize
     else
       @current_action = TurnPhase.deserialize(@current_action).transition(
         TurnPhase::Events::DestinationChosen.new,
@@ -364,8 +379,17 @@ class MoveApplicator::HashState
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
-    mark_tile_used(@players[player_order], "LighthouseTile")
-    @current_action = phase_after ? phase_after.deep_dup : { "type" => "mandatory" }
+    if phase_after
+      mark_tile_used(@players[player_order], "LighthouseTile")
+      @current_action = phase_after.deep_dup
+    else
+      phase = TurnPhase.deserialize(@current_action)
+      @current_action = TurnPhase::MeepleMovementPhase.new(
+        action_type: phase.type,
+        klass_name: phase.klass_name,
+        from: to
+      ).serialize
+    end
   end
 
   def apply_select_ship(player_order:, from:)
@@ -400,8 +424,17 @@ class MoveApplicator::HashState
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
-    mark_tile_used(@players[player_order], "WagonTile")
-    @current_action = phase_after ? phase_after.deep_dup : { "type" => "mandatory" }
+    if phase_after
+      mark_tile_used(@players[player_order], "WagonTile")
+      @current_action = phase_after.deep_dup
+    else
+      phase = TurnPhase.deserialize(@current_action)
+      @current_action = TurnPhase::MeepleMovementPhase.new(
+        action_type: phase.type,
+        klass_name: phase.klass_name,
+        from: to
+      ).serialize
+    end
   end
 
   def apply_select_wagon(player_order:, from:)
