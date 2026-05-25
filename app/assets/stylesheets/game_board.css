@@ -292,6 +292,10 @@ ul li .hex:hover {
     z-index: 1000;
 }
 
+#end-game-modal .score-table .score-value {
+    text-align: right;
+}
+
 .tile-tooltip {
     animation: goal-tooltip-in 0.12s ease-out;
     background: #0d1f0d;

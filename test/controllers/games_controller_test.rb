@@ -250,6 +250,22 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span#current-action[data-type='mandatory']"
   end
 
+  test "game show renders treasure bonus scores in the end game modal" do
+    game = games(:game2player)
+    game.update!(
+      state: "completed",
+      scores: {
+        "0" => { "castles" => { "score" => 1 }, "total" => 1 },
+        "1" => { "castles" => { "score" => 1 }, "treasure" => { "score" => 3 }, "total" => 4 }
+      }
+    )
+
+    get game_url(game)
+
+    assert_select "#end-game-modal .score-table tbody tr td", text: "Treasure"
+    assert_select "#end-game-modal .score-table .score-value", text: "3"
+  end
+
   test "POST action dispatches to place_wall when quarry action" do
     game = games(:game2player)
     chris = game_players(:chris)

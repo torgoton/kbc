@@ -9,14 +9,14 @@
     <% end %>
   </p>
   <% players = game.game_players.sort_by(&:order) %>
-  <% goal_keys = (scores&.values&.first&.keys || []) - ["total"] %>
+  <% goal_keys = Array(scores&.values).compact.flat_map(&:keys).uniq - ["total"] %>
   <% if scores.present? %>
     <table class="score-table">
       <thead>
         <tr>
           <th>Goal</th>
           <% players.each do |player| %>
-            <th><%= player.player.handle %></th>
+            <th class="score-value"><%= player.player.handle %></th>
           <% end %>
         </tr>
       </thead>
@@ -25,14 +25,14 @@
           <tr>
             <td><%= goal.capitalize %></td>
             <% players.each do |player| %>
-              <td><%= scores[player.order.to_s][goal]["score"] %></td>
+              <td class="score-value"><%= scores.dig(player.order.to_s, goal, "score").to_i %></td>
             <% end %>
           </tr>
         <% end %>
         <tr class="score-total">
           <td>Total</td>
           <% players.each do |player| %>
-            <td><%= scores[player.order.to_s]["total"] %></td>
+            <td class="score-value"><%= scores[player.order.to_s]["total"] %></td>
           <% end %>
         </tr>
       </tbody>
