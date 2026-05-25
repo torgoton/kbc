@@ -132,7 +132,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
 end
 
 class TurnPhase::TileBuildPhase < TurnPhase
-  attr_reader :action_type, :klass_value, :chosen_terrain_value, :remaining, :walls_placed
+  attr_reader :action_type, :klass_value, :chosen_terrain_value, :remaining, :walls_placed, :outpost_active_value
 
   def self.from_hash(hash)
     new(
@@ -140,16 +140,18 @@ class TurnPhase::TileBuildPhase < TurnPhase
       klass_name: hash["klass"],
       chosen_terrain: hash["chosen_terrain"],
       remaining: hash["remaining"],
-      walls_placed: hash["walls_placed"]
+      walls_placed: hash["walls_placed"],
+      outpost_active: hash["outpost_active"] == true
     )
   end
 
-  def initialize(action_type:, klass_name:, chosen_terrain: nil, remaining: nil, walls_placed: nil)
+  def initialize(action_type:, klass_name:, chosen_terrain: nil, remaining: nil, walls_placed: nil, outpost_active: false)
     @action_type = action_type
     @klass_value = klass_name
     @chosen_terrain_value = chosen_terrain
     @remaining = remaining
     @walls_placed = walls_placed
+    @outpost_active_value = outpost_active
   end
 
   def type
@@ -164,13 +166,18 @@ class TurnPhase::TileBuildPhase < TurnPhase
     chosen_terrain_value
   end
 
+  def outpost_active?
+    outpost_active_value == true
+  end
+
   def decrement_remaining
     self.class.new(
       action_type: action_type,
       klass_name: klass_name,
       chosen_terrain: chosen_terrain,
       remaining: remaining && remaining - 1,
-      walls_placed: walls_placed
+      walls_placed: walls_placed,
+      outpost_active: outpost_active?
     )
   end
 
@@ -180,7 +187,8 @@ class TurnPhase::TileBuildPhase < TurnPhase
       klass_name: klass_name,
       chosen_terrain: chosen_terrain,
       remaining: remaining,
-      walls_placed: walls_placed.to_i + 1
+      walls_placed: walls_placed.to_i + 1,
+      outpost_active: outpost_active?
     )
   end
 
@@ -190,6 +198,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
     hash["chosen_terrain"] = chosen_terrain if chosen_terrain
     hash["remaining"] = remaining if remaining
     hash["walls_placed"] = walls_placed if walls_placed
+    hash["outpost_active"] = true if outpost_active?
     hash
   end
 end

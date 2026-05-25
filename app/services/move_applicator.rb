@@ -182,12 +182,16 @@ class MoveApplicator::HashState
       end
     else
       @mandatory_count -= 1
-      @current_action = TurnPhase.deserialize(@current_action).transition(
+      next_phase = TurnPhase.deserialize(@current_action).transition(
         TurnPhase::Events::BuildChosen.new(coordinate: [ coord.row, coord.col ]),
         TurnPhase::Facts::BuildChoice.new(
           locked_terrain: build_terrain
         )
-      ).next_phase.serialize
+      ).next_phase
+      @current_action = TurnPhase::MandatoryBuildPhase.new(
+        chosen_terrain: next_phase.chosen_terrain,
+        builds: next_phase.builds
+      ).serialize
     end
   end
 
@@ -263,6 +267,15 @@ class MoveApplicator::HashState
         TurnPhase::MandatoryBuildPhase.new(
           chosen_terrain: current_phase.chosen_terrain,
           builds: current_phase.builds,
+          outpost_active: true
+        ).serialize
+      elsif current_phase.is_a?(TurnPhase::TileBuildPhase)
+        TurnPhase::TileBuildPhase.new(
+          action_type: current_phase.type,
+          klass_name: current_phase.klass_name,
+          chosen_terrain: current_phase.chosen_terrain,
+          remaining: current_phase.remaining,
+          walls_placed: current_phase.walls_placed,
           outpost_active: true
         ).serialize
       else
@@ -585,6 +598,15 @@ class MoveApplicator::LiveState
       @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(
         chosen_terrain: current_phase.chosen_terrain,
         builds: current_phase.builds,
+        outpost_active: false
+      )
+    elsif current_phase.is_a?(TurnPhase::TileBuildPhase)
+      @game.turn_phase = TurnPhase::TileBuildPhase.new(
+        action_type: current_phase.type,
+        klass_name: current_phase.klass_name,
+        chosen_terrain: current_phase.chosen_terrain,
+        remaining: current_phase.remaining,
+        walls_placed: current_phase.walls_placed,
         outpost_active: false
       )
     else

@@ -17,11 +17,12 @@
 }
 
 .fancy-box {
+  background-color: var(--clr-ds-table);
   border-radius: 15px;
   filter: drop-shadow(-20px 20px 20px black);
   width: 80%;
   margin: 20px auto;
-  padding: 2rem;
+  padding: 1rem;
   font-size: 1.5rem;
 }
 

@@ -1438,6 +1438,68 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal all_empty_grass.sort, cells.sort
   end
 
+  test "outpost_active is consumed by the next mandatory build" do
+    @game.update!(boards: [ [ 1, 0 ], [ 0, 0 ], [ 0, 0 ], [ 0, 0 ] ], board_contents: BoardState.new)
+    force_hand("G")
+    @game.current_player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+
+    @engine.activate_outpost
+    @game.reload
+
+    first_spot = [ 0, 7 ]
+    @engine.build_settlement(*first_spot)
+    @game = Game.find(@game.id)
+
+    assert_nil @game.current_action["outpost_active"]
+
+    second_spot = [ 4, 4 ]
+    assert_not_includes TurnEngine.new(@game).buildable_cells, second_spot
+
+    result = TurnEngine.new(@game).build_settlement(*second_spot)
+    assert_equal "Not available", result
+  end
+
+  test "outpost preserves a selected Farm action and only waives adjacency for that build" do
+    @game.update!(boards: [ [ 1, 0 ], [ 0, 0 ], [ 0, 0 ], [ 0, 0 ] ], board_contents: BoardState.new)
+    force_hand("D")
+    player = @game.current_player
+    player.update!(tiles: [
+      { "klass" => "MandatoryTile", "used" => false },
+      { "klass" => "FarmTile", "from" => "[1, 7]", "used" => false },
+      { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
+    ])
+    @game.board_contents_will_change!
+    @game.board_contents.place_settlement(0, 7, player.order)
+    @game.update!(mandatory_count: 0)
+
+    @engine.select_action("farm")
+    @game.reload
+    TurnEngine.new(@game).activate_outpost
+    @game.reload
+
+    assert_equal "farm", @game.current_action["type"]
+    assert @game.current_action["outpost_active"]
+
+    non_adjacent_grass = [ 4, 4 ]
+    destinations = Tiles::FarmTile.new(0).valid_destinations(
+      board_contents: @game.board_contents,
+      board: @game.instantiate,
+      player_order: player.order
+    )
+    assert_not_includes destinations, non_adjacent_grass
+
+    result = TurnEngine.new(@game).activate_tile_build(*non_adjacent_grass)
+    @game.reload
+
+    assert_not_equal "Not available", result
+    assert_equal player.order, @game.board_contents.player_at(*non_adjacent_grass)
+    assert_equal({ "type" => "mandatory" }, @game.current_action)
+    assert player.reload.tiles.find { |t| t["klass"] == "FarmTile" }["used"]
+  end
+
   test "undo of activate_outpost clears outpost_active and marks tile unused" do
     force_hand("G")
     player = @game.current_player

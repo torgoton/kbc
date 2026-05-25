@@ -17,6 +17,4 @@ and anything else that is worth documenting and examining.
 
 ### Scoring
 
-- Merchants does not score for connecting a Nomads space
-
 ### System design
