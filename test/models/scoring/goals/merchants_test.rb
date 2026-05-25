@@ -18,6 +18,17 @@ class Scoring::Goals::MerchantsTest < Scoring::Goals::GoalTestCase
     assert_equal 8, result[:score]
   end
 
+  test "scores when a component connects a Nomad space to a location space" do
+    # CaravanBoard has a Nomad space at (3,3) and a location at (6,2).
+    ctx = build_game(
+      boards: [ [ 8, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ],
+      chris_settlements: [ [ 4, 3 ], [ 5, 2 ] ]
+    )
+
+    result = Scoring::Goals::Merchants.new(ctx[:game]).score_for(ctx[:chris])
+    assert_equal 8, result[:score]
+  end
+
   test "isolated component with no special hexes scores 0" do
     ctx = build_game(chris_settlements: [ [ 0, 0 ], [ 7, 2 ], [ 7, 3 ], [ 7, 4 ] ])
     result = Scoring::Goals::Merchants.new(ctx[:game]).score_for(ctx[:chris])

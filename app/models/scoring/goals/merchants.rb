@@ -17,10 +17,9 @@ class Scoring
       private
 
       def special_hexes
-        l_hexes = (0..19).flat_map do |r|
-          (0..19).filter_map { |c| [ r, c ] if board.terrain_at(r, c) == "L" }
+        (0..19).flat_map do |r|
+          (0..19).filter_map { |c| [ r, c ] if %w[L S].include?(board.terrain_at(r, c)) }
         end
-        (l_hexes + castle_hexes).uniq
       end
     end
   end
