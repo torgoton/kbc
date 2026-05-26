@@ -1,5 +1,5 @@
 // sound.js — loaded as a classic script before gameboard.js
-// Exposes SoundManager as a global and registers the play_sound Turbo Stream action.
+// Exposes SoundManager as a global.
 var SoundManager = (() => {
   const MUTE_KEY   = "kbc_muted";
   const VOLUME_KEY = "kbc_volume";
@@ -76,11 +76,4 @@ var SoundManager = (() => {
     getVolume: () => volume
   };
 })();
-
-// Register once Turbo is loaded — sound.js is a classic body script but Turbo
-// loads from importmap modules, which execute after classic scripts parse.
-document.addEventListener("turbo:load", () => {
-  Turbo.StreamActions.play_sound = function () {
-    SoundManager.play(this.getAttribute("key"));
-  };
-}, { once: true });
+window.SoundManager = SoundManager;

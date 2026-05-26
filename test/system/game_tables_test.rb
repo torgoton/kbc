@@ -45,4 +45,13 @@ class GameTablesTest < ApplicationSystemTestCase
     assert created_game.reload.playing?
     assert_equal 2, created_game.game_players.count
   end
+
+  test "game page registers the play_sound turbo stream action" do
+    sign_in(email_address: "chris@example.com")
+
+    visit game_path(games(:game2player))
+
+    assert_selector "#game-area"
+    assert_equal true, page.evaluate_script("typeof Turbo.StreamActions.play_sound === 'function'")
+  end
 end

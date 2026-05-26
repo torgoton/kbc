@@ -2,6 +2,10 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 
+window.Turbo.StreamActions.play_sound = function () {
+  window.SoundManager?.play(this.getAttribute("key"))
+}
+
 let fancyDanceInterval;
 
 function stop_fancy_dance() {
