@@ -299,9 +299,7 @@ class MoveApplicator::HashState
     from_coord = Coordinate.from_key(from)
     to_coord = Coordinate.from_key(to)
     @board.move_settlement(from_coord.row, from_coord.col, to_coord.row, to_coord.col)
-    if action_before
-      @current_action = TurnPhase.deserialize(action_before).serialize
-    elsif phase_after
+    if phase_after
       @current_action = phase_after.deep_dup
     elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::ResettlementPhase)
       phase = TurnPhase.deserialize(@current_action)
@@ -311,7 +309,7 @@ class MoveApplicator::HashState
         moves: phase.moves.to_i + 1
       ).serialize
     elsif TurnPhase.deserialize(@current_action).is_a?(TurnPhase::MeepleMovementPhase)
-      phase = TurnPhase.deserialize(action_before || @current_action)
+      phase = TurnPhase.deserialize(@current_action)
       @current_action = TurnPhase::MeepleMovementPhase.new(
         action_type: phase.type,
         klass_name: phase.klass_name,

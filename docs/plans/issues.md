@@ -13,7 +13,8 @@ and anything else that is worth documenting and examining.
 
 ### Game #show view
 
-- Sounds don't always work
+- Quarry doesn't recognize terrain choice if you have crossroads tile
+- Quarry undo of 2nd build wall stops quarry tile
 
 ### Scoring
 
