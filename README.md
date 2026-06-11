@@ -1,8 +1,8 @@
 # Kingdom Builder (kbc)
 
-A browser-based implementation of the [Kingdom Builder](https://new.queen-games.com/kingdom-builder/) board game by Queen Games. Built for players who already know the game and want to play online without a physical copy.
+A browser-based implementation of the [Kingdom Builder](https://new.queen-games.com/kingdom-builder/) board game designed by Donald X. Vaccarino and published by Queen Games. Built for players who already know the game and want to play online without a physical copy.
 
-**Live:** [kbc-divs.onrender.com](https://kbc-divs.onrender.com/) — accounts are required to play. If you'd like to try it, click the "Request an account" link or reach out directly to request one.
+**Live:** [kbc.chrisschumann.dev](https://kbc.chrisschumann.dev) — accounts are required to play. If you'd like to try it, click the "Request an account" link or reach out directly to request one.
 
 ---
 
