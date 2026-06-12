@@ -159,6 +159,16 @@ class GamePlayer < ApplicationRecord
     (tiles || []).map { |t| t["from"] }.to_set
   end
 
+  def holds_tile?(klass: nil, from: nil)
+    (tiles || []).any? do |t|
+      (klass.nil? || t["klass"] == klass) && (from.nil? || t["from"] == from)
+    end
+  end
+
+  def usable_tiles
+    (tiles || []).reject { |t| t["used"] }
+  end
+
   def mark_tile_used!(klass)
     idx = (tiles || []).find_index { |t| t["klass"] == klass && !t["used"] }
     return unless idx
