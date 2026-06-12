@@ -1088,17 +1088,13 @@ class TurnEngine
   def apply_tile_forfeit(game_player)
     return if (game_player.tiles || []).empty?
     active_tile_klass = @game.turn_phase.type == "mandatory" ? nil : current_action_tile_klass
+    changes = prefer_used_forfeit!(game_player, active_tile_klass)
+    record_used_redistribution(game_player, changes) if changes.any?
     game_player.tiles = game_player.tiles.reject do |tile|
-      next false if tile["klass"] == active_tile_klass
-      # Rule: Nomad tiles expire by turn, never by location
-      next false if Tiles::Tile.for_klass(tile["klass"])&.new(0)&.nomad_tile?
+      next false unless forfeit_eligible?(tile, active_tile_klass)
       loc = tile["from"]
-      next false unless loc
-      loc_coord = Coordinate.from_key(loc)
-      klass = @game.board_contents.tile_klass(*loc_coord) || tile["klass"]
-      should_forfeit = @game.board_contents.settlements_for(game_player.order).none? do |s_row, s_col|
-        @game.board_contents.neighbors(s_row, s_col).any? { |nr, nc| Coordinate.new(nr, nc).to_key == loc }
-      end
+      should_forfeit = !source_adjacent?(game_player, loc)
+      klass = @game.board_contents.tile_klass(*Coordinate.from_key(loc)) || tile["klass"]
       if should_forfeit
         @game.move_count += 1
         @game.moves.create(
@@ -1118,6 +1114,63 @@ class TurnEngine
       end
       should_forfeit
     end
+  end
+
+  # A tile is subject to location forfeit unless it is the currently-active
+  # tile, a Nomad tile (which expires by turn, never by location), or has no
+  # source location.
+  def forfeit_eligible?(tile, active_tile_klass)
+    return false if tile["klass"] == active_tile_klass
+    return false if Tiles::Tile.for_klass(tile["klass"])&.new(0)&.nomad_tile?
+    !tile["from"].nil?
+  end
+
+  def source_adjacent?(game_player, loc)
+    return false unless loc
+    @game.board_contents.settlements_for(game_player.order).any? do |s_row, s_col|
+      @game.board_contents.neighbors(s_row, s_col).any? { |nr, nc| Coordinate.new(nr, nc).to_key == loc }
+    end
+  end
+
+  # Prefer-used forfeit: copies of the same klass are interchangeable, so when
+  # some sources are still adjacent and some are not, reassign the `used` flags
+  # within the klass group to the still-adjacent copies first — i.e. the
+  # surviving copies become the unused ones, and the used copies are the ones
+  # that go on to be forfeited. Returns the list of flag changes so the
+  # redistribution can be replayed and undone.
+  def prefer_used_forfeit!(game_player, active_tile_klass)
+    changes = []
+    eligible = (game_player.tiles || []).select { |t| forfeit_eligible?(t, active_tile_klass) }
+    eligible.group_by { |t| t["klass"] }.each_value do |group|
+      adjacent, forfeiting = group.partition { |t| source_adjacent?(game_player, t["from"]) }
+      # Only a mixed group forces a forfeit choice; otherwise leave flags as-is.
+      next if adjacent.empty? || forfeiting.empty?
+      unused_first = group.map { |t| t["used"] }.sort_by { |used| used ? 1 : 0 }
+      (adjacent + forfeiting).each_with_index do |tile, i|
+        before, after = tile["used"], unused_first[i]
+        next if before == after
+        tile["used"] = after
+        changes << { "from" => tile["from"], "before" => before, "after" => after }
+      end
+    end
+    changes
+  end
+
+  # Records the prefer-used flag reassignment as a reversible move so that both
+  # replay (forward) and undo (reverse) reproduce it. Ordered before the
+  # forfeit_tile moves so undo restores forfeited tiles first, then corrects
+  # every affected flag back to its pre-forfeit value. No log message: this is
+  # internal bookkeeping, not a player-visible action.
+  def record_used_redistribution(game_player, changes)
+    @game.move_count += 1
+    @game.moves.create(
+      order: @game.move_count,
+      game_player: game_player,
+      deliberate: false,
+      action: "redistribute_tile_used",
+      reversible: true,
+      payload: { "changes" => changes }
+    )
   end
 
   def find_tile_pickup(game_player, row, col)
