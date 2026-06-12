@@ -142,6 +142,32 @@ class Game < ApplicationRecord
     Scoring.new(self).compute
   end
 
+  # Stable domain query: the hexes where game_player may legally build right
+  # now. Delegates to the engine's availability rule; returns coordinate pairs.
+  def legal_builds(game_player, terrain: nil)
+    terrain ||= Array(game_player.hand).first
+    instantiate
+    list = TurnEngine.new(self).available_list(game_player.order, terrain)
+    return [] unless list
+    list.each_with_index.flat_map do |row_cells, row|
+      row_cells.each_index.select { |col| row_cells[col] }.map { |col| [ row, col ] }
+    end
+  end
+
+  # Stable domain query: the held tiles game_player could activate right now
+  # (unused, recognized klass, and permitted in the current turn phase).
+  def available_tile_actions(game_player)
+    instantiate
+    engine = TurnEngine.new(self)
+    (game_player.tiles || []).select { |tile| engine.tile_activatable?(tile) }
+  end
+
+  # Stable domain query: game_player's current points for one goal or task.
+  # Raises KeyError if the goal is not part of this game.
+  def score_for(goal, game_player)
+    Scoring.new(self).score_for(game_player).fetch(goal.to_s)[:score]
+  end
+
   def complete!
     self.state = "completed"
     self.scores = Scoring.new(self).compute
