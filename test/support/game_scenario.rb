@@ -42,6 +42,21 @@ class GameScenario
     perform { |engine| engine.undo_last_move }
   end
 
+  # Activate a held tile's action (e.g. :resettlement, :paddock). The player
+  # must already hold the corresponding tile.
+  def activate_tile(type)
+    perform { |engine| engine.select_action(type.to_s) }
+  end
+
+  def select_settlement(at:)
+    perform { |engine| engine.select_settlement(*at) }
+  end
+
+  # One step of a stepped settlement move (resettlement, paddock, etc.).
+  def move_step(to:)
+    perform { |engine| engine.move_settlement(*to) }
+  end
+
   # --- setup (direct state construction; no rules applied) ---
 
   def place_tile(klass, at:, qty: 2)
