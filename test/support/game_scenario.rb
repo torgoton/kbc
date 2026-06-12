@@ -142,6 +142,16 @@ class GameScenario
     @game.game_players.find_by!(order: order)
   end
 
+  # Canonical, order-normalized game state for round-trip comparison. Mirrors
+  # the fields game_replayer_test treats as the replayable state.
+  def snapshot
+    state = @game.capture_snapshot
+    state.merge(
+      "board_contents" => state["board_contents"].sort_by { |e| [ e["r"], e["c"] ] },
+      "players" => state["players"].sort_by { |p| p["order"] }
+    )
+  end
+
   private
 
   def create_player(order, hand)
