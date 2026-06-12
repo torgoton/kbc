@@ -84,6 +84,12 @@ class GameScenario
     game_player(player).holds_tile?(klass: klass, from: from)
   end
 
+  # Raw held-tile hashes (klass/from/used), optionally filtered by klass.
+  def held_tiles(player, klass: nil)
+    tiles = game_player(player).tiles || []
+    klass ? tiles.select { |t| t["klass"] == klass } : tiles
+  end
+
   def tile_qty(at)
     @game.board_contents.tile_qty(*at)
   end

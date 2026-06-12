@@ -33,6 +33,11 @@ module MoveApplicator
         klass: move.payload["klass"],
         used: move.to == "true"
       )
+    when "redistribute_tile_used"
+      backend.apply_redistribute_tile_used(
+        player_order: player_order,
+        changes: move.payload["changes"]
+      )
     when "end_turn"
       backend.apply_end_turn(
         player_order: player_order,
@@ -213,6 +218,15 @@ class MoveApplicator::HashState
   def apply_forfeit_tile(player_order:, from:, klass:, used:)
     player = @players[player_order]
     player["tiles"] = (player["tiles"] || []).reject { |t| t["from"] == from }
+  end
+
+  # Forward replay: apply the prefer-used flag reassignment.
+  def apply_redistribute_tile_used(player_order:, changes:)
+    tiles = @players[player_order]["tiles"] || []
+    changes.each do |change|
+      tile = tiles.find { |t| t["from"] == change["from"] }
+      tile["used"] = change["after"] if tile
+    end
   end
 
   def apply_end_turn(player_order:, card_discarded:, card_drawn:, reshuffled:, deck_after:)
@@ -554,6 +568,20 @@ class MoveApplicator::LiveState
   def apply_forfeit_tile(player_order:, from:, klass:, used:)
     gp = player_for(player_order)
     gp.restore_tile!(klass, from: from, used: used)
+    gp.save
+  end
+
+  # Undo (reverse): restore every reassigned `used` flag to its prior value.
+  # Runs after the forfeit_tile reversal, so the just-restored forfeited tile is
+  # present and corrected here too.
+  def apply_redistribute_tile_used(player_order:, changes:)
+    gp = player_for(player_order)
+    tiles = gp.tiles || []
+    changes.each do |change|
+      tile = tiles.find { |t| t["from"] == change["from"] }
+      tile["used"] = change["before"] if tile
+    end
+    gp.tiles = tiles
     gp.save
   end
 
