@@ -29,6 +29,7 @@ o DXV calls the Warrior, Ship, and Wagon tokens "Meeples"
 - Caravan and Resettlement (from Nomads) CAN move a Warrior
 - Meeples stay on the board if you lose the corresponding tile
 - Meeples do not change end of game
+- Placing a Meeple counts as building; moving one does not
 - Fort draws a card, then builds on that terrain; that build CAN be modified by Outpost from Nomads
 - City Hall counts EACH settlement for Shepherd
 - If you lose the Crossroads tile, you do not immediately discard a Terrain card
