@@ -36,12 +36,12 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 
 | Task | Coverage | Test |
 | --- | --- | --- |
-| advance | ⬜ | — |
-| compass_points | ⬜ | — |
-| fortress | ⬜ | — |
-| home_country | ⬜ | — |
-| place_of_refuge | ⬜ | — |
-| road | ⬜ | — |
+| advance | ✅ | `tasks/advance_test.rb` |
+| compass_points | ✅ | `tasks/compass_points_test.rb` |
+| fortress | ✅ | `tasks/fortress_test.rb` |
+| home_country | ✅ | `tasks/home_country_test.rb` |
+| place_of_refuge | ✅ | `tasks/place_of_refuge_test.rb` |
+| road | ✅ | `tasks/road_test.rb` |
 
 ## Tiles (`app/models/tiles/`)
 
