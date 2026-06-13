@@ -310,10 +310,6 @@ class Game < ApplicationRecord
     )
   end
 
-  def replayed_state
-    GameReplayer.new(self).replay
-  end
-
   def board_has_quarry?
     board.map.any? { |s| s.location_hexes.any? { |h| h[:k] == "Quarry" } }
   end
