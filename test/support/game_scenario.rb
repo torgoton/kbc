@@ -29,7 +29,6 @@ class GameScenario
     )
     players.times { |order| create_player(order, hands.fetch(order, DEFAULT_HAND)) }
     @game.update!(current_player: game_player(0))
-    @game.update!(base_snapshot: @game.capture_snapshot)
   end
 
   # --- actions (domain intent; raise IllegalMove when the rules forbid it) ---

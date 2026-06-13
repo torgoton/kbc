@@ -3,7 +3,6 @@
 # Table name: games
 #
 #  id                :bigint           not null, primary key
-#  base_snapshot     :jsonb
 #  board_contents    :json
 #  boards            :json
 #  current_action    :json

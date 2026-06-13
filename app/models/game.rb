@@ -3,7 +3,6 @@
 # Table name: games
 #
 #  id                :bigint           not null, primary key
-#  base_snapshot     :jsonb
 #  board_contents    :json
 #  boards            :json
 #  current_action    :json
@@ -97,7 +96,6 @@ class Game < ApplicationRecord
     deal_terrain_cards
     choose_start_player
     self.current_action = { "type" => "mandatory" }
-    self.base_snapshot = capture_snapshot
     save
   end
 
