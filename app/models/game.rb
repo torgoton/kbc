@@ -292,10 +292,13 @@ class Game < ApplicationRecord
       "current_player_order" => current_player.order,
       "stone_walls" => stone_walls,
       "turn_number" => turn_number,
+      "end_trigger_count" => end_trigger_count,
+      "move_count" => move_count,
       "players" => game_players.map do |gp|
         { "order" => gp.order, "hand" => gp.hand,
           "supply" => gp.supply.dup, "tiles" => (gp.tiles || []).dup,
-          "taken_from" => (gp.taken_from || []).dup }
+          "taken_from" => (gp.taken_from || []).dup,
+          "bonus_scores" => gp.bonus_scores.dup }
       end
     }
   end
