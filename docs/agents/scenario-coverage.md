@@ -78,13 +78,13 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 
 | Tile | Coverage | Test | Notes |
 | --- | --- | --- | --- |
-| Nomad::OutpostTile | 🟡 | `tiles/meeple_movement_contract_test.rb` | only used as the "Nomad tiles are never forfeited" exemplar; own `activatable?` untested |
-| CityHallTile | ⬜ | — | `on_pickup`, `valid_destinations`, `activatable?` |
-| CrossroadsTile | ⬜ | — | `activatable?` (Crossroads expansion) |
-| QuarryTile | ⬜ | — | wall placement |
-| Nomad::SwordTile | ⬜ | — | |
-| Nomad::TreasureTile | ⬜ | — | pure scoring tile, no custom methods |
-| CastleTile | ⬜ | — | location tile tied to the Castles goal |
+| Nomad::OutpostTile | ✅ | `tiles/meeple_movement_contract_test.rb`, `tiles/outpost_tile_test.rb` | "Nomad tiles are never forfeited" exemplar, plus `activate_outpost` adjacency skip and always-false `activatable?` |
+| CityHallTile | ✅ | `tiles/city_hall_tile_test.rb` | `on_pickup` grants supply, `valid_destinations`/`activatable?` find a 7-hex cluster adjacent to another settlement, `place_city_hall` |
+| CrossroadsTile | ✅ | `tiles/crossroads_tile_test.rb` | extra card draw on `end_turn`, always-false `activatable?` |
+| QuarryTile | ✅ | `tiles/quarry_tile_test.rb` | wall placement on played-terrain hexes adjacent to a settlement, up to 2 walls, `activatable?` |
+| Nomad::SwordTile | ✅ | `tiles/sword_tile_test.rb` | targeted removal of an opponent's settlement, returned to supply; documents 2 known bugs (see test comments) |
+| Nomad::TreasureTile | ✅ | `tiles/treasure_tile_test.rb` | pickup immediately scores 3 points and is not held |
+| CastleTile | ✅ | `goals/castles_test.rb` | pure-data location tile; scoring covered by the Castles goal, no custom tile logic |
 
 ## Rules / cross-cutting mechanics
 

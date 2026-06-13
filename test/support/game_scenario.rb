@@ -48,6 +48,10 @@ class GameScenario
     perform { |engine| engine.undo_last_move }
   end
 
+  def end_turn
+    perform { |engine| engine.end_turn }
+  end
+
   def undo_allowed?
     fresh_board
     TurnEngine.new(@game).undo_allowed?
@@ -62,6 +66,12 @@ class GameScenario
   # Draw a card and enter the Fort tile's build phase on the drawn terrain.
   def activate_fort_tile
     perform { |engine| engine.activate_fort_tile }
+  end
+
+  # Activate a held Outpost tile, skipping the adjacency requirement for the
+  # current mandatory (or tile-build) action.
+  def activate_outpost
+    perform { |engine| engine.activate_outpost }
   end
 
   def select_settlement(at:)
@@ -81,6 +91,16 @@ class GameScenario
   # One step of a stepped wagon/ship move (or the initial placement).
   def move_meeple_step(to:)
     perform { |engine| engine.execute_meeple_action(*to) }
+  end
+
+  # Place a stone wall (QuarryTile).
+  def place_wall(at:)
+    perform { |engine| engine.place_wall(*at) }
+  end
+
+  # Place a City Hall cluster centered on `at:` (CityHallTile).
+  def place_city_hall(at:)
+    perform { |engine| engine.place_city_hall(*at) }
   end
 
   # --- setup (direct state construction; no rules applied) ---
@@ -115,6 +135,14 @@ class GameScenario
     gp = game_player(player)
     gp.add_warriors!(qty)
     gp.save!
+    @game.reload
+  end
+
+  def give_city_halls(player, qty)
+    gp = game_player(player)
+    gp.add_city_halls!(qty)
+    gp.save!
+    @game.reload
   end
 
   # --- actions ---
@@ -123,6 +151,12 @@ class GameScenario
   # BarracksTile). Counterpart to move_meeple_step's placement path.
   def remove_meeple(at:)
     perform { |engine| engine.remove_meeple_action(*at) }
+  end
+
+  # Remove an opponent's settlement (e.g. via Nomad::SwordTile's targeted
+  # removal phase), returning it to their supply.
+  def remove_settlement(at:)
+    perform { |engine| engine.remove_settlement(*at) }
   end
 
   # --- queries ---
@@ -137,6 +171,26 @@ class GameScenario
 
   def warriors_remaining(player)
     game_player(player).warriors_remaining
+  end
+
+  def hand(player)
+    game_player(player).hand
+  end
+
+  def stone_walls
+    @game.stone_walls
+  end
+
+  def wall_at?(at)
+    @game.board_contents.tile_klass(*at) == "Wall"
+  end
+
+  def city_hall_at?(at)
+    @game.board_contents.city_hall_at?(*at)
+  end
+
+  def city_halls_remaining(player)
+    game_player(player).city_halls_remaining
   end
 
   def holds_tile?(player, klass: nil, from: nil)
