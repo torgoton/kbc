@@ -103,13 +103,11 @@ class TurnEngine
     game_player = @game.current_player
     return "No outpost tile" unless game_player.find_unused_tile("OutpostTile")
     return "Not in build action" unless build_action?
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "activate_outpost",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
       message: "#{game_player.player.handle} activated the Outpost tile"
     )
     game_player.mark_tile_used!("OutpostTile")
@@ -142,13 +140,11 @@ class TurnEngine
     return "Not available" unless game_player.find_unused_tile("FortTile")
     return "No settlements left" unless game_player.settlements_remaining?
 
-    @game.move_count += 1
-    @game.moves.create!(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "activate_fort",
+      deliberate: true,
       reversible: false,
+      game_player: game_player,
       message: "#{game_player.player.handle} activated the Fort tile"
     )
 
@@ -158,13 +154,11 @@ class TurnEngine
       @game.discard.clear
     end
     @game.discard.push(drawn_card)
-    @game.move_count += 1
-    @game.moves.create!(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: false,
+    record_move(
       action: "draw_fort_card",
+      deliberate: false,
       reversible: false,
+      game_player: game_player,
       payload: { "card" => drawn_card, "deck_after" => @game.deck.dup, "discard_after" => @game.discard.dup },
       message: "#{game_player.player.handle} drew a #{Boards::Board::TERRAIN_NAMES[drawn_card]} card"
     )
@@ -191,15 +185,13 @@ class TurnEngine
     tile_used = phase_result ? phase_result.action_completed : remaining_orders.empty?
     meeple = @game.board_contents.meeple_at(row, col)
 
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "remove_settlement",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
       from: "[#{row}, #{col}]",
       to: "player_#{owner_order}_supply",
-      reversible: true,
       payload: { "owner_order" => owner_order, "action_before" => action_before, "tile_used" => tile_used, "meeple" => meeple },
       message: "#{game_player.player.handle} removed #{owner.player.handle}'s #{meeple || 'settlement'}"
     )
@@ -332,14 +324,12 @@ class TurnEngine
     return "Not available" unless destinations.any?
 
     action_word = tile_obj.meeple_kind
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "select_#{action_word}",
-      from: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
       message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
     )
     current_phase = @game.turn_phase
@@ -372,14 +362,12 @@ class TurnEngine
     action_before = @game.current_action.deep_dup
     cluster = tile_obj.cluster_hexes(row, col, @game.board_contents)
 
-    @game.move_count += 1
-    @game.moves.create!(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "place_city_hall",
-      to: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
       payload: { "action_before" => action_before },
       message: "#{game_player.player.handle} placed their City Hall at [#{row}, #{col}]"
     )
@@ -456,7 +444,6 @@ class TurnEngine
   def select_action(type)
     klass_name = tile_klass_name_for_type(type)
     payload = { "klass" => klass_name }
-    @game.move_count += 1
     tile_klass = Tiles::Tile.for_klass(klass_name)
     tile_obj = tile_klass&.new(0)
     selected_phase =
@@ -508,13 +495,11 @@ class TurnEngine
         pending_orders: opponents
       )
     end
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: @game.current_player,
-      deliberate: true,
+    record_move(
       action: "select_action",
-      to: type,
+      deliberate: true,
       reversible: true,
+      to: type,
       payload: payload,
       message: "#{@game.current_player.player.handle} selected the #{type} action"
     )
@@ -527,14 +512,11 @@ class TurnEngine
   end
 
   def select_settlement(row, col)
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: @game.current_player,
-      deliberate: true,
+    record_move(
       action: "select_settlement",
-      from: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      from: "[#{row}, #{col}]",
       message: "#{@game.current_player.player.handle} selected a settlement at [#{row}, #{col}]"
     )
     current_phase = @game.turn_phase
@@ -617,16 +599,13 @@ class TurnEngine
         "chosen_terrain_before" => chosen_terrain_before,
         "phase_after" => TurnPhase::MandatoryBuildPhase.new.serialize
       }
-      @game.move_count += 1
       payload["phase_after"] = TurnPhase::MandatoryBuildPhase.new.serialize
-      @game.moves.create(
-        order: @game.move_count,
-        game_player: @game.current_player,
-        deliberate: true,
+      record_move(
         action: "move_settlement",
+        deliberate: true,
+        reversible: true,
         from: from,
         to: Coordinate.new(row, col).to_key,
-        reversible: true,
         payload: payload,
         message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
       )
@@ -688,15 +667,13 @@ class TurnEngine
 
     walls_placed = current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed.to_i + 1 : 1
 
-    @game.move_count += 1
     payload = { "chosen_terrain_before" => chosen_terrain_before }
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "place_wall",
-      to: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
       payload: payload,
       message: "#{game_player.player.handle} placed a stone wall at [#{row}, #{col}]"
     )
@@ -826,13 +803,11 @@ class TurnEngine
     end
     # Increment turn number
     @game.turn_number += 1
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "end_turn",
+      deliberate: true,
       reversible: false,
+      game_player: game_player,
       payload: { "card_discarded" => card_discarded, "card_drawn" => card_drawn,
                  "reshuffled" => reshuffled, "deck_after" => @game.deck.dup },
       message: "#{game_player.player.handle} ended their turn"
@@ -844,13 +819,11 @@ class TurnEngine
     end
     max_order = @game.game_players.count - 1
     if @game.ending? && game_player.order == max_order
-      @game.move_count += 1
-      @game.moves.create(
-        order: @game.move_count,
-        game_player: game_player,
-        deliberate: false,
+      record_move(
         action: "end_game",
+        deliberate: false,
         reversible: false,
+        game_player: game_player,
         message: "Game over!"
       )
       @game.save
@@ -1034,7 +1007,7 @@ class TurnEngine
   # Single seam for recording moves. Increments move_count, defaults the
   # game_player to the current player, and attaches the request's pre-click
   # snapshot to deliberate moves so undo can restore it (ADR-0002).
-  def record_move(action:, deliberate:, reversible:, message:, game_player: nil, from: nil, to: nil, payload: nil)
+  def record_move(action:, deliberate:, reversible:, message: nil, game_player: nil, from: nil, to: nil, payload: nil)
     @game.move_count += 1
     @game.moves.create!(
       order: @game.move_count,
@@ -1120,13 +1093,11 @@ class TurnEngine
       should_forfeit = !source_adjacent?(game_player, loc)
       klass = @game.board_contents.tile_klass(*Coordinate.from_key(loc)) || tile["klass"]
       if should_forfeit
-        @game.move_count += 1
-        @game.moves.create(
-          order: @game.move_count,
-          game_player: game_player,
-          deliberate: false,
+        record_move(
           action: "forfeit_tile",
+          deliberate: false,
           reversible: true,
+          game_player: game_player,
           from: loc,
           to: tile["used"].to_s,
           payload: { "klass" => klass },
@@ -1186,13 +1157,11 @@ class TurnEngine
   # every affected flag back to its pre-forfeit value. No log message: this is
   # internal bookkeeping, not a player-visible action.
   def record_used_redistribution(game_player, changes)
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: false,
+    record_move(
       action: "redistribute_tile_used",
+      deliberate: false,
       reversible: true,
+      game_player: game_player,
       payload: { "changes" => changes }
     )
   end
@@ -1216,15 +1185,13 @@ class TurnEngine
     return unless tile
 
     qty_before = @game.board_contents.tile_qty(*Coordinate.from_key(tile[:key]))
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: false,
+    record_move(
       action: "pick_up_tile",
+      deliberate: false,
+      reversible: true,
+      game_player: game_player,
       from: tile[:key],
       to: "player_#{game_player.order}",
-      reversible: true,
       payload: { "klass" => tile[:klass], "qty_before" => qty_before },
       message: "#{game_player.player.handle} picked up #{/\A[AEIOU]/.match?(tile[:klass]) ? "an" : "a"} #{tile[:klass].delete_suffix("Tile")} tile"
     )
@@ -1238,13 +1205,11 @@ class TurnEngine
     game_player.supply_hash.each do |kind, qty_after|
       granted = qty_after - supply_before[kind].to_i
       next unless granted > 0
-      @game.move_count += 1
-      @game.moves.create(
-        order: @game.move_count,
-        game_player: game_player,
-        deliberate: false,
+      record_move(
         action: "grant_meeple",
+        deliberate: false,
         reversible: true,
+        game_player: game_player,
         payload: { "kind" => kind, "qty" => granted },
         message: "#{game_player.player.handle} acquires #{ActionController::Base.helpers.pluralize(granted, kind)}"
       )
@@ -1317,13 +1282,11 @@ class TurnEngine
   end
 
   def score_goal(game_player, goal, points, message)
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: false,
+    record_move(
       action: "score_goal",
+      deliberate: false,
       reversible: true,
+      game_player: game_player,
       payload: { "goal" => goal, "score" => points },
       message: message
     )
@@ -1390,15 +1353,13 @@ class TurnEngine
       step_payload["action_before"] = step_action_before(action_before, current.to_key, index, vacated_this_route)
       step_payload["phase_after"] = phase_after if index == path.size - 1
 
-      @game.move_count += 1
-      @game.moves.create(
-        order: @game.move_count,
-        game_player: game_player,
-        deliberate: true,
+      record_move(
         action: action,
+        deliberate: true,
+        reversible: true,
+        game_player: game_player,
         from: current.to_key,
         to: destination.to_key,
-        reversible: true,
         payload: step_payload,
         message: "#{game_player.player.handle} moved their #{message_piece} to #{destination.to_key}"
       )
@@ -1493,14 +1454,12 @@ class TurnEngine
 
   def place_warrior(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "place_warrior",
-      to: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
       payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} placed a warrior at [#{row}, #{col}]"
     )
@@ -1512,14 +1471,12 @@ class TurnEngine
 
   def remove_warrior(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "remove_warrior",
-      from: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
       payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} removed a warrior from [#{row}, #{col}]"
     )
@@ -1531,14 +1488,12 @@ class TurnEngine
 
   def place_ship(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "place_ship",
-      to: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
       payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} placed their ship at [#{row}, #{col}]"
     )
@@ -1550,14 +1505,12 @@ class TurnEngine
 
   def remove_ship(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "remove_ship",
-      from: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
       payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} removed their ship from [#{row}, #{col}]"
     )
@@ -1587,14 +1540,12 @@ class TurnEngine
 
   def place_wagon(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "place_wagon",
-      to: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
       payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} placed their wagon at [#{row}, #{col}]"
     )
@@ -1606,14 +1557,12 @@ class TurnEngine
 
   def remove_wagon(row, col, game_player, tile_klass:)
     action_before = @game.turn_phase.serialize
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "remove_wagon",
-      from: "[#{row}, #{col}]",
+      deliberate: true,
       reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
       payload: { "klass" => tile_klass, "action_before" => action_before },
       message: "#{game_player.player.handle} removed their wagon from [#{row}, #{col}]"
     )
