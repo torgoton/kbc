@@ -52,27 +52,27 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | WagonTile | ✅ | `tiles/meeple_movement_contract_test.rb` | relocate, pickup, forfeit, 3-step budget |
 | LighthouseTile | ✅ | `tiles/meeple_movement_contract_test.rb` | same contract as wagon |
 | Nomad::ResettlementTile | ✅ | `tiles/resettlement_movement_test.rb`, `rules/forfeit_test.rb`, `rules/undo_round_trip_test.rb` | stepped settlement move, forfeit-prefers-used, undo round trip |
-| BarracksTile | ⬜ | — | places a warrior meeple |
-| PaddockTile | ⬜ | — | 2-hex straight-line settlement jump (`STRAIGHT_LINES`) |
-| BarnTile | ⬜ | — | moves a settlement |
-| CaravanTile | ⬜ | — | moves a settlement, `selectable_settlements` |
-| HarborTile | ⬜ | — | moves a settlement |
+| BarracksTile | ✅ | `tiles/barracks_tile_test.rb` | place warrior (adjacent-first/anywhere fallback), remove placed warrior, `activatable?` |
+| PaddockTile | ✅ | `tiles/paddock_tile_test.rb` | 2-hex straight-line settlement jump (`STRAIGHT_LINES`), `activatable?` |
+| BarnTile | ✅ | `tiles/barn_tile_test.rb` | moves a settlement to played-terrain hex, adjacent-first/anywhere fallback |
+| CaravanTile | ✅ | `tiles/caravan_tile_test.rb` | moves a settlement as far as possible along a straight line until blocked, `activatable?` |
+| HarborTile | ✅ | `tiles/harbor_tile_test.rb` | moves a settlement to water, adjacent-first/anywhere fallback |
 
 ### Build-bonus tiles (`builds_settlement?`)
 
 | Tile | Coverage | Test | Notes |
 | --- | --- | --- | --- |
-| FarmTile | 🟡 | `tiles/meeple_movement_contract_test.rb`, `rules/forfeit_test.rb` | only used as a generic forfeitable-tile exemplar; its extra-build effect is untested |
-| OasisTile | 🟡 | `rules/tile_pickup_test.rb`, `rules/tile_usability_test.rb`, `tiles/meeple_movement_contract_test.rb` | pickup/usability mechanics covered; extra-build effect untested |
-| ForestersLodgeTile | ⬜ | — | |
-| FortTile | ⬜ | — | also `activatable?` (drawn-terrain constraint) |
-| GardenTile | ⬜ | — | |
-| MonasteryTile | ⬜ | — | |
-| OracleTile | ⬜ | — | |
-| TavernTile | ⬜ | — | also `activatable?`, `valid_destinations` |
-| TowerTile | ⬜ | — | also `valid_destinations` |
-| VillageTile | ⬜ | — | also `valid_destinations` |
-| Nomad::DonationTile (+ 7 terrain variants: Canyon/Desert/Flower/Grass/Mountain/Timber/Water) | ⬜ | — | donate hand card for extra build |
+| FarmTile | ✅ | `tiles/meeple_movement_contract_test.rb`, `rules/forfeit_test.rb`, `tiles/terrain_build_tile_test.rb` | extra-build contract (adjacent-only destinations, anywhere fallback, pickup, wrong-terrain rejection) |
+| OasisTile | ✅ | `rules/tile_pickup_test.rb`, `rules/tile_usability_test.rb`, `tiles/meeple_movement_contract_test.rb`, `tiles/terrain_build_tile_test.rb` | pickup/usability plus extra-build contract |
+| ForestersLodgeTile | ✅ | `tiles/terrain_build_tile_test.rb` | extra-build contract |
+| FortTile | ✅ | `tiles/fort_tile_test.rb` | draw-card-and-build contract, non-undoable |
+| GardenTile | ✅ | `tiles/terrain_build_tile_test.rb` | extra-build contract |
+| MonasteryTile | ✅ | `tiles/terrain_build_tile_test.rb` | extra-build contract |
+| OracleTile | ✅ | `tiles/oracle_tile_test.rb` | extra-build contract on played terrain card(s) |
+| TavernTile | ✅ | `tiles/tavern_tile_test.rb` | build at end of 3-settlement line, `activatable?` |
+| TowerTile | ✅ | `tiles/tower_tile_test.rb` | build at board edge, adjacent-first then fallback |
+| VillageTile | ✅ | `tiles/village_tile_test.rb` | build adjacent to >=3 settlements, `activatable?` |
+| Nomad::DonationTile (+ 7 terrain variants: Canyon/Desert/Flower/Grass/Mountain/Timber/Water) | ✅ | `tiles/donation_tile_test.rb` | 3-build donation contract, adjacency-first, off-limits terrain |
 
 ### Other tiles
 

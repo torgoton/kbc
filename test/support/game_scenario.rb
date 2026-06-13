@@ -35,17 +35,33 @@ class GameScenario
   # --- actions (domain intent; raise IllegalMove when the rules forbid it) ---
 
   def build_settlement(at:)
-    perform { |engine| engine.build_settlement(*at) }
+    perform do |engine|
+      if current_tile_obj&.builds_settlement?
+        engine.activate_tile_build(*at)
+      else
+        engine.build_settlement(*at)
+      end
+    end
   end
 
   def undo
     perform { |engine| engine.undo_last_move }
   end
 
+  def undo_allowed?
+    fresh_board
+    TurnEngine.new(@game).undo_allowed?
+  end
+
   # Activate a held tile's action (e.g. :resettlement, :paddock). The player
   # must already hold the corresponding tile.
   def activate_tile(type)
     perform { |engine| engine.select_action(type.to_s) }
+  end
+
+  # Draw a card and enter the Fort tile's build phase on the drawn terrain.
+  def activate_fort_tile
+    perform { |engine| engine.activate_fort_tile }
   end
 
   def select_settlement(at:)
@@ -85,16 +101,42 @@ class GameScenario
     mutate_board { |contents| contents.place_ship(*at, player) }
   end
 
+  def place_warrior(player, at:)
+    mutate_board { |contents| contents.place_warrior(*at, player) }
+  end
+
   def give_tile(player, klass, from:, used: false)
     gp = game_player(player)
     gp.restore_tile!(klass, from: Coordinate.new(*from).to_key, used: used)
     gp.save!
   end
 
+  def give_warriors(player, qty)
+    gp = game_player(player)
+    gp.add_warriors!(qty)
+    gp.save!
+  end
+
+  # --- actions ---
+
+  # Remove a warrior/wagon/ship meeple the current player owns (e.g. via
+  # BarracksTile). Counterpart to move_meeple_step's placement path.
+  def remove_meeple(at:)
+    perform { |engine| engine.remove_meeple_action(*at) }
+  end
+
   # --- queries ---
 
   def owner_at(at)
     @game.board_contents.player_at(*at)
+  end
+
+  def meeple_at(at)
+    @game.board_contents.meeple_at(*at)
+  end
+
+  def warriors_remaining(player)
+    game_player(player).warriors_remaining
   end
 
   def holds_tile?(player, klass: nil, from: nil)
@@ -122,6 +164,13 @@ class GameScenario
 
   def legal_builds(player)
     @game.legal_builds(game_player(player))
+  end
+
+  # The hexes highlighted as valid build/action destinations for the current
+  # player's active phase (mirrors TurnEngine#buildable_cells, used by the UI).
+  def buildable_cells
+    fresh_board
+    TurnEngine.new(@game).buildable_cells
   end
 
   def score_for(goal, player)
@@ -268,6 +317,15 @@ class GameScenario
 
   private
 
+  # The tile object for the currently active tile action (as set by
+  # activate_tile), or nil during a mandatory build phase.
+  def current_tile_obj
+    action_type = @game.current_action["type"]
+    return nil if action_type == "mandatory"
+    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
+    Tiles::Tile.for_klass(klass_name)&.new(0)
+  end
+
   def create_player(order, hand)
     user = User.create!(
       handle: "scenario-#{@game.id}-p#{order}",
@@ -342,6 +400,7 @@ class GameScenario
   end
 
   def perform
+    @game.reload
     @game.board = nil
     result = yield TurnEngine.new(@game)
     raise IllegalMove, result if result.is_a?(String)
