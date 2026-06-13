@@ -57,6 +57,16 @@ class GameScenario
     perform { |engine| engine.move_settlement(*to) }
   end
 
+  # Select an on-board wagon/ship before moving it step by step.
+  def select_meeple(at:)
+    perform { |engine| engine.select_meeple_for_move(*at) }
+  end
+
+  # One step of a stepped wagon/ship move (or the initial placement).
+  def move_meeple_step(to:)
+    perform { |engine| engine.execute_meeple_action(*to) }
+  end
+
   # --- setup (direct state construction; no rules applied) ---
 
   def place_tile(klass, at:, qty: 2)
@@ -65,6 +75,14 @@ class GameScenario
 
   def place_settlement(player, at:)
     mutate_board { |contents| contents.place_settlement(*at, player) }
+  end
+
+  def place_wagon(player, at:)
+    mutate_board { |contents| contents.place_wagon(*at, player) }
+  end
+
+  def place_ship(player, at:)
+    mutate_board { |contents| contents.place_ship(*at, player) }
   end
 
   def give_tile(player, klass, from:, used: false)
