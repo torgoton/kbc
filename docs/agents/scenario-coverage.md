@@ -72,7 +72,7 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | TavernTile | ⬜ | — | also `activatable?`, `valid_destinations` |
 | TowerTile | ⬜ | — | also `valid_destinations` |
 | VillageTile | ⬜ | — | also `valid_destinations` |
-| Nomad::DonationTile (+ 6 terrain variants: Canyon/Desert/Flower/Grass/Mountain/Timber/Water) | ⬜ | — | donate hand card for extra build |
+| Nomad::DonationTile (+ 7 terrain variants: Canyon/Desert/Flower/Grass/Mountain/Timber/Water) | ⬜ | — | donate hand card for extra build |
 
 ### Other tiles
 

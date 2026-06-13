@@ -105,6 +105,10 @@ class MeepleMovementContractTest < ActiveSupport::TestCase
 
       assert_equal 0, scenario.owner_at(path.last)
       assert_nil scenario.owner_at(start)
+      path[0...-1].each do |interim|
+        assert_nil scenario.owner_at(interim),
+          "each step relocates the same meeple, so interior hexes must be vacated, not left occupied"
+      end
 
       visited = [ start ] + path
       extra = scenario.neighbors(path.last).find do |n|

@@ -180,24 +180,6 @@ class GameScenario
     nil
   end
 
-  # An empty hex whose neighbors include exactly `count` distinct hexes
-  # whose terrain is in `terrains`. Used by goal tracers that score based on
-  # the number of distinct special hexes adjacent to a settlement
-  # (merchants, ...). `terrains` may be a single terrain string or an array.
-  def empty_hex_with_neighbor_count(terrains, count)
-    terrains = Array(terrains)
-    board = fresh_board
-    20.times do |row|
-      20.times do |col|
-        next if terrains.include?(board.terrain_at(row, col))
-        next unless @game.board_contents.empty?(row, col)
-        matches = @game.board_contents.neighbors(row, col).count { |r, c| terrains.include?(board.terrain_at(r, c)) }
-        return [ row, col ] if matches == count
-      end
-    end
-    nil
-  end
-
   # `count` distinct empty hexes (not on `terrain`) that are all adjacent to
   # the same hex of `terrain`. Used by goal tracers that test multiple
   # settlements near a single special hex (castles, ...).
