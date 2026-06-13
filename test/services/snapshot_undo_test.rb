@@ -25,4 +25,16 @@ class SnapshotUndoTest < ActiveSupport::TestCase
     assert_equal supply_before, scenario.settlements_remaining(0)
     assert_equal snap["move_count"], scenario.game.move_count
   end
+
+  test "a deliberate build move carries the pre-click snapshot; consequential moves do not" do
+    scenario = GameScenario.new(hands: { 0 => "G", 1 => "D" })
+    spot = scenario.empty_hexes("G", 1).first
+    scenario.build_settlement(at: spot)
+
+    deliberate = scenario.game.moves.where(deliberate: true).order(:id).last
+    assert_not_nil deliberate.snapshot_before, "deliberate move must carry snapshot_before"
+
+    consequential = scenario.game.moves.where(deliberate: false).order(:id).last
+    assert_nil consequential&.snapshot_before, "consequential moves must not carry a snapshot"
+  end
 end

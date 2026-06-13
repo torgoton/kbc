@@ -1,6 +1,13 @@
 class TurnEngine
   def initialize(game)
     @game = game
+    # Pre-click game state. Attached to the deliberate Move this request
+    # records (via record_move) so undo can restore it. See ADR-0002.
+    # Reading game_players for the snapshot must not leave a stale association
+    # cache: current_player (belongs_to) and game_players (has_many) are
+    # distinct instances, and downstream paths re-read the collection.
+    @snapshot_before = game.capture_snapshot
+    game.game_players.reset
   end
 
   def available_list(active_player, terrain)
@@ -1024,6 +1031,25 @@ class TurnEngine
 
   private
 
+  # Single seam for recording moves. Increments move_count, defaults the
+  # game_player to the current player, and attaches the request's pre-click
+  # snapshot to deliberate moves so undo can restore it (ADR-0002).
+  def record_move(action:, deliberate:, reversible:, message:, game_player: nil, from: nil, to: nil, payload: nil)
+    @game.move_count += 1
+    @game.moves.create!(
+      order: @game.move_count,
+      game_player: game_player || @game.current_player,
+      action: action,
+      deliberate: deliberate,
+      reversible: reversible,
+      message: message,
+      from: from,
+      to: to,
+      payload: payload,
+      snapshot_before: (deliberate ? @snapshot_before : nil)
+    )
+  end
+
   def build_action?
     return true if @game.turn_phase.is_a?(TurnPhase::MandatoryBuildPhase)
     klass = Tiles::Tile.for_klass(current_action_tile_klass)
@@ -1066,15 +1092,13 @@ class TurnEngine
       @game.end_trigger_count += 1
       payload["triggered_ending"] = true
     end
-    @game.move_count += 1
-    @game.moves.create(
-      order: @game.move_count,
-      game_player: game_player,
-      deliberate: true,
+    record_move(
       action: "build",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
       from: "supply",
       to: "[#{row}, #{col}]",
-      reversible: true,
       payload: payload,
       message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]}"
     )
