@@ -1705,6 +1705,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "BarracksTile", "from" => "[0, 0]", "used" => false } ])
     player.reload.add_warriors!(2)
+    player.save!
     @game.update!(current_action: { "type" => "barracks", "klass" => "BarracksTile" })
 
     hex = empty_hexes_of("G", 1).first

@@ -1,13 +1,7 @@
 class TurnEngine
   def initialize(game)
     @game = game
-    # Pre-click game state. Attached to the deliberate Move this request
-    # records (via record_move) so undo can restore it. See ADR-0002.
-    # Reading game_players for the snapshot must not leave a stale association
-    # cache: current_player (belongs_to) and game_players (has_many) are
-    # distinct instances, and downstream paths re-read the collection.
-    @snapshot_before = game.capture_snapshot
-    game.game_players.reset
+    capture_undo_snapshot
   end
 
   def available_list(active_player, terrain)
@@ -45,6 +39,7 @@ class TurnEngine
   end
 
   def build_settlement(row, col)
+    capture_undo_snapshot
     Rails.logger.debug("Attempt to build at #{row}, #{col}")
     @game.instantiate
     game_player = @game.current_player
@@ -99,6 +94,7 @@ class TurnEngine
   end
 
   def activate_outpost
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     return "No outpost tile" unless game_player.find_unused_tile("OutpostTile")
@@ -134,6 +130,7 @@ class TurnEngine
   end
 
   def activate_fort_tile
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     return "Not available" unless @game.turn_phase.is_a?(TurnPhase::MandatoryBuildPhase)
@@ -168,6 +165,7 @@ class TurnEngine
   end
 
   def remove_settlement(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
 
@@ -223,6 +221,7 @@ class TurnEngine
   end
 
   def execute_meeple_action(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     tile_klass = current_action_tile_klass
@@ -275,6 +274,7 @@ class TurnEngine
   end
 
   def remove_meeple_action(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     tile_klass = current_action_tile_klass
@@ -301,6 +301,7 @@ class TurnEngine
   end
 
   def select_meeple_for_move(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     tile_klass = current_action_tile_klass
@@ -348,6 +349,7 @@ class TurnEngine
   end
 
   def place_city_hall(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     tile = game_player.find_unused_tile("CityHallTile")
@@ -382,6 +384,7 @@ class TurnEngine
   end
 
   def activate_tile_build(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     return "No settlements left" unless game_player.settlements_remaining?
@@ -442,6 +445,7 @@ class TurnEngine
   end
 
   def select_action(type)
+    capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
     payload = { "klass" => klass_name }
     tile_klass = Tiles::Tile.for_klass(klass_name)
@@ -512,6 +516,7 @@ class TurnEngine
   end
 
   def select_settlement(row, col)
+    capture_undo_snapshot
     record_move(
       action: "select_settlement",
       deliberate: true,
@@ -535,6 +540,7 @@ class TurnEngine
   end
 
   def move_settlement(row, col)
+    capture_undo_snapshot
     @game.instantiate
     current_phase = @game.turn_phase
     from = current_phase.from
@@ -641,6 +647,7 @@ class TurnEngine
   end
 
   def place_wall(row, col)
+    capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
     current_phase = @game.turn_phase
@@ -779,6 +786,7 @@ class TurnEngine
   end
 
   def end_turn
+    capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
     @game.instantiate
@@ -988,21 +996,24 @@ class TurnEngine
   end
 
   def undo_last_move
-    last_deliberate = @game.moves.where(deliberate: true).order(order: :desc).first
-    return unless last_deliberate
-    Rails.logger.debug("UNDOING back to deliberate move #{last_deliberate.inspect}")
-    @game.instantiate
-    backend = MoveApplicator::LiveState.new(@game)
-    @game.moves.where("id >= ?", last_deliberate.id).order(id: :desc).each do |move|
-      Rails.logger.debug("  undoing #{move.action} (order #{move.order})")
-      @game.move_count -= 1
-      MoveApplicator.dispatch(backend, move)
-      move.destroy
-    end
-    @game.save
+    last = @game.moves.where(deliberate: true).order(:id).last
+    return unless last&.reversible?
+    @game.restore_snapshot!(last.snapshot_before)
+    @game.moves.where("id >= ?", last.id).destroy_all
   end
 
   private
+
+  # Snapshot of pre-action game state, attached to the deliberate Move an action
+  # records so undo can restore it (ADR-0002). Captured at construction and at
+  # the start of each public action, so it reflects the state immediately before
+  # the action even if the engine was constructed earlier. Resetting game_players
+  # avoids leaving a stale association cache (current_player and game_players are
+  # distinct instances; downstream paths re-read the collection).
+  def capture_undo_snapshot
+    @snapshot_before = @game.capture_snapshot
+    @game.game_players.reset
+  end
 
   # Single seam for recording moves. Increments move_count, defaults the
   # game_player to the current player, and attaches the request's pre-click
