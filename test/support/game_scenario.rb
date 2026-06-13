@@ -162,6 +162,114 @@ class GameScenario
     spots
   end
 
+  # An empty hex (not itself one of `terrains`) whose neighbors do (or
+  # don't) include a hex of `terrains`. Used by goal tracers that score
+  # settlements by adjacency to a terrain type (fishermen, miners, workers,
+  # ...). `terrains` may be a single terrain string or an array.
+  def empty_hex_adjacent_to(terrains, adjacent: true)
+    terrains = Array(terrains)
+    board = fresh_board
+    20.times do |row|
+      20.times do |col|
+        next if terrains.include?(board.terrain_at(row, col))
+        next unless @game.board_contents.empty?(row, col)
+        has_neighbor = @game.board_contents.neighbors(row, col).any? { |r, c| terrains.include?(board.terrain_at(r, c)) }
+        return [ row, col ] if has_neighbor == adjacent
+      end
+    end
+    nil
+  end
+
+  # An empty hex whose neighbors include exactly `count` distinct hexes
+  # whose terrain is in `terrains`. Used by goal tracers that score based on
+  # the number of distinct special hexes adjacent to a settlement
+  # (merchants, ...). `terrains` may be a single terrain string or an array.
+  def empty_hex_with_neighbor_count(terrains, count)
+    terrains = Array(terrains)
+    board = fresh_board
+    20.times do |row|
+      20.times do |col|
+        next if terrains.include?(board.terrain_at(row, col))
+        next unless @game.board_contents.empty?(row, col)
+        matches = @game.board_contents.neighbors(row, col).count { |r, c| terrains.include?(board.terrain_at(r, c)) }
+        return [ row, col ] if matches == count
+      end
+    end
+    nil
+  end
+
+  # `count` distinct empty hexes (not on `terrain`) that are all adjacent to
+  # the same hex of `terrain`. Used by goal tracers that test multiple
+  # settlements near a single special hex (castles, ...).
+  def empty_hexes_adjacent_to(terrain, count)
+    board = fresh_board
+    20.times do |row|
+      20.times do |col|
+        next unless board.terrain_at(row, col) == terrain
+        candidates = @game.board_contents.neighbors(row, col).select do |r, c|
+          board.terrain_at(r, c) != terrain && @game.board_contents.empty?(r, c)
+        end
+        return candidates.first(count) if candidates.size >= count
+      end
+    end
+    nil
+  end
+
+  # All empty hexes on a buildable terrain, row-major.
+  def empty_buildable_hexes
+    board = fresh_board
+    spots = []
+    20.times do |row|
+      20.times do |col|
+        next unless Tiles::Tile::BUILDABLE_TERRAIN.include?(board.terrain_at(row, col))
+        next unless @game.board_contents.empty?(row, col)
+        spots << [ row, col ]
+      end
+    end
+    spots
+  end
+
+  # `count` empty, buildable hexes forming a connected chain (each adjacent
+  # to the previous), none of which appear in `excluding`. Used by goal
+  # tracers that score connected settlement groups (citizens, merchants,
+  # ...); pass `excluding` (a chain plus its neighbors) to find a second,
+  # separate chain.
+  def connected_empty_hexes(count, excluding: [])
+    empty_buildable_hexes.each do |start|
+      next if excluding.include?(start)
+      chain = extend_chain([ start ], count - 1, excluding)
+      return chain if chain
+    end
+    nil
+  end
+
+  # A connected chain of empty, buildable hexes (up to `max_length` long)
+  # whose neighbors collectively touch exactly `count` distinct hexes whose
+  # terrain is in `terrains`. Used by goal tracers that score connected
+  # settlement groups by the number of distinct special hexes they're
+  # adjacent to (merchants, ...). If `require_redundant` is true, the chain
+  # must additionally have at least one of those `count` specials adjacent
+  # to 2+ of its hexes (two distinct connections to the same location).
+  def connected_empty_hexes_with_specials(terrains, count, max_length: 6, require_redundant: false)
+    terrains = Array(terrains)
+    board = fresh_board
+    specials_of = lambda do |spot|
+      neighbors(spot).select { |r, c| terrains.include?(board.terrain_at(r, c)) }
+    end
+
+    # Only start from hexes already touching at least one (but not too
+    # many) specials - starting from "0 specials" hexes wastes the search
+    # wandering through terrain with nothing relevant nearby.
+    starts = empty_buildable_hexes.select { |spot| specials_of.call(spot).size.between?(1, count) }
+    starts.each do |start|
+      counts = Hash.new(0)
+      specials_of.call(start).each { |s| counts[s] += 1 }
+      chain = grow_chain_for_specials([ start ], counts, specials_of, count, max_length, require_redundant)
+      return chain if chain
+    end
+    nil
+  end
+
   def game_player(order)
     @game.game_players.find_by!(order: order)
   end
@@ -193,6 +301,55 @@ class GameScenario
       supply: { "settlements" => Game::SETTLEMENTS_PER_PLAYER },
       tiles: []
     )
+  end
+
+  # Backtracking search extending `chain`, stopping once it touches exactly
+  # `count` distinct specials (pruning branches that would exceed `count`),
+  # and - if `require_redundant` - one of those specials is touched by 2+
+  # of the chain's hexes. `counts` maps each touched special position to how
+  # many chain hexes are adjacent to it.
+  def grow_chain_for_specials(chain, counts, specials_of, count, max_length, require_redundant)
+    if counts.size == count && (!require_redundant || counts.value?(2))
+      return chain
+    end
+    return nil if chain.size >= max_length
+
+    candidates = neighbors(chain.last).filter_map do |n|
+      next if chain.include?(n)
+      next unless @game.board_contents.empty?(*n)
+      next unless Tiles::Tile::BUILDABLE_TERRAIN.include?(fresh_board.terrain_at(*n))
+
+      new_counts = counts.dup
+      specials_of.call(n).each { |s| new_counts[s] += 1 }
+      next if new_counts.size > count
+
+      [ n, new_counts ]
+    end
+
+    # Try hexes that add a new special, or repeat an existing one, first -
+    # this converges toward the goal instead of wandering through terrain.
+    candidates.sort_by! { |_, new_counts| -(new_counts.size - counts.size + new_counts.values.count { |v| v == 2 }) }
+    candidates.each do |n, new_counts|
+      result = grow_chain_for_specials(chain + [ n ], new_counts, specials_of, count, max_length, require_redundant)
+      return result if result
+    end
+    nil
+  end
+
+  # Backtracking search extending `chain` by `remaining` more empty,
+  # buildable hexes adjacent to its last entry, none in `excluding`.
+  def extend_chain(chain, remaining, excluding)
+    return chain if remaining.zero?
+
+    neighbors(chain.last).each do |n|
+      next if chain.include?(n) || excluding.include?(n)
+      next unless @game.board_contents.empty?(*n)
+      next unless Tiles::Tile::BUILDABLE_TERRAIN.include?(fresh_board.terrain_at(*n))
+
+      extended = extend_chain(chain + [ n ], remaining - 1, excluding)
+      return extended if extended
+    end
+    nil
   end
 
   def mutate_board

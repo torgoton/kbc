@@ -20,15 +20,15 @@ time (accumulated in `game_player.bonus_scores`). Tier-1 goals are pure
 | families | 2 | ✅ | `goals/families_test.rb` |
 | shepherds | 2 | ✅ | `goals/shepherds_test.rb` |
 | hermits | 1 | ✅ | `goals/hermits_test.rb` |
-| castles | 1 | ⬜ | — |
-| citizens | 1 | ⬜ | — |
-| discoverers | 1 | ⬜ | — |
-| farmers | 1 | ⬜ | — |
-| fishermen | 1 | ⬜ | — |
-| knights | 1 | ⬜ | — |
-| merchants | 1 | ⬜ | — |
-| miners | 1 | ⬜ | — |
-| workers | 1 | ⬜ | — |
+| castles | 1 | ✅ | `goals/castles_test.rb` |
+| citizens | 1 | ✅ | `goals/citizens_test.rb` |
+| discoverers | 1 | ✅ | `goals/discoverers_test.rb` |
+| farmers | 1 | ✅ | `goals/farmers_test.rb` |
+| fishermen | 1 | ✅ | `goals/fishermen_test.rb` |
+| knights | 1 | ✅ | `goals/knights_test.rb` |
+| merchants | 1 | ✅ | `goals/merchants_test.rb` |
+| miners | 1 | ✅ | `goals/miners_test.rb` |
+| workers | 1 | ✅ | `goals/workers_test.rb` |
 
 ## Tasks (`Scoring::TASK_CLASSES`, `app/models/scoring/tasks/`)
 
