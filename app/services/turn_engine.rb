@@ -1,7 +1,6 @@
 class TurnEngine
   def initialize(game)
     @game = game
-    capture_undo_snapshot
   end
 
   def available_list(active_player, terrain)
@@ -987,10 +986,10 @@ class TurnEngine
   private
 
   # Snapshot of pre-action game state, attached to the deliberate Move an action
-  # records so undo can restore it (ADR-0002). Captured at construction and at
-  # the start of each public action, so it reflects the state immediately before
-  # the action even if the engine was constructed earlier. Resetting game_players
-  # avoids leaving a stale association cache (current_player and game_players are
+  # records so undo can restore it (ADR-0002). Captured at the start of each
+  # public action, so it reflects the state immediately before the action even
+  # if the engine was constructed earlier. Resetting game_players avoids
+  # leaving a stale association cache (current_player and game_players are
   # distinct instances; downstream paths re-read the collection).
   def capture_undo_snapshot
     @snapshot_before = @game.capture_snapshot

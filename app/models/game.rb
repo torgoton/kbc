@@ -281,12 +281,10 @@ class Game < ApplicationRecord
   def capture_snapshot
     {
       "board_contents" => BoardState.dump(board_contents),
-      "boards" => boards.dup,
       "deck" => deck.dup,
       "discard" => discard.dup,
-      "goals" => goals&.dup,
       "mandatory_count" => mandatory_count,
-      "current_action" => current_action.dup,
+      "current_action" => current_action.deep_dup,
       "current_player_order" => current_player.order,
       "stone_walls" => stone_walls,
       "turn_number" => turn_number,

@@ -26,6 +26,23 @@ class SnapshotUndoTest < ActiveSupport::TestCase
     assert_equal snap["move_count"], scenario.game.move_count
   end
 
+  test "TurnEngine.new does not raise for a waiting game with no current player" do
+    game = games(:waiting_game)
+    assert_nil game.current_player
+
+    assert_nothing_raised { TurnEngine.new(game) }
+  end
+
+  test "capture_snapshot's current_action is independent of the live game's current_action" do
+    scenario = GameScenario.new(hands: { 0 => "G", 1 => "D" })
+    scenario.game.update!(current_action: { "type" => "mandatory", "builds" => [ "0,0" ] })
+
+    snap = scenario.game.capture_snapshot
+    scenario.game.current_action["builds"] << "1,1"
+
+    assert_equal [ "0,0" ], snap["current_action"]["builds"]
+  end
+
   test "a deliberate build move carries the pre-click snapshot; consequential moves do not" do
     scenario = GameScenario.new(hands: { 0 => "G", 1 => "D" })
     spot = scenario.empty_hexes("G", 1).first
