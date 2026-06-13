@@ -824,7 +824,7 @@ class GameTest < ActiveSupport::TestCase
     assert_equal false, move.payload["reshuffled"]
   end
 
-  test "end_turn stores reshuffled true and deck_after when deck runs out mid-draw" do
+  test "end_turn stores reshuffled true when deck runs out mid-draw" do
     game = games(:game2player)
     chris = game_players(:chris)
     chris.hand = [ "G" ]
@@ -839,7 +839,6 @@ class GameTest < ActiveSupport::TestCase
     assert_equal [ "G" ], move.payload["card_discarded"]
     assert_equal [ "C" ], move.payload["card_drawn"]
     assert_equal true, move.payload["reshuffled"]
-    assert_not_empty move.payload["deck_after"]
   end
 
   test "pick_up_tile stores tile klass and qty_before in payload" do
