@@ -455,6 +455,83 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
       post join_game_url(game)
     end
   end
+
+  test "build broadcasts board, turn-state, common-resources, a log entry, and private updates" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    game.board_contents = BoardState.new
+    game.current_action = { "type" => "mandatory" }
+    game.save
+
+    post action_game_url(game), params: { build_row: 1, build_col: 7 }
+
+    public_broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}")
+    targets = public_broadcasts.map { |e| e["target"] }
+    assert_includes targets, "board"
+    assert_includes targets, "turn-state"
+    assert_includes targets, "common-resources"
+
+    log_entry = public_broadcasts.find { |e| e["target"] == "log" }
+    assert_match "built a settlement", log_entry.text
+
+    private_targets = capture_turbo_stream_broadcasts("game_player_#{chris.id}_private").map { |e| e["target"] }
+    assert_includes private_targets, "game_player_#{chris.id}"
+    assert_includes private_targets, "end-turn-area"
+  end
+
+  test "activating a tile broadcasts the tile as used and logs the build" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 2, chris.order) }
+    game.current_action = { "type" => "oasis" }
+    game.save
+    chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
+    chris.save
+
+    post action_game_url(game), params: { build_row: 0, build_col: 1 }
+
+    own_panel = capture_turbo_stream_broadcasts("game_player_#{chris.id}_private")
+      .find { |e| e["target"] == "game_player_#{chris.id}" }
+    assert_not_empty own_panel.css(".player-tile.tile-used .tile-container.oasis"),
+      "expected the Oasis tile to render as used"
+
+    log_entry = capture_turbo_stream_broadcasts("game_#{game.id}").find { |e| e["target"] == "log" }
+    assert_match "built a settlement", log_entry.text
+  end
+
+  test "end_turn broadcasts turn-state, a log entry, and private end-turn-area updates" do
+    game = games(:game2player)
+    paula = game_players(:paula)
+    game.mandatory_count = 0
+    game.save
+
+    post end_turn_game_url(game)
+
+    public_broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}")
+    assert_includes public_broadcasts.map { |e| e["target"] }, "turn-state"
+
+    log_entry = public_broadcasts.find { |e| e["target"] == "log" }
+    assert_match "ended their turn", log_entry.text
+
+    private_targets = capture_turbo_stream_broadcasts("game_player_#{paula.id}_private").map { |e| e["target"] }
+    assert_includes private_targets, "end-turn-area"
+  end
+
+  test "the final end_turn that completes the game broadcasts the end-game modal" do
+    game = games(:game2player)
+    paula = game_players(:paula)
+    game.update!(current_player: paula, mandatory_count: 0, end_trigger_count: 1)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    post end_turn_game_url(game)
+
+    modal = capture_turbo_stream_broadcasts("game_#{game.id}").find { |e| e["target"] == "game-area" }
+    assert_not_nil modal, "expected an end-game modal broadcast"
+    assert_equal "append", modal["action"]
+    assert_equal "completed", game.reload.state
+  end
 end
 
 class GamesControllerUnauthenticatedTest < ActionDispatch::IntegrationTest

@@ -98,3 +98,17 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | Undo (single deliberate move) | ✅ | `rules/undo_test.rb` |
 | Undo round trip (`assert_undo_round_trip`) | ✅ | `rules/undo_round_trip_test.rb` |
 | Meeple movement contract (relocate/pickup/forfeit/budget) | ✅ | `tiles/meeple_movement_contract_test.rb` |
+
+## Request-spec ring (HTTP/Turbo wiring)
+
+A handful of `ActionDispatch::IntegrationTest`s in `test/controllers/games_controller_test.rb`
+verify the view/log/broadcast trust boundary that the domain-layer scenario
+suite is blind to: broadcast targets and log-entry presence for the key
+flows below (not styling, not per-rule).
+
+| Flow | Coverage | Test |
+| --- | --- | --- |
+| Build (mandatory) | ✅ | `games_controller_test.rb` "build broadcasts board, turn-state, common-resources, a log entry, and private updates" |
+| Tile activation (build-bonus tile) | ✅ | `games_controller_test.rb` "activating a tile broadcasts the tile as used and logs the build" |
+| End turn | ✅ | `games_controller_test.rb` "end_turn broadcasts turn-state, a log entry, and private end-turn-area updates" |
+| End game | ✅ | `games_controller_test.rb` "the final end_turn that completes the game broadcasts the end-game modal" |
