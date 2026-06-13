@@ -211,8 +211,9 @@ class GameScenario
     result
   end
 
+  # Memoized via Game#instantiate_board; perform/mutate_board reset @game.board
+  # to nil after any state change, so this only rebuilds when stale.
   def fresh_board
-    @game.board = nil
     @game.instantiate
   end
 end
