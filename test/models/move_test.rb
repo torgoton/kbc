@@ -2,19 +2,20 @@
 #
 # Table name: moves
 #
-#  id             :bigint           not null, primary key
-#  action         :string
-#  deliberate     :boolean
-#  from           :string
-#  message        :string
-#  order          :integer
-#  payload        :jsonb
-#  reversible     :boolean
-#  to             :string
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  game_id        :bigint           not null
-#  game_player_id :bigint           not null
+#  id              :bigint           not null, primary key
+#  action          :string
+#  deliberate      :boolean
+#  from            :string
+#  message         :string
+#  order           :integer
+#  payload         :jsonb
+#  reversible      :boolean
+#  snapshot_before :jsonb
+#  to              :string
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  game_id         :bigint           not null
+#  game_player_id  :bigint           not null
 #
 # Indexes
 #
