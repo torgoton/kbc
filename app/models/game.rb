@@ -303,6 +303,30 @@ class Game < ApplicationRecord
     }
   end
 
+  def restore_snapshot!(snapshot)
+    self.board_contents = BoardState.load(snapshot["board_contents"])
+    self.deck = snapshot["deck"]
+    self.discard = snapshot["discard"]
+    self.current_action = snapshot["current_action"]
+    self.mandatory_count = snapshot["mandatory_count"]
+    self.stone_walls = snapshot["stone_walls"]
+    self.turn_number = snapshot["turn_number"]
+    self.end_trigger_count = snapshot["end_trigger_count"]
+    self.move_count = snapshot["move_count"]
+    self.current_player = game_players.find { |gp| gp.order == snapshot["current_player_order"] }
+
+    snapshot["players"].each do |ps|
+      gp = game_players.find { |g| g.order == ps["order"] }
+      gp.update!(
+        hand: ps["hand"], supply: ps["supply"], tiles: ps["tiles"],
+        taken_from: ps["taken_from"], bonus_scores: ps["bonus_scores"]
+      )
+    end
+
+    @board = nil # force re-instantiation of the read model
+    save!
+  end
+
   SOUND_KEY_FORMAT = /\A[a-z_]+\z/
 
   def broadcast_sound(key)
