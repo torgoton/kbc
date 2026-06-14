@@ -6,7 +6,7 @@ class Tiles::Nomad::SwordTileTest < ActiveSupport::TestCase
   end
 
   test "activatable? returns true" do
-    assert @tile.activatable?(player_order: 0, board_contents: BoardState.new, board: nil)
+    assert @tile.activatable?(player_order: 0, board_contents: with_terrain(BoardState.new, nil))
   end
 
   test "nomad_tile? returns true" do

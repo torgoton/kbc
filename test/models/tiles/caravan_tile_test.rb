@@ -22,7 +22,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   test "valid_destinations slides east until blocked" do
@@ -99,7 +99,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
     state.place_settlement(10, 10, 0)
     state.place_city_hall_hex(10, 14, 0)
     tile = Tiles::CaravanTile.new(0)
-    result = tile.selectable_settlements(player_order: 0, board_contents: state, board: all_grass)
+    result = tile.selectable_settlements(player_order: 0, board_contents: with_terrain(state, all_grass))
     assert_includes result, [ 10, 10 ]
     assert_not_includes result, [ 10, 14 ]
   end

@@ -9,16 +9,16 @@ module Tiles
       game_player.add_city_halls!(1)
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
-      supply["city_hall"].to_i > 0 && valid_destinations(board_contents:, board:, player_order:, supply:).any?
+    def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
+      supply["city_hall"].to_i > 0 && valid_destinations(board_contents:, player_order:, supply:).any?
     end
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, supply: Hash.new(0))
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0))
       return [] if supply["city_hall"].to_i < 1
 
       (0..19).flat_map do |r|
         (0..19).filter_map do |c|
-          [ r, c ] if valid_center?(r, c, board_contents:, board:, player_order:)
+          [ r, c ] if valid_center?(r, c, board_contents:, player_order:)
         end
       end
     end
@@ -34,12 +34,12 @@ module Tiles
 
     private
 
-    def valid_center?(row, col, board_contents:, board:, player_order:)
-      return false unless buildable_and_empty?(row, col, board_contents:, board:)
+    def valid_center?(row, col, board_contents:, player_order:)
+      return false unless buildable_and_empty?(row, col, board_contents:)
 
       neighbors = board_contents.neighbors(row, col)
       return false unless neighbors.size == 6
-      return false unless neighbors.all? { |nr, nc| buildable_and_empty?(nr, nc, board_contents:, board:) }
+      return false unless neighbors.all? { |nr, nc| buildable_and_empty?(nr, nc, board_contents:) }
 
       cluster = Set.new([ [ row, col ] ] + neighbors)
       neighbors.any? do |nr, nc|
@@ -49,8 +49,8 @@ module Tiles
       end
     end
 
-    def buildable_and_empty?(row, col, board_contents:, board:)
-      board_contents.empty?(row, col) && BUILDABLE_TERRAIN.include?(board.terrain_at(row, col))
+    def buildable_and_empty?(row, col, board_contents:)
+      board_contents.empty?(row, col) && BUILDABLE_TERRAIN.include?(board_contents.terrain_at(row, col))
     end
   end
 end

@@ -435,7 +435,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.instantiate
     dest = Tiles::Nomad::ResettlementTile.new(0).valid_destinations(
       from_row: from_hex[0], from_col: from_hex[1],
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: with_terrain(@game.board_contents, @game.board),
       player_order: player.order, budget: 4
     ).first
     raise "No adjacent step available" unless dest
@@ -465,7 +465,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.instantiate
     step = Tiles::Nomad::ResettlementTile.new(0).valid_destinations(
       from_row: from_hex[0], from_col: from_hex[1],
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: with_terrain(@game.board_contents, @game.board),
       player_order: player.order, budget: 4
     ).first
     raise "No adjacent step available" unless step
@@ -785,7 +785,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.instantiate
     expected = Tiles::PaddockTile.new(0).valid_destinations(
       from_row: spot[0], from_col: spot[1],
-      board_contents: @game.board_contents, board: @game.board
+      board_contents: with_terrain(@game.board_contents, @game.board)
     )
     assert_equal expected.sort, cells.sort
   end
@@ -1499,8 +1499,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     non_adjacent_grass = [ 4, 4 ]
     destinations = Tiles::FarmTile.new(0).valid_destinations(
-      board_contents: @game.board_contents,
-      board: @game.instantiate,
+      board_contents: with_terrain(@game.board_contents, @game.instantiate),
       player_order: player.order
     )
     assert_not_includes destinations, non_adjacent_grass
@@ -1779,7 +1778,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.board_contents.ship_at?(0, 4)
     assert_empty player.reload.tiles.reject { |tile| tile["klass"] == "LighthouseTile" }
     assert @game.moves.where(action: "move_ship").all?(&:deliberate?)
-    assert_equal [[ "[0, 3]", "[1, 3]" ], [ "[1, 3]", "[0, 4]" ]],
+    assert_equal [ [ "[0, 3]", "[1, 3]" ], [ "[1, 3]", "[0, 4]" ] ],
       @game.moves.where(action: "move_ship").order(:order).pluck(:from, :to)
     assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
     assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
@@ -1823,7 +1822,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.board_contents.wagon_at?(1, 2)
     assert_empty player.reload.tiles.reject { |tile| tile["klass"] == "WagonTile" }
     assert @game.moves.where(action: "move_wagon").all?(&:deliberate?)
-    assert_equal [[ "[4, 3]", "[3, 3]" ], [ "[3, 3]", "[2, 3]" ], [ "[2, 3]", "[1, 2]" ]],
+    assert_equal [ [ "[4, 3]", "[3, 3]" ], [ "[3, 3]", "[2, 3]" ], [ "[2, 3]", "[1, 2]" ] ],
       @game.moves.where(action: "move_wagon").order(:order).pluck(:from, :to)
     assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
     assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
@@ -1895,13 +1894,13 @@ class TurnEngineTest < ActiveSupport::TestCase
     engine = TurnEngine.new(@game.reload)
     first_step = source_tile.valid_destinations(
       from_row: 4, from_col: 3,
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: with_terrain(@game.board_contents, @game.board),
       player_order: player.order,
       budget: 4
     ).first
     second_step = source_tile.valid_destinations(
       from_row: 2, from_col: 7,
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: with_terrain(@game.board_contents, @game.board),
       player_order: player.order,
       budget: 4
     ).first
@@ -1924,7 +1923,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.moves.where(action: "move_settlement").all?(&:deliberate?)
     assert_equal [
       [ "[4, 3]", Coordinate.new(*first_step).to_key ],
-      [ "[2, 7]", Coordinate.new(*second_step).to_key ],
+      [ "[2, 7]", Coordinate.new(*second_step).to_key ]
     ],
       @game.moves.where(action: "move_settlement").order(:order).pluck(:from, :to)
     assert_nil @game.current_action["from"]
@@ -2283,8 +2282,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.instantiate
     tile = Tiles::Tile.for_klass(tile_klass).new(0)
     tile.valid_destinations(
-      board_contents: @game.board_contents,
-      board: @game.board,
+      board_contents: with_terrain(@game.board_contents, @game.board),
       player_order: @game.current_player.order,
       supply: @game.current_player.supply_hash
     )

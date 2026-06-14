@@ -41,32 +41,32 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
 
   test "activatable? is true when wagon in supply" do
     state = BoardState.new
-    assert tile.activatable?(player_order: 0, board_contents: state, board: all_grass_board, supply: { "wagon" => 1 })
+    assert tile.activatable?(player_order: 0, board_contents: with_terrain(state, all_grass_board), supply: { "wagon" => 1 })
   end
 
   test "activatable? is true when wagon already on board" do
     state = BoardState.new
     state.place_wagon(5, 5, 0)
-    assert tile.activatable?(player_order: 0, board_contents: state, board: all_grass_board, supply: { "wagon" => 0 })
+    assert tile.activatable?(player_order: 0, board_contents: with_terrain(state, all_grass_board), supply: { "wagon" => 0 })
   end
 
   test "activatable? is false when no supply and no wagon on board" do
     state = BoardState.new
-    assert_not tile.activatable?(player_order: 0, board_contents: state, board: all_grass_board, supply: { "wagon" => 0 })
+    assert_not tile.activatable?(player_order: 0, board_contents: with_terrain(state, all_grass_board), supply: { "wagon" => 0 })
   end
 
   # --- valid_destinations (placement) ---
 
   test "valid_destinations (placement) returns empty when wagon supply 0 and no wagon on board" do
     state = BoardState.new
-    assert_equal [], tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "wagon" => 0 })
+    assert_equal [], tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "wagon" => 0 })
   end
 
   test "valid_destinations (placement) returns adjacent suitable hexes when own settlements present" do
     state = BoardState.new
     state.place_settlement(5, 5, 0)
     neighbors = state.neighbors(5, 5)
-    destinations = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "wagon" => 1 })
+    destinations = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "wagon" => 1 })
     neighbors.each { |r, c| assert_includes destinations, [ r, c ] }
     assert_not_includes destinations, [ 0, 0 ]
   end
@@ -78,7 +78,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     land_neighbors.each { |(r, c)| terrain[[ r, c ]] = "W" }
     state = BoardState.new
     state.place_settlement(5, 5, 0)
-    destinations = tile.valid_destinations(board_contents: state, board: BoardStub.new(terrain), player_order: 0, supply: { "wagon" => 1 })
+    destinations = tile.valid_destinations(board_contents: with_terrain(state, BoardStub.new(terrain)), player_order: 0, supply: { "wagon" => 1 })
     assert_includes destinations, [ 0, 0 ]
   end
 
@@ -86,14 +86,14 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(5, 5, 0)
     state.place_settlement(5, 4, 1)
-    destinations = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "wagon" => 1 })
+    destinations = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "wagon" => 1 })
     assert_not_includes destinations, [ 5, 4 ]
   end
 
   test "valid_destinations (placement) includes own wagon hex when wagon is on board" do
     state = BoardState.new
     state.place_wagon(3, 3, 0)
-    destinations = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "wagon" => 0 })
+    destinations = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "wagon" => 0 })
     assert_includes destinations, [ 3, 3 ]
   end
 
@@ -102,14 +102,14 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     20.times { |r| 20.times { |c| terrain[[ r, c ]] = "M" } }
     state = BoardState.new
     state.place_settlement(5, 5, 0)
-    destinations = tile.valid_destinations(board_contents: state, board: BoardStub.new(terrain), player_order: 0, supply: { "wagon" => 1 })
+    destinations = tile.valid_destinations(board_contents: with_terrain(state, BoardStub.new(terrain)), player_order: 0, supply: { "wagon" => 1 })
     state.neighbors(5, 5).each { |r, c| assert_includes destinations, [ r, c ] }
   end
 
   test "valid_destinations (placement) excludes water hexes" do
     state = BoardState.new
     state.place_settlement(5, 5, 0)
-    destinations = tile.valid_destinations(board_contents: state, board: all_water_board, player_order: 0, supply: { "wagon" => 1 })
+    destinations = tile.valid_destinations(board_contents: with_terrain(state, all_water_board), player_order: 0, supply: { "wagon" => 1 })
     assert_equal [], destinations
   end
 
@@ -120,7 +120,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     state.place_wagon(5, 5, 0)
     destinations = tile.valid_destinations(
       from_row: 5, from_col: 5,
-      board_contents: state, board: all_water_board, player_order: 0
+      board_contents: with_terrain(state, all_water_board), player_order: 0
     )
     assert_equal [], destinations
   end
@@ -130,7 +130,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     state.place_wagon(10, 10, 0)
     dests = tile.valid_destinations(
       from_row: 10, from_col: 10,
-      board_contents: state, board: all_grass_board, player_order: 0
+      board_contents: with_terrain(state, all_grass_board), player_order: 0
     )
     assert_includes dests, [ 10, 11 ]
     assert_not_includes dests, [ 10, 12 ]
@@ -146,7 +146,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     state.place_wagon(10, 10, 0)
     dests = tile.valid_destinations(
       from_row: 10, from_col: 10,
-      board_contents: state, board: BoardStub.new(terrain), player_order: 0
+      board_contents: with_terrain(state, BoardStub.new(terrain)), player_order: 0
     )
     assert_not_includes dests, [ 10, 11 ]
   end
@@ -157,7 +157,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     state.place_settlement(10, 11, 1)
     dests = tile.valid_destinations(
       from_row: 10, from_col: 10,
-      board_contents: state, board: all_grass_board, player_order: 0
+      board_contents: with_terrain(state, all_grass_board), player_order: 0
     )
     assert_not_includes dests, [ 10, 11 ]
   end
@@ -169,7 +169,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     state.place_wagon(10, 10, 0)
     dests = tile.valid_destinations(
       from_row: 10, from_col: 10,
-      board_contents: state, board: BoardStub.new(terrain), player_order: 0
+      board_contents: with_terrain(state, BoardStub.new(terrain)), player_order: 0
     )
     assert_includes dests, [ 10, 11 ]
     assert_not_includes dests, [ 10, 12 ]

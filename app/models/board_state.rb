@@ -1,10 +1,22 @@
 class BoardState
+  # Terrain is static board config (from game.boards), not occupancy, so it is
+  # never serialized. A terrain source (anything answering terrain_at(row, col)
+  # — the Boards::Board in production, a stub in tests) is attached at
+  # game.instantiate so BoardState can answer both occupancy and terrain.
+  attr_writer :terrain_source
+
   def initialize
     @cells = {}
   end
 
   def initialize_copy(original)
     @cells = original.instance_variable_get(:@cells).transform_values(&:dup)
+    @terrain_source = original.instance_variable_get(:@terrain_source)
+  end
+
+  def terrain_at(row, col)
+    raise "no terrain source attached (call game.instantiate first)" unless @terrain_source
+    @terrain_source.terrain_at(row, col)
   end
 
   def place_settlement(row, col, player)

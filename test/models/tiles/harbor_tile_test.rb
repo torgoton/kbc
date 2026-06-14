@@ -19,7 +19,7 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   test "moves_settlement? returns true" do
@@ -46,13 +46,13 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(2, 0, chris.order) }
     game.save
     game.instantiate
-    ctx = { board_contents: game.board_contents, board: game.board }
+    ctx = { board_contents: with_terrain(game.board_contents, game.board) }
     tile = Tiles::HarborTile.new(0)
 
     result = tile.valid_destinations(from_row: 2, from_col: 0, **ctx, player_order: chris.order)
 
     assert result.any?
-    result.each { |r, c| assert_equal "W", ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "W", ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "selectable_settlements returns all settlements when empty water exists" do

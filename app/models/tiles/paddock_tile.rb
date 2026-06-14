@@ -17,7 +17,7 @@ module Tiles
 
     def moves_settlement? = true
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order: nil, hand: nil)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order: nil, hand: nil)
       return [] if from_row.nil? || from_col.nil?
       STRAIGHT_LINES.filter_map do |steps|
         dr1, dc1 = steps[from_row % 2]
@@ -29,19 +29,19 @@ module Tiles
         c2 = c1 + dc2
         next unless (0..19).cover?(r2) && (0..19).cover?(c2)
         next unless board_contents.available_for_building?(r2, c2)
-        next unless BUILDABLE_TERRAIN.include?(board.terrain_at(r2, c2))
+        next unless BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r2, c2))
         [ r2, c2 ]
       end
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
-      selectable_settlements(player_order:, board_contents:, board:, hand:).any?
+    def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
+      selectable_settlements(player_order:, board_contents:, hand:).any?
     end
 
-    def selectable_settlements(player_order:, board_contents:, board:, hand: nil)
+    def selectable_settlements(player_order:, board_contents:, hand: nil)
       board_contents.settlements_for(player_order).filter_map do |r, c|
         next if board_contents.city_hall_at?(r, c)
-        [ r, c ] if valid_destinations(from_row: r, from_col: c, board_contents:, board:).any?
+        [ r, c ] if valid_destinations(from_row: r, from_col: c, board_contents:).any?
       end
     end
   end

@@ -23,7 +23,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   test "valid_destinations includes hexes adjacent to 3+ own settlements" do
@@ -77,7 +77,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
-    result.each { |r, c| assert_includes Tiles::Tile::BUILDABLE_TERRAIN, @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_includes Tiles::Tile::BUILDABLE_TERRAIN, @ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "valid_destinations ignores opponent settlements" do

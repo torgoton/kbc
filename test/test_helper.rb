@@ -23,6 +23,14 @@ module ActiveSupport
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
 
-    # Add more helper methods to be used by all tests here...
+    # Attach a terrain source to a BoardState and return it, so tile methods can
+    # call board_contents.terrain_at without a separate board: argument. In
+    # production game.instantiate does this; tests pass a BoardStub (or the real
+    # Boards::Board). Idempotent.
+    def with_terrain(board_contents, terrain_source)
+      return board_contents if board_contents.nil?
+      board_contents.terrain_source = terrain_source if terrain_source
+      board_contents
+    end
   end
 end

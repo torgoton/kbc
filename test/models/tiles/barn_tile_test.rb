@@ -15,7 +15,7 @@ class Tiles::BarnTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   test "selectable_settlements returns settlements when valid destinations exist" do

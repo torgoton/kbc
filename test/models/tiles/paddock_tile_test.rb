@@ -15,14 +15,14 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    { board_contents: game.board_contents, board: game.board, chris: chris }
+    { board_contents: with_terrain(game.board_contents, game.board), chris: chris }
   end
 
   test "valid_destinations returns buildable empty 2-hop cells" do
     ctx = setup_board
     tile = Tiles::PaddockTile.new(0)
 
-    result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: ctx[:board_contents], board: ctx[:board])
+    result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
 
     assert_includes result, [ 0, 12 ], "C terrain straight W 2 hops away"
     assert_includes result, [ 0, 16 ], "D terrain straight E 2 hops away"
@@ -37,7 +37,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(0, 12, 1) }
     tile = Tiles::PaddockTile.new(0)
 
-    result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: ctx[:board_contents], board: ctx[:board])
+    result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
 
     assert_not_includes result, [ 0, 12 ], "occupied cell excluded"
     assert_includes result, [ 0, 16 ]
@@ -48,7 +48,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     tile = Tiles::PaddockTile.new(0)
 
     result = tile.selectable_settlements(player_order: ctx[:chris].order,
-      board_contents: ctx[:board_contents], board: ctx[:board])
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
 
     assert_includes result, [ 0, 14 ]
   end
@@ -61,7 +61,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     tile = Tiles::PaddockTile.new(0)
 
     result = tile.selectable_settlements(player_order: ctx[:chris].order,
-      board_contents: ctx[:board_contents], board: ctx[:board])
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
 
     assert_empty result
   end
@@ -72,7 +72,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     state.place_settlement(10, 10, 0)
     state.place_city_hall_hex(10, 14, 0)
     tile = Tiles::PaddockTile.new(0)
-    result = tile.selectable_settlements(player_order: 0, board_contents: state, board: all_grass)
+    result = tile.selectable_settlements(player_order: 0, board_contents: with_terrain(state, all_grass))
     assert_includes result, [ 10, 10 ]
     assert_not_includes result, [ 10, 14 ]
   end
@@ -95,7 +95,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     tile = Tiles::PaddockTile.new(0)
     result = tile.valid_destinations(
       from_row: 0, from_col: 14,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order
     )
     assert_not_includes result, [ 0, 12 ]
   end

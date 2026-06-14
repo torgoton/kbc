@@ -6,7 +6,7 @@ module Tiles
     def builds_settlement? = true
     def fort_tile? = true
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
+    def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
       true
     end
   end

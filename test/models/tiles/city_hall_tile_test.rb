@@ -34,26 +34,26 @@ class Tiles::CityHallTileTest < ActiveSupport::TestCase
   test "activatable? returns false when city_hall supply is 0" do
     state = BoardState.new
     state.place_settlement(10, 8, 0)
-    assert_not tile.activatable?(player_order: 0, board_contents: state, board: all_grass_board, supply: { "city_hall" => 0 })
+    assert_not tile.activatable?(player_order: 0, board_contents: with_terrain(state, all_grass_board), supply: { "city_hall" => 0 })
   end
 
   test "activatable? returns false when no valid center exists" do
     state = BoardState.new
     # No settlements adjacent to any cluster
-    assert_not tile.activatable?(player_order: 0, board_contents: state, board: all_grass_board, supply: { "city_hall" => 1 })
+    assert_not tile.activatable?(player_order: 0, board_contents: with_terrain(state, all_grass_board), supply: { "city_hall" => 1 })
   end
 
   test "activatable? returns true when supply available and valid center exists" do
     state = BoardState.new
     # settlement at [10,8] is adjacent to cluster centered at [10,10] via outer hex [10,9]
     state.place_settlement(10, 8, 0)
-    assert tile.activatable?(player_order: 0, board_contents: state, board: all_grass_board, supply: { "city_hall" => 1 })
+    assert tile.activatable?(player_order: 0, board_contents: with_terrain(state, all_grass_board), supply: { "city_hall" => 1 })
   end
 
   test "valid_destinations returns valid center hexes" do
     state = BoardState.new
     state.place_settlement(10, 8, 0)
-    result = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "city_hall" => 1 })
     assert_includes result, [ 10, 10 ]
   end
 
@@ -61,7 +61,7 @@ class Tiles::CityHallTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(10, 8, 0)
     state.place_settlement(10, 9, 1)  # occupies one cluster hex
-    result = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "city_hall" => 1 })
     assert_not_includes result, [ 10, 10 ]
   end
 
@@ -71,14 +71,14 @@ class Tiles::CityHallTileTest < ActiveSupport::TestCase
     terrain[[ 10, 9 ]] = "M"  # one cluster hex is mountain
     state = BoardState.new
     state.place_settlement(10, 8, 0)
-    result = tile.valid_destinations(board_contents: state, board: BoardStub.new(terrain), player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, BoardStub.new(terrain)), player_order: 0, supply: { "city_hall" => 1 })
     assert_not_includes result, [ 10, 10 ]
   end
 
   test "valid_destinations excludes centers not adjacent to any player settlement" do
     state = BoardState.new
     # No settlements anywhere — cluster at [10,10] has no adjacent player settlement
-    result = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "city_hall" => 1 })
     assert_not_includes result, [ 10, 10 ]
   end
 
@@ -86,7 +86,7 @@ class Tiles::CityHallTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(10, 8, 0)
     state.place_city_hall_hex(10, 9, 1)  # opponent's city hall hex in the cluster
-    result = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "city_hall" => 1 })
     assert_not_includes result, [ 10, 10 ]
   end
 
@@ -94,14 +94,14 @@ class Tiles::CityHallTileTest < ActiveSupport::TestCase
     state = BoardState.new
     # [10,8] is adjacent to [10,9] which is an outer cluster hex of center [10,10]
     state.place_settlement(10, 8, 0)
-    result = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "city_hall" => 1 })
     assert_includes result, [ 10, 10 ]
   end
 
   test "valid_destinations: opponent settlement does not satisfy adjacency" do
     state = BoardState.new
     state.place_settlement(10, 8, 1)  # opponent player, order 1
-    result = tile.valid_destinations(board_contents: state, board: all_grass_board, player_order: 0, supply: { "city_hall" => 1 })
+    result = tile.valid_destinations(board_contents: with_terrain(state, all_grass_board), player_order: 0, supply: { "city_hall" => 1 })
     assert_not_includes result, [ 10, 10 ]
   end
 

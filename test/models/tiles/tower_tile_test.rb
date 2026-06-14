@@ -15,7 +15,7 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   test "builds_settlement? returns true" do
@@ -44,14 +44,14 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.save
     game.instantiate
-    ctx = { board_contents: game.board_contents, board: game.board }
+    ctx = { board_contents: with_terrain(game.board_contents, game.board) }
     tile = Tiles::TowerTile.new(0)
 
     result = tile.valid_destinations(**ctx, player_order: chris.order)
 
     assert result.any?
     result.each { |r, c| assert(r == 0 || r == 19 || c == 0 || c == 19, "#{[ r, c ]} is not a border hex") }
-    result.each { |r, c| assert_includes %w[C D F G T], ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_includes %w[C D F G T], ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "valid_destinations excludes occupied border hexes" do

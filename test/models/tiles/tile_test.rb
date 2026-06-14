@@ -5,15 +5,15 @@ require "test_helper"
 
 class Tiles::TileTest < ActiveSupport::TestCase
   test "valid_destinations returns empty array" do
-    assert_equal [], Tiles::Tile.new(0).valid_destinations(board_contents: BoardState.new, board: nil, player_order: 0)
+    assert_equal [], Tiles::Tile.new(0).valid_destinations(board_contents: with_terrain(BoardState.new, nil), player_order: 0)
   end
 
   test "selectable_settlements returns empty array" do
-    assert_equal [], Tiles::Tile.new(0).selectable_settlements(player_order: 0, board_contents: BoardState.new, board: nil)
+    assert_equal [], Tiles::Tile.new(0).selectable_settlements(player_order: 0, board_contents: with_terrain(BoardState.new, nil))
   end
 
   test "activatable? returns false when no terrain defined" do
-    assert_not Tiles::Tile.new(0).activatable?(player_order: 0, board_contents: BoardState.new, board: nil)
+    assert_not Tiles::Tile.new(0).activatable?(player_order: 0, board_contents: with_terrain(BoardState.new, nil))
   end
 
   test "builds_settlement? returns false" do
@@ -44,7 +44,7 @@ class Tiles::TileTest < ActiveSupport::TestCase
     tile = Tiles::BarnTile.new(0)
     all_grass = Object.new
     all_grass.define_singleton_method(:terrain_at) { |r, c| "G" }
-    result = tile.selectable_settlements(player_order: 0, board_contents: state, board: all_grass, hand: "G")
+    result = tile.selectable_settlements(player_order: 0, board_contents: with_terrain(state, all_grass), hand: "G")
     assert_includes result, [ 5, 5 ]
     assert_not_includes result, [ 6, 5 ]
   end

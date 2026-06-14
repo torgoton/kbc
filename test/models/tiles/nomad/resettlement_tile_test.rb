@@ -21,7 +21,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     @game.board_contents = state
     @game.save
     @game.instantiate
-    { board_contents: @game.board_contents, board: @game.board }
+    { board_contents: with_terrain(@game.board_contents, @game.board) }
   end
 
   # --- moves_settlement? ---
@@ -34,7 +34,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
 
   test "returns [] when from_row/from_col is nil" do
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
-    result = @tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order)
+    result = @tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: @chris.order)
     assert_equal [], result
   end
 
@@ -42,7 +42,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     result = @tile.valid_destinations(
       from_row: 0, from_col: 0,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: @chris.order,
       budget: 0
     )
     assert_equal [], result
@@ -55,15 +55,15 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     result = @tile.valid_destinations(
       from_row: 0, from_col: 0,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: @chris.order,
       budget: 1
     )
     assert_includes result, [ 0, 1 ]
     assert_includes result, [ 1, 0 ]
     # Water (W) at (0,3) is not buildable; Mountain (M) is not buildable
     result.each do |r, c|
-      assert_includes Tiles::Tile::BUILDABLE_TERRAIN, ctx[:board].terrain_at(r, c),
-        "all destinations must be buildable terrain, but [#{r},#{c}] is #{ctx[:board].terrain_at(r, c)}"
+      assert_includes Tiles::Tile::BUILDABLE_TERRAIN, ctx[:board_contents].terrain_at(r, c),
+        "all destinations must be buildable terrain, but [#{r},#{c}] is #{ctx[:board_contents].terrain_at(r, c)}"
     end
   end
 
@@ -72,7 +72,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     result = @tile.valid_destinations(
       from_row: 0, from_col: 0,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: @chris.order,
       budget: 2
     )
     assert_includes result, [ 0, 1 ], "adjacent hex is a destination"
@@ -85,7 +85,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(0, 2, @chris.order) }
     result = @tile.valid_destinations(
       from_row: 0, from_col: 2,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: @chris.order,
       budget: 1
     )
     refute_includes result, [ 0, 3 ], "Water terrain should not be a valid destination"
@@ -96,7 +96,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
   test "selectable_settlements returns [] when budget is 0" do
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     result = @tile.selectable_settlements(
-      player_order: @chris.order, board_contents: ctx[:board_contents], board: ctx[:board],
+      player_order: @chris.order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       budget: 0
     )
     assert_equal [], result
@@ -106,7 +106,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     # Settlement at (0,0) [G] has buildable neighbors
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     result = @tile.selectable_settlements(
-      player_order: @chris.order, board_contents: ctx[:board_contents], board: ctx[:board],
+      player_order: @chris.order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       budget: 4
     )
     assert_includes result, [ 0, 0 ]
@@ -128,7 +128,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
       s.place_settlement(2, 2, @chris.order)
     end
     result = @tile.selectable_settlements(
-      player_order: @chris.order, board_contents: ctx[:board_contents], board: ctx[:board],
+      player_order: @chris.order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       budget: 1
     )
     refute_includes result, [ 1, 1 ], "trapped settlement should not be selectable"
@@ -139,7 +139,7 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(10, 10, @chris.order)
     state.place_city_hall_hex(10, 14, @chris.order)
-    result = @tile.selectable_settlements(player_order: @chris.order, board_contents: state, board: all_grass)
+    result = @tile.selectable_settlements(player_order: @chris.order, board_contents: with_terrain(state, all_grass))
     assert_includes result, [ 10, 10 ]
     refute_includes result, [ 10, 14 ]
   end
@@ -149,14 +149,14 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
   test "activatable? returns true when there are selectable settlements" do
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     assert @tile.activatable?(
-      player_order: @chris.order, board_contents: ctx[:board_contents], board: ctx[:board]
+      player_order: @chris.order, board_contents: with_terrain(ctx[:board_contents], ctx[:board])
     )
   end
 
   test "activatable? returns false when no settlements present" do
     ctx = setup_board
     refute @tile.activatable?(
-      player_order: @chris.order, board_contents: ctx[:board_contents], board: ctx[:board]
+      player_order: @chris.order, board_contents: with_terrain(ctx[:board_contents], ctx[:board])
     )
   end
 end

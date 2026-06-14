@@ -10,9 +10,9 @@ module Tiles
       "#{player_handle} must build at the edge of the board"
     end
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil)
       border = ->(r, c) { r == 0 || r == 19 || c == 0 || c == 19 }
-      buildable = ->(r, c) { BUILDABLE_TERRAIN.include?(board.terrain_at(r, c)) }
+      buildable = ->(r, c) { BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c)) }
 
       adjacent = board_contents.settlements_for(player_order).flat_map do |r, c|
         board_contents.neighbors_where(r, c) do |nr, nc|

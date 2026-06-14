@@ -10,9 +10,9 @@ class TurnEngine
     any = false
     20.times do |row|
       20.times do |col|
-        if @game.board.content_at(row, col).try(:player) == active_player
+        if @game.board_contents.player_at(row, col) == active_player
           @game.board_contents.neighbors(row, col).each do |nr, nc|
-            if @game.board.content_at(nr, nc) == nil && @game.board.terrain_at(nr, nc) == terrain &&
+            if @game.board_contents.empty?(nr, nc) && @game.board_contents.terrain_at(nr, nc) == terrain &&
                !@game.board_contents.warrior_blocked?(nr, nc)
               any = available[nr][nc] = true
             end
@@ -24,8 +24,8 @@ class TurnEngine
 
     20.times do |row|
       20.times do |col|
-        if @game.board.terrain_at(row, col) == terrain && !@game.board_contents.warrior_blocked?(row, col)
-          available[row][col] = true unless @game.board.content_at(row, col)
+        if @game.board_contents.terrain_at(row, col) == terrain && !@game.board_contents.warrior_blocked?(row, col)
+          available[row][col] = true if @game.board_contents.empty?(row, col)
         end
       end
     end
@@ -49,9 +49,9 @@ class TurnEngine
     card_terrain = effective_terrain(game_player)
 
     if current_phase.is_a?(TurnPhase::MandatoryBuildPhase) && current_phase.outpost_active?
-      card_terrain ||= game_player.hand.find { |t| @game.board.terrain_at(row, col) == t }
+      card_terrain ||= game_player.hand.find { |t| @game.board_contents.terrain_at(row, col) == t }
       # Skip adjacency: just check it's empty and correct terrain
-      return "Not available" unless @game.board_contents.available_for_building?(row, col) && @game.board.terrain_at(row, col) == card_terrain
+      return "Not available" unless @game.board_contents.available_for_building?(row, col) && @game.board_contents.terrain_at(row, col) == card_terrain
       lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
       build_on_terrain(card_terrain, row, col, game_player)
       @game.mandatory_count -= 1
@@ -252,7 +252,7 @@ class TurnEngine
       return "Not available"  # handled by popup: remove_meeple_action
     else
       destinations = tile_obj.valid_destinations(
-        board_contents: @game.board_contents, board: @game.board,
+        board_contents: @game.board_contents,
         player_order: game_player.order, supply: game_player.supply_hash
       )
       return "Not available" unless destinations.include?([ row, col ])
@@ -317,7 +317,7 @@ class TurnEngine
 
     destinations = tile_obj.valid_destinations(
       from_row: row, from_col: col,
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: @game.board_contents,
       player_order: game_player.order
     )
     return "Not available" unless destinations.any?
@@ -354,7 +354,7 @@ class TurnEngine
     return "No City Hall tile" unless tile
     tile_obj = Tiles::CityHallTile.new(0)
     valid = tile_obj.valid_destinations(
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: @game.board_contents,
       player_order: game_player.order, supply: game_player.supply_hash
     )
     return "Not available" unless valid.include?([ row, col ])
@@ -393,31 +393,31 @@ class TurnEngine
     if current_phase.respond_to?(:outpost_active?) && current_phase.outpost_active?
       outpost_terrains = outpost_build_terrains(tile_obj, current_phase, game_player)
       return "Not available" unless @game.board_contents.available_for_building?(row, col) &&
-        outpost_terrains.include?(@game.board.terrain_at(row, col))
+        outpost_terrains.include?(@game.board_contents.terrain_at(row, col))
     else
       if tile_obj.fort_tile?
         hand = current_phase.respond_to?(:fort_terrain) ? current_phase.fort_terrain : nil
         destinations = tile_obj.valid_destinations(
-          board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: hand
+          board_contents: @game.board_contents, player_order: game_player.order, hand: hand
         )
       elsif tile_obj.uses_played_terrain? && effective_terrain(game_player).nil?
         destinations = game_player.hand.flat_map { |t|
           tile_obj.valid_destinations(
-            board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: t
+            board_contents: @game.board_contents, player_order: game_player.order, hand: t
           )
         }.uniq
       else
         hand = effective_terrain(game_player) || game_player.hand.first
         destinations = tile_obj.valid_destinations(
-          board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: hand
+          board_contents: @game.board_contents, player_order: game_player.order, hand: hand
         )
       end
       return "Not available" unless destinations.include?([ row, col ])
     end
     if tile_obj.uses_played_terrain? && chosen_terrain_before.nil? && game_player.hand.size > 1
-      lock_terrain!(@game.board.terrain_at(row, col), chosen_terrain_before)
+      lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
     end
-    build_on_terrain(@game.board.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
+    build_on_terrain(@game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
     if tile_obj.is_a?(Tiles::Nomad::DonationTile)
       remaining = current_phase.remaining.to_i - 1
       if remaining > 0
@@ -543,13 +543,13 @@ class TurnEngine
     tile_obj = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
     chosen_terrain_before = current_phase.chosen_terrain
     if tile_obj&.uses_played_terrain? && chosen_terrain_before.nil? && @game.current_player.hand.size > 1
-      lock_terrain!(@game.board.terrain_at(row, col), chosen_terrain_before)
+      lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
     end
     if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
       return "Not available" unless current_phase.budget.to_i > 0 &&
         tile_obj.valid_destinations(
           from_row: from_coord.row, from_col: from_coord.col,
-          board_contents: @game.board_contents, board: @game.board,
+          board_contents: @game.board_contents,
           player_order: @game.current_player.order, budget: current_phase.budget.to_i
         ).include?([ row, col ])
 
@@ -634,16 +634,16 @@ class TurnEngine
     wall_terrain = effective_terrain(game_player)
     if wall_terrain.nil?
       destinations = game_player.hand.flat_map { |t|
-        tile_obj.valid_destinations(board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: t)
+        tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: game_player.order, hand: t)
       }.uniq
     else
-      destinations = tile_obj.valid_destinations(board_contents: @game.board_contents, board: @game.board, player_order: game_player.order, hand: wall_terrain)
+      destinations = tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: game_player.order, hand: wall_terrain)
     end
     return "Not available" unless destinations.include?([ row, col ])
     return "No stone walls left" if @game.stone_walls <= 0
 
     if chosen_terrain_before.nil? && game_player.hand.size > 1
-      hex_terrain = @game.board.terrain_at(row, col)
+      hex_terrain = @game.board_contents.terrain_at(row, col)
       lock_terrain!(hex_terrain, chosen_terrain_before)
       current_phase = @game.turn_phase
     end
@@ -665,7 +665,7 @@ class TurnEngine
     @game.stone_walls -= 1
 
     remaining = tile_obj.valid_destinations(
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: @game.board_contents,
       player_order: game_player.order, hand: wall_terrain || game_player.hand.first
     )
     if walls_placed >= 2 || remaining.empty?
@@ -688,7 +688,7 @@ class TurnEngine
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, board: @game.board, hand: @game.current_player.hand.first, supply: @game.current_player.supply_hash }
+    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand.first, supply: @game.current_player.supply_hash }
     tile_obj.activatable?(**ctx)
   end
 
@@ -829,7 +829,7 @@ class TurnEngine
             (0..19).flat_map do |r|
               (0..19).filter_map do |c|
                 [ r, c ] if @game.board_contents.available_for_building?(r, c) &&
-                  terrains.include?(@game.board.terrain_at(r, c))
+                  terrains.include?(@game.board_contents.terrain_at(r, c))
               end
             end
           else
@@ -862,7 +862,7 @@ class TurnEngine
               end
             else
               tile_obj.valid_destinations(
-                board_contents: @game.board_contents, board: @game.board,
+                board_contents: @game.board_contents,
                 player_order: player.order,
                 supply: player.supply_hash
               )
@@ -870,11 +870,11 @@ class TurnEngine
           elsif tile_obj.places_wall?
             if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
               player.hand.flat_map { |t|
-                tile_obj.valid_destinations(board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: t)
+                tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: player.order, hand: t)
               }.uniq
             else
               tile_obj.valid_destinations(
-                board_contents: @game.board_contents, board: @game.board,
+                board_contents: @game.board_contents,
                 player_order: player.order, hand: effective_terrain(player) || player.hand.first
               )
             end
@@ -885,19 +885,19 @@ class TurnEngine
               if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
                 tile_obj.valid_destinations(
                   from_row: from.row, from_col: from.col,
-                  board_contents: @game.board_contents, board: @game.board,
+                  board_contents: @game.board_contents,
                   player_order: player.order, budget: current_phase.budget.to_i
                 )
               else
                 extra_kwargs = {}
                 if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
                   player.hand.flat_map { |t|
-                    tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: t, **extra_kwargs)
+                    tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, player_order: player.order, hand: t, **extra_kwargs)
                   }.uniq
                 else
                   tile_obj.valid_destinations(
                     from_row: from.row, from_col: from.col,
-                    board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: hand_arg,
+                    board_contents: @game.board_contents, player_order: player.order, hand: hand_arg,
                     **extra_kwargs
                   )
                 end
@@ -911,18 +911,18 @@ class TurnEngine
               end
               if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
                 player.hand.flat_map { |t|
-                  tile_obj.selectable_settlements(player_order: player.order, board_contents: @game.board_contents, board: @game.board, hand: t, **extra_kwargs)
+                  tile_obj.selectable_settlements(player_order: player.order, board_contents: @game.board_contents, hand: t, **extra_kwargs)
                 }.uniq
               else
                 tile_obj.selectable_settlements(
-                  player_order: player.order, board_contents: @game.board_contents, board: @game.board, hand: hand_arg,
+                  player_order: player.order, board_contents: @game.board_contents, hand: hand_arg,
                   **extra_kwargs
                 )
               end
             end
           elsif tile_obj.places_city_hall?
             tile_obj.valid_destinations(
-              board_contents: @game.board_contents, board: @game.board, player_order: player.order, supply: player.supply_hash
+              board_contents: @game.board_contents, player_order: player.order, supply: player.supply_hash
             )
           else
             if tile_obj.builds_settlement? && current_phase.respond_to?(:outpost_active?) && current_phase.outpost_active?
@@ -930,24 +930,24 @@ class TurnEngine
               (0..19).flat_map do |r|
                 (0..19).filter_map do |c|
                   [ r, c ] if @game.board_contents.available_for_building?(r, c) &&
-                    terrains.include?(@game.board.terrain_at(r, c))
+                    terrains.include?(@game.board_contents.terrain_at(r, c))
                 end
               end
             elsif tile_obj.fort_tile?
               hand = current_phase.respond_to?(:fort_terrain) ? current_phase.fort_terrain : nil
               tile_obj.valid_destinations(
-                board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: hand
+                board_contents: @game.board_contents, player_order: player.order, hand: hand
               )
             elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
               player.hand.flat_map { |t|
                 tile_obj.valid_destinations(
-                  board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: t
+                  board_contents: @game.board_contents, player_order: player.order, hand: t
                 )
               }.uniq
             else
               hand = effective_terrain(player) || player.hand.first
               tile_obj.valid_destinations(
-                board_contents: @game.board_contents, board: @game.board, player_order: player.order, hand: hand
+                board_contents: @game.board_contents, player_order: player.order, hand: hand
               )
             end
           end
@@ -964,7 +964,7 @@ class TurnEngine
     player = @game.current_player
     tile_obj = Tiles::CityHallTile.new(0)
     centers = tile_obj.valid_destinations(
-      board_contents: @game.board_contents, board: @game.board,
+      board_contents: @game.board_contents,
       player_order: player.order, supply: player.supply_hash
     )
     centers.to_h do |r, c|
@@ -1234,7 +1234,7 @@ class TurnEngine
   def check_shepherds_goal(game_player, row, col, terrain)
     return unless Array(@game.goals).include?("shepherds")
     no_adjacent_empty = @game.board_contents.neighbors(row, col).none? do |nr, nc|
-      @game.board_contents.empty?(nr, nc) && @game.board.terrain_at(nr, nc) == terrain
+      @game.board_contents.empty?(nr, nc) && @game.board_contents.terrain_at(nr, nc) == terrain
     end
     return unless no_adjacent_empty
     score_goal(game_player, "shepherds", 2,
@@ -1361,7 +1361,7 @@ class TurnEngine
     @game.turn_phase.budget.to_i > 0 &&
       tile_obj.valid_destinations(
         from_row: from_coord.row, from_col: from_coord.col,
-        board_contents: @game.board_contents, board: @game.board,
+        board_contents: @game.board_contents,
         player_order: @game.current_player.order
       ).include?([ row, col ])
   end
