@@ -1,6 +1,6 @@
 require "application_system_test_case"
 
-class FortTileTest < ApplicationSystemTestCase
+class FortTileSystemTest < ApplicationSystemTestCase
   setup do
     @game = games(:game2player)
     @chris = game_players(:chris)
