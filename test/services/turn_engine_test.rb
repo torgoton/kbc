@@ -23,18 +23,14 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "mandatory builds gate turn_endable?" do
     force_hand("G")
-    spots = empty_hexes_of("G", 3)
 
     assert_not @engine.turn_endable?
-    @engine.build_settlement(*spots[0])
-    @game.reload
-    assert_not @engine.turn_endable?
-
-    @engine.build_settlement(*spots[1])
-    @game.reload
-    assert_not @engine.turn_endable?
-
-    @engine.build_settlement(*spots[2])
+    2.times do
+      @engine.build_settlement(*TurnEngine.new(@game).buildable_cells.first)
+      @game.reload
+      assert_not @engine.turn_endable?
+    end
+    @engine.build_settlement(*TurnEngine.new(@game).buildable_cells.first)
     @game.reload
     assert @engine.turn_endable?
   end
@@ -884,7 +880,9 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.save!
     @game.reload
 
-    @engine.move_settlement(1, 0)
+    dest = TurnEngine.new(@game).buildable_cells.first
+    raise "fixed board should offer a legal barn destination" unless dest
+    @engine.move_settlement(*dest)
     @game.current_player.reload
 
     barn_tile = @game.current_player.tiles.find { |t| t["klass"] == "BarnTile" }
@@ -2258,6 +2256,32 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal drawn, @game.current_action["fort_terrain"]
     fort = @game.current_player.tiles.find { |t| t["klass"] == "FortTile" }
     assert_equal false, fort["used"]
+  end
+
+  # Drift closed by the legal_targets seam: wall targets must not be offered
+  # (and place_wall must be rejected) once stone walls are exhausted.
+  test "no wall targets and place_wall rejected when stone walls are exhausted" do
+    @game.current_player.update!(tiles: [ { "klass" => "QuarryTile", "from" => "[2, 0]", "used" => false } ])
+    @game.update!(current_action: { "type" => "quarry", "klass" => "QuarryTile" }, stone_walls: 0)
+    spot = empty_hexes_of("G", 1).first
+
+    assert_empty TurnEngine.new(@game).buildable_cells
+    assert_equal "No stone walls left", @engine.place_wall(*spot)
+    assert @game.reload.board_contents.empty?(*spot)
+  end
+
+  # Gap closed: a settlement move to an illegal destination is rejected instead
+  # of silently mutating the board.
+  test "move_settlement rejects a destination that is not a legal move" do
+    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.update!(current_action: { "type" => "paddock", "from" => "[5, 5]" })
+    @game.instantiate
+    @game.board_contents.place_settlement(5, 5, @game.current_player.order)
+    @game.save!
+    # [5, 6] is one hex away — not a legal Paddock move (which is two in a line).
+    assert_equal "Not available", @engine.move_settlement(5, 6)
+    assert_equal @game.current_player.order, @game.reload.board_contents.player_at(5, 5)
+    assert @game.board_contents.empty?(5, 6)
   end
 
   def force_hand(terrain)

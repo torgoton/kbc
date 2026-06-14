@@ -12,10 +12,10 @@ class SwordTileTest < ActiveSupport::TestCase
 
     scenario.activate_tile(:"nomad::sword")
 
-    # Known bug: buildable_cells checks `action == "sword"`, but select_action
-    # stores the type as "nomad::sword" for this tile, so that branch never
-    # matches and the opponent's settlement isn't highlighted as a target.
-    assert_not_includes scenario.buildable_cells, OPPONENT_SETTLEMENT
+    # The opponent's settlement is highlighted as a removal target (dispatched
+    # polymorphically via sword_tile?, so it works regardless of the
+    # "nomad::sword" action-type string).
+    assert_includes scenario.buildable_cells, OPPONENT_SETTLEMENT
 
     before_supply = scenario.settlements_remaining(1)
     scenario.remove_settlement(at: OPPONENT_SETTLEMENT)
