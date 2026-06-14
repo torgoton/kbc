@@ -15,18 +15,18 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    { board_contents: game.board_contents, board: game.board, chris: chris }
+    { board_contents: with_terrain(game.board_contents, game.board), chris: chris }
   end
 
   test "valid_destinations returns adjacent Canyon hexes when available" do
     ctx = setup_board
     tile = Tiles::MonasteryTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_includes result, [ 5, 6 ], "Canyon hex adjacent to settlement must be included"
     result.each do |r, c|
-      assert_equal "C", ctx[:board].terrain_at(r, c), "every destination must be Canyon"
+      assert_equal "C", ctx[:board_contents].terrain_at(r, c), "every destination must be Canyon"
     end
   end
 
@@ -34,7 +34,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(5, 6, 1) }
     tile = Tiles::MonasteryTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_not_includes result, [ 5, 6 ], "occupied Canyon hex must be excluded"
   end
@@ -49,7 +49,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     game.instantiate
     tile = Tiles::MonasteryTile.new(0)
 
-    result = tile.valid_destinations(board_contents: game.board_contents, board: game.board, player_order: chris.order)
+    result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
     assert_includes result, [ 0, 2 ], "fallback must include non-adjacent Canyon hex"
     assert_includes result, [ 5, 6 ], "fallback must include distant Canyon hex"
@@ -85,7 +85,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     game.instantiate
     tile = Tiles::MonasteryTile.new(0)
 
-    result = tile.valid_destinations(board_contents: game.board_contents, board: game.board, player_order: chris.order)
+    result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
     assert_empty result
   end
@@ -107,7 +107,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
   test "activatable? is true when Canyon hexes are reachable" do
     ctx = setup_board
     tile = Tiles::MonasteryTile.new(0)
-    assert tile.activatable?(player_order: ctx[:chris].order, board_contents: ctx[:board_contents], board: ctx[:board])
+    assert tile.activatable?(player_order: ctx[:chris].order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
   end
 
   test "activatable? is false when all Canyon hexes are occupied" do
@@ -131,7 +131,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     game.save
     game.instantiate
     tile = Tiles::MonasteryTile.new(0)
-    assert_not tile.activatable?(player_order: chris.order, board_contents: game.board_contents, board: game.board)
+    assert_not tile.activatable?(player_order: chris.order, board_contents: with_terrain(game.board_contents, game.board))
   end
 
   test "builds_settlement? returns true" do

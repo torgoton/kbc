@@ -15,19 +15,19 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    { board_contents: game.board_contents, board: game.board, chris: chris }
+    { board_contents: with_terrain(game.board_contents, game.board), chris: chris }
   end
 
   test "valid_destinations returns adjacent Grass hexes when available" do
     ctx = setup_board
     tile = Tiles::FarmTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_includes result, [ 14, 1 ], "Grass hex adjacent to settlement must be included"
     assert_includes result, [ 15, 0 ], "Grass hex adjacent to settlement must be included"
     result.each do |r, c|
-      assert_equal "G", ctx[:board].terrain_at(r, c), "every destination must be Grass"
+      assert_equal "G", ctx[:board_contents].terrain_at(r, c), "every destination must be Grass"
     end
   end
 
@@ -35,7 +35,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     ctx = setup_board { |s| s.place_settlement(14, 1, 1) }
     tile = Tiles::FarmTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_not_includes result, [ 14, 1 ], "occupied Grass hex must be excluded"
   end
@@ -50,7 +50,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     game.instantiate
     tile = Tiles::FarmTile.new(0)
 
-    result = tile.valid_destinations(board_contents: game.board_contents, board: game.board, player_order: chris.order)
+    result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
     assert_includes result, [ 14, 1 ], "fallback must include non-adjacent Grass hex"
     assert_includes result, [ 16, 0 ], "fallback must include distant Grass hex"
@@ -84,7 +84,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     game.instantiate
     tile = Tiles::FarmTile.new(0)
 
-    result = tile.valid_destinations(board_contents: game.board_contents, board: game.board, player_order: chris.order)
+    result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
     assert_empty result
   end
@@ -106,7 +106,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
   test "activatable? is true when Grass hexes are reachable" do
     ctx = setup_board
     tile = Tiles::FarmTile.new(0)
-    assert tile.activatable?(player_order: ctx[:chris].order, board_contents: ctx[:board_contents], board: ctx[:board])
+    assert tile.activatable?(player_order: ctx[:chris].order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
   end
 
   test "activatable? is false when all Grass hexes are occupied" do
@@ -128,7 +128,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     game.save
     game.instantiate
     tile = Tiles::FarmTile.new(0)
-    assert_not tile.activatable?(player_order: chris.order, board_contents: game.board_contents, board: game.board)
+    assert_not tile.activatable?(player_order: chris.order, board_contents: with_terrain(game.board_contents, game.board))
   end
 
   test "builds_settlement? returns true" do

@@ -16,7 +16,7 @@ module Tiles
         raise NotImplementedError, "#{self.class} must define build_terrain"
       end
 
-      def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
+      def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil)
         terrain = build_terrain
         settlements = board_contents.settlements_for(player_order)
 
@@ -24,7 +24,7 @@ module Tiles
         # Note: Donation tiles can build on W and M (unlike normal builds)
         adjacent = settlements.flat_map do |r, c|
           board_contents.neighbors_where(r, c) do |nr, nc|
-            board_contents.available_for_building?(nr, nc) && board.terrain_at(nr, nc) == terrain
+            board_contents.available_for_building?(nr, nc) && board_contents.terrain_at(nr, nc) == terrain
           end
         end.uniq
 
@@ -33,13 +33,13 @@ module Tiles
         # Fallback: all empty hexes of that terrain anywhere on board
         (0..19).flat_map do |r|
           (0..19).filter_map do |c|
-            [ r, c ] if board_contents.available_for_building?(r, c) && board.terrain_at(r, c) == terrain
+            [ r, c ] if board_contents.available_for_building?(r, c) && board_contents.terrain_at(r, c) == terrain
           end
         end
       end
 
-      def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
-        valid_destinations(board_contents:, board:, player_order:, hand:).any?
+      def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
+        valid_destinations(board_contents:, player_order:, hand:).any?
       end
     end
   end

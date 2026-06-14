@@ -15,7 +15,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   # row 8: W W W D D D D M C C — neighbors of (8,0) are all W/C, no Grass
@@ -26,7 +26,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "G")
 
     assert result.any?
-    result.each { |r, c| assert_equal "G", @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "G", @ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "valid_destinations uses hand to determine terrain" do
@@ -36,7 +36,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "D")
 
     assert result.any?
-    result.each { |r, c| assert_equal "D", @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "D", @ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "valid_destinations excludes occupied hexes" do
@@ -55,6 +55,6 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "G")
 
     assert_includes result, [ 0, 2 ]
-    result.each { |r, c| assert_equal "G", @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "G", @ctx[:board_contents].terrain_at(r, c) }
   end
 end

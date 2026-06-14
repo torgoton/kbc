@@ -23,7 +23,7 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     @game.board_contents = state
     @game.save
     @game.instantiate
-    { board_contents: @game.board_contents, board: @game.board, chris: @chris }
+    { board_contents: with_terrain(@game.board_contents, @game.board), chris: @chris }
   end
 
   # --- DonationCanyonTile (terrain "C") ---
@@ -34,12 +34,12 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     ctx = setup_board_with_settlement(0, 8)
     tile = Tiles::Nomad::DonationCanyonTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_includes result, [ 0, 7 ], "adjacent Canyon hex must be included"
     assert_includes result, [ 0, 9 ], "adjacent Canyon hex must be included"
     result.each do |r, c|
-      assert_equal "C", ctx[:board].terrain_at(r, c), "every destination must be Canyon"
+      assert_equal "C", ctx[:board_contents].terrain_at(r, c), "every destination must be Canyon"
     end
   end
 
@@ -49,11 +49,11 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     ctx = setup_board_with_settlement(2, 0)
     tile = Tiles::Nomad::DonationCanyonTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_not_empty result, "fallback should find Canyon hexes on the board"
     result.each do |r, c|
-      assert_equal "C", ctx[:board].terrain_at(r, c), "every fallback destination must be Canyon"
+      assert_equal "C", ctx[:board_contents].terrain_at(r, c), "every fallback destination must be Canyon"
     end
     # (0,7) is Canyon and not adjacent to (2,0), must appear in fallback
     assert_includes result, [ 0, 7 ]
@@ -67,11 +67,11 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     ctx = setup_board_with_settlement(0, 2)
     tile = Tiles::Nomad::DonationWaterTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_includes result, [ 0, 3 ], "adjacent Water hex must be included"
     result.each do |r, c|
-      assert_equal "W", ctx[:board].terrain_at(r, c), "every destination must be Water"
+      assert_equal "W", ctx[:board_contents].terrain_at(r, c), "every destination must be Water"
     end
   end
 
@@ -80,11 +80,11 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     ctx = setup_board_with_settlement(0, 8)
     tile = Tiles::Nomad::DonationWaterTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_not_empty result, "fallback should find Water hexes on the board"
     result.each do |r, c|
-      assert_equal "W", ctx[:board].terrain_at(r, c), "every fallback destination must be Water"
+      assert_equal "W", ctx[:board_contents].terrain_at(r, c), "every fallback destination must be Water"
     end
   end
 
@@ -101,11 +101,11 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     ctx = setup_board_with_settlement(0, 5)
     tile = Tiles::Nomad::DonationMountainTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_includes result, [ 0, 6 ], "adjacent Mountain hex must be included"
     result.each do |r, c|
-      assert_equal "M", ctx[:board].terrain_at(r, c), "every destination must be Mountain"
+      assert_equal "M", ctx[:board_contents].terrain_at(r, c), "every destination must be Mountain"
     end
   end
 
@@ -114,11 +114,11 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     ctx = setup_board_with_settlement(0, 8)
     tile = Tiles::Nomad::DonationMountainTile.new(0)
 
-    result = tile.valid_destinations(board_contents: ctx[:board_contents], board: ctx[:board], player_order: ctx[:chris].order)
+    result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
     assert_not_empty result, "fallback should find Mountain hexes on the board"
     result.each do |r, c|
-      assert_equal "M", ctx[:board].terrain_at(r, c), "every fallback destination must be Mountain"
+      assert_equal "M", ctx[:board_contents].terrain_at(r, c), "every fallback destination must be Mountain"
     end
   end
 

@@ -19,8 +19,8 @@ class Scoring
 
     def count_adjacent_to(order, terrain)
       settlements_for(order).count do |r, c|
-        board.terrain_at(r, c) != terrain &&
-          neighbors(r, c).any? { |nr, nc| board.terrain_at(nr, nc) == terrain }
+        board_contents.terrain_at(r, c) != terrain &&
+          neighbors(r, c).any? { |nr, nc| board_contents.terrain_at(nr, nc) == terrain }
       end
     end
 
@@ -82,7 +82,7 @@ class Scoring
     def terrain_hexes(terrain)
       @terrain_hexes ||= {}
       @terrain_hexes[terrain] ||= 20.times.flat_map do |r|
-        20.times.filter_map { |c| [ r, c ] if board.terrain_at(r, c) == terrain }
+        20.times.filter_map { |c| [ r, c ] if board_contents.terrain_at(r, c) == terrain }
       end
     end
   end

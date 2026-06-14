@@ -18,7 +18,7 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    @ctx = { board_contents: game.board_contents, board: game.board }
+    @ctx = { board_contents: with_terrain(game.board_contents, game.board) }
   end
 
   test "builds_settlement? returns true" do
@@ -33,7 +33,7 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
     assert result.any?
-    result.each { |r, c| assert_equal "F", @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "F", @ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "valid_destinations includes only empty flower hexes" do
@@ -43,7 +43,7 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
     assert_not_includes result, [ 3, 6 ]
-    result.each { |r, c| assert_equal "F", @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "F", @ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "valid_destinations falls back to all flower hexes when none adjacent" do
@@ -54,7 +54,7 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
     assert result.any?
-    result.each { |r, c| assert_equal "F", @ctx[:board].terrain_at(r, c) }
+    result.each { |r, c| assert_equal "F", @ctx[:board_contents].terrain_at(r, c) }
   end
 
   test "from_hash returns a GardenTile" do

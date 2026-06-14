@@ -10,7 +10,7 @@ class Tiles::Nomad::OutpostTileTest < ActiveSupport::TestCase
   end
 
   test "activatable? returns false" do
-    refute @tile.activatable?(player_order: 0, board_contents: BoardState.new, board: nil)
+    refute @tile.activatable?(player_order: 0, board_contents: with_terrain(BoardState.new, nil))
   end
 
   test "nomad_tile? returns true" do

@@ -14,13 +14,13 @@ class Tiles::FortTileTest < ActiveSupport::TestCase
   test "activatable? returns true regardless of board state" do
     state = BoardState.new
     board = Struct.new(:terrain).new({})
-    assert tile.activatable?(player_order: 0, board_contents: state, board: board)
+    assert tile.activatable?(player_order: 0, board_contents: with_terrain(state, board))
   end
 
   test "activatable? returns true even with no valid destinations for hand terrain" do
     # Fort doesn't check hand — it draws a new card
     state = BoardState.new
     board = Struct.new(:terrain).new({})
-    assert tile.activatable?(player_order: 0, board_contents: state, board: board, hand: "G")
+    assert tile.activatable?(player_order: 0, board_contents: with_terrain(state, board), hand: "G")
   end
 end

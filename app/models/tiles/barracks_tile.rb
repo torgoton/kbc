@@ -10,22 +10,22 @@ module Tiles
       game_player.add_warriors!(2)
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
+    def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
       supply["warrior"] > 0 || board_contents.warriors_for(player_order).any?
     end
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, supply: Hash.new(0))
-      placement = supply["warrior"] > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0))
+      placement = supply["warrior"] > 0 ? placement_hexes(board_contents:, player_order:) : []
       removal = board_contents.warriors_for(player_order)
       (placement + removal).uniq
     end
 
     private
 
-    def placement_hexes(board_contents:, board:, player_order:)
+    def placement_hexes(board_contents:, player_order:)
       all_valid = (0..19).flat_map do |r|
         (0..19).filter_map do |c|
-          [ r, c ] if BUILDABLE_TERRAIN.include?(board.terrain_at(r, c)) && board_contents.available_for_building?(r, c)
+          [ r, c ] if BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c)) && board_contents.available_for_building?(r, c)
         end
       end
 

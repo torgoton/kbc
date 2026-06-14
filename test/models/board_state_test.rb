@@ -267,4 +267,26 @@ class BoardStateTest < ActiveSupport::TestCase
     state.place_ship(3, 4, 0)
     assert_includes state.settlements_for(0), [ 3, 4 ]
   end
+
+  test "terrain_at delegates to the attached terrain source" do
+    source = Struct.new(:m) do
+      def terrain_at(row, col) = m.fetch([ row, col ], "G")
+    end.new({ [ 1, 2 ] => "W" })
+    state = BoardState.new
+    state.terrain_source = source
+
+    assert_equal "W", state.terrain_at(1, 2)
+    assert_equal "G", state.terrain_at(0, 0)
+  end
+
+  test "terrain_at raises when no terrain source is attached" do
+    assert_raises(RuntimeError) { BoardState.new.terrain_at(0, 0) }
+  end
+
+  test "dup carries the terrain source" do
+    source = Struct.new(:x) { def terrain_at(_r, _c) = "T" }.new(nil)
+    state = BoardState.new
+    state.terrain_source = source
+    assert_equal "T", state.dup.terrain_at(5, 5)
+  end
 end

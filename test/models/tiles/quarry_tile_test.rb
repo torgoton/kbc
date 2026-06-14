@@ -16,7 +16,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
     game.board_contents = state
     game.save
     game.instantiate
-    { board_contents: game.board_contents, board: game.board, chris: chris }
+    { board_contents: with_terrain(game.board_contents, game.board), chris: chris }
   end
 
   test "places_wall? returns true" do
@@ -28,7 +28,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
     tile = Tiles::QuarryTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:board_contents], board: ctx[:board],
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       player_order: ctx[:chris].order, hand: "G"
     )
 
@@ -43,7 +43,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
     tile = Tiles::QuarryTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:board_contents], board: ctx[:board],
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       player_order: ctx[:chris].order, hand: "G"
     )
 
@@ -56,7 +56,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
     tile = Tiles::QuarryTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:board_contents], board: ctx[:board],
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       player_order: ctx[:chris].order, hand: "G"
     )
 
@@ -69,7 +69,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
     tile = Tiles::QuarryTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:board_contents], board: ctx[:board],
+      board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
       player_order: ctx[:chris].order, hand: nil
     )
 

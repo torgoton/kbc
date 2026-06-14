@@ -19,7 +19,7 @@ module Tiles
       [ [ [ -1, 0 ], [ -1, 1 ] ], [ [ 1, -1 ], [ 1, 0 ] ] ]    # NE / SW
     ].freeze
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil)
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil)
       settlements = board_contents.settlements_for(player_order).to_set
       candidates = []
 
@@ -41,16 +41,16 @@ module Tiles
 
           next if run_length < 3
 
-          candidates << [ nr, nc ] if valid_build?(nr, nc, board_contents, board)
-          candidates << [ br, bc ] if valid_build?(br, bc, board_contents, board)
+          candidates << [ nr, nc ] if valid_build?(nr, nc, board_contents)
+          candidates << [ br, bc ] if valid_build?(br, bc, board_contents)
         end
       end
 
       candidates.uniq
     end
 
-    def activatable?(player_order:, board_contents:, board:, hand: nil, supply: Hash.new(0))
-      valid_destinations(board_contents:, board:, player_order:).any?
+    def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
+      valid_destinations(board_contents:, player_order:).any?
     end
 
     private
@@ -60,10 +60,10 @@ module Tiles
       [ r + dr, c + dc ]
     end
 
-    def valid_build?(r, c, board_contents, board)
+    def valid_build?(r, c, board_contents)
       (0..19).cover?(r) && (0..19).cover?(c) &&
         board_contents.available_for_building?(r, c) &&
-        BUILDABLE_TERRAIN.include?(board.terrain_at(r, c))
+        BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c))
     end
   end
 end

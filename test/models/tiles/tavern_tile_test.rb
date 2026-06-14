@@ -38,8 +38,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board,
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
       player_order: ctx[:chris].order
     )
 
@@ -51,8 +50,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board,
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
       player_order: ctx[:chris].order
     )
 
@@ -66,8 +64,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board,
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
       player_order: ctx[:chris].order
     )
 
@@ -81,8 +78,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board,
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
       player_order: ctx[:chris].order
     )
 
@@ -103,8 +99,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: game.board_contents,
-      board: game.board,
+      board_contents: with_terrain(game.board_contents, game.board),
       player_order: chris.order
     )
 
@@ -118,8 +113,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
 
     result = tile.valid_destinations(
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board,
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
       player_order: ctx[:chris].order
     )
 
@@ -135,8 +129,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
     assert tile.activatable?(
       player_order: ctx[:chris].order,
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board)
     )
   end
 
@@ -145,8 +138,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     tile = Tiles::TavernTile.new(0)
     assert_not tile.activatable?(
       player_order: ctx[:chris].order,
-      board_contents: ctx[:game].board_contents,
-      board: ctx[:game].board
+      board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board)
     )
   end
 

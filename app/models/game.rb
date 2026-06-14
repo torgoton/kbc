@@ -196,6 +196,8 @@ class Game < ApplicationRecord
 
   def instantiate_board
     @board ||= Boards::Board.new(self)
+    board_contents.terrain_source = @board
+    @board
   end
 
   def broadcast_dashboard_update
