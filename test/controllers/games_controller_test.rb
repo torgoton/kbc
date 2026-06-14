@@ -69,15 +69,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST action dispatches to move_settlement when paddock action has from set" do
     game = games(:game2player)
     chris = game_players(:chris)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
+    chris.update!(tiles: [ { "klass" => "PaddockTile", "from" => "[2, 0]", "used" => false } ])
+    dest = TurnEngine.new(game).buildable_cells.first
+    raise "fixed board should offer a legal paddock destination" unless dest
 
-    post action_game_url(game), params: { build_row: 5, build_col: 7 }
+    post action_game_url(game), params: { build_row: dest[0], build_col: dest[1] }
 
     game.reload
     assert game.board_contents.empty?(5, 5), "settlement must have moved"
-    assert_equal chris.order, game.board_contents.player_at(5, 7)
+    assert_equal chris.order, game.board_contents.player_at(*dest)
   end
 
   test "POST action dispatches to select_settlement when harbor action has no from" do
@@ -100,12 +104,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "harbor", "from" => "[5, 5]" }
     game.save
+    chris.update!(tiles: [ { "klass" => "HarborTile", "from" => "[2, 0]", "used" => false } ])
+    dest = TurnEngine.new(game).buildable_cells.first
+    raise "fixed board should offer a legal harbor destination" unless dest
 
-    post action_game_url(game), params: { build_row: 0, build_col: 5 }
+    post action_game_url(game), params: { build_row: dest[0], build_col: dest[1] }
 
     game.reload
     assert game.board_contents.empty?(5, 5), "settlement must have moved from origin"
-    assert_equal chris.order, game.board_contents.player_at(0, 5)
+    assert_equal chris.order, game.board_contents.player_at(*dest)
   end
 
   test "POST action dispatches to activate_tile_build when tower action" do
@@ -308,14 +315,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "POST action with mandatory current_action dispatches build_settlement" do
     game = games(:game2player)
+    chris = game_players(:chris)
     game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new
     game.current_action = { "type" => "mandatory" }
+    game.mandatory_count = Game::MANDATORY_COUNT
     game.save
+    chris.update!(hand: [ "G" ])
+    target = TurnEngine.new(game).buildable_cells.first
+    raise "fixed board should offer a legal mandatory build" unless target
 
-    post action_game_url(game), params: { build_row: 1, build_col: 7 }
+    post action_game_url(game), params: { build_row: target[0], build_col: target[1] }
 
-    assert_equal game_players(:chris).order, game.reload.board_contents.player_at(1, 7)
+    assert_equal chris.order, game.reload.board_contents.player_at(*target)
   end
 
   test "POST action with oasis current_action dispatches activate_tile_build" do
@@ -462,9 +474,13 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new
     game.current_action = { "type" => "mandatory" }
+    game.mandatory_count = Game::MANDATORY_COUNT
     game.save
+    chris.update!(hand: [ "G" ])
+    target = TurnEngine.new(game).buildable_cells.first
+    raise "fixed board should offer a legal mandatory build" unless target
 
-    post action_game_url(game), params: { build_row: 1, build_col: 7 }
+    post action_game_url(game), params: { build_row: target[0], build_col: target[1] }
 
     public_broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}")
     targets = public_broadcasts.map { |e| e["target"] }

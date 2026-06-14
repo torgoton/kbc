@@ -32,11 +32,6 @@ class TurnEngine
     available
   end
 
-  def available?(order, terrain, row, col)
-    @list ||= available_list(order, terrain)
-    @list.any? ? @list[row][col] : true
-  end
-
   def build_settlement(row, col)
     capture_undo_snapshot
     Rails.logger.debug("Attempt to build at #{row}, #{col}")
@@ -49,9 +44,8 @@ class TurnEngine
     card_terrain = effective_terrain(game_player)
 
     if current_phase.is_a?(TurnPhase::MandatoryBuildPhase) && current_phase.outpost_active?
+      return "Not available" unless legal_targets.include?([ row, col ])
       card_terrain ||= game_player.hand.find { |t| @game.board_contents.terrain_at(row, col) == t }
-      # Skip adjacency: just check it's empty and correct terrain
-      return "Not available" unless @game.board_contents.available_for_building?(row, col) && @game.board_contents.terrain_at(row, col) == card_terrain
       lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
       build_on_terrain(card_terrain, row, col, game_player)
       @game.mandatory_count -= 1
@@ -66,15 +60,13 @@ class TurnEngine
       builds = @game.turn_phase.builds || []
       check_families_goal(game_player) if builds.size == 3
     else
+      return "Not available" unless legal_targets.include?([ row, col ])
       if card_terrain.nil?
         card_terrain = game_player.hand.find { |t|
           list = available_list(game_player.order, t)
           list.any? ? list[row][col] : true
         }
-        return "Not available" unless card_terrain
         lock_terrain!(card_terrain, chosen_terrain_before)
-      else
-        return "Not available" unless available?(game_player.order, card_terrain, row, col)
       end
       build_on_terrain(card_terrain, row, col, game_player)
       @game.mandatory_count -= 1
@@ -168,11 +160,10 @@ class TurnEngine
     @game.instantiate
     game_player = @game.current_player
 
-    return "Not a valid target" if @game.board_contents.city_hall_at?(row, col)
+    return "Not a valid target" unless legal_targets.include?([ row, col ])
     current_phase = @game.turn_phase
     pending_orders = current_phase.respond_to?(:pending_orders) ? current_phase.pending_orders : []
     owner_order = @game.board_contents.player_at(row, col)
-    return "Not a valid target" unless owner_order && pending_orders.include?(owner_order)
 
     owner = @game.game_players.find { |gp| gp.order == owner_order }
 
@@ -233,8 +224,7 @@ class TurnEngine
     movement_step = false
     if current_phase.from
       # complete a ship or wagon move to destination
-      from_coord = Coordinate.from_key(current_phase.from)
-      return "Not available" unless meeple_step_available?(from_coord, row, col, tile_obj)
+      return "Not available" unless legal_targets.include?([ row, col ])
       movement_result = case tile_obj.meeple_kind
       when "ship"  then move_ship(row, col, game_player, tile_klass:)
       when "wagon" then move_wagon(row, col, game_player, tile_klass:)
@@ -251,11 +241,7 @@ class TurnEngine
           @game.board_contents.player_at(row, col) == game_player.order
       return "Not available"  # handled by popup: remove_meeple_action
     else
-      destinations = tile_obj.valid_destinations(
-        board_contents: @game.board_contents,
-        player_order: game_player.order, supply: game_player.supply_hash
-      )
-      return "Not available" unless destinations.include?([ row, col ])
+      return "Not available" unless legal_targets.include?([ row, col ])
       case tile_obj.meeple_kind
       when "ship"    then place_ship(row, col, game_player, tile_klass:)
       when "wagon"   then place_wagon(row, col, game_player, tile_klass:)
@@ -353,11 +339,7 @@ class TurnEngine
     tile = game_player.find_unused_tile("CityHallTile")
     return "No City Hall tile" unless tile
     tile_obj = Tiles::CityHallTile.new(0)
-    valid = tile_obj.valid_destinations(
-      board_contents: @game.board_contents,
-      player_order: game_player.order, supply: game_player.supply_hash
-    )
-    return "Not available" unless valid.include?([ row, col ])
+    return "Not available" unless legal_targets.include?([ row, col ])
 
     cluster = tile_obj.cluster_hexes(row, col, @game.board_contents)
 
@@ -390,30 +372,7 @@ class TurnEngine
     tile_obj = Tiles::Tile.from_hash(tile)
     current_phase = @game.turn_phase
     chosen_terrain_before = current_phase.chosen_terrain
-    if current_phase.respond_to?(:outpost_active?) && current_phase.outpost_active?
-      outpost_terrains = outpost_build_terrains(tile_obj, current_phase, game_player)
-      return "Not available" unless @game.board_contents.available_for_building?(row, col) &&
-        outpost_terrains.include?(@game.board_contents.terrain_at(row, col))
-    else
-      if tile_obj.fort_tile?
-        hand = current_phase.respond_to?(:fort_terrain) ? current_phase.fort_terrain : nil
-        destinations = tile_obj.valid_destinations(
-          board_contents: @game.board_contents, player_order: game_player.order, hand: hand
-        )
-      elsif tile_obj.uses_played_terrain? && effective_terrain(game_player).nil?
-        destinations = game_player.hand.flat_map { |t|
-          tile_obj.valid_destinations(
-            board_contents: @game.board_contents, player_order: game_player.order, hand: t
-          )
-        }.uniq
-      else
-        hand = effective_terrain(game_player) || game_player.hand.first
-        destinations = tile_obj.valid_destinations(
-          board_contents: @game.board_contents, player_order: game_player.order, hand: hand
-        )
-      end
-      return "Not available" unless destinations.include?([ row, col ])
-    end
+    return "Not available" unless legal_targets.include?([ row, col ])
     if tile_obj.uses_played_terrain? && chosen_terrain_before.nil? && game_player.hand.size > 1
       lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
     end
@@ -583,6 +542,14 @@ class TurnEngine
         @game.turn_phase = phase_result.next_phase
       end
     else
+      # move_settlement resolves its tile from current_action (not the player's
+      # hand), so it validates against that tile's destinations directly rather
+      # than legal_targets (which requires the tile to be held).
+      hand_arg = effective_terrain(@game.current_player) || @game.current_player.hand.first
+      return "Not available" unless tile_obj.valid_destinations(
+        from_row: from_coord.row, from_col: from_coord.col,
+        board_contents: @game.board_contents, player_order: @game.current_player.order, hand: hand_arg
+      ).include?([ row, col ])
       record_move(
         action: "move_settlement",
         deliberate: true,
@@ -631,16 +598,8 @@ class TurnEngine
     chosen_terrain_before = current_phase.chosen_terrain
 
     tile_obj = Tiles::QuarryTile.new(0)
-    wall_terrain = effective_terrain(game_player)
-    if wall_terrain.nil?
-      destinations = game_player.hand.flat_map { |t|
-        tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: game_player.order, hand: t)
-      }.uniq
-    else
-      destinations = tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: game_player.order, hand: wall_terrain)
-    end
-    return "Not available" unless destinations.include?([ row, col ])
     return "No stone walls left" if @game.stone_walls <= 0
+    return "Not available" unless legal_targets.include?([ row, col ])
 
     if chosen_terrain_before.nil? && game_player.hand.size > 1
       hex_terrain = @game.board_contents.terrain_at(row, col)
@@ -816,7 +775,9 @@ class TurnEngine
 
   def buildable_cells
     return [] unless @game.playing?
-    @buildable_cells ||= begin
+    # Recomputed each call (no memo): it is a derived view of mutable game state,
+    # and the guards now read it mid-action, so caching across a mutation is unsafe.
+    begin
       @game.instantiate
       player = @game.current_player
       current_phase = @game.turn_phase
@@ -842,15 +803,17 @@ class TurnEngine
         else
           []
         end
-      elsif action == "sword"
-        pending_orders = @game.turn_phase.respond_to?(:pending_orders) ? @game.turn_phase.pending_orders : []
-        pending_orders.flat_map { |order| @game.board_contents.settlements_for(order) }
       else
         klass = current_action_tile_klass
         tile = player.find_unused_tile(klass)
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
-          if tile_obj.places_meeple?
+          if tile_obj.sword_tile?
+            pending_orders = current_phase.respond_to?(:pending_orders) ? current_phase.pending_orders : []
+            pending_orders.flat_map { |order|
+              @game.board_contents.settlements_for(order).reject { |r, c| @game.board_contents.city_hall_at?(r, c) }
+            }
+          elsif tile_obj.places_meeple?
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
               if current_phase.respond_to?(:budget) && current_phase.budget.to_i <= 0
@@ -868,7 +831,9 @@ class TurnEngine
               )
             end
           elsif tile_obj.places_wall?
-            if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
+            if @game.stone_walls <= 0
+              []
+            elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
               player.hand.flat_map { |t|
                 tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: player.order, hand: t)
               }.uniq
@@ -956,6 +921,16 @@ class TurnEngine
         end
       end
     end
+  end
+
+  # Canonical set of hexes the current player may legally click right now, for
+  # O(1) membership. This is the single source of truth that both the view
+  # (via buildable_cells) and every action guard share, so they cannot drift.
+  # It does not include popup-trigger affordances (clicking your own ship/wagon
+  # to open the move/remove popup) — those are routed by select_meeple /
+  # remove_meeple, not build/move targets.
+  def legal_targets
+    buildable_cells.to_set
   end
 
   def city_hall_clusters

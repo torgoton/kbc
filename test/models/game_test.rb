@@ -160,6 +160,7 @@ class GameTest < ActiveSupport::TestCase
   test "move_settlement moves the piece and resets current_action to mandatory" do
     game = games(:game2player)
     chris = game_players(:chris)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
@@ -176,6 +177,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     chris = game_players(:chris)
     # Chris has one settlement at [1,7], which is adjacent to tile location [2,7]
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(1, 7, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[1, 7]" }
     game.save
@@ -435,6 +437,7 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     # Settlement moves from [5, 5] to [5, 7]. Tile from-hexes [6, 7] and [6, 8]
     # are both adjacent to [5, 7] (odd row) so they survive apply_tile_forfeit.
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(5, 5, chris.order) }
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
@@ -1215,6 +1218,7 @@ class GameTest < ActiveSupport::TestCase
     game = games(:game2player)
     game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", qty) }
+    game.mandatory_count = Game::MANDATORY_COUNT
     game.save
     game
   end
