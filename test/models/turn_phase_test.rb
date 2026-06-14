@@ -83,7 +83,6 @@ class TurnPhaseTest < ActiveSupport::TestCase
       "type" => "resettlement",
       "klass" => "ResettlementTile",
       "budget" => 4,
-      "vacated" => [],
       "moves" => 0
     })
 
@@ -95,7 +94,6 @@ class TurnPhaseTest < ActiveSupport::TestCase
     assert_instance_of TurnPhase::ResettlementPhase, result.next_phase
     assert_equal "[1, 2]", result.next_phase.from
     assert_equal 4, result.next_phase.budget
-    assert_equal [], result.next_phase.vacated
     assert_equal 0, result.next_phase.moves
   end
 
@@ -104,14 +102,12 @@ class TurnPhaseTest < ActiveSupport::TestCase
       "type" => "resettlement",
       "klass" => "ResettlementTile",
       "budget" => 3,
-      "vacated" => ["[2, 3]"],
       "moves" => 1,
       "from" => "[5, 5]"
     })
 
     assert_instance_of TurnPhase::ResettlementPhase, phase
     assert_equal 3, phase.budget
-    assert_equal ["[2, 3]"], phase.vacated
     assert_equal 1, phase.moves
     assert_equal "[5, 5]", phase.from
   end

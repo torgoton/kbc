@@ -96,7 +96,7 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
     assert_equal [], destinations
   end
 
-  test "valid_destinations (move) returns reachable water hexes within 3 steps" do
+  test "valid_destinations (move) returns only adjacent empty water hexes (one step)" do
     state = BoardState.new
     state.place_ship(10, 10, 0)
     dests = tile.valid_destinations(
@@ -104,9 +104,8 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
       board_contents: state, board: all_water_board, player_order: 0
     )
     assert_includes dests, [ 10, 11 ]
-    assert_includes dests, [ 10, 12 ]
-    assert_includes dests, [ 10, 13 ]
-    assert_not_includes dests, [ 10, 14 ]
+    assert_not_includes dests, [ 10, 12 ]
+    assert_not_includes dests, [ 10, 13 ]
     assert_not_includes dests, [ 10, 10 ]
   end
 
@@ -133,22 +132,5 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
       board_contents: state, board: all_water_board, player_order: 0
     )
     assert_not_includes dests, [ 10, 11 ]
-  end
-
-  test "selectable_ships returns ship coords when ship can move" do
-    state = BoardState.new
-    state.place_ship(10, 10, 0)
-    result = tile.selectable_ships(player_order: 0, board_contents: state, board: all_water_board)
-    assert_includes result, [ 10, 10 ]
-  end
-
-  test "selectable_ships returns empty when ship has no move destinations" do
-    state = BoardState.new
-    state.place_ship(1, 1, 0)
-    all_land = {}
-    20.times { |r| 20.times { |c| all_land[[ r, c ]] = "G" } }
-    all_land[[ 1, 1 ]] = "W"
-    result = tile.selectable_ships(player_order: 0, board_contents: state, board: BoardStub.new(all_land))
-    assert_equal [], result
   end
 end

@@ -125,7 +125,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     assert_equal [], destinations
   end
 
-  test "valid_destinations (move) reaches up to 3 steps through suitable terrain" do
+  test "valid_destinations (move) returns only adjacent suitable hexes (one step)" do
     state = BoardState.new
     state.place_wagon(10, 10, 0)
     dests = tile.valid_destinations(
@@ -133,9 +133,8 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
       board_contents: state, board: all_grass_board, player_order: 0
     )
     assert_includes dests, [ 10, 11 ]
-    assert_includes dests, [ 10, 12 ]
-    assert_includes dests, [ 10, 13 ]
-    assert_not_includes dests, [ 10, 14 ]
+    assert_not_includes dests, [ 10, 12 ]
+    assert_not_includes dests, [ 10, 13 ]
     assert_not_includes dests, [ 10, 10 ]
   end
 
@@ -163,7 +162,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
     assert_not_includes dests, [ 10, 11 ]
   end
 
-  test "valid_destinations (move) can traverse mountain hexes" do
+  test "valid_destinations (move) includes adjacent mountain hexes" do
     terrain = {}
     20.times { |r| 20.times { |c| terrain[[ r, c ]] = "M" } }
     state = BoardState.new
@@ -173,23 +172,6 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
       board_contents: state, board: BoardStub.new(terrain), player_order: 0
     )
     assert_includes dests, [ 10, 11 ]
-    assert_includes dests, [ 10, 12 ]
-    assert_includes dests, [ 10, 13 ]
-  end
-
-  # --- selectable_wagons ---
-
-  test "selectable_wagons returns wagon coords when wagon can move" do
-    state = BoardState.new
-    state.place_wagon(10, 10, 0)
-    result = tile.selectable_wagons(player_order: 0, board_contents: state, board: all_grass_board)
-    assert_includes result, [ 10, 10 ]
-  end
-
-  test "selectable_wagons returns empty when wagon surrounded by water" do
-    state = BoardState.new
-    state.place_wagon(5, 5, 0)
-    result = tile.selectable_wagons(player_order: 0, board_contents: state, board: all_water_board)
-    assert_equal [], result
+    assert_not_includes dests, [ 10, 12 ]
   end
 end

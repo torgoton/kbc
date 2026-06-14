@@ -15,20 +15,16 @@ module Tiles
     end
 
     # No from_row/from_col: placement hexes + own ship hex (for popup triggering).
-    # With from_row/from_col: BFS move destinations through empty water up to 3 steps.
+    # With from_row/from_col: the single move step — adjacent empty water hexes.
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, board:, player_order:, hand: nil, supply: Hash.new(0))
       if from_row && from_col
-        water_bfs(from_row, from_col, board_contents:, board:, max_depth: 3)
+        board_contents.neighbors_where(from_row, from_col) do |nr, nc|
+          board_contents.available_for_building?(nr, nc) && board.terrain_at(nr, nc) == "W"
+        end
       else
         ships = board_contents.ships_for(player_order)
         placement = supply["ship"] > 0 ? placement_hexes(board_contents:, board:, player_order:) : []
         (placement + ships).uniq
-      end
-    end
-
-    def selectable_ships(player_order:, board_contents:, board:)
-      board_contents.ships_for(player_order).select do |r, c|
-        water_bfs(r, c, board_contents:, board:, max_depth: 3).any?
       end
     end
 
@@ -45,25 +41,6 @@ module Tiles
       (0..19).flat_map do |r|
         (0..19).filter_map { |c| [ r, c ] if board_contents.empty?(r, c) && board.terrain_at(r, c) == "W" }
       end
-    end
-
-    def water_bfs(from_row, from_col, board_contents:, board:, max_depth:)
-      visited = { [ from_row, from_col ] => 0 }
-      queue = [ [ from_row, from_col, 0 ] ]
-      reachable = []
-      while queue.any?
-        r, c, depth = queue.shift
-        next if depth >= max_depth
-        board_contents.neighbors(r, c).each do |nr, nc|
-          next if visited.key?([ nr, nc ])
-          next unless board.terrain_at(nr, nc) == "W"
-          next unless board_contents.empty?(nr, nc)
-          visited[[ nr, nc ]] = depth + 1
-          reachable << [ nr, nc ]
-          queue << [ nr, nc, depth + 1 ]
-        end
-      end
-      reachable
     end
   end
 end
