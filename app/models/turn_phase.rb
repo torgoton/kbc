@@ -295,20 +295,18 @@ class TurnPhase::SettlementMovePhase < TurnPhase
 end
 
 class TurnPhase::ResettlementPhase < TurnPhase
-  attr_reader :budget_value, :vacated_value, :moves_value, :from_value
+  attr_reader :budget_value, :moves_value, :from_value
 
   def self.from_hash(hash)
     new(
       budget: hash.fetch("budget"),
-      vacated: Array(hash["vacated"]),
       moves: hash.fetch("moves"),
       from: hash["from"]
     )
   end
 
-  def initialize(budget:, vacated:, moves:, from: nil)
+  def initialize(budget:, moves:, from: nil)
     @budget_value = budget
-    @vacated_value = vacated
     @moves_value = moves
     @from_value = from
   end
@@ -325,10 +323,6 @@ class TurnPhase::ResettlementPhase < TurnPhase
     budget_value
   end
 
-  def vacated
-    vacated_value
-  end
-
   def moves
     moves_value
   end
@@ -343,7 +337,6 @@ class TurnPhase::ResettlementPhase < TurnPhase
       TurnPhase::TransitionResult.new(
         next_phase: self.class.new(
           budget: budget,
-          vacated: vacated,
           moves: moves,
           from: event.coordinate_key
         ),
@@ -365,7 +358,6 @@ class TurnPhase::ResettlementPhase < TurnPhase
       "type" => "resettlement",
       "klass" => "ResettlementTile",
       "budget" => budget,
-      "vacated" => vacated,
       "moves" => moves
     }
     hash["from"] = from if from
@@ -602,10 +594,6 @@ class TurnPhase::LegacyPhase < TurnPhase
 
   def budget
     data["budget"]
-  end
-
-  def vacated
-    Array(data["vacated"])
   end
 
   def moves

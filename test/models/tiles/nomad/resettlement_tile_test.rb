@@ -67,52 +67,16 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     end
   end
 
-  test "BFS reaches hexes 2 steps away with budget=2" do
-    # (0,0) -> (0,1) -> (0,2) is 2 steps, all G terrain
+  test "returns only adjacent hexes (one step), not 2 away, regardless of budget" do
+    # Movement is one hex per step; budget only gates whether a step remains.
     ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
     result = @tile.valid_destinations(
       from_row: 0, from_col: 0,
       board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
       budget: 2
     )
-    assert_includes result, [ 0, 2 ], "should reach 2 steps away"
-  end
-
-  test "BFS does not exceed budget" do
-    # With budget=1, should NOT include (0,2) which is 2 steps from (0,0)
-    ctx = setup_board { |s| s.place_settlement(0, 0, @chris.order) }
-    result = @tile.valid_destinations(
-      from_row: 0, from_col: 0,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
-      budget: 1
-    )
-    refute_includes result, [ 0, 2 ], "budget=1 should not reach 2 steps away"
-  end
-
-  test "vacated hexes are passable" do
-    # Settlement at (0,2) [G]. Place another settlement at (0,1) to block direct path.
-    # If (0,1) is vacated (treated as empty), BFS can pass through it.
-    ctx = setup_board do |s|
-      s.place_settlement(0, 2, @chris.order)
-      s.place_settlement(0, 1, @chris.order)  # blocks (0,1) normally
-    end
-
-    # Without vacated, (0,1) is occupied — should not appear as destination
-    result_no_vacated = @tile.valid_destinations(
-      from_row: 0, from_col: 2,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
-      budget: 2, vacated: []
-    )
-    refute_includes result_no_vacated, [ 0, 1 ], "occupied hex should not be a destination without vacated"
-
-    # With (0,1) in vacated, BFS can pass through it
-    result_with_vacated = @tile.valid_destinations(
-      from_row: 0, from_col: 2,
-      board_contents: ctx[:board_contents], board: ctx[:board], player_order: @chris.order,
-      budget: 2, vacated: [ "[0, 1]" ]
-    )
-    assert_includes result_with_vacated, [ 0, 1 ], "vacated hex should be reachable"
-    assert_includes result_with_vacated, [ 0, 0 ], "hex beyond vacated should be reachable with remaining budget"
+    assert_includes result, [ 0, 1 ], "adjacent hex is a destination"
+    refute_includes result, [ 0, 2 ], "a hex 2 steps away is never a single-step destination"
   end
 
   test "non-buildable terrain is excluded from destinations" do

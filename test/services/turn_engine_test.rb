@@ -380,7 +380,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal "resettlement", @game.current_action["type"]
     assert_equal "ResettlementTile", @game.current_action["klass"]
     assert_equal 4, @game.current_action["budget"]
-    assert_equal [], @game.current_action["vacated"]
     assert_equal 0, @game.current_action["moves"]
   end
 
@@ -422,21 +421,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "resettlement move deducts one step from budget" do
     @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    # Find two Grass hexes at least 2 apart so cost > 1
-    grass_hexes = empty_hexes_of("G", 10)
-    # Find a source and a destination that are 2+ steps apart
-    from_hex = grass_hexes[0]
-    dest_hex = grass_hexes.find do |h|
-      @game.instantiate
-      dist = Tiles::Nomad::ResettlementTile.new(0).move_cost(
-        from_row: from_hex[0], from_col: from_hex[1],
-        to_row: h[0], to_col: h[1],
-        board_contents: @game.board_contents, board: @game.board,
-        player_order: @game.current_player.order
-      )
-      dist && dist >= 2
-    end
-    raise "No suitable hex pair found" unless dest_hex
+    from_hex = empty_hexes_of("G", 10).first
 
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
@@ -445,47 +430,48 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.save
     @game.update!(current_action: {
       "type" => "resettlement", "klass" => "ResettlementTile",
-      "budget" => 4, "vacated" => [], "moves" => 0
+      "budget" => 4, "moves" => 0
     })
     @game.instantiate
-    path = @engine.send(
-      :shortest_movement_path,
-      from_hex[0], from_hex[1], dest_hex[0], dest_hex[1],
-      budget: 4,
-      allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
-      vacated: []
-    )
+    dest = Tiles::Nomad::ResettlementTile.new(0).valid_destinations(
+      from_row: from_hex[0], from_col: from_hex[1],
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order, budget: 4
+    ).first
+    raise "No adjacent step available" unless dest
+
     @engine.select_settlement(*from_hex)
     @game.reload
-    @engine.move_settlement(*path.first)
+    @engine.move_settlement(*dest)
     @game.reload
 
     assert_equal 3, @game.current_action["budget"]
   end
 
-  test "undo of resettlement move restores budget, vacated, moves, and from in current_action" do
+  test "undo of resettlement move restores budget, moves, and from in current_action" do
     @game.boards = [ [ 6, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    spots = empty_hexes_of("G", 2)
+    from_hex = empty_hexes_of("G", 2).first
     player = @game.current_player
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[0, 0]", "used" => false } ])
     # Place a settlement so there's something to move
     @game.board_contents_will_change!
-    @game.board_contents.place_settlement(*spots[0], player.order)
+    @game.board_contents.place_settlement(*from_hex, player.order)
     @game.save
-    from_key = "[#{spots[0][0]}, #{spots[0][1]}]"
+    from_key = "[#{from_hex[0]}, #{from_hex[1]}]"
     @game.update!(current_action: {
       "type" => "resettlement", "klass" => "ResettlementTile",
-      "budget" => 4, "vacated" => [], "moves" => 0
+      "budget" => 4, "moves" => 0
     })
-    @engine.select_settlement(*spots[0])
-    @game.reload
-    step = @engine.send(
-      :shortest_movement_path,
-      spots[0][0], spots[0][1], spots[1][0], spots[1][1],
-      budget: 4,
-      allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
-      vacated: []
+    @game.instantiate
+    step = Tiles::Nomad::ResettlementTile.new(0).valid_destinations(
+      from_row: from_hex[0], from_col: from_hex[1],
+      board_contents: @game.board_contents, board: @game.board,
+      player_order: player.order, budget: 4
     ).first
+    raise "No adjacent step available" unless step
+
+    @engine.select_settlement(*from_hex)
+    @game.reload
     @engine.move_settlement(*step)
     @game.reload
     assert_equal 3, @game.current_action["budget"]
@@ -496,7 +482,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal "resettlement",     @game.current_action["type"]
     assert_equal "ResettlementTile", @game.current_action["klass"]
     assert_equal 4,                  @game.current_action["budget"]
-    assert_equal [],                 @game.current_action["vacated"]
     assert_equal 0,                  @game.current_action["moves"]
     assert_equal from_key,           @game.current_action["from"]
   end
@@ -510,7 +495,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.save
     @game.update!(current_action: {
       "type" => "resettlement", "klass" => "ResettlementTile",
-      "budget" => 4, "vacated" => [], "moves" => 0
+      "budget" => 4, "moves" => 0
     })
     @engine.select_settlement(*spots[0])
     @game.reload
@@ -521,7 +506,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal "resettlement",     @game.current_action["type"]
     assert_equal "ResettlementTile", @game.current_action["klass"]
     assert_equal 4,                  @game.current_action["budget"]
-    assert_equal [],                 @game.current_action["vacated"]
     assert_equal 0,                  @game.current_action["moves"]
     assert_nil                       @game.current_action["from"]
   end
@@ -816,7 +800,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[3, 4]", "used" => false } ])
     @game.update!(current_action: {
       "type" => "resettlement", "klass" => "ResettlementTile",
-      "budget" => 4, "vacated" => [], "moves" => 0, "from" => "[4, 3]"
+      "budget" => 4, "moves" => 0, "from" => "[4, 3]"
     })
 
     cells = @engine.buildable_cells
@@ -1904,7 +1888,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     player.update!(tiles: [ { "klass" => "ResettlementTile", "from" => "[3, 4]", "used" => false } ])
     @game.update!(current_action: {
       "type" => "resettlement", "klass" => "ResettlementTile",
-      "budget" => 4, "vacated" => [], "moves" => 0
+      "budget" => 4, "moves" => 0
     })
     @game.instantiate
 
@@ -1913,15 +1897,13 @@ class TurnEngineTest < ActiveSupport::TestCase
       from_row: 4, from_col: 3,
       board_contents: @game.board_contents, board: @game.board,
       player_order: player.order,
-      budget: 4,
-      vacated: []
+      budget: 4
     ).first
     second_step = source_tile.valid_destinations(
       from_row: 2, from_col: 7,
       board_contents: @game.board_contents, board: @game.board,
       player_order: player.order,
-      budget: 4,
-      vacated: []
+      budget: 4
     ).first
     assert first_step
     assert second_step

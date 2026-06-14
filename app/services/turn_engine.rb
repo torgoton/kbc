@@ -461,7 +461,6 @@ class TurnEngine
       elsif tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
         TurnPhase::ResettlementPhase.new(
           budget: 4,
-          vacated: [],
           moves: 0
         )
       elsif tile_obj&.places_meeple? && %w[ship wagon].include?(tile_obj.meeple_kind)
@@ -547,18 +546,14 @@ class TurnEngine
       lock_terrain!(@game.board.terrain_at(row, col), chosen_terrain_before)
     end
     if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
-      route = [ [ row, col ] ]
-      return "Not available" unless valid_movement_path?(
-        route,
-        from_coord.row,
-        from_coord.col,
-        budget: current_phase.budget.to_i,
-        allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
-        vacated: current_phase.vacated || []
-      )
+      return "Not available" unless current_phase.budget.to_i > 0 &&
+        tile_obj.valid_destinations(
+          from_row: from_coord.row, from_col: from_coord.col,
+          board_contents: @game.board_contents, board: @game.board,
+          player_order: @game.current_player.order, budget: current_phase.budget.to_i
+        ).include?([ row, col ])
 
       budget = current_phase.budget.to_i - 1
-      vacated = (current_phase.vacated || []) + [ from ]
       moves = current_phase.moves.to_i + 1
       next_phase =
         if budget <= 0
@@ -566,7 +561,6 @@ class TurnEngine
         else
           TurnPhase::ResettlementPhase.new(
             budget: budget,
-            vacated: vacated,
             moves: moves
           )
         end
@@ -574,7 +568,7 @@ class TurnEngine
         action: "move_settlement",
         game_player: @game.current_player,
         from_row: from_coord.row, from_col: from_coord.col,
-        path: route,
+        path: [ [ row, col ] ],
         payload: { "tile_klass" => tile_klass_name },
         message_piece: "settlement"
       )
@@ -889,7 +883,11 @@ class TurnEngine
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
               if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
-                resettlement_step_destinations(from, current_phase)
+                tile_obj.valid_destinations(
+                  from_row: from.row, from_col: from.col,
+                  board_contents: @game.board_contents, board: @game.board,
+                  player_order: player.order, budget: current_phase.budget.to_i
+                )
               else
                 extra_kwargs = {}
                 if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
@@ -908,8 +906,7 @@ class TurnEngine
               extra_kwargs = {}
               if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
                 extra_kwargs = {
-                  budget: current_phase.respond_to?(:budget) ? current_phase.budget.to_i : 0,
-                  vacated: current_phase.respond_to?(:vacated) ? current_phase.vacated || [] : []
+                  budget: current_phase.respond_to?(:budget) ? current_phase.budget.to_i : 0
                 }
               end
               if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
@@ -1357,71 +1354,16 @@ class TurnEngine
     end
   end
 
-  def valid_movement_path?(path, from_row, from_col, budget:, allowed_terrains:, vacated:)
-    return false if path.empty? || path.size > budget
-
-    vacated_set = vacated.to_set
-    current = [ from_row, from_col ]
-    path.all? do |row, col|
-      key = Coordinate.new(row, col).to_key
-      valid = @game.board_contents.neighbors(*current).include?([ row, col ]) &&
-        allowed_terrains.include?(@game.board.terrain_at(row, col)) &&
-        ((@game.board_contents.empty?(row, col) || vacated_set.include?(key)) && !@game.board_contents.warrior_blocked?(row, col))
-      current = [ row, col ]
-      valid
-    end
-  end
-
-  def shortest_movement_path(from_row, from_col, to_row, to_col, budget:, allowed_terrains:, vacated:)
-    vacated_set = vacated.to_set
-    queue = [ [ from_row, from_col, [] ] ]
-    visited = Set.new([ [ from_row, from_col ] ])
-
-    until queue.empty?
-      row, col, path = queue.shift
-      @game.board_contents.neighbors(row, col).each do |next_row, next_col|
-        next if visited.include?([ next_row, next_col ])
-        key = Coordinate.new(next_row, next_col).to_key
-        next unless allowed_terrains.include?(@game.board.terrain_at(next_row, next_col))
-        next unless (@game.board_contents.empty?(next_row, next_col) || vacated_set.include?(key)) && !@game.board_contents.warrior_blocked?(next_row, next_col)
-
-        next_path = path + [ [ next_row, next_col ] ]
-        return next_path if next_row == to_row && next_col == to_col
-        next if next_path.size >= budget
-
-        visited << [ next_row, next_col ]
-        queue << [ next_row, next_col, next_path ]
-      end
-    end
-    nil
-  end
-
+  # One move step is legal when a hop remains this turn and the destination is
+  # among the piece's adjacent single-step destinations (the tile owns the
+  # terrain rule via valid_destinations).
   def meeple_step_available?(from_coord, row, col, tile_obj)
     @game.turn_phase.budget.to_i > 0 &&
-      @game.board_contents.neighbors(from_coord.row, from_coord.col).include?([ row, col ]) &&
-      meeple_movement_terrain(tile_obj).include?(@game.board.terrain_at(row, col)) &&
-      @game.board_contents.empty?(row, col) &&
-      !@game.board_contents.warrior_blocked?(row, col)
-  end
-
-  def resettlement_step_destinations(from_coord, current_phase)
-    @game.board_contents.neighbors(from_coord.row, from_coord.col).select do |row, col|
-      valid_movement_path?(
-        [ [ row, col ] ],
-        from_coord.row, from_coord.col,
-        budget: current_phase.budget.to_i,
-        allowed_terrains: Tiles::Tile::BUILDABLE_TERRAIN,
-        vacated: current_phase.respond_to?(:vacated) ? current_phase.vacated || [] : []
-      )
-    end
-  end
-
-  def meeple_movement_terrain(tile_obj)
-    case tile_obj.meeple_kind
-    when "ship" then [ "W" ]
-    when "wagon" then Tiles::WagonTile::SUITABLE_TERRAIN
-    else []
-    end
+      tile_obj.valid_destinations(
+        from_row: from_coord.row, from_col: from_coord.col,
+        board_contents: @game.board_contents, board: @game.board,
+        player_order: @game.current_player.order
+      ).include?([ row, col ])
   end
 
   def place_warrior(row, col, game_player, tile_klass:)
