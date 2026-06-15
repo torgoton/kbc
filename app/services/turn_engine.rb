@@ -349,7 +349,7 @@ class TurnEngine
       lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
     end
     build_on_terrain(@game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
-    if tile_obj.is_a?(Tiles::Nomad::DonationTile)
+    if tile_obj.repeats_build?
       remaining = current_phase.remaining.to_i - 1
       if remaining > 0
         @game.turn_phase = TurnPhase::TileBuildPhase.new(
@@ -381,15 +381,15 @@ class TurnEngine
         TurnPhase::TileBuildPhase.new(
           action_type: type,
           klass_name: klass_name,
-          remaining: (3 if tile_obj.is_a?(Tiles::Nomad::DonationTile)),
-          walls_placed: (0 if tile_obj.is_a?(Tiles::QuarryTile))
+          remaining: (tile_obj.build_quota if tile_obj.repeats_build?),
+          walls_placed: (0 if tile_obj.places_wall?)
         )
-      elsif tile_obj&.moves_settlement? && !tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
+      elsif tile_obj&.moves_settlement? && !tile_obj.resettles?
         TurnPhase::SettlementMovePhase.new(
           action_type: type,
           klass_name: klass_name
         )
-      elsif tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
+      elsif tile_obj&.resettles?
         TurnPhase::ResettlementPhase.new(
           budget: 4,
           moves: 0
@@ -410,7 +410,7 @@ class TurnEngine
         action = { "type" => type, "klass" => klass_name }
         TurnPhase::LegacyPhase.new(action)
       end
-    if tile_obj&.is_a?(Tiles::Nomad::SwordTile)
+    if tile_obj&.sword_tile?
       opponents = @game.game_players
         .reject { |gp| gp == @game.current_player }
         .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
@@ -476,7 +476,7 @@ class TurnEngine
     if tile_obj&.uses_played_terrain? && chosen_terrain_before.nil? && @game.current_player.hand.size > 1
       lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
     end
-    if tile_obj&.is_a?(Tiles::Nomad::ResettlementTile)
+    if tile_obj&.resettles?
       return "Not available" unless current_phase.budget.to_i > 0 &&
         tile_obj.valid_destinations(
           from_row: from_coord.row, from_col: from_coord.col,
@@ -815,7 +815,7 @@ class TurnEngine
             hand_arg = effective_terrain(player) || player.hand.first
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
-              if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
+              if tile_obj.resettles?
                 tile_obj.valid_destinations(
                   from_row: from.row, from_col: from.col,
                   board_contents: @game.board_contents,
@@ -837,7 +837,7 @@ class TurnEngine
               end
             else
               extra_kwargs = {}
-              if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
+              if tile_obj.resettles?
                 extra_kwargs = {
                   budget: current_phase.budget.to_i
                 }
@@ -1145,7 +1145,7 @@ class TurnEngine
       )
     end
     if tile_obj&.nomad_tile?
-      if tile_obj.is_a?(Tiles::Nomad::TreasureTile)
+      if tile_obj.scores_on_pickup?
         # Score 3 points immediately and remove the tile
         game_player.tiles = (game_player.tiles || []).reject { |t| t["klass"] == tile[:klass] && t["from"] == tile[:key] }
         score_goal(game_player, "treasure", 3, "#{game_player.player.handle} scored 3 points from a Treasure tile")

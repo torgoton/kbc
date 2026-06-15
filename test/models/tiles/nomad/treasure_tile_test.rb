@@ -9,6 +9,10 @@ class Tiles::Nomad::TreasureTileTest < ActiveSupport::TestCase
     assert @tile.nomad_tile?
   end
 
+  test "scores_on_pickup? returns true" do
+    assert @tile.scores_on_pickup?
+  end
+
   test "DESCRIPTION is set" do
     assert_includes Tiles::Nomad::TreasureTile::DESCRIPTION, "3 points"
   end

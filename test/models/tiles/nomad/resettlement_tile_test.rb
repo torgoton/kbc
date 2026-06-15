@@ -14,6 +14,10 @@ class Tiles::Nomad::ResettlementTileTest < ActiveSupport::TestCase
     @tile = Tiles::Nomad::ResettlementTile.new(0)
   end
 
+  test "resettles? returns true" do
+    assert @tile.resettles?
+  end
+
   def setup_board(boards: [ [ 10, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ])
     @game.boards = boards
     state = BoardState.new

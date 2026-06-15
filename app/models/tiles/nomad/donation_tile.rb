@@ -10,6 +10,8 @@ module Tiles
       end
 
       def builds_settlement? = true
+      def repeats_build? = true
+      def build_quota = 3
 
       # build_terrain must be defined by subclasses
       def build_terrain

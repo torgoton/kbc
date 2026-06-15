@@ -5,6 +5,7 @@ module Tiles
       DESCRIPTION = "Move settlements using a shared budget of 4 steps.".freeze
 
       def moves_settlement? = true
+      def resettles? = true
 
       # The single move step from (from_row, from_col): adjacent empty buildable
       # hexes. `budget` gates whether any step remains this turn.
