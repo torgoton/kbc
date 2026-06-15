@@ -80,6 +80,30 @@ class TurnPhase
   def pending_orders = []
   def outpost_active? = false
 
+  # Remove one targeted owner and advance. Lives on the base so the engine can
+  # ask any current phase uniformly: a phase with remaining orders yields the
+  # next TargetedRemovalPhase, otherwise the action completes back to mandatory.
+  def consume_target(owner_order)
+    remaining = pending_orders - [ owner_order ]
+    if remaining.empty?
+      TurnPhase::TransitionResult.new(
+        next_phase: TurnPhase::MandatoryBuildPhase.new,
+        action_completed: true,
+        source_cleared: true
+      )
+    else
+      TurnPhase::TransitionResult.new(
+        next_phase: TurnPhase::TargetedRemovalPhase.new(
+          action_type: type,
+          klass_name: klass_name,
+          pending_orders: remaining
+        ),
+        action_completed: false,
+        source_cleared: true
+      )
+    end
+  end
+
   def transition(_event, _facts)
     raise InvalidTransition, "#{self.class.name} does not accept that event"
   end
@@ -480,26 +504,7 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
     pending_orders_value
   end
 
-  def consume_target(owner_order)
-    remaining = pending_orders - [ owner_order ]
-    if remaining.empty?
-      TurnPhase::TransitionResult.new(
-        next_phase: TurnPhase::MandatoryBuildPhase.new,
-        action_completed: true,
-        source_cleared: true
-      )
-    else
-      TurnPhase::TransitionResult.new(
-        next_phase: self.class.new(
-          action_type: action_type,
-          klass_name: klass_name,
-          pending_orders: remaining
-        ),
-        action_completed: false,
-        source_cleared: true
-      )
-    end
-  end
+  # consume_target is inherited from TurnPhase — its self.class is this class.
 
   def serialize
     {
