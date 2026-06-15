@@ -238,7 +238,7 @@ class TurnEngine
       end
     end
 
-    unless movement_step && @game.turn_phase.is_a?(TurnPhase::MeepleMovementPhase)
+    unless movement_step && @game.turn_phase.meeple_movement?
       game_player.mark_tile_used!(tile_klass)
       reset_to_mandatory
     end
@@ -307,7 +307,7 @@ class TurnEngine
       message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
     )
     current_phase = @game.turn_phase
-    if current_phase.is_a?(TurnPhase::MeepleMovementPhase)
+    if current_phase.meeple_movement?
       phase_result = current_phase.transition(
         TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
         nil
@@ -654,11 +654,7 @@ class TurnEngine
   end
 
   def tile_action_endable?
-    @game.playing? && (
-      (@game.turn_phase.is_a?(TurnPhase::ResettlementPhase) && @game.turn_phase.moves.to_i >= 1) ||
-      (@game.turn_phase.is_a?(TurnPhase::MeepleMovementPhase) && @game.turn_phase.moves.to_i >= 1) ||
-      (@game.turn_phase.is_a?(TurnPhase::TileBuildPhase) && @game.turn_phase.walls_placed.to_i >= 1)
-    )
+    @game.playing? && @game.turn_phase.tile_action_endable?
   end
 
   def tile_used?(tile)

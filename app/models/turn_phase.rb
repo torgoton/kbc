@@ -80,6 +80,11 @@ class TurnPhase
   def pending_orders = []
   def outpost_active? = false
 
+  # Phase-kind / capability questions the engine asks instead of probing the
+  # concrete class. Phases that qualify override these.
+  def meeple_movement? = false
+  def tile_action_endable? = false
+
   # Remove one targeted owner and advance. Lives on the base so the engine can
   # ask any current phase uniformly: a phase with remaining orders yields the
   # next TargetedRemovalPhase, otherwise the action completes back to mandatory.
@@ -204,6 +209,8 @@ class TurnPhase::TileBuildPhase < TurnPhase
   def outpost_active?
     outpost_active_value == true
   end
+
+  def tile_action_endable? = walls_placed.to_i >= 1
 
   def decrement_remaining
     self.class.new(
@@ -350,6 +357,8 @@ class TurnPhase::ResettlementPhase < TurnPhase
     "resettlement"
   end
 
+  def tile_action_endable? = moves.to_i >= 1
+
   def klass_name
     "ResettlementTile"
   end
@@ -440,6 +449,9 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
   def moves
     moves_value
   end
+
+  def meeple_movement? = true
+  def tile_action_endable? = moves.to_i >= 1
 
   def transition(event, facts)
     case event
