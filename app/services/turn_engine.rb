@@ -162,14 +162,11 @@ class TurnEngine
 
     return "Not a valid target" unless legal_targets.include?([ row, col ])
     current_phase = @game.turn_phase
-    pending_orders = current_phase.pending_orders
     owner_order = @game.board_contents.player_at(row, col)
-
     owner = @game.game_players.find { |gp| gp.order == owner_order }
 
-    phase_result = current_phase.is_a?(TurnPhase::TargetedRemovalPhase) ? current_phase.consume_target(owner_order) : nil
-    remaining_orders = pending_orders - [ owner_order ]
-    tile_used = phase_result ? phase_result.action_completed : remaining_orders.empty?
+    phase_result = current_phase.consume_target(owner_order)
+    tile_used = phase_result.action_completed
     meeple = @game.board_contents.meeple_at(row, col)
 
     record_move(
@@ -193,15 +190,7 @@ class TurnEngine
       game_player.mark_tile_used!(klass_name.demodulize)
       @game.turn_phase = TurnPhase::MandatoryBuildPhase.new
     else
-      if phase_result
-        @game.turn_phase = phase_result.next_phase
-      else
-        @game.turn_phase = TurnPhase::TargetedRemovalPhase.new(
-          action_type: current_phase.type,
-          klass_name: current_phase.klass_name,
-          pending_orders: remaining_orders
-        )
-      end
+      @game.turn_phase = phase_result.next_phase
     end
 
     owner.save
@@ -249,7 +238,7 @@ class TurnEngine
       end
     end
 
-    unless movement_step && @game.turn_phase.is_a?(TurnPhase::MeepleMovementPhase)
+    unless movement_step && @game.turn_phase.meeple_movement?
       game_player.mark_tile_used!(tile_klass)
       reset_to_mandatory
     end
@@ -318,7 +307,7 @@ class TurnEngine
       message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
     )
     current_phase = @game.turn_phase
-    if current_phase.is_a?(TurnPhase::MeepleMovementPhase)
+    if current_phase.meeple_movement?
       phase_result = current_phase.transition(
         TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
         nil
@@ -665,11 +654,7 @@ class TurnEngine
   end
 
   def tile_action_endable?
-    @game.playing? && (
-      (@game.turn_phase.is_a?(TurnPhase::ResettlementPhase) && @game.turn_phase.moves.to_i >= 1) ||
-      (@game.turn_phase.is_a?(TurnPhase::MeepleMovementPhase) && @game.turn_phase.moves.to_i >= 1) ||
-      (@game.turn_phase.is_a?(TurnPhase::TileBuildPhase) && @game.turn_phase.walls_placed.to_i >= 1)
-    )
+    @game.playing? && @game.turn_phase.tile_action_endable?
   end
 
   def tile_used?(tile)

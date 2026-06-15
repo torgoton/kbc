@@ -151,6 +151,25 @@ class TurnPhaseTest < ActiveSupport::TestCase
     assert_equal({ "type" => "cityhall", "klass" => "CityHallTile" }, phase.serialize)
   end
 
+  test "phases answer meeple_movement? and tile_action_endable? for themselves" do
+    barracks = TurnPhase.deserialize({ "type" => "barracks", "klass" => "BarracksTile" })
+    assert_equal false, barracks.meeple_movement?
+    assert_equal false, barracks.tile_action_endable?
+
+    movement = TurnPhase.deserialize({ "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 1 })
+    assert_equal true, movement.meeple_movement?
+    assert_equal true, movement.tile_action_endable?
+    fresh_movement = TurnPhase.deserialize({ "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0 })
+    assert_equal false, fresh_movement.tile_action_endable?
+
+    resettlement = TurnPhase.deserialize({ "type" => "resettlement", "klass" => "ResettlementTile", "budget" => 3, "moves" => 1 })
+    assert_equal true, resettlement.tile_action_endable?
+    assert_equal false, resettlement.meeple_movement?
+
+    walled = TurnPhase.deserialize({ "type" => "quarry", "klass" => "QuarryTile", "walls_placed" => 1 })
+    assert_equal true, walled.tile_action_endable?
+  end
+
   test "a phase that owns none of the optional concepts exposes neutral defaults" do
     # The engine asks every current phase for these without a respond_to? guard
     # (e.g. turn_endable? reads outpost_active?, the move counter reads moves and
