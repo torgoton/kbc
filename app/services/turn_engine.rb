@@ -307,7 +307,7 @@ class TurnEngine
       message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
     )
     current_phase = @game.turn_phase
-    if current_phase.meeple_movement?
+    if current_phase.accepts_source_selection?
       phase_result = current_phase.transition(
         TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
         nil
@@ -467,7 +467,7 @@ class TurnEngine
       message: "#{@game.current_player.player.handle} selected a settlement at [#{row}, #{col}]"
     )
     current_phase = @game.turn_phase
-    if current_phase.is_a?(TurnPhase::SettlementMovePhase) || current_phase.is_a?(TurnPhase::ResettlementPhase)
+    if current_phase.accepts_source_selection?
       phase_result = current_phase.transition(
         TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
         nil

@@ -84,6 +84,9 @@ class TurnPhase
   # concrete class. Phases that qualify override these.
   def meeple_movement? = false
   def tile_action_endable? = false
+  # Clicking one of your own pieces starts a transition(SourceSelected) rather
+  # than the LegacyPhase fallback. True for the move/resettlement phases.
+  def accepts_source_selection? = false
 
   # Remove one targeted owner and advance. Lives on the base so the engine can
   # ask any current phase uniformly: a phase with remaining orders yields the
@@ -306,6 +309,8 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     from_value
   end
 
+  def accepts_source_selection? = true
+
   def transition(event, facts)
     case event
     when TurnPhase::Events::SourceSelected
@@ -358,6 +363,7 @@ class TurnPhase::ResettlementPhase < TurnPhase
   end
 
   def tile_action_endable? = moves.to_i >= 1
+  def accepts_source_selection? = true
 
   def klass_name
     "ResettlementTile"
@@ -452,6 +458,7 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
 
   def meeple_movement? = true
   def tile_action_endable? = moves.to_i >= 1
+  def accepts_source_selection? = true
 
   def transition(event, facts)
     case event
