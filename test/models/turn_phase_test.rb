@@ -128,12 +128,12 @@ class TurnPhaseTest < ActiveSupport::TestCase
   end
 
   test "targeted removal phase removes one pending order at a time" do
-    phase = TurnPhase.deserialize({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [1, 2] })
+    phase = TurnPhase.deserialize({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ 1, 2 ] })
 
     result = phase.consume_target(1)
 
     assert_instance_of TurnPhase::TargetedRemovalPhase, result.next_phase
-    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [2] }, result.next_phase.serialize)
+    assert_equal({ "type" => "sword", "klass" => "SwordTile", "pending_orders" => [ 2 ] }, result.next_phase.serialize)
     assert_equal false, result.action_completed
   end
 
@@ -149,5 +149,21 @@ class TurnPhaseTest < ActiveSupport::TestCase
 
     assert_instance_of TurnPhase::CityHallPhase, phase
     assert_equal({ "type" => "cityhall", "klass" => "CityHallTile" }, phase.serialize)
+  end
+
+  test "a phase that owns none of the optional concepts exposes neutral defaults" do
+    # The engine asks every current phase for these without a respond_to? guard
+    # (e.g. turn_endable? reads outpost_active?, the move counter reads moves and
+    # walls_placed), so a phase that lacks them must answer with the neutral value.
+    phase = TurnPhase.deserialize({ "type" => "barracks", "klass" => "BarracksTile" })
+
+    assert_nil phase.budget
+    assert_nil phase.moves
+    assert_nil phase.remaining
+    assert_nil phase.walls_placed
+    assert_nil phase.fort_terrain
+    assert_nil phase.chosen_terrain
+    assert_equal [], phase.pending_orders
+    assert_equal false, phase.outpost_active?
   end
 end

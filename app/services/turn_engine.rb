@@ -162,7 +162,7 @@ class TurnEngine
 
     return "Not a valid target" unless legal_targets.include?([ row, col ])
     current_phase = @game.turn_phase
-    pending_orders = current_phase.respond_to?(:pending_orders) ? current_phase.pending_orders : []
+    pending_orders = current_phase.pending_orders
     owner_order = @game.board_contents.player_at(row, col)
 
     owner = @game.game_players.find { |gp| gp.order == owner_order }
@@ -580,8 +580,8 @@ class TurnEngine
     game_player = @game.current_player
     tile_klass_name = current_action_tile_klass
     current_phase = @game.turn_phase
-    moves_made = current_phase.respond_to?(:moves) ? current_phase.moves.to_i : 0
-    walls_placed = current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed.to_i : 0
+    moves_made = current_phase.moves.to_i
+    walls_placed = current_phase.walls_placed.to_i
     return "Not allowed" unless moves_made >= 1 || walls_placed >= 1
 
     game_player.mark_tile_used!(tile_klass_name.demodulize)
@@ -608,7 +608,7 @@ class TurnEngine
     end
     wall_terrain = effective_terrain(game_player)
 
-    walls_placed = current_phase.respond_to?(:walls_placed) ? current_phase.walls_placed.to_i + 1 : 1
+    walls_placed = current_phase.walls_placed.to_i + 1
 
     record_move(
       action: "place_wall",
@@ -660,7 +660,7 @@ class TurnEngine
   def outpost_activatable?(tile)
     return false if tile["used"]
     return false unless build_action?
-    return false if @game.turn_phase.respond_to?(:outpost_active?) && @game.turn_phase.outpost_active?
+    return false if @game.turn_phase.outpost_active?
     @game.current_player.settlements_remaining?
   end
 
@@ -688,7 +688,7 @@ class TurnEngine
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
     if tile_klass
       tile_for_msg = tile_klass.new(0)
-      hand_for_msg = if tile_for_msg.fort_tile? && current_phase.respond_to?(:fort_terrain)
+      hand_for_msg = if tile_for_msg.fort_tile?
         current_phase.fort_terrain
       else
         @game.current_player.hand.first
@@ -698,7 +698,7 @@ class TurnEngine
         terrain_names: Boards::Board::TERRAIN_NAMES,
         hand: hand_for_msg
       )
-      remaining = current_phase.respond_to?(:remaining) ? current_phase.remaining : nil
+      remaining = current_phase.remaining
       remaining ? "#{msg} (#{remaining} remaining)" : msg
     else
       has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
@@ -785,7 +785,7 @@ class TurnEngine
 
       if action == "mandatory"
         if player.settlements_remaining? && @game.mandatory_count > 0
-          if current_phase.respond_to?(:outpost_active?) && current_phase.outpost_active?
+          if current_phase.outpost_active?
             terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
             (0..19).flat_map do |r|
               (0..19).filter_map do |c|
@@ -809,14 +809,14 @@ class TurnEngine
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
           if tile_obj.sword_tile?
-            pending_orders = current_phase.respond_to?(:pending_orders) ? current_phase.pending_orders : []
+            pending_orders = current_phase.pending_orders
             pending_orders.flat_map { |order|
               @game.board_contents.settlements_for(order).reject { |r, c| @game.board_contents.city_hall_at?(r, c) }
             }
           elsif tile_obj.places_meeple?
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
-              if current_phase.respond_to?(:budget) && current_phase.budget.to_i <= 0
+              if current_phase.budget.to_i <= 0
                 []
               else
                 @game.board_contents.neighbors(from.row, from.col).select do |row, col|
@@ -871,7 +871,7 @@ class TurnEngine
               extra_kwargs = {}
               if tile_obj.is_a?(Tiles::Nomad::ResettlementTile)
                 extra_kwargs = {
-                  budget: current_phase.respond_to?(:budget) ? current_phase.budget.to_i : 0
+                  budget: current_phase.budget.to_i
                 }
               end
               if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
@@ -890,7 +890,7 @@ class TurnEngine
               board_contents: @game.board_contents, player_order: player.order, supply: player.supply_hash
             )
           else
-            if tile_obj.builds_settlement? && current_phase.respond_to?(:outpost_active?) && current_phase.outpost_active?
+            if tile_obj.builds_settlement? && current_phase.outpost_active?
               terrains = outpost_build_terrains(tile_obj, current_phase, player)
               (0..19).flat_map do |r|
                 (0..19).filter_map do |c|
@@ -899,7 +899,7 @@ class TurnEngine
                 end
               end
             elsif tile_obj.fort_tile?
-              hand = current_phase.respond_to?(:fort_terrain) ? current_phase.fort_terrain : nil
+              hand = current_phase.fort_terrain
               tile_obj.valid_destinations(
                 board_contents: @game.board_contents, player_order: player.order, hand: hand
               )
@@ -995,7 +995,7 @@ class TurnEngine
 
   def outpost_build_terrains(tile_obj, current_phase, game_player)
     if tile_obj.fort_tile?
-      [ current_phase.respond_to?(:fort_terrain) ? current_phase.fort_terrain : nil ].compact
+      [ current_phase.fort_terrain ].compact
     elsif tile_obj.uses_played_terrain? && effective_terrain(game_player).nil?
       game_player.hand
     else
@@ -1272,7 +1272,7 @@ class TurnEngine
 
   def lock_terrain!(terrain, before)
     phase = @game.turn_phase
-    return if phase.respond_to?(:chosen_terrain) && phase.chosen_terrain
+    return if phase.chosen_terrain
     @game.turn_phase =
       if phase.is_a?(TurnPhase::TileBuildPhase)
         TurnPhase::TileBuildPhase.new(
@@ -1286,14 +1286,14 @@ class TurnEngine
         TurnPhase::MandatoryBuildPhase.new(
           chosen_terrain: terrain,
           builds: phase.is_a?(TurnPhase::MandatoryBuildPhase) ? phase.builds : [],
-          outpost_active: phase.respond_to?(:outpost_active?) && phase.outpost_active?
+          outpost_active: phase.outpost_active?
         )
       end
   end
 
   def reset_to_mandatory
     current_phase = @game.turn_phase
-    ct = current_phase.respond_to?(:chosen_terrain) ? current_phase.chosen_terrain : nil
+    ct = current_phase.chosen_terrain
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
   end
 
@@ -1303,7 +1303,7 @@ class TurnEngine
 
   def effective_terrain(player)
     current_phase = @game.turn_phase
-    (current_phase.respond_to?(:chosen_terrain) ? current_phase.chosen_terrain : nil) || (player.hand.size == 1 ? player.hand.first : nil)
+    current_phase.chosen_terrain || (player.hand.size == 1 ? player.hand.first : nil)
   end
 
   def log_piece_movement_steps(action:, game_player:, from_row:, from_col:, path:, payload:, message_piece:)

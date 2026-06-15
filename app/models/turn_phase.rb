@@ -69,6 +69,17 @@ class TurnPhase
     serialize["from"]
   end
 
+  # Null-object defaults so the engine can ask any phase for these without a
+  # respond_to? guard. Phases that own a concept override the accessor; phases
+  # that don't return the neutral value the engine would otherwise default to.
+  def budget = nil
+  def moves = nil
+  def remaining = nil
+  def walls_placed = nil
+  def fort_terrain = nil
+  def pending_orders = []
+  def outpost_active? = false
+
   def transition(_event, _facts)
     raise InvalidTransition, "#{self.class.name} does not accept that event"
   end
@@ -470,7 +481,7 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
   end
 
   def consume_target(owner_order)
-    remaining = pending_orders - [owner_order]
+    remaining = pending_orders - [ owner_order ]
     if remaining.empty?
       TurnPhase::TransitionResult.new(
         next_phase: TurnPhase::MandatoryBuildPhase.new,
