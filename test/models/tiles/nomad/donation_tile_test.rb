@@ -128,6 +128,12 @@ class Tiles::Nomad::DonationTileTest < ActiveSupport::TestCase
     assert_equal "C", Tiles::Nomad::DonationCanyonTile.new(0).build_terrain
   end
 
+  test "donation tiles repeat the build with a quota of 3" do
+    tile = Tiles::Nomad::DonationCanyonTile.new(0)
+    assert tile.repeats_build?
+    assert_equal 3, tile.build_quota
+  end
+
   test "DonationDesertTile build_terrain returns D" do
     assert_equal "D", Tiles::Nomad::DonationDesertTile.new(0).build_terrain
   end

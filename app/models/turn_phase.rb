@@ -34,7 +34,7 @@ class TurnPhase
 
     if tile&.fort_tile?
       FortPhase.from_hash(hash)
-    elsif tile&.is_a?(Tiles::Nomad::ResettlementTile)
+    elsif tile&.resettles?
       ResettlementPhase.from_hash(hash)
     elsif tile && (tile.builds_settlement? || tile.places_wall?)
       TileBuildPhase.from_hash(hash)

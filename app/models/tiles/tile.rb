@@ -92,6 +92,28 @@ module Tiles
       false
     end
 
+    # Settlement movement with a per-turn budget (ResettlementTile), as opposed
+    # to the single-step movers handled by SettlementMovePhase.
+    def resettles?
+      false
+    end
+
+    # Grants more than one settlement build in a row (DonationTile); build_quota
+    # is how many.
+    def repeats_build?
+      false
+    end
+
+    def build_quota
+      1
+    end
+
+    # Consumed for points the moment it is picked up (TreasureTile), rather than
+    # being held with an expiry.
+    def scores_on_pickup?
+      false
+    end
+
     def crossroads_tile?
       false
     end

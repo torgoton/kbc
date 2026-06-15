@@ -36,6 +36,19 @@ class Tiles::TileTest < ActiveSupport::TestCase
     assert_not Tiles::Tile.new(0).places_city_hall?
   end
 
+  test "resettles? returns false by default" do
+    assert_not Tiles::Tile.new(0).resettles?
+  end
+
+  test "repeats_build? returns false and build_quota is 1 by default" do
+    assert_not Tiles::Tile.new(0).repeats_build?
+    assert_equal 1, Tiles::Tile.new(0).build_quota
+  end
+
+  test "scores_on_pickup? returns false by default" do
+    assert_not Tiles::Tile.new(0).scores_on_pickup?
+  end
+
   test "selectable_settlements excludes city_hall hexes" do
     state = BoardState.new
     state.place_settlement(5, 5, 0)
