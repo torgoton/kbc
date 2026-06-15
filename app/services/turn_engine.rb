@@ -170,7 +170,7 @@ class TurnEngine
 
     if tile_used
       klass_name = current_action_tile_klass
-      game_player.mark_tile_used!(klass_name.demodulize)
+      game_player.mark_tile_used!(klass_name)
       @game.turn_phase = TurnPhase::MandatoryBuildPhase.new
     else
       @game.turn_phase = phase_result.next_phase
@@ -504,7 +504,7 @@ class TurnEngine
         message_piece: "settlement"
       )
       if budget <= 0
-        @game.current_player.mark_tile_used!(tile_klass_name.demodulize)
+        @game.current_player.mark_tile_used!(tile_klass_name)
         @game.turn_phase = next_phase
       else
         phase_result = current_phase.transition(
@@ -556,7 +556,7 @@ class TurnEngine
     walls_placed = current_phase.walls_placed.to_i
     return "Not allowed" unless moves_made >= 1 || walls_placed >= 1
 
-    game_player.mark_tile_used!(tile_klass_name.demodulize)
+    game_player.mark_tile_used!(tile_klass_name)
     reset_to_mandatory
     game_player.save
     @game.save
