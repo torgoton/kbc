@@ -83,10 +83,24 @@ class TurnPhase
   # Phase-kind / capability questions the engine asks instead of probing the
   # concrete class. Phases that qualify override these.
   def meeple_movement? = false
+  def mandatory_build? = false
+  def city_hall? = false
   def tile_action_endable? = false
   # Clicking one of your own pieces starts a transition(SourceSelected) rather
   # than the LegacyPhase fallback. True for the move/resettlement phases.
   def accepts_source_selection? = false
+
+  # Return a copy of this phase with the outpost power active. Non-build phases
+  # fall back to a fresh mandatory build (the engine only activates the outpost
+  # during a build action).
+  def with_outpost_active
+    TurnPhase::MandatoryBuildPhase.new(chosen_terrain: chosen_terrain, builds: [], outpost_active: true)
+  end
+
+  # Return a copy of this phase with its terrain locked in.
+  def with_chosen_terrain(terrain)
+    TurnPhase::MandatoryBuildPhase.new(chosen_terrain: terrain, builds: [], outpost_active: outpost_active?)
+  end
 
   # Remove one targeted owner and advance. Lives on the base so the engine can
   # ask any current phase uniformly: a phase with remaining orders yields the
@@ -140,6 +154,16 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
 
   def outpost_active?
     outpost_active_value == true
+  end
+
+  def mandatory_build? = true
+
+  def with_outpost_active
+    self.class.new(chosen_terrain: chosen_terrain, builds: builds, outpost_active: true)
+  end
+
+  def with_chosen_terrain(terrain)
+    self.class.new(chosen_terrain: terrain, builds: builds, outpost_active: outpost_active?)
   end
 
   def transition(event, facts)
@@ -214,6 +238,27 @@ class TurnPhase::TileBuildPhase < TurnPhase
   end
 
   def tile_action_endable? = walls_placed.to_i >= 1
+
+  def with_outpost_active
+    self.class.new(
+      action_type: action_type,
+      klass_name: klass_name,
+      chosen_terrain: chosen_terrain,
+      remaining: remaining,
+      walls_placed: walls_placed,
+      outpost_active: true
+    )
+  end
+
+  def with_chosen_terrain(terrain)
+    self.class.new(
+      action_type: action_type,
+      klass_name: klass_name,
+      chosen_terrain: terrain,
+      remaining: remaining,
+      walls_placed: walls_placed
+    )
+  end
 
   def decrement_remaining
     self.class.new(
@@ -587,6 +632,8 @@ class TurnPhase::CityHallPhase < TurnPhase
   def klass_name
     klass_value
   end
+
+  def city_hall? = true
 
   def serialize
     {

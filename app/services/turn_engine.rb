@@ -43,7 +43,7 @@ class TurnEngine
     chosen_terrain_before = current_phase.chosen_terrain
     card_terrain = effective_terrain(game_player)
 
-    if current_phase.is_a?(TurnPhase::MandatoryBuildPhase) && current_phase.outpost_active?
+    if current_phase.mandatory_build? && current_phase.outpost_active?
       return "Not available" unless legal_targets.include?([ row, col ])
       card_terrain ||= game_player.hand.find { |t| @game.board_contents.terrain_at(row, col) == t }
       lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
@@ -98,24 +98,7 @@ class TurnEngine
       message: "#{game_player.player.handle} activated the Outpost tile"
     )
     game_player.mark_tile_used!("OutpostTile")
-    current_phase = @game.turn_phase
-    @game.turn_phase =
-      if current_phase.is_a?(TurnPhase::TileBuildPhase)
-        TurnPhase::TileBuildPhase.new(
-          action_type: current_phase.type,
-          klass_name: current_phase.klass_name,
-          chosen_terrain: current_phase.chosen_terrain,
-          remaining: current_phase.remaining,
-          walls_placed: current_phase.walls_placed,
-          outpost_active: true
-        )
-      else
-        TurnPhase::MandatoryBuildPhase.new(
-          chosen_terrain: current_phase.chosen_terrain,
-          builds: current_phase.is_a?(TurnPhase::MandatoryBuildPhase) ? current_phase.builds : [],
-          outpost_active: true
-        )
-      end
+    @game.turn_phase = @game.turn_phase.with_outpost_active
     game_player.save
     @game.save
   end
@@ -124,7 +107,7 @@ class TurnEngine
     capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
-    return "Not available" unless @game.turn_phase.is_a?(TurnPhase::MandatoryBuildPhase)
+    return "Not available" unless @game.turn_phase.mandatory_build?
     return "Not available" unless game_player.find_unused_tile("FortTile")
     return "No settlements left" unless game_player.settlements_remaining?
 
@@ -630,7 +613,7 @@ class TurnEngine
   def tile_activatable?(tile)
     return false if tile["used"]
     return false unless Tiles::Tile.for_klass(tile["klass"])
-    return false unless @game.turn_phase.is_a?(TurnPhase::MandatoryBuildPhase) &&
+    return false unless @game.turn_phase.mandatory_build? &&
       (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile)
@@ -642,7 +625,7 @@ class TurnEngine
 
   def turn_endable?
     @game.playing? &&
-      @game.turn_phase.is_a?(TurnPhase::MandatoryBuildPhase) &&
+      @game.turn_phase.mandatory_build? &&
       (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
   end
 
@@ -919,7 +902,7 @@ class TurnEngine
   end
 
   def city_hall_clusters
-    return {} unless @game.turn_phase.is_a?(TurnPhase::CityHallPhase)
+    return {} unless @game.turn_phase.city_hall?
     @game.instantiate
     player = @game.current_player
     tile_obj = Tiles::CityHallTile.new(0)
@@ -973,7 +956,7 @@ class TurnEngine
   end
 
   def build_action?
-    return true if @game.turn_phase.is_a?(TurnPhase::MandatoryBuildPhase)
+    return true if @game.turn_phase.mandatory_build?
     klass = Tiles::Tile.for_klass(current_action_tile_klass)
     klass&.new(0)&.builds_settlement? || false
   end
@@ -1258,22 +1241,7 @@ class TurnEngine
   def lock_terrain!(terrain, before)
     phase = @game.turn_phase
     return if phase.chosen_terrain
-    @game.turn_phase =
-      if phase.is_a?(TurnPhase::TileBuildPhase)
-        TurnPhase::TileBuildPhase.new(
-          action_type: phase.type,
-          klass_name: phase.klass_name,
-          chosen_terrain: terrain,
-          remaining: phase.remaining,
-          walls_placed: phase.walls_placed
-        )
-      else
-        TurnPhase::MandatoryBuildPhase.new(
-          chosen_terrain: terrain,
-          builds: phase.is_a?(TurnPhase::MandatoryBuildPhase) ? phase.builds : [],
-          outpost_active: phase.outpost_active?
-        )
-      end
+    @game.turn_phase = phase.with_chosen_terrain(terrain)
   end
 
   def reset_to_mandatory
