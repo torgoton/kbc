@@ -18,7 +18,7 @@ module Tiles
 
     def build_terrain = nil
 
-    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0))
+    def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0), budget: nil)
       terrain = build_terrain || hand
       return [] unless terrain
 
@@ -40,7 +40,7 @@ module Tiles
       end
     end
 
-    def selectable_settlements(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
+    def selectable_settlements(player_order:, board_contents:, hand: nil, supply: Hash.new(0), budget: nil)
       return [] unless moves_settlement?
       return [] unless valid_destinations(board_contents:, player_order:, hand:).any?
       board_contents.settlements_for(player_order).reject { |r, c| board_contents.city_hall_at?(r, c) }
@@ -108,10 +108,11 @@ module Tiles
       1
     end
 
-    # Consumed for points the moment it is picked up (TreasureTile), rather than
-    # being held with an expiry.
-    def scores_on_pickup?
-      false
+    # A nomad tile that is consumed for points the instant it is picked up
+    # returns [goal, points] here (TreasureTile); tiles that are instead held
+    # with an expiry return nil.
+    def pickup_score
+      nil
     end
 
     def crossroads_tile?
