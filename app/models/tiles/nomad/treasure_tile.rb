@@ -4,7 +4,7 @@ module Tiles
       CREATOR = "Icon by Vector Place".freeze
       DESCRIPTION = "Immediately score 3 points when picked up.".freeze
 
-      def scores_on_pickup? = true
+      def pickup_score = [ "treasure", 3 ]
     end
   end
 end

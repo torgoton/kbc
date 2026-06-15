@@ -9,8 +9,8 @@ class Tiles::Nomad::TreasureTileTest < ActiveSupport::TestCase
     assert @tile.nomad_tile?
   end
 
-  test "scores_on_pickup? returns true" do
-    assert @tile.scores_on_pickup?
+  test "pickup_score awards 3 points to the treasure goal" do
+    assert_equal [ "treasure", 3 ], @tile.pickup_score
   end
 
   test "DESCRIPTION is set" do

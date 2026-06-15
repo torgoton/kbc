@@ -45,8 +45,8 @@ class Tiles::TileTest < ActiveSupport::TestCase
     assert_equal 1, Tiles::Tile.new(0).build_quota
   end
 
-  test "scores_on_pickup? returns false by default" do
-    assert_not Tiles::Tile.new(0).scores_on_pickup?
+  test "pickup_score is nil by default" do
+    assert_nil Tiles::Tile.new(0).pickup_score
   end
 
   test "selectable_settlements excludes city_hall hexes" do

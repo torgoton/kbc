@@ -812,44 +812,30 @@ class TurnEngine
               )
             end
           elsif tile_obj.moves_settlement?
+            # budget only gates ResettlementTile; every other mover accepts and
+            # ignores it, so it can be passed uniformly without special-casing.
             hand_arg = effective_terrain(player) || player.hand.first
+            budget = current_phase.budget.to_i
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
-              if tile_obj.resettles?
-                tile_obj.valid_destinations(
-                  from_row: from.row, from_col: from.col,
-                  board_contents: @game.board_contents,
-                  player_order: player.order, budget: current_phase.budget.to_i
-                )
-              else
-                extra_kwargs = {}
-                if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-                  player.hand.flat_map { |t|
-                    tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, player_order: player.order, hand: t, **extra_kwargs)
-                  }.uniq
-                else
-                  tile_obj.valid_destinations(
-                    from_row: from.row, from_col: from.col,
-                    board_contents: @game.board_contents, player_order: player.order, hand: hand_arg,
-                    **extra_kwargs
-                  )
-                end
-              end
-            else
-              extra_kwargs = {}
-              if tile_obj.resettles?
-                extra_kwargs = {
-                  budget: current_phase.budget.to_i
-                }
-              end
               if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
                 player.hand.flat_map { |t|
-                  tile_obj.selectable_settlements(player_order: player.order, board_contents: @game.board_contents, hand: t, **extra_kwargs)
+                  tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, player_order: player.order, hand: t, budget:)
+                }.uniq
+              else
+                tile_obj.valid_destinations(
+                  from_row: from.row, from_col: from.col,
+                  board_contents: @game.board_contents, player_order: player.order, hand: hand_arg, budget:
+                )
+              end
+            else
+              if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
+                player.hand.flat_map { |t|
+                  tile_obj.selectable_settlements(player_order: player.order, board_contents: @game.board_contents, hand: t, budget:)
                 }.uniq
               else
                 tile_obj.selectable_settlements(
-                  player_order: player.order, board_contents: @game.board_contents, hand: hand_arg,
-                  **extra_kwargs
+                  player_order: player.order, board_contents: @game.board_contents, hand: hand_arg, budget:
                 )
               end
             end
@@ -1145,10 +1131,11 @@ class TurnEngine
       )
     end
     if tile_obj&.nomad_tile?
-      if tile_obj.scores_on_pickup?
-        # Score 3 points immediately and remove the tile
+      if (scoring = tile_obj.pickup_score)
+        goal, points = scoring
+        # Score immediately and remove the tile
         game_player.tiles = (game_player.tiles || []).reject { |t| t["klass"] == tile[:klass] && t["from"] == tile[:key] }
-        score_goal(game_player, "treasure", 3, "#{game_player.player.handle} scored 3 points from a Treasure tile")
+        score_goal(game_player, goal, points, "#{game_player.player.handle} scored #{points} points from a #{tile[:klass].delete_suffix("Tile")} tile")
       else
         # Set expiry on the tile
         expires = @game.turn_number + @game.game_players.count
