@@ -1738,7 +1738,12 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "placing a lighthouse ship adjacent to an oasis location picks up an Oasis tile" do
     @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    @game.board_contents.place_tile(2, 4, "OasisTile", 2)
+    # Start a clean board so (1, 4) is deterministically empty water. Reusing the
+    # board_contents from `start` leaves randomly-placed location/nomad tiles that
+    # can occupy (1, 4) and make the ship placement illegal (order-dependent flake).
+    @game.board_contents = BoardState.new.tap do |state|
+      state.place_tile(2, 4, "OasisTile", 2)
+    end
     @game.save!
     @engine = TurnEngine.new(@game.reload)
 
