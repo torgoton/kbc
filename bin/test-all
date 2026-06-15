@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#
+# Run the entire test suite with one command and a single merged coverage report.
+#
+# Units/integration/scenario tests run in parallel (fast). Browser system tests
+# run separately, on their own: inside the parallel pool the system-test browser
+# is CPU-starved by the other workers, so Turbo drops the intercepted click and
+# navigations silently fail (only a fully-serial run is reliable). Splitting the
+# two suites keeps the unit run parallel and the system run reliable.
+#
+# SimpleCov merges both runs' results automatically (each run writes distinct
+# command names to coverage/.resultset.json within the merge window), so the
+# final coverage/index.html reflects the whole suite.
+#
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+rm -rf coverage
+
+bin/rails test
+units_status=$?
+
+bin/rails test:system
+system_status=$?
+
+echo
+if [ "$units_status" -eq 0 ] && [ "$system_status" -eq 0 ]; then
+  echo "✓ All tests passed — merged coverage report: coverage/index.html"
+  exit 0
+else
+  echo "✗ Failures (units exit=$units_status, system exit=$system_status)"
+  exit 1
+fi
