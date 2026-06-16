@@ -93,7 +93,7 @@ section#log {
 #board {
     display: grid;
     grid-template-columns: 10fr 10fr 1fr;
-    height: 60vw;
+    aspect-ratio: 21 / 22;
     margin-left: 5px;
     position: absolute;
     top: 0;
