@@ -124,10 +124,17 @@ section#log {
 
 .hex {
     --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
-    border-radius: 15%;
     position: relative;
-    border: 1px solid #0004;
     margin: 0.25px;
+    overflow: visible;
+}
+
+.hex-bg {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    position: absolute;
+    inset: 0;
+    background-color: var(--hex-bg, transparent);
+    pointer-events: none;
 }
 
 .hex > .hex-outline {
@@ -144,7 +151,7 @@ svg {
     height: 102%;
 }
 
-ul li .hex:hover {
+ul li .hex:hover .hex-bg {
     background-color: #fd005f;
 }
 
@@ -345,38 +352,38 @@ ul li .hex:hover {
 /* Terrains suitable for building */
 /* canyon */
 .hex.terrain-c {
-    background-color: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
 }
 
 /* desert */
 .hex.terrain-d {
-    background-color: color-mix(in srgb, #ffd700, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #ffd700, transparent var(--fx-hex-transparency));
 }
 
 /* flower field */
 .hex.terrain-f {
-    background-color: color-mix(in srgb, darkorchid, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, darkorchid, transparent var(--fx-hex-transparency));
 }
 
 /* grassland */
 .hex.terrain-g {
-    background-color: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
 }
 
 /* timberland (forest) */
 .hex.terrain-t {
-    background-color: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
 }
 
 /* Terrains normally not suitable for building */
 /* mountain */
 .hex.terrain-m {
-    background-color: color-mix(in srgb, #444, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #444, transparent var(--fx-hex-transparency));
 }
 
 /* water */
 .hex.terrain-w {
-    background-color: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
 }
 
 /* Special terrains */
@@ -388,12 +395,12 @@ ul li .hex:hover {
 
 /* location (tiles, nomads) */
 .hex.terrain-l {
-    background-color: color-mix(in srgb, goldenrod, transparent var(--fx-loc-transparency));
+    --hex-bg: color-mix(in srgb, goldenrod, transparent var(--fx-loc-transparency));
 }
 
 /* silver (castle, palace, etc) */
 .hex.terrain-s {
-    background-color: color-mix(in srgb, silver, transparent var(--fx-loc-transparency));
+    --hex-bg: color-mix(in srgb, silver, transparent var(--fx-loc-transparency));
 }
 
 .hex.terrain-s:before, .hex.terrain-l:before {
