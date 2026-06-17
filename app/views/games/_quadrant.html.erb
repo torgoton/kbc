@@ -22,6 +22,9 @@
           board_col < 10 ? "left" : "right",
           board_row <= 2 ? "top-row" : nil,
           ].compact.join(" ") do %>
+        <div class="hex-bg"></div>
+        <div class="terrain-icon"></div>
+        <svg class="hex-outline" viewBox="0 0 100 115.47" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,0 100,28.87 100,86.60 50,115.47 0,86.60 0,28.87"/></svg>
         <% if terrain == "s" && !content.is_a?(Tiles::Tile) %>
           <% silver_kind = quadrant.silver_hex_kind(row, col) %>
           <%= content_tag :div, nil, class: silver_kind == "Nomad" ? "terrain-nomad" : "terrain-castlehex" %>

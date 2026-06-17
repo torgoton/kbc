@@ -10,7 +10,7 @@
     --clr-p-d: #cccccc;
     --clr-p-e: #aa00aa;
 
-    --fx-hex-transparency: 10%;
+    --fx-hex-transparency: 15%;
     --fx-loc-transparency: 15%;
 }
 
@@ -32,7 +32,7 @@ body.game-page {
     display: grid;
     grid-template-areas:
         "main players-area game-log";
-    grid-template-columns: 5fr 2fr 2fr;
+    grid-template-columns: 7fr 2fr 2fr;
     grid-template-rows: 1fr;
     flex: 1;
     min-height: 0;
@@ -51,6 +51,7 @@ main {
     overflow: hidden;
     position: relative;
     cursor: grab;
+    container-type: inline-size;
 }
 
 #board-viewport.grabbing {
@@ -93,7 +94,6 @@ section#log {
 #board {
     display: grid;
     grid-template-columns: 10fr 10fr 1fr;
-    height: 60vw;
     margin-left: 5px;
     position: absolute;
     top: 0;
@@ -106,28 +106,35 @@ section#log {
 .quadrant {
     display: grid;
     grid-template-columns: repeat(21, 1fr);
-    grid-template-rows: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 3.927cqw);
+    position: relative;
 }
 
 .quadrant.right {
-    margin-left: -14px;
+    margin-left: -24px;
 }
 
 .quadrant.bottom {
-    margin-top: 3px;
+    margin-top: 4px;
 }
 
 .hex, .marker {
     grid-column: span 2;
     position: relative;
+    align-self: start;
 }
 
 .hex {
-    --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
-    border-radius: 15%;
-    position: relative;
-    border: 1px solid #0004;
-    margin: 0.25px;
+    height: 5.236cqw;
+    overflow: visible;
+}
+
+.hex-bg {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    position: absolute;
+    inset: 0;
+    background-color: var(--hex-bg, transparent);
+    pointer-events: none;
 }
 
 .hex > .hex-outline {
@@ -136,7 +143,15 @@ section#log {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    pointer-events: none;
+}
+
+.hex > .hex-outline polygon {
+    fill: none;
+    stroke: oklch(from var(--hex-bg, transparent) calc(l * 0.55) c h);
+    stroke-width: 4;
+    vector-effect: non-scaling-stroke;
 }
 
 svg {
@@ -144,26 +159,36 @@ svg {
     height: 102%;
 }
 
-ul li .hex:hover {
+ul li .hex:hover .hex-bg {
     background-color: #fd005f;
 }
 
 #board .selectable {
     cursor: pointer;
     width: 95%;
-    height: 95%;
     margin: auto;
 }
 
-#board .selectable:hover {
-    box-shadow: 0 0 10px 5px white;
+#board .selectable .hex-outline polygon {
+    stroke: black;
+    stroke-width: 4px;
+    animation: selectable-pulse 2s linear infinite;
+}
+
+@keyframes selectable-pulse {
+    0%, 100%  { stroke-opacity: 0.2; }
+    50%       { stroke-opacity: 1; }
+}
+
+#board .selectable:hover .hex-bg {
+    filter: drop-shadow(0 0 2px white);
 }
 
 #board .selected {
     transform: scale(1.25);
-    box-shadow: 0 0 0 2px #f0c040, 0 0 14px 4px rgba(240, 192, 64, 0.7);
     z-index: 10;
-    transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+    transition: transform 0.1s ease-out;
+    filter: drop-shadow(0 0 3px #f0c040) drop-shadow(0 0 8px rgba(240, 192, 64, 0.8));
 }
 
 @property --angle {
@@ -176,7 +201,8 @@ ul li .hex:hover {
     --angle: 0deg;
     content: "";
     position: absolute;
-    border-radius: 5px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    box-sizing: content-box;
     height: 100%;
     width: 100%;
     background-image: conic-gradient(from var(--angle), black, white, black, white, black);
@@ -185,7 +211,7 @@ ul li .hex:hover {
     translate: -50% -50%;
     z-index: -1;
     padding: 3px;
-    animation: 5s spin linear infinite;
+    animation: 3s spin linear infinite;
 }
 
 @keyframes spin {
@@ -266,21 +292,21 @@ ul li .hex:hover {
 
 .tile-counter {
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 48%;
-    height: 48%;
+    top: 0%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30%;
+    aspect-ratio: 1;
     background: #cc1100;
-    clip-path: polygon(100% 0, 100% 100%, 0 0);
+    border-radius: 50%;
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding: 4% 6% 0 0;
+    align-items: center;
+    justify-content: center;
     color: white;
     font-size: 0.7rem;
     font-weight: 900;
     line-height: 1;
-    z-index: 2;
+    z-index: 4;
     text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
 
@@ -345,61 +371,82 @@ ul li .hex:hover {
 /* Terrains suitable for building */
 /* canyon */
 .hex.terrain-c {
-    background-color: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
 }
 
 /* desert */
 .hex.terrain-d {
-    background-color: color-mix(in srgb, #ffd700, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #ffd700, transparent var(--fx-hex-transparency));
 }
 
 /* flower field */
 .hex.terrain-f {
-    background-color: color-mix(in srgb, darkorchid, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, darkorchid, transparent var(--fx-hex-transparency));
 }
 
 /* grassland */
 .hex.terrain-g {
-    background-color: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
 }
 
 /* timberland (forest) */
 .hex.terrain-t {
-    background-color: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
 }
 
 /* Terrains normally not suitable for building */
 /* mountain */
 .hex.terrain-m {
-    background-color: color-mix(in srgb, #444, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #444, transparent var(--fx-hex-transparency));
 }
 
 /* water */
 .hex.terrain-w {
-    background-color: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
 }
+
+/* Terrain icons */
+.hex .terrain-icon {
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-size: 38%;
+    background-position: center 85%;
+    opacity: 0.65;
+    pointer-events: none;
+}
+.hex.terrain-c .terrain-icon { background-image: url("terrain-icons/canyon.svg"); }
+.hex.terrain-d .terrain-icon { background-image: url("terrain-icons/desert.svg"); }
+.hex.terrain-f .terrain-icon { background-image: url("terrain-icons/flowers.svg"); }
+.hex.terrain-g .terrain-icon { background-image: url("terrain-icons/grass.svg"); }
+.hex.terrain-t .terrain-icon { background-image: url("terrain-icons/timberland.svg"); }
+.hex.terrain-m .terrain-icon { background-image: url("terrain-icons/mountain.svg"); }
+.hex.terrain-w .terrain-icon { background-image: url("terrain-icons/water.svg"); }
+.hex.terrain-b .terrain-icon { background-image: url("terrain-icons/marshland.svg"); }
+.hex.terrain-p .terrain-icon { background-image: url("terrain-icons/farmland.svg"); }
 
 /* Special terrains */
 .hex.terrain-l, .hex.terrain-s {
     width: 95%;
-    height: 95%;
+    height: 4.974cqw;
     margin: auto;
 }
 
 /* location (tiles, nomads) */
 .hex.terrain-l {
-    background-color: color-mix(in srgb, goldenrod, transparent var(--fx-loc-transparency));
+    --hex-bg: color-mix(in srgb, goldenrod, transparent var(--fx-loc-transparency));
 }
 
 /* silver (castle, palace, etc) */
 .hex.terrain-s {
-    background-color: color-mix(in srgb, silver, transparent var(--fx-loc-transparency));
+    --hex-bg: color-mix(in srgb, silver, transparent var(--fx-loc-transparency));
 }
 
 .hex.terrain-s:before, .hex.terrain-l:before {
     content: "";
     position: absolute;
-    border-radius: 5px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    box-sizing: content-box;
     height: 100%;
     width: 100%;
     background-image: conic-gradient(from var(--angle), black, white, black, white, black);
@@ -411,8 +458,8 @@ ul li .hex:hover {
 }
 
 .hex .terrain-castlehex {
-    height: inherit;
-    width: inherit;
+    position: absolute;
+    inset: 0;
     background-image: url("silver/castle.svg");
     background-size: 100%;
     background-repeat: no-repeat;
@@ -420,8 +467,8 @@ ul li .hex:hover {
 }
 
 .hex .terrain-nomad {
-    height: inherit;
-    width: inherit;
+    position: absolute;
+    inset: 0;
     background-image: url("silver/nomad.svg");
     background-size: 100%;
     background-repeat: no-repeat;
@@ -725,10 +772,10 @@ ul li .hex:hover {
 
 .hex-settlement {
     position: absolute;
-    top: 14%;
-    left: 21%;
-    width: 66%;
-    height: 66%;
+    top: 5%;
+    left: 20%;
+    width: 60%;
+    height: 60%;
 }
 
 .city-hall-settlement {
@@ -746,7 +793,8 @@ ul li .hex:hover {
     --angle: 0deg;
     content: "";
     position: absolute;
-    border-radius: 5px;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    box-sizing: content-box;
     height: 100%;
     width: 100%;
     background-image: conic-gradient(from var(--angle), #5a3a00, gold, #ffd700, gold, #5a3a00);

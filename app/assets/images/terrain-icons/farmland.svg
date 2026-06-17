@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- plowed field rows -->
+  <path d="M6 34 Q14 30 22 34 Q30 38 42 34" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M6 27 Q14 23 22 27 Q30 31 42 27" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <path d="M6 20 Q14 16 22 20 Q30 24 42 20" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- wheat stalk -->
+  <line x1="36" y1="38" x2="36" y2="8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="36" cy="5" rx="2.5" ry="4" fill="white"/>
+  <line x1="36" y1="14" x2="32" y2="10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="36" y1="18" x2="40" y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
