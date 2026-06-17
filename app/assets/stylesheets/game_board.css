@@ -10,7 +10,7 @@
     --clr-p-d: #cccccc;
     --clr-p-e: #aa00aa;
 
-    --fx-hex-transparency: 10%;
+    --fx-hex-transparency: 15%;
     --fx-loc-transparency: 15%;
 }
 
@@ -171,8 +171,8 @@ ul li .hex:hover .hex-bg {
 
 #board .selectable .hex-outline polygon {
     stroke: black;
-    stroke-width: 8;
-    animation: selectable-pulse 2s ease-in-out infinite;
+    stroke-width: 4px;
+    animation: selectable-pulse 2s linear infinite;
 }
 
 @keyframes selectable-pulse {
@@ -181,7 +181,7 @@ ul li .hex:hover .hex-bg {
 }
 
 #board .selectable:hover .hex-bg {
-    filter: drop-shadow(0 0 5px white) drop-shadow(0 0 2px white);
+    filter: drop-shadow(0 0 2px white);
 }
 
 #board .selected {
@@ -211,7 +211,7 @@ ul li .hex:hover .hex-bg {
     translate: -50% -50%;
     z-index: -1;
     padding: 3px;
-    animation: 5s spin linear infinite;
+    animation: 3s spin linear infinite;
 }
 
 @keyframes spin {
@@ -404,6 +404,26 @@ ul li .hex:hover .hex-bg {
 .hex.terrain-w {
     --hex-bg: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
 }
+
+/* Terrain icons */
+.hex .terrain-icon {
+    position: absolute;
+    inset: 0;
+    background-repeat: no-repeat;
+    background-size: 38%;
+    background-position: center 85%;
+    opacity: 0.65;
+    pointer-events: none;
+}
+.hex.terrain-c .terrain-icon { background-image: url("terrain-icons/canyon.svg"); }
+.hex.terrain-d .terrain-icon { background-image: url("terrain-icons/desert.svg"); }
+.hex.terrain-f .terrain-icon { background-image: url("terrain-icons/flowers.svg"); }
+.hex.terrain-g .terrain-icon { background-image: url("terrain-icons/grass.svg"); }
+.hex.terrain-t .terrain-icon { background-image: url("terrain-icons/timberland.svg"); }
+.hex.terrain-m .terrain-icon { background-image: url("terrain-icons/mountain.svg"); }
+.hex.terrain-w .terrain-icon { background-image: url("terrain-icons/water.svg"); }
+.hex.terrain-b .terrain-icon { background-image: url("terrain-icons/marshland.svg"); }
+.hex.terrain-p .terrain-icon { background-image: url("terrain-icons/farmland.svg"); }
 
 /* Special terrains */
 .hex.terrain-l, .hex.terrain-s {
@@ -752,10 +772,10 @@ ul li .hex:hover .hex-bg {
 
 .hex-settlement {
     position: absolute;
-    top: 14%;
-    left: 21%;
-    width: 66%;
-    height: 66%;
+    top: 5%;
+    left: 20%;
+    width: 60%;
+    height: 60%;
 }
 
 .city-hall-settlement {
