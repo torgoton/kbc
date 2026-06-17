@@ -32,7 +32,7 @@ body.game-page {
     display: grid;
     grid-template-areas:
         "main players-area game-log";
-    grid-template-columns: 5fr 2fr 2fr;
+    grid-template-columns: 7fr 2fr 2fr;
     grid-template-rows: 1fr;
     flex: 1;
     min-height: 0;
@@ -51,6 +51,7 @@ main {
     overflow: hidden;
     position: relative;
     cursor: grab;
+    container-type: inline-size;
 }
 
 #board-viewport.grabbing {
@@ -93,7 +94,6 @@ section#log {
 #board {
     display: grid;
     grid-template-columns: 10fr 10fr 1fr;
-    aspect-ratio: 21 / 22;
     margin-left: 5px;
     position: absolute;
     top: 0;
@@ -106,26 +106,26 @@ section#log {
 .quadrant {
     display: grid;
     grid-template-columns: repeat(21, 1fr);
-    grid-template-rows: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 3.927cqw);
+    position: relative;
 }
 
 .quadrant.right {
-    margin-left: -14px;
+    margin-left: -24px;
 }
 
 .quadrant.bottom {
-    margin-top: 3px;
+    margin-top: 4px;
 }
 
 .hex, .marker {
     grid-column: span 2;
     position: relative;
+    align-self: start;
 }
 
 .hex {
-    --cell-padding: calc(var(--cell-width) * 2.0 / sqrt(3));
-    position: relative;
-    margin: 0.25px;
+    height: 5.236cqw;
     overflow: visible;
 }
 
@@ -143,7 +143,15 @@ section#log {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1;
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    pointer-events: none;
+}
+
+.hex > .hex-outline polygon {
+    fill: none;
+    stroke: oklch(from var(--hex-bg, transparent) calc(l * 0.55) c h);
+    stroke-width: 4;
+    vector-effect: non-scaling-stroke;
 }
 
 svg {
@@ -158,8 +166,18 @@ ul li .hex:hover .hex-bg {
 #board .selectable {
     cursor: pointer;
     width: 95%;
-    height: 95%;
     margin: auto;
+}
+
+#board .selectable .hex-outline polygon {
+    stroke: black;
+    stroke-width: 8;
+    animation: selectable-pulse 2s ease-in-out infinite;
+}
+
+@keyframes selectable-pulse {
+    0%, 100%  { stroke-opacity: 0.2; }
+    50%       { stroke-opacity: 1; }
 }
 
 #board .selectable:hover .hex-bg {
@@ -170,9 +188,6 @@ ul li .hex:hover .hex-bg {
     transform: scale(1.25);
     z-index: 10;
     transition: transform 0.1s ease-out;
-}
-
-#board .selected .hex-bg {
     filter: drop-shadow(0 0 3px #f0c040) drop-shadow(0 0 8px rgba(240, 192, 64, 0.8));
 }
 
@@ -277,21 +292,21 @@ ul li .hex:hover .hex-bg {
 
 .tile-counter {
     position: absolute;
-    top: 0;
-    right: 0;
-    width: 48%;
-    height: 48%;
+    top: 0%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30%;
+    aspect-ratio: 1;
     background: #cc1100;
-    clip-path: polygon(100% 0, 100% 100%, 0 0);
+    border-radius: 50%;
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding: 4% 6% 0 0;
+    align-items: center;
+    justify-content: center;
     color: white;
     font-size: 0.7rem;
     font-weight: 900;
     line-height: 1;
-    z-index: 2;
+    z-index: 4;
     text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
 
@@ -393,7 +408,7 @@ ul li .hex:hover .hex-bg {
 /* Special terrains */
 .hex.terrain-l, .hex.terrain-s {
     width: 95%;
-    height: 95%;
+    height: 4.974cqw;
     margin: auto;
 }
 
@@ -423,8 +438,8 @@ ul li .hex:hover .hex-bg {
 }
 
 .hex .terrain-castlehex {
-    height: inherit;
-    width: inherit;
+    position: absolute;
+    inset: 0;
     background-image: url("silver/castle.svg");
     background-size: 100%;
     background-repeat: no-repeat;
@@ -432,8 +447,8 @@ ul li .hex:hover .hex-bg {
 }
 
 .hex .terrain-nomad {
-    height: inherit;
-    width: inherit;
+    position: absolute;
+    inset: 0;
     background-image: url("silver/nomad.svg");
     background-size: 100%;
     background-repeat: no-repeat;
