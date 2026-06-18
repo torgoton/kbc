@@ -1,9 +1,16 @@
+CONTAINERIZED ?= 1
+
 ifeq ($(CONTAINERIZED),1)
-up: up-container
+up:
+	@docker compose up --build
 
-down: down-container
+down:
+	@echo "Stopping the application..."
+	@docker compose down
 
-tail: tail-container
+tail:
+	@echo "Tailing the application logs..."
+	@docker compose logs -f web
 else
 up:
 	@bin/dev
@@ -16,15 +23,4 @@ tail:
 	@echo "Tailing the application logs..."
 	tail -f log/*.log
 endif
-
-up-container:
-	@docker compose up --build
-
-down-container:
-	@echo "Stopping the application..."
-	@docker compose down
-
-tail-container:
-	@echo "Tailing the application logs..."
-	@docker compose logs -f web
 
