@@ -7,8 +7,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     ports:
       - 3000:3000
     volumes:
@@ -16,7 +14,6 @@ services:
     environment:
       RAILS_ENV: development
       DB_HOST: db
-      REDIS_URL: redis://redis:6379/1
 
   db:
     image: postgres:16-alpine
@@ -32,16 +29,5 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
-  redis:
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    volumes:
-      - redis-data:/data
-
 volumes:
   postgres-data:
-  redis-data:
