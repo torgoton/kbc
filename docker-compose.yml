@@ -3,12 +3,11 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile-dev
-    command: ["./bin/rails", "server", "--binding=0.0.0.0", "--port=3000"]
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - 3000:3000
+      - "${KBC_HOST_PORT:-3000}:3000"
     volumes:
       - .:/usr/src/app
     environment:
