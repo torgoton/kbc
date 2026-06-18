@@ -4,6 +4,8 @@ A browser-based implementation of the [Kingdom Builder](https://new.queen-games.
 
 **Live:** [kbc.chrisschumann.dev](https://kbc.chrisschumann.dev) — accounts are required to play. If you'd like to try it, click the "Request an account" link or reach out directly to request one.
 
+- run the whole stack in development mode with `make up` (or `docker compose up --build`)
+
 ---
 
 ## What it is
@@ -50,19 +52,49 @@ The board rendering is done entirely in CSS and HTML, no canvas. Space-adjacent 
 
 **Please let me know if this section needs corrections!**
 
-Requires Ruby, PostgreSQL, and Valkey or Redis. No Node or npm needed.
+Requires Ruby and PostgreSQL. No Node or npm needed.
 
-Set your database credentials in `config/database.yml`.
+With Docker, run the containerized stack with `make up` (equivalent to `docker compose up --build`). For a native setup, set your database credentials in `config/database.yml`.
 
 ```bash
 git clone https://github.com/torgoton/kbc.git
 cd kbc
-bundle install
-rails db:setup
 make up
 ```
 
 In the app, request at least two accounts, then from a Rails console set the approved column in the users table to true.
+
+### Container notes
+
+`docker compose` runs the app in `RAILS_ENV=development` against the `kbc_development` database. The Rails server listens on port `3000` inside the container; override the host port with `KBC_HOST_PORT` (default `3000`).
+
+Start, stop, and tear down the stack:
+
+```bash
+make up
+make stop      # pause containers
+make down      # stop and remove containers (database data is preserved)
+```
+
+The `app` directory is mounted into the container, so code changes sync immediately while Rails runs in development mode.
+
+Reset the database (`make reset` will prompt before deleting the database volume):
+
+```bash
+make reset
+```
+
+Connect to Postgres from inside the container:
+
+```bash
+docker compose exec db psql -U postgres -d kbc_development
+```
+
+Or from the host via the published port (use your configured `KBC_HOST_PORT`):
+
+```bash
+psql -h localhost -p ${KBC_HOST_PORT:-3000} -U postgres -d kbc_development
+```
 
 ---
 
