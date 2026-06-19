@@ -10,8 +10,8 @@
     --clr-p-d: #cccccc;
     --clr-p-e: #aa00aa;
 
-    --fx-hex-transparency: 15%;
-    --fx-loc-transparency: 15%;
+    --fx-hex-transparency: 20%;
+    --fx-loc-transparency: 35%;
 }
 
 html{
@@ -150,8 +150,7 @@ section#log {
 .hex > .hex-outline polygon {
     fill: none;
     stroke: oklch(from var(--hex-bg, transparent) calc(l * 0.55) c h);
-    stroke-width: 4;
-    vector-effect: non-scaling-stroke;
+    stroke-width: 8px;
 }
 
 svg {
@@ -292,10 +291,10 @@ ul li .hex:hover .hex-bg {
 
 .tile-counter {
     position: absolute;
-    top: 0%;
+    top: -5%;
     left: 50%;
     transform: translateX(-50%);
-    width: 25%;
+    width: 35%;
     aspect-ratio: 1;
     background: #cc1100;
     border-radius: 50%;
@@ -427,8 +426,8 @@ ul li .hex:hover .hex-bg {
 
 /* Special terrains */
 .hex.terrain-l, .hex.terrain-s {
-    width: 95%;
-    height: 4.974cqw;
+    width: 92%;
+    height: 132%;
     margin: auto;
 }
 
