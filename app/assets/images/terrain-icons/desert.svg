@@ -1,9 +1,88 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <circle cx="34" cy="12" r="6" fill="white"/>
-  <line x1="34" y1="3" x2="34" y2="5" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  <line x1="41" y1="5" x2="39.5" y2="6.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  <line x1="27" y1="5" x2="28.5" y2="6.5" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  <line x1="43" y1="12" x2="41" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  <line x1="27" y1="12" x2="25" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  <path d="M4 38 Q10 24 18 32 Q26 40 34 28 Q40 20 44 26" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 48 48"
+   fill="none"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="desert.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs5" />
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showguides="true"
+     inkscape:zoom="16.666667"
+     inkscape:cx="23.97"
+     inkscape:cy="24"
+     inkscape:window-width="1920"
+     inkscape:window-height="1011"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5">
+    <sodipodi:guide
+       position="-2.5307812,33.001406"
+       orientation="0,-1"
+       id="guide5"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <path
+     d="m 6.4816632,26.180364 c 6.9185008,0 11.1146358,1.616103 15.2865678,4.042779 0.09314,0.05409 0.194846,0.07989 0.29533,0.07989 0.202697,0 0.400064,-0.104807 0.509264,-0.292666 0.163368,-0.280924 0.06814,-0.641154 -0.212853,-0.804594 -1.606956,-0.934611 -3.805147,-2.11449 -6.563314,-2.948618 -2.789355,-0.843707 -5.836296,-1.253784 -9.3149948,-1.253784 -0.3250795,0 -0.5884992,0.263421 -0.5884992,0.5885 0,0.325079 0.2634197,0.588499 0.5884992,0.588499 z"
+     id="path8"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.0720317" />
+  <path
+     d="m 42.184897,25.003366 c -9.092418,0 -13.702086,2.836752 -18.160057,5.58008 -4.517252,2.779847 -8.783978,5.405475 -17.5431768,5.405475 -0.3250795,0 -0.5884992,0.26342 -0.5884992,0.588499 0,0.325079 0.2634197,0.588499 0.5884992,0.588499 9.0924178,0 13.7020858,-2.836752 18.1600568,-5.58008 4.517252,-2.779848 8.783978,-5.405475 17.543177,-5.405475 0.325079,0 0.588499,-0.26342 0.588499,-0.588499 0,-0.325079 -0.26342,-0.588499 -0.588499,-0.588499 z"
+     id="path9"
+     style="fill:#000000;stroke-width:0.0720317" />
+  <path
+     d="m 24.33328,14.998594 c -3.180107,0 -5.767352,2.587348 -5.767352,5.767354 0,3.180005 2.587346,5.767353 5.767352,5.767353 3.180006,0 5.767352,-2.587348 5.767352,-5.767353 0,-3.180006 -2.587245,-5.767354 -5.767352,-5.767354 z m 0,9.88702 c -2.271605,0 -4.119566,-1.84796 -4.119566,-4.119566 0,-2.271604 1.847961,-4.119666 4.119566,-4.119666 2.271605,0 4.119566,1.84796 4.119566,4.119566 0,2.271605 -1.847961,4.119666 -4.119566,4.119666 z"
+     id="path10"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.100844" />
+  <circle
+     cx="10.741797"
+     cy="29.924175"
+     r="1.625"
+     id="circle10"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.198899" />
+  <circle
+     cx="11.778298"
+     cy="30.960676"
+     r="0.58849907"
+     id="circle11"
+     style="stroke-width:0.0720317" />
+  <circle
+     cx="33.470692"
+     cy="41.676125"
+     r="1.625"
+     id="circle12"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.198898" />
+  <circle
+     cx="37.924759"
+     cy="44.750195"
+     r="1.625"
+     id="circle13"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.198898" />
+  <circle
+     cx="38.658833"
+     cy="31.217176"
+     r="1.625"
+     id="circle14"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.198898" />
+  <circle
+     cx="12.154799"
+     cy="44.016121"
+     r="1.625"
+     id="circle15"
+     style="fill:#000000;fill-opacity:1;stroke-width:0.198898" />
 </svg>

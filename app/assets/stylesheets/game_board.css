@@ -295,7 +295,7 @@ ul li .hex:hover .hex-bg {
     top: 0%;
     left: 50%;
     transform: translateX(-50%);
-    width: 30%;
+    width: 25%;
     aspect-ratio: 1;
     background: #cc1100;
     border-radius: 50%;
@@ -1230,7 +1230,7 @@ ul li .hex:hover .hex-bg {
     display: inline-block;
     flex-shrink: 0;
     border-radius: 6px;
-    border: 2px solid rgba(0, 0, 0, 0.35);
+    /* border: 2px solid rgba(0, 0, 0, 0.35); */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
@@ -1239,24 +1239,24 @@ ul li .hex:hover .hex-bg {
 }
 
 .player-card.card-G {
-    background-image: url("grass.svg");
+    background-image: url("cards/grass-card.svg");
     background-position: 20%;
 }
 
 .player-card.card-C {
-    background-image: url("canyon.svg");
+    background-image: url("cards/canyon-card.svg");
 }
 
 .player-card.card-D {
-    background-image: url("desert.svg");
+    background-image: url("cards/desert-card.svg");
 }
 
 .player-card.card-F {
-    background-image: url("flowers.svg");
+    background-image: url("cards/flowers-card.svg");
 }
 
 .player-card.card-T {
-    background-image: url("timberland.svg");
+    background-image: url("cards/timberland-card.svg");
 }
 
 .player-card.card-shunned {
