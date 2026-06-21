@@ -7,7 +7,7 @@ class Tiles::WagonTileTest < ActiveSupport::TestCase
 
   SUITABLE = Tiles::Tile::BUILDABLE_TERRAIN + [ "M" ]
 
-  def tile = Tiles::WagonTile.new(2)
+  def tile = Tiles::Location::WagonTile.new(2)
 
   def all_grass_board
     terrain = {}

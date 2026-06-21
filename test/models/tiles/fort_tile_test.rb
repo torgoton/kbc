@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Tiles::FortTileTest < ActiveSupport::TestCase
-  def tile = Tiles::FortTile.new(0)
+  def tile = Tiles::Location::FortTile.new(0)
 
   test "fort_tile? is true" do
     assert tile.fort_tile?

@@ -20,12 +20,12 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
   end
 
   test "places_wall? returns true" do
-    assert Tiles::QuarryTile.new(0).places_wall?
+    assert Tiles::Location::QuarryTile.new(0).places_wall?
   end
 
   test "valid_destinations returns empty terrain hexes of hand terrain adjacent to player settlements" do
     ctx = setup_board
-    tile = Tiles::QuarryTile.new(0)
+    tile = Tiles::Location::QuarryTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
@@ -40,7 +40,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
 
   test "valid_destinations does not return hexes not adjacent to any settlement" do
     ctx = setup_board
-    tile = Tiles::QuarryTile.new(0)
+    tile = Tiles::Location::QuarryTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
@@ -53,7 +53,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
 
   test "valid_destinations does not return occupied hexes" do
     ctx = setup_board { |s| s.place_settlement(0, 1, 1) }
-    tile = Tiles::QuarryTile.new(0)
+    tile = Tiles::Location::QuarryTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]),
@@ -66,7 +66,7 @@ class Tiles::QuarryTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns empty when hand is nil" do
     ctx = setup_board
-    tile = Tiles::QuarryTile.new(0)
+    tile = Tiles::Location::QuarryTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]),

@@ -19,12 +19,12 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
   end
 
   test "builds_settlement? returns true" do
-    assert Tiles::TowerTile.new(0).builds_settlement?
+    assert Tiles::Location::TowerTile.new(0).builds_settlement?
   end
 
   test "valid_destinations returns adjacent buildable border hexes" do
     setup_board
-    tile = Tiles::TowerTile.new(0)
+    tile = Tiles::Location::TowerTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -45,7 +45,7 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
     game.save
     game.instantiate
     ctx = { board_contents: with_terrain(game.board_contents, game.board) }
-    tile = Tiles::TowerTile.new(0)
+    tile = Tiles::Location::TowerTile.new(0)
 
     result = tile.valid_destinations(**ctx, player_order: chris.order)
 
@@ -56,7 +56,7 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
 
   test "valid_destinations excludes occupied border hexes" do
     setup_board { |s| s.place_settlement(0, 1, 1) }
-    tile = Tiles::TowerTile.new(0)
+    tile = Tiles::Location::TowerTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -64,6 +64,6 @@ class Tiles::TowerTileTest < ActiveSupport::TestCase
   end
 
   test "from_hash returns a TowerTile" do
-    assert_instance_of Tiles::TowerTile, Tiles::Tile.from_hash("klass" => "TowerTile")
+    assert_instance_of Tiles::Location::TowerTile, Tiles::Tile.from_hash("klass" => "TowerTile")
   end
 end

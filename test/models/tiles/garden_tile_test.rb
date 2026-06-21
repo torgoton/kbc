@@ -22,13 +22,13 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
   end
 
   test "builds_settlement? returns true" do
-    assert Tiles::GardenTile.new(0).builds_settlement?
+    assert Tiles::Location::GardenTile.new(0).builds_settlement?
   end
 
   test "valid_destinations returns adjacent flower hexes when available" do
     # Settlement at (4,6)=G. Odd-row neighbors: (3,6)=F, (4,7)=F are adjacent F hexes.
     setup_board(4, 6)
-    tile = Tiles::GardenTile.new(0)
+    tile = Tiles::Location::GardenTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -38,7 +38,7 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
 
   test "valid_destinations includes only empty flower hexes" do
     setup_board(4, 6) { |s| s.place_settlement(3, 6, 1) }
-    tile = Tiles::GardenTile.new(0)
+    tile = Tiles::Location::GardenTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -49,7 +49,7 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
   test "valid_destinations falls back to all flower hexes when none adjacent" do
     # Settlement at (0,0)=C — no adjacent F hexes
     setup_board(0, 0)
-    tile = Tiles::GardenTile.new(0)
+    tile = Tiles::Location::GardenTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -58,6 +58,6 @@ class Tiles::GardenTileTest < ActiveSupport::TestCase
   end
 
   test "from_hash returns a GardenTile" do
-    assert_instance_of Tiles::GardenTile, Tiles::Tile.from_hash("klass" => "GardenTile")
+    assert_instance_of Tiles::Location::GardenTile, Tiles::Tile.from_hash("klass" => "GardenTile")
   end
 end

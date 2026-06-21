@@ -20,7 +20,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns adjacent Grass hexes when available" do
     ctx = setup_board
-    tile = Tiles::FarmTile.new(0)
+    tile = Tiles::Location::FarmTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
@@ -33,7 +33,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
 
   test "valid_destinations excludes occupied Grass hexes" do
     ctx = setup_board { |s| s.place_settlement(14, 1, 1) }
-    tile = Tiles::FarmTile.new(0)
+    tile = Tiles::Location::FarmTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
@@ -48,7 +48,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(12, 0, chris.order) }
     game.save
     game.instantiate
-    tile = Tiles::FarmTile.new(0)
+    tile = Tiles::Location::FarmTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
@@ -82,7 +82,7 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     end
     game.save
     game.instantiate
-    tile = Tiles::FarmTile.new(0)
+    tile = Tiles::Location::FarmTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
@@ -92,20 +92,20 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
   # --- build_terrain ---
 
   test "build_terrain returns G" do
-    assert_equal "G", Tiles::FarmTile.new(0).build_terrain
+    assert_equal "G", Tiles::Location::FarmTile.new(0).build_terrain
   end
 
   # --- from_hash ---
 
   test "from_hash returns a FarmTile" do
-    assert_instance_of Tiles::FarmTile, Tiles::Tile.from_hash("klass" => "FarmTile")
+    assert_instance_of Tiles::Location::FarmTile, Tiles::Tile.from_hash("klass" => "FarmTile")
   end
 
   # --- activatable? ---
 
   test "activatable? is true when Grass hexes are reachable" do
     ctx = setup_board
-    tile = Tiles::FarmTile.new(0)
+    tile = Tiles::Location::FarmTile.new(0)
     assert tile.activatable?(player_order: ctx[:chris].order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
   end
 
@@ -127,11 +127,11 @@ class Tiles::FarmTileTest < ActiveSupport::TestCase
     end
     game.save
     game.instantiate
-    tile = Tiles::FarmTile.new(0)
+    tile = Tiles::Location::FarmTile.new(0)
     assert_not tile.activatable?(player_order: chris.order, board_contents: with_terrain(game.board_contents, game.board))
   end
 
   test "builds_settlement? returns true" do
-    assert Tiles::FarmTile.new(0).builds_settlement?
+    assert Tiles::Location::FarmTile.new(0).builds_settlement?
   end
 end

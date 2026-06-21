@@ -23,12 +23,12 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
   end
 
   test "moves_settlement? returns true" do
-    assert Tiles::HarborTile.new(0).moves_settlement?
+    assert Tiles::Location::HarborTile.new(0).moves_settlement?
   end
 
   test "valid_destinations returns water hexes adjacent to other settlements" do
     setup_board
-    tile = Tiles::HarborTile.new(0)
+    tile = Tiles::Location::HarborTile.new(0)
 
     result = tile.valid_destinations(from_row: 2, from_col: 0, **@ctx, player_order: @chris.order)
 
@@ -47,7 +47,7 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
     game.save
     game.instantiate
     ctx = { board_contents: with_terrain(game.board_contents, game.board) }
-    tile = Tiles::HarborTile.new(0)
+    tile = Tiles::Location::HarborTile.new(0)
 
     result = tile.valid_destinations(from_row: 2, from_col: 0, **ctx, player_order: chris.order)
 
@@ -57,7 +57,7 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
 
   test "selectable_settlements returns all settlements when empty water exists" do
     setup_board
-    tile = Tiles::HarborTile.new(0)
+    tile = Tiles::Location::HarborTile.new(0)
 
     result = tile.selectable_settlements(**@ctx, player_order: @chris.order)
 
@@ -66,6 +66,6 @@ class Tiles::HarborTileTest < ActiveSupport::TestCase
   end
 
   test "from_hash returns a HarborTile" do
-    assert_instance_of Tiles::HarborTile, Tiles::Tile.from_hash("klass" => "HarborTile")
+    assert_instance_of Tiles::Location::HarborTile, Tiles::Tile.from_hash("klass" => "HarborTile")
   end
 end

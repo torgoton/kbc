@@ -5,7 +5,7 @@ class Tiles::BarracksTileTest < ActiveSupport::TestCase
     def terrain_at(row, col) = terrain_map.fetch([ row, col ], "")
   end
 
-  def tile = Tiles::BarracksTile.new(2)
+  def tile = Tiles::Location::BarracksTile.new(2)
 
   def board_with(**hexes)
     BoardStub.new(hexes.transform_keys { |k| k.is_a?(Array) ? k : k.to_s.split(",").map(&:to_i) })

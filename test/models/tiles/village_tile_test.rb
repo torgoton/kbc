@@ -32,7 +32,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
       s.place_settlement(0, 4, @chris.order)
       s.place_settlement(1, 2, @chris.order)
     end
-    tile = Tiles::VillageTile.new(0)
+    tile = Tiles::Location::VillageTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -45,7 +45,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
       s.place_settlement(0, 4, @chris.order)
       # Only 2 neighbors of (0,3)
     end
-    tile = Tiles::VillageTile.new(0)
+    tile = Tiles::Location::VillageTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -59,7 +59,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
       s.place_settlement(1, 2, @chris.order)
       s.place_settlement(0, 3, 1)  # opponent occupies the hex
     end
-    tile = Tiles::VillageTile.new(0)
+    tile = Tiles::Location::VillageTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -73,7 +73,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
       s.place_settlement(0, 4, @chris.order)
       s.place_settlement(1, 2, @chris.order)
     end
-    tile = Tiles::VillageTile.new(0)
+    tile = Tiles::Location::VillageTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -86,7 +86,7 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
       s.place_settlement(0, 4, @chris.order)
       s.place_settlement(1, 2, 1)  # opponent's settlement
     end
-    tile = Tiles::VillageTile.new(0)
+    tile = Tiles::Location::VillageTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order)
 
@@ -94,10 +94,10 @@ class Tiles::VillageTileTest < ActiveSupport::TestCase
   end
 
   test "builds_settlement? returns true" do
-    assert Tiles::VillageTile.new(0).builds_settlement?
+    assert Tiles::Location::VillageTile.new(0).builds_settlement?
   end
 
   test "from_hash returns a VillageTile" do
-    assert_instance_of Tiles::VillageTile, Tiles::Tile.from_hash("klass" => "VillageTile")
+    assert_instance_of Tiles::Location::VillageTile, Tiles::Tile.from_hash("klass" => "VillageTile")
   end
 end

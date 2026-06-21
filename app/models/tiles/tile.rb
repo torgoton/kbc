@@ -1,5 +1,9 @@
 module Tiles
   class Tile
+    def creator = "".freeze
+    def class_description = "should be overridden".freeze
+    def tile_description = "should be overridden".freeze
+
     BUILDABLE_TERRAIN = %w[C D F G T].freeze
 
     attr_accessor :qty
@@ -13,7 +17,9 @@ module Tiles
     end
 
     def description
-      "#{self.class.name.demodulize.delete_suffix("Tile")} - #{self.class::DESCRIPTION}"
+      "#{self.class.name.demodulize.delete_suffix("Tile")}<br>" \
+      "#{self.class_description}<br>" \
+      "#{self.tile_description}"
     end
 
     def build_terrain = nil

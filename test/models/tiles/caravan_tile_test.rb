@@ -27,7 +27,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
 
   test "valid_destinations slides east until blocked" do
     setup_board(6, 4)
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
 
     result = tile.valid_destinations(from_row: 6, from_col: 4, **@ctx, player_order: @chris.order)
 
@@ -39,7 +39,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
 
   test "valid_destinations stops at occupied hex" do
     setup_board(6, 4) { |s| s.place_settlement(6, 6, 1) }
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
 
     result = tile.valid_destinations(from_row: 6, from_col: 4, **@ctx, player_order: @chris.order)
 
@@ -52,7 +52,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
   test "valid_destinations excludes direction where first hex is blocked" do
     # Settlement at (6,4)=C. West: (6,3)=C, (6,2)=L (location tile, not buildable terrain).
     setup_board(6, 4)
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
 
     result = tile.valid_destinations(from_row: 6, from_col: 4, **@ctx, player_order: @chris.order)
 
@@ -63,14 +63,14 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns empty if from_row or from_col is nil" do
     setup_board(6, 4)
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
 
     assert_empty tile.valid_destinations(from_row: nil, from_col: nil, **@ctx, player_order: @chris.order)
   end
 
   test "selectable_settlements returns settlements that can slide" do
     setup_board(6, 4)
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
 
     result = tile.selectable_settlements(player_order: @chris.order, **@ctx)
 
@@ -85,7 +85,7 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
     # (6,8)=M — slide W: (6,7)=G, E: (6,9)=G, so it can slide.
     # Use (0,0)=W on CaravanBoard — neighbors are also W. No slides possible.
     setup_board(0, 0) { |s| s.place_settlement(6, 4, @chris.order) }
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
 
     result = tile.selectable_settlements(player_order: @chris.order, **@ctx)
 
@@ -98,21 +98,21 @@ class Tiles::CaravanTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(10, 10, 0)
     state.place_city_hall_hex(10, 14, 0)
-    tile = Tiles::CaravanTile.new(0)
+    tile = Tiles::Location::CaravanTile.new(0)
     result = tile.selectable_settlements(player_order: 0, board_contents: with_terrain(state, all_grass))
     assert_includes result, [ 10, 10 ]
     assert_not_includes result, [ 10, 14 ]
   end
 
   test "moves_settlement? returns true" do
-    assert Tiles::CaravanTile.new(0).moves_settlement?
+    assert Tiles::Location::CaravanTile.new(0).moves_settlement?
   end
 
   test "builds_settlement? returns false" do
-    assert_not Tiles::CaravanTile.new(0).builds_settlement?
+    assert_not Tiles::Location::CaravanTile.new(0).builds_settlement?
   end
 
   test "from_hash returns a CaravanTile" do
-    assert_instance_of Tiles::CaravanTile, Tiles::Tile.from_hash("klass" => "CaravanTile")
+    assert_instance_of Tiles::Location::CaravanTile, Tiles::Tile.from_hash("klass" => "CaravanTile")
   end
 end

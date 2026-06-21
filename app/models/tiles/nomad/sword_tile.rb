@@ -1,6 +1,6 @@
 module Tiles
-  module Nomad
-    class SwordTile < Tiles::NomadTile
+  class Nomad
+    class SwordTile < Tiles::Nomad
       CREATOR = "Icon by Muhammad Naufal Subhiansyah".freeze
       DESCRIPTION = "Remove one settlement from each opponent.".freeze
 

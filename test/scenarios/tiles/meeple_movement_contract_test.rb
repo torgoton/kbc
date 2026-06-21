@@ -13,7 +13,7 @@ class MeepleMovementContractTest < ActiveSupport::TestCase
       piece_name: "wagon",
       start_terrain: "G",
       place: ->(scenario, player, at:) { scenario.place_wagon(player, at: at) },
-      suitable_terrain?: ->(scenario, hex) { Tiles::WagonTile::SUITABLE_TERRAIN.include?(scenario.terrain_at(hex)) }
+      suitable_terrain?: ->(scenario, hex) { Tiles::Location::WagonTile::SUITABLE_TERRAIN.include?(scenario.terrain_at(hex)) }
     },
     lighthouse: {
       tile_klass: "LighthouseTile",

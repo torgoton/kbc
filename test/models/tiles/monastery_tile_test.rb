@@ -20,7 +20,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns adjacent Canyon hexes when available" do
     ctx = setup_board
-    tile = Tiles::MonasteryTile.new(0)
+    tile = Tiles::Location::MonasteryTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
@@ -32,7 +32,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
 
   test "valid_destinations excludes occupied Canyon hexes" do
     ctx = setup_board { |s| s.place_settlement(5, 6, 1) }
-    tile = Tiles::MonasteryTile.new(0)
+    tile = Tiles::Location::MonasteryTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order)
 
@@ -47,7 +47,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     game.board_contents = BoardState.new.tap { |s| s.place_settlement(0, 7, chris.order) }
     game.save
     game.instantiate
-    tile = Tiles::MonasteryTile.new(0)
+    tile = Tiles::Location::MonasteryTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
@@ -83,7 +83,7 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     end
     game.save
     game.instantiate
-    tile = Tiles::MonasteryTile.new(0)
+    tile = Tiles::Location::MonasteryTile.new(0)
 
     result = tile.valid_destinations(board_contents: with_terrain(game.board_contents, game.board), player_order: chris.order)
 
@@ -93,20 +93,20 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
   # --- build_terrain ---
 
   test "build_terrain returns C" do
-    assert_equal "C", Tiles::MonasteryTile.new(0).build_terrain
+    assert_equal "C", Tiles::Location::MonasteryTile.new(0).build_terrain
   end
 
   # --- from_hash ---
 
   test "from_hash returns a MonasteryTile" do
-    assert_instance_of Tiles::MonasteryTile, Tiles::Tile.from_hash("klass" => "MonasteryTile")
+    assert_instance_of Tiles::Location::MonasteryTile, Tiles::Tile.from_hash("klass" => "MonasteryTile")
   end
 
   # --- activatable? ---
 
   test "activatable? is true when Canyon hexes are reachable" do
     ctx = setup_board
-    tile = Tiles::MonasteryTile.new(0)
+    tile = Tiles::Location::MonasteryTile.new(0)
     assert tile.activatable?(player_order: ctx[:chris].order, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
   end
 
@@ -130,11 +130,11 @@ class Tiles::MonasteryTileTest < ActiveSupport::TestCase
     end
     game.save
     game.instantiate
-    tile = Tiles::MonasteryTile.new(0)
+    tile = Tiles::Location::MonasteryTile.new(0)
     assert_not tile.activatable?(player_order: chris.order, board_contents: with_terrain(game.board_contents, game.board))
   end
 
   test "builds_settlement? returns true" do
-    assert Tiles::MonasteryTile.new(0).builds_settlement?
+    assert Tiles::Location::MonasteryTile.new(0).builds_settlement?
   end
 end

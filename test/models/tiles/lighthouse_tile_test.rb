@@ -5,7 +5,7 @@ class Tiles::LighthouseTileTest < ActiveSupport::TestCase
     def terrain_at(row, col) = terrain_map.fetch([ row, col ], "")
   end
 
-  def tile = Tiles::LighthouseTile.new(2)
+  def tile = Tiles::Location::LighthouseTile.new(2)
 
   def all_water_board
     terrain = {}

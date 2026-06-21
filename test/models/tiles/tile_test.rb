@@ -54,7 +54,7 @@ class Tiles::TileTest < ActiveSupport::TestCase
     state.place_settlement(5, 5, 0)
     state.place_city_hall_hex(6, 5, 0)
     # Use a movement tile stub that has moves_settlement? = true and some valid destination
-    tile = Tiles::BarnTile.new(0)
+    tile = Tiles::Location::BarnTile.new(0)
     all_grass = Object.new
     all_grass.define_singleton_method(:terrain_at) { |r, c| "G" }
     result = tile.selectable_settlements(player_order: 0, board_contents: with_terrain(state, all_grass), hand: "G")

@@ -20,7 +20,7 @@ class Tiles::BarnTileTest < ActiveSupport::TestCase
 
   test "selectable_settlements returns settlements when valid destinations exist" do
     setup_board(0, 0)
-    tile = Tiles::BarnTile.new(0)
+    tile = Tiles::Location::BarnTile.new(0)
 
     result = tile.selectable_settlements(**@ctx, player_order: @chris.order, hand: "F")
 
@@ -33,7 +33,7 @@ class Tiles::BarnTileTest < ActiveSupport::TestCase
     # With the bug, moving FROM (6,3) with hand "C" would return only those two
     # adjacent Canyon spaces instead of all Canyon spaces (fallback).
     setup_board(6, 3)
-    tile = Tiles::BarnTile.new(0)
+    tile = Tiles::Location::BarnTile.new(0)
 
     result = tile.valid_destinations(from_row: 6, from_col: 3, **@ctx, player_order: @chris.order, hand: "C")
 
@@ -43,10 +43,10 @@ class Tiles::BarnTileTest < ActiveSupport::TestCase
   end
 
   test "builds_settlement? returns false" do
-    assert_not Tiles::BarnTile.new(0).builds_settlement?
+    assert_not Tiles::Location::BarnTile.new(0).builds_settlement?
   end
 
   test "from_hash returns a BarnTile" do
-    assert_instance_of Tiles::BarnTile, Tiles::Tile.from_hash("klass" => "BarnTile")
+    assert_instance_of Tiles::Location::BarnTile, Tiles::Tile.from_hash("klass" => "BarnTile")
   end
 end

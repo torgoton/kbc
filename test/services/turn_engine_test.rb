@@ -670,7 +670,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "PaddockTile#builds_settlement? returns false" do
-    assert_not Tiles::PaddockTile.new(0).builds_settlement?
+    assert_not Tiles::Location::PaddockTile.new(0).builds_settlement?
   end
 
   test "buildable_cells for mandatory build returns buildable cells" do
@@ -779,7 +779,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     cells = @engine.buildable_cells
 
     @game.instantiate
-    expected = Tiles::PaddockTile.new(0).valid_destinations(
+    expected = Tiles::Location::PaddockTile.new(0).valid_destinations(
       from_row: spot[0], from_col: spot[1],
       board_contents: with_terrain(@game.board_contents, @game.board)
     )
@@ -1496,7 +1496,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.current_action["outpost_active"]
 
     non_adjacent_grass = [ 4, 4 ]
-    destinations = Tiles::FarmTile.new(0).valid_destinations(
+    destinations = Tiles::Location::FarmTile.new(0).valid_destinations(
       board_contents: with_terrain(@game.board_contents, @game.instantiate),
       player_order: player.order
     )
