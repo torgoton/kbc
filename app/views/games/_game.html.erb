@@ -9,10 +9,10 @@
            aria-label="Volume">
   </div>
   <div id="turn-state">
-    <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
+    <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player&.id } %>
   </div>
   <div id="end-turn-area">
-    <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: my_player&.id == game.current_player.id } %>
+    <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: my_player&.id == game.current_player&.id } %>
   </div>
 </div>
 <div id="game-area">

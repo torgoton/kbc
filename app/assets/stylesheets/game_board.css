@@ -231,6 +231,7 @@ ul li .hex:hover .hex-bg {
     height: 100%;
     width: 100%;
     position: relative;
+    background-repeat: no-repeat;
 }
 
 .hex .tile-container {
@@ -460,9 +461,9 @@ ul li .hex:hover .hex-bg {
     position: absolute;
     inset: 0;
     background-image: url("silver/castle.svg");
-    background-size: 100%;
     background-repeat: no-repeat;
-    background-position: 1px 3px;
+    background-size: 80%;
+    background-position: 5px 6px;
 }
 
 .hex .terrain-nomad {
@@ -470,196 +471,132 @@ ul li .hex:hover .hex-bg {
     inset: 0;
     background-image: url("silver/nomad.svg");
     background-size: 100%;
-    background-repeat: no-repeat;
     background-position: 1px 3px;
 }
 
 .tile-container.barn {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/barn.svg");
-    background-size: 100%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 80%;
+    background-position: center 45%;
 }
 
 .tile-container.farm {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/farm.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-position: center;
 }
 
 .tile-container.harbor {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/harbor.svg");
-    background-size: 100%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 88%;
+    background-position: center 50%;
 }
 
 .tile-container.oasis {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/oasis.svg");
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 75%;
+    background-position: center 50%;
 }
 
 .tile-container.oracle {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/oracle.svg");
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 70%;
+    background-position: center 55%;
 }
 
 .tile-container.paddock {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/paddock.svg");
-    background-size: 81%;
-    background-repeat: no-repeat;
-    background-position: center 65%;
+    background-size: 74%;
+    background-position: center 48%;
 }
 
 .tile-container.tavern {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/tavern.svg");
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 75%;
+    background-position: center 50%;
 }
 
 .tile-container.tower {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/tower.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-position: center 50%;
 }
 
 .tile-container.mandatory {
-    height: 100%;
-    width: 100%;
-    background-image: url("gold/mandatory.svg");
+    background-image: url("permanent/mandatory.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.caravan {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/caravan.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.garden {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/garden.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.quarry {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/quarry.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.village {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/village.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.barracks {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/barracks.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.cityhall {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/cityhall.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.crossroads {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/crossroads.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.foresterslodge {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/foresterslodge.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.fort {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/fort.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.lighthouse {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/lighthouse.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.monastery {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/monastery.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.wagon {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/wagon.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
@@ -676,7 +613,6 @@ ul li .hex:hover .hex-bg {
 .tile-container.donationtimber,
 .tile-container.donationwater {
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
@@ -692,20 +628,6 @@ ul li .hex:hover .hex-bg {
 .tile-container.donationmountain { background-image: url("nomad/donationmountain.svg"); }
 .tile-container.donationtimber   { background-image: url("nomad/donationtimber.svg"); }
 .tile-container.donationwater    { background-image: url("nomad/donationwater.svg"); }
-
-.hex .tile-container.donationcanyon,
-.hex .tile-container.donationdesert,
-.hex .tile-container.donationflower,
-.hex .tile-container.donationgrass,
-.hex .tile-container.donationmountain,
-.hex .tile-container.donationtimber,
-.hex .tile-container.donationwater,
-.hex .tile-container.outpost,
-.hex .tile-container.resettlement {
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
-}
 
 .hex .tile-container.donationcanyon   { background-image: url("nomad/donationcanyon.svg"); }
 .hex .tile-container.donationdesert   { background-image: url("nomad/donationdesert.svg"); }

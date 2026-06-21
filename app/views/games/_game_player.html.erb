@@ -32,7 +32,7 @@
         </div>
       </div>
     <% end %>
-    <% if n == 0 %>
+    <% if n == 0 && game.id %>
       <%= button_to("Undo", undo_move_game_path(game), class: "undo-btn", disabled: !(my_turn && engine.undo_allowed?)) %>
     <% end %>
   </div>
@@ -61,5 +61,5 @@
   </div>
 </div>
 <div class="player-action-zone">
-  <%= render partial: "games/tiles", locals: { game:, player:, n:, engine:, my_turn: } %>
+  <%= render partial: "games/tiles", locals: { game:, player:, n:, engine:, my_turn: } if game.id %>
 </div>
