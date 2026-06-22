@@ -336,12 +336,13 @@ ul li .hex:hover .hex-bg {
     pointer-events: none;
     position: absolute;
     transform: translateX(-50%);
-    width: 160px;
+    width: 260px;
     will-change: transform, opacity;
     z-index: 200;
 }
 
-.hex:hover .tile-tooltip {
+.hex:hover .tile-tooltip,
+.player-tile:hover .tile-tooltip {
     display: block;
 }
 
@@ -361,6 +362,12 @@ ul li .hex:hover .hex-bg {
 .hex.top-row .tile-tooltip {
     bottom: auto;
     top: calc(100% + 6px);
+}
+
+.player-tile .tile-tooltip {
+    bottom: auto;
+    top: calc(100% + 6px);
+    width: 260px;
 }
 
 @keyframes tile-tooltip-in-left {
@@ -989,11 +996,39 @@ ul li .hex:hover .hex-bg {
     height: 44px;
     border-radius: 6px;
     background-color: #1c1508;
+    border: 3px solid transparent;
+    position: relative;
     transition: opacity 0.2s, filter 0.2s, box-shadow 0.2s;
 }
 
-.player-tile .tile-container {
-    filter: invert(1);
+.player-tile.category-permanent {
+    background-color: silver;
+    border-color: black;
+}
+
+.player-tile.category-location {
+    background-color: goldenrod;
+    border-color: gold;
+}
+
+.player-tile.category-nomad {
+    background-color: silver;
+    border-color: silver;
+}
+
+.player-tile.tile-inactive.category-permanent {
+    background-color: color-mix(in srgb, silver, #333 20%);
+    border-color: color-mix(in srgb, black, #333 20%);
+}
+
+.player-tile.tile-inactive.category-location {
+    background-color: color-mix(in srgb, goldenrod, #333 20%);
+    border-color: color-mix(in srgb, gold, #333 20%);
+}
+
+.player-tile.tile-inactive.category-nomad {
+    background-color: color-mix(in srgb, silver, #333 20%);
+    border-color: color-mix(in srgb, silver, #333 20%);
 }
 
 .player-tiles form {
@@ -1007,6 +1042,9 @@ ul li .hex:hover .hex-bg {
 
 .tile-activatable {
     cursor: pointer;
+}
+
+.tile-activatable .tile-container {
     opacity: 1;
 }
 
@@ -1014,13 +1052,9 @@ ul li .hex:hover .hex-bg {
     box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.5);
 }
 
-.tile-inactive {
-    opacity: 0.55;
-}
-
-.tile-used {
+.tile-inactive .tile-container {
     filter: grayscale(100%);
-    opacity: 0.3;
+    opacity: 0.5;
 }
 
 .tile-active {

@@ -19,7 +19,8 @@
           "hex",
           "terrain-#{terrain}",
           row.even? ? "even" : "odd",
-          board_col < 10 ? "left" : "right"
+          board_col < 10 ? "left" : "right",
+          index < 2 ? "top-row" : nil
         ].compact.join(" ") do %>
         <div class="hex-bg"></div>
         <div class="terrain-icon"></div>

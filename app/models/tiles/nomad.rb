@@ -6,6 +6,7 @@ module Tiles
       "You do not lose this tile if you move away from the space that granted it."
     ).freeze
 
+    def class_description = CLASS_DESCRIPTION
     def nomad_tile? = true
   end
 end

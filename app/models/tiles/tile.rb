@@ -2,9 +2,13 @@ module Tiles
   class Tile
     def creator = "".freeze
     def class_description = "should be overridden".freeze
-    def tile_description = "should be overridden".freeze
+
+    def tile_description
+      self.class.const_defined?(:DESCRIPTION) ? self.class::DESCRIPTION : "should be overridden"
+    end
 
     BUILDABLE_TERRAIN = %w[C D F G T].freeze
+    CATEGORIES = %w[permanent location nomad bonus].freeze
 
     attr_accessor :qty
 
@@ -16,10 +20,17 @@ module Tiles
       self.class.name.demodulize.delete_suffix("Tile").downcase
     end
 
+    def tile_category
+      return "permanent" if is_a?(Tiles::Permanent)
+      return "location" if is_a?(Tiles::Location)
+      return "nomad" if is_a?(Tiles::Nomad)
+      "bonus" if is_a?(Tiles::Bonus)
+    end
+
     def description
       "#{self.class.name.demodulize.delete_suffix("Tile")}<br>" \
-      "#{self.class_description}<br>" \
-      "#{self.tile_description}"
+      "#{self.tile_description}<br><br>" \
+      "#{self.class_description}<br>"
     end
 
     def build_terrain = nil
