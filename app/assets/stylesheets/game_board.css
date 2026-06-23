@@ -191,6 +191,10 @@ ul li .hex:hover .hex-bg {
     filter: drop-shadow(0 0 3px #f0c040) drop-shadow(0 0 8px rgba(240, 192, 64, 0.8));
 }
 
+.hex.warrior-blocked {
+    filter: drop-shadow(0 0 3px red) drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
+}
+
 @property --angle {
     syntax: "<angle>";
     inherits: false;
