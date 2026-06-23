@@ -2,7 +2,7 @@ module Tiles
   class Location
     class FortTile < Tiles::Location
       CREATOR = "Icon by agus raharjo".freeze
-      DESCRIPTION = "CANNOT be undone! Draw a card and build on that terrain".freeze
+      DESCRIPTION = "CANNOT be undone! Draw a card and build on that terrain, adjacent if possible.".freeze
 
       def builds_settlement? = true
       def fort_tile? = true

@@ -2,7 +2,7 @@ module Tiles
   class Location
     class LighthouseTile < Tiles::Location
       CREATOR = "Icon by franc11s".freeze
-      DESCRIPTION = "Place, move, or remove your ship".freeze
+      DESCRIPTION = "Place adjacent to one of your settlements, move (up to 3 hexes), or remove your ship.".freeze
 
       def places_meeple? = true
       def meeple_kind    = "ship"

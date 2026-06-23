@@ -1,8 +1,8 @@
-<% my_turn = n == 0 && player.id == game.current_player.id %>
+<% my_turn = n == 0 && player.id == game.current_player&.id %>
 <div class="player-info-zone">
   <div class="player-header">
     <%= content_tag :div, class: "handle #{' my-turn' if my_turn }" do %>
-      <% if player.id == game.current_player.id %>
+      <% if player.id == game.current_player&.id %>
         <%= content_tag :span, class: "player-spinner" do %>
           <%= image_tag "tape-reel.svg", title: "It's your turn" %>
         <% end %>

@@ -68,6 +68,10 @@ class Game < ApplicationRecord
     state.to_s == "waiting"
   end
 
+  def completed?
+    state.to_s == "completed"
+  end
+
   def start(safe = true, options = {})
     if game_players.count < 2
       Rails.logger.warn "Cannot start game with less than 2 players"
@@ -117,6 +121,7 @@ class Game < ApplicationRecord
 
   def turn_state
     return "Waiting for players" if waiting?
+    return "Game has ended" if completed?
     TurnEngine.new(self).turn_state
   end
 
@@ -168,7 +173,9 @@ class Game < ApplicationRecord
 
   def complete!
     self.state = "completed"
+    self.current_player = nil
     self.scores = Scoring.new(self).compute
+    self.mandatory_count = 0
     save!
     broadcast_end_game
     broadcast_dashboard_update
@@ -343,7 +350,7 @@ class Game < ApplicationRecord
 
   def select_boards(options = {})
     min = options[:min_board] || 0
-    max = options[:max_board] || Boards::BoardSection::SECTIONS.size - 1
+    max = options[:max_board] || Boards::BoardSection::SECTIONS.size - 5 # last 4 are for testing UI
     self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
     while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
@@ -372,7 +379,7 @@ class Game < ApplicationRecord
         state.place_tile(row, col, klass, 1) if klass
       end
     end
-    update(board_contents: state)
+    self.board_contents = state
     @board = nil # board was created before tiles were placed; reset so next instantiate is fresh
     Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
   end

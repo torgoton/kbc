@@ -2,7 +2,7 @@ module Tiles
   class Location
     class CityHallTile < Tiles::Location
       CREATOR = "Icon by Chris Schumann".freeze
-      DESCRIPTION = "Place your City Hall on 7 connected hexes".freeze
+      DESCRIPTION = "Place your City Hall on 7 connected hexes, adjacent to at least one of your settlements. Usable only once.".freeze
 
       def places_city_hall? = true
 

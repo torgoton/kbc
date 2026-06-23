@@ -1,7 +1,7 @@
 class Scoring
   module Tasks
     class PlaceOfRefuge < Task
-      DESCRIPTION = "8 points if a special space is completely surrounded by your own settlements."
+      DESCRIPTION = "8 points if a silver or gold hex is completely surrounded by your own settlements."
       POINTS = 8
 
       SPECIAL_TERRAINS = %w[L S].freeze

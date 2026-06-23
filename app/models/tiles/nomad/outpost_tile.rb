@@ -2,7 +2,7 @@ module Tiles
   class Nomad
     class OutpostTile < Tiles::Nomad
       CREATOR = "Icon by Icon from us".freeze
-      DESCRIPTION = "Activate to skip adjacency requirement for the current build.".freeze
+      def tile_description = "Activate during ANY build to skip adjacency requirement.".freeze
 
       def outpost_tile? = true
 

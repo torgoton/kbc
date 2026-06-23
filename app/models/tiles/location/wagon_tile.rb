@@ -2,7 +2,7 @@ module Tiles
   class Location
     class WagonTile < Tiles::Location
       CREATOR = "Icon by Chris Schumann".freeze
-      DESCRIPTION = "Place, move, or remove your wagon".freeze
+      DESCRIPTION = "Place adjacent to one of your settlements, move (up to 3 hexes), or remove your wagon. Wagons may use any terrain except water.".freeze
 
       SUITABLE_TERRAIN = (BUILDABLE_TERRAIN + [ "M" ]).freeze
 

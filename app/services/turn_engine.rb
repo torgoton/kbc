@@ -651,6 +651,7 @@ class TurnEngine
   end
 
   def turn_state
+    return "Game over" unless @game.current_player_id
     current_phase = @game.turn_phase
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -669,7 +670,7 @@ class TurnEngine
       remaining = current_phase.remaining
       remaining ? "#{msg} (#{remaining} remaining)" : msg
     else
-      has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
+      has_activatable = (@game.current_player&.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
         terrain_name = if (ct = effective_terrain(@game.current_player))
           Boards::Board::TERRAIN_NAMES[ct]

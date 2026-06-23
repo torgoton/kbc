@@ -618,10 +618,10 @@ class GameTest < ActiveSupport::TestCase
     assert_match(/must move a settlement/, engine(game).turn_state)
   end
 
-  test "turn_state returns must move a settlement to a Water space when harbor action" do
+  test "turn_state returns must move a settlement to a Water hex when harbor action" do
     game = games(:game2player)
     game.current_action = { "type" => "harbor" }
-    assert_match(/must move a settlement to a Water space/, engine(game).turn_state)
+    assert_match(/must move a settlement to a Water hex/, engine(game).turn_state)
   end
 
   test "turn_state returns must build at the edge of the board when tower action" do
@@ -744,10 +744,10 @@ class GameTest < ActiveSupport::TestCase
     assert_equal 0, game.moves.count
   end
 
-  test "turn_state returns must build on a Desert space when oasis action" do
+  test "turn_state returns must build on a Desert hex when oasis action" do
     game = games(:game2player)
     game.current_action = { "type" => "oasis" }
-    assert_match(/must build on a Desert space/, engine(game).turn_state)
+    assert_match(/must build on a Desert hex/, engine(game).turn_state)
   end
 
   test "turn_endable? returns false when oasis action is in progress" do
@@ -1044,6 +1044,35 @@ class GameTest < ActiveSupport::TestCase
     assert_equal "completed", game.state
     assert_not_nil game.scores, "scores must be stored"
     assert game.scores.key?(game.game_players.first.order.to_s), "scores keyed by player order"
+  end
+
+  test "complete! clears current_player" do
+    game = new_started_game
+    assert_not_nil game.current_player_id, "sanity check: a started game has a current player"
+
+    game.complete!
+    game.reload
+
+    assert_nil game.current_player_id
+  end
+
+  test "end_turn clears current_player when it completes the game" do
+    game = new_started_game
+    last_gp = game.game_players.max_by(&:order)
+    game.update!(end_trigger_count: 1, mandatory_count: 0, current_player: last_gp)
+
+    engine(game).end_turn
+    game.reload
+
+    assert_equal "completed", game.state
+    assert_nil game.current_player_id
+  end
+
+  test "turn_state returns 'Game has ended' for completed games" do
+    game = games(:game2player)
+    game.update!(state: "completed", current_player: nil)
+
+    assert_equal "Game has ended", game.turn_state
   end
 
   test "undo_last_move after last settlement clears the ending flag" do

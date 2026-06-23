@@ -548,6 +548,26 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "append", modal["action"]
     assert_equal "completed", game.reload.state
   end
+
+  test "no player-spinner or active tile shows for the player who would have gone next once the game completes" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    chris.tiles = [ { "klass" => "MandatoryTile", "used" => false } ]
+    chris.save!
+    game.update!(current_player: paula, mandatory_count: 0, end_trigger_count: 1)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    post end_turn_game_url(game)
+    assert_equal "completed", game.reload.state
+    assert_nil game.current_player_id
+
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+    get game_url(game)
+
+    assert_select ".player-spinner", count: 0
+    assert_select ".player-tile.tile-active", count: 0
+  end
 end
 
 class GamesControllerUnauthenticatedTest < ActionDispatch::IntegrationTest

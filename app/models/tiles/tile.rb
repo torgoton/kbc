@@ -149,10 +149,10 @@ module Tiles
       if moves_settlement?
         terrain = move_terrain(hand:)
         msg = "#{player_handle} must move a settlement"
-        terrain ? "#{msg} to a #{terrain_names[terrain]} space" : msg
+        terrain ? "#{msg} to a #{terrain_names[terrain]} hex" : msg
       else
         terrain = build_terrain || hand
-        terrain ? "#{player_handle} must build on a #{terrain_names[terrain]} space" : "#{player_handle} must build"
+        terrain ? "#{player_handle} must build on a #{terrain_names[terrain]} hex" : "#{player_handle} must build"
       end
     end
 

@@ -1,7 +1,7 @@
 class Scoring
   module Tasks
     class Road < Task
-      DESCRIPTION = "7 points if at least 7 of your settlements form a continuous diagonal line."
+      DESCRIPTION = "7 points if at least 7 of your settlements form a continuous DIAGONAL line."
       POINTS = 7
 
       def arrangement_met?(game_player)

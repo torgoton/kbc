@@ -281,13 +281,13 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "turn_state returns oasis message when current_action is oasis" do
     @game.update!(current_action: { "type" => "oasis" })
 
-    assert_match(/must build on a Desert space/, @engine.turn_state)
+    assert_match(/must build on a Desert hex/, @engine.turn_state)
   end
 
   test "turn_state returns donation tile message for namespaced Nomad tile action" do
     @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 })
 
-    assert_match(/must build on a Desert space/, @engine.turn_state)
+    assert_match(/must build on a Desert hex/, @engine.turn_state)
   end
 
   test "turn_state includes remaining count for donation tile action" do
@@ -915,14 +915,14 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(current_action: { "type" => "barn" })
     @game.current_player.update!(hand: [ "G" ])
 
-    assert_match(/must move a settlement to a Grass space/, @engine.turn_state)
+    assert_match(/must move a settlement to a Grass hex/, @engine.turn_state)
   end
 
   test "turn_state returns oracle message when current_action is oracle" do
     @game.update!(current_action: { "type" => "oracle" })
     @game.current_player.update!(hand: [ "G" ])
 
-    assert_match(/must build on a Grass space/, @engine.turn_state)
+    assert_match(/must build on a Grass hex/, @engine.turn_state)
   end
 
   test "buildable_cells for oracle action returns hand-terrain hexes" do

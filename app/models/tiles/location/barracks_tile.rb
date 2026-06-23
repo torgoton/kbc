@@ -2,7 +2,7 @@ module Tiles
   class Location
     class BarracksTile < Tiles::Location
       CREATOR = "Icon by Anton Gajdosik".freeze
-      DESCRIPTION = "Place or remove a warrior".freeze
+      DESCRIPTION = "Place adjacent to one of your settlements, or remove a warrior, which stops anything from being placed adjacent to it.".freeze
 
       def places_meeple? = true
       def meeple_kind    = "warrior"

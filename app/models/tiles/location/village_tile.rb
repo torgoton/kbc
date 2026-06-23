@@ -2,7 +2,7 @@ module Tiles
   class Location
     class VillageTile < Tiles::Location
       CREATOR = "Icon by Setitik pixel".freeze
-      DESCRIPTION = "Build <em>one settlement</em> on an eligible space adjacent to <em>at least 3</em> of your settlements.".freeze
+      DESCRIPTION = "Build on an eligible hex adjacent to at least 3 of your settlements.".freeze
 
       def builds_settlement? = true
 

@@ -5,7 +5,7 @@ module Tiles
       DESCRIPTION = (
         "Build 3 settlements on the terrain of your played terrain card. " \
         "Build adjacent if possible. " \
-        "You must use this action every turn."
+        "You must use this action every turn, before or after your other actions"
       ).freeze
 
       # Mandatory placement is handled by clicking the board directly,

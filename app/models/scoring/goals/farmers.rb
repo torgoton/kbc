@@ -1,7 +1,7 @@
 class Scoring
   module Goals
     class Farmers < Goal
-      DESCRIPTION = "3 points for each of your settlements on the board section with the fewest such settlements"
+      DESCRIPTION = "3 points for each of your settlements on the board section with the fewest of your settlements."
       def score_for(game_player)
         counts = quadrant_counts(game_player.order)
         fewest = counts.min

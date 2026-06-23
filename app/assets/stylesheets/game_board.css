@@ -93,7 +93,7 @@ section#log {
 
 #board {
     display: grid;
-    grid-template-columns: 10fr 10fr 1fr;
+    grid-template-columns: 28fr 28fr 1fr;
     margin-left: 5px;
     position: absolute;
     top: 0;
@@ -111,7 +111,8 @@ section#log {
 }
 
 .quadrant.right {
-    margin-left: -24px;
+    margin-left: -20px;
+    margin-right: 20px;
 }
 
 .quadrant.bottom {
@@ -1031,6 +1032,15 @@ ul li .hex:hover .hex-bg {
     border-color: color-mix(in srgb, silver, #333 20%);
 }
 
+.player-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: conic-gradient(from var(--angle), #00000040, #ffffff40, #00000040, #ffffff40, #00000040);
+    height: 100%;
+    width: 100%;
+}
+
 .player-tiles form {
     display: contents;
 }
@@ -1052,8 +1062,8 @@ ul li .hex:hover .hex-bg {
     box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.5);
 }
 
-.tile-inactive .tile-container {
-    filter: grayscale(100%);
+.tile-used,
+.tile-inactive .tile-container{
     opacity: 0.5;
 }
 

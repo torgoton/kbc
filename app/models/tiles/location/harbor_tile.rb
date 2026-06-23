@@ -2,7 +2,7 @@ module Tiles
   class Location
     class HarborTile < Tiles::Location
       CREATOR = "Icon by Dicky Prayudawanto".freeze
-      DESCRIPTION = "Move any one of your existing settlements to a water space. Build adjacent if possible.".freeze
+      DESCRIPTION = "Move any one of your settlements to a water hex, adjacent if possible.".freeze
 
       def moves_settlement? = true
       def move_terrain(hand:) = "W"

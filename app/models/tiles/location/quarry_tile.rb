@@ -2,7 +2,7 @@ module Tiles
   class Location
     class QuarryTile < Tiles::Location
       CREATOR = "Icon by Maan Icons".freeze
-      DESCRIPTION = "Build 1 or 2 stone walls on empty terrain spaces of the same type as your played terrain card, adjacent to at least one of your settlements.".freeze
+      DESCRIPTION = "Build 1 or 2 stone walls on empty terrain hexes of the same type as your played terrain card, adjacent to at least one of your settlements.".freeze
 
       def places_wall? = true
       def uses_played_terrain? = true
@@ -25,7 +25,7 @@ module Tiles
 
       def action_message(player_handle:, terrain_names:, hand: nil)
         terrain = hand
-        terrain ? "#{player_handle} must place a stone wall on a #{terrain_names[terrain]} space" : "#{player_handle} must place a stone wall"
+        terrain ? "#{player_handle} must place a stone wall on a #{terrain_names[terrain]} hex" : "#{player_handle} must place a stone wall"
       end
     end
   end

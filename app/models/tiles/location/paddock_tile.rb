@@ -2,9 +2,9 @@ module Tiles
   class Location
     class PaddockTile < Tiles::Location
       CREATOR = "Icon by M Yudi Maulana".freeze
-      DESCRIPTION = "Move <em>any one of your existing settlements two spaces in a straight line</em> in any " \
-                    "­direction (horizontally or diagonally) to <em>any eligible space</em>. You may jump across " \
-                    "<em>any</em> space, even if occupied. ".freeze
+      DESCRIPTION = "Move one of your existing settlements exactly two hexes in a straight line " \
+                    "to any eligible hex. You may jump across " \
+                    "<em>any</em> hex, even if occupied. ".freeze
 
       # Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
       STRAIGHT_LINES = [
