@@ -1194,7 +1194,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "place_city_hall places 7 hexes on the board" do
-    center, settlement_hex = setup_city_hall_scenario
+    center, _settlement_hex = setup_city_hall_scenario
 
     @engine.place_city_hall(*center)
     @game.reload
