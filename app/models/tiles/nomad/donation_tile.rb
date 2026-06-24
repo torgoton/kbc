@@ -1,12 +1,11 @@
 module Tiles
-  module Nomad
-    class DonationTile < Tiles::NomadTile
-      CREATOR = "Icon by agus raharjo".freeze
-      DESCRIPTION = "Build 3 settlements on the donation terrain. Build adjacent if possible.".freeze
+  class Nomad
+    class DonationTile < Tiles::Nomad
+      CREATOR = "".freeze
 
-      def description
+      def tile_description
         terrain_name = Boards::Board::TERRAIN_NAMES[build_terrain]
-        "Build 3 settlements on #{terrain_name} spaces. Build adjacent if possible."
+        "Build 3 settlements on #{terrain_name}, adjacent if possible."
       end
 
       def builds_settlement? = true

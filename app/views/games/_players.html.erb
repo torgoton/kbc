@@ -1,19 +1,21 @@
 <div id="players-area">
   <div id="moves-area" hidden>
-    <%= form_with url: action_game_path(game),
-      id: :action_form do |f| %>
-      <%= f.text_field :tile %>
-      <%= f.hidden_field :build_row %>
-      <%= f.hidden_field :build_col %>
-      <%= f.text_field :move_source, placeholder: "Move from" %>
-      <%= f.text_field :move_destination, placeholder: "Move to" %>
-      <%= f.submit "Action", id: "action_submit" %>
+    <% if game.id %>
+      <%= form_with url: action_game_path(game),
+        id: :action_form do |f| %>
+        <%= f.text_field :tile %>
+        <%= f.hidden_field :build_row %>
+        <%= f.hidden_field :build_col %>
+        <%= f.text_field :move_source, placeholder: "Move from" %>
+        <%= f.text_field :move_destination, placeholder: "Move to" %>
+        <%= f.submit "Action", id: "action_submit" %>
+      <% end %>
     <% end %>
   </div>
   <%# Language note: "player" is a GamePlayer model; "player.player" is a User %>
   <% players = game.game_players.sort_by(&:order) %>
   <% Rails.logger.debug "CU: #{current_user.inspect}" %>
-  <% offset = current_user ? players.find { |p| p.player == current_user }.order : 0 %>
+  <% offset = ( current_user ? players.find { |p| p.player == current_user }&.order : nil ) || 0 %>
   <% players.size.times do |n| %>
     <%# Always display current user first %>
     <% index = (n + offset) % players.size %>

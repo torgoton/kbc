@@ -91,6 +91,8 @@ Rails.application.routes.draw do
   get "dashboard", to: "dashboard#index"
   get "credits", to: "credits#index"
 
+  get "hidden/icons", to: "hidden#icons"
+
   resource :session
   resources :passwords, param: :token
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html

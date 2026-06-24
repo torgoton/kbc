@@ -19,7 +19,7 @@ class Tiles::CityHallTileTest < ActiveSupport::TestCase
     state.neighbors(row, col).unshift([ row, col ])
   end
 
-  def tile = Tiles::CityHallTile.new(2)
+  def tile = Tiles::Location::CityHallTile.new(2)
 
   test "places_city_hall? returns true" do
     assert tile.places_city_hall?

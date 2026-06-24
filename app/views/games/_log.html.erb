@@ -1,5 +1,5 @@
 <h1>Game Log</h1>
-<% game.moves.order(created_at: :desc).each do |move| %>
+<% game.moves.includes(:game_player).order(created_at: :desc).each do |move| %>
   <% next if move.message.blank? %>
   <div class="move <%= 'abcde'.chars[move.game_player.order] %>">
     <%= move.message %>

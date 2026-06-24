@@ -21,7 +21,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
   # row 8: W W W D D D D M C C — neighbors of (8,0) are all W/C, no Grass
   test "valid_destinations falls back to any empty hand-terrain hex when no adjacent match" do
     setup_board(8, 0)
-    tile = Tiles::OracleTile.new(0)
+    tile = Tiles::Location::OracleTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "G")
 
@@ -31,7 +31,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
 
   test "valid_destinations uses hand to determine terrain" do
     setup_board(8, 0)
-    tile = Tiles::OracleTile.new(0)
+    tile = Tiles::Location::OracleTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "D")
 
@@ -41,7 +41,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
 
   test "valid_destinations excludes occupied hexes" do
     setup_board(0, 3) { |s| s.place_settlement(0, 2, 1) }
-    tile = Tiles::OracleTile.new(0)
+    tile = Tiles::Location::OracleTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "G")
 
@@ -50,7 +50,7 @@ class Tiles::OracleTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns adjacent hand-terrain hexes" do
     setup_board(0, 3)
-    tile = Tiles::OracleTile.new(0)
+    tile = Tiles::Location::OracleTile.new(0)
 
     result = tile.valid_destinations(**@ctx, player_order: @chris.order, hand: "G")
 

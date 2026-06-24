@@ -1,94 +1,73 @@
-<% regular_tiles, nomad_tiles = (player.tiles || []).partition { |t| !Tiles::Tile.for_klass(t["klass"])&.new(0)&.nomad_tile? } %>
+<% tiles_by_category = (player.tiles || []).group_by { |t| Tiles::Tile.for_klass(t["klass"])&.new(0)&.tile_category } %>
+<% sorted_tiles = Tiles::Tile::CATEGORIES.flat_map { |category| tiles_by_category[category] || [] } %>
 
 <div class="player-tiles">
   <% marked_active_type = nil %>
-  <% regular_tiles.each do |tile| %>
-    <% next unless Tiles::Tile.for_klass(tile["klass"]) %>
-    <% description = Tiles::Tile.for_klass(tile["klass"])&.new(0)&.description %>
+  <% sorted_tiles.each do |tile| %>
+    <% tile_obj = Tiles::Tile.for_klass(tile["klass"]).new(0) %>
+    <% description = tile_obj.description %>
     <% type = tile["klass"].delete_suffix("Tile").downcase %>
+    <% category = "category-#{tile_obj.tile_category}" %>
     <% used = engine.tile_used?(tile) %>
-    <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
-    <% marked_active_type = type if active %>
-    <% activatable = my_turn && engine.tile_activatable?(tile) %>
-    <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
 
-    <% tile_obj_check = Tiles::Tile.for_klass(tile["klass"])&.new(0) %>
-    <% if activatable && tile_obj_check&.fort_tile? %>
-      <div class="player-tile-popup"
-           data-controller="meeple-popup"
-           data-action="click->meeple-popup#toggle">
-        <div class="player-tile <%= state %>"
-             title="<%= description %>">
-          <div class="tile-container <%= type %>"></div>
-        </div>
-        <div data-meeple-popup-target="popup" class="meeple-popup hidden">
-          <span class="popup-warning">Cannot be undone!</span>
-          <%= button_to "Draw & Build", activate_fort_game_path(game),
-                class: "popup-btn", data: { turbo_stream: true } %>
-          <button data-action="click->meeple-popup#cancel" class="popup-btn popup-btn-cancel">Cancel</button>
-        </div>
-      </div>
-    <% elsif activatable %>
-      <%= button_to select_action_game_path(game), params: { action_type: type } do %>
-        <div class="player-tile <%= state %>" title="<%= description %>">
-          <div class="tile-container <%= type %>"></div>
+    <% if tile_obj.outpost_tile? %>
+      <% outpost_on = game.current_action["outpost_active"] %>
+      <% selectable = my_turn && engine.outpost_activatable?(tile) %>
+      <% state = outpost_on ? "tile-active" : used ? "tile-used" : selectable ? "tile-activatable" : "tile-inactive" %>
+      <% if selectable %>
+        <%= button_to activate_outpost_game_path(game) do %>
+          <div class="player-tile <%= state %> <%= category %> spin">
+            <div class="tile-container outpost"></div>
+            <div class="tile-tooltip"><%= description.html_safe %></div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="player-tile <%= state %> <%= category %>">
+          <div class="tile-container outpost"></div>
+          <div class="tile-tooltip"><%= description.html_safe %></div>
         </div>
       <% end %>
     <% else %>
-      <div class="player-tile <%= state %>" title="<%= description %>">
-        <div class="tile-container <%= type %>"></div>
-      </div>
+      <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
+      <% marked_active_type = type if active %>
+      <% activatable = my_turn && engine.tile_activatable?(tile) %>
+      <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
+
+      <% if activatable && tile_obj.fort_tile? %>
+        <div class="player-tile-popup"
+             data-controller="meeple-popup"
+             data-action="click->meeple-popup#toggle">
+          <div class="player-tile <%= state %> <%= category %>">
+            <div class="tile-container <%= type %>"></div>
+            <div class="tile-tooltip"><%= description.html_safe %></div>
+          </div>
+          <div data-meeple-popup-target="popup" class="meeple-popup hidden">
+            <span class="popup-warning">Cannot be undone!</span>
+            <%= button_to "Draw & Build", activate_fort_game_path(game),
+                  class: "popup-btn", data: { turbo_stream: true } %>
+            <button data-action="click->meeple-popup#cancel" class="popup-btn popup-btn-cancel">Cancel</button>
+          </div>
+        </div>
+      <% elsif activatable %>
+        <%= button_to select_action_game_path(game), params: { action_type: type } do %>
+          <div class="player-tile <%= state %> <%= category %>">
+            <div class="tile-container <%= type %>"></div>
+            <div class="tile-tooltip"><%= description.html_safe %></div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="player-tile <%= state %> <%= category %>">
+          <div class="tile-container <%= type %>"></div>
+          <div class="tile-tooltip"><%= description.html_safe %></div>
+        </div>
+      <% end %>
+
+      <% if active && game.current_action["remaining"] %>
+        <span class="tile-progress"><%= game.current_action["remaining"] %> left</span>
+      <% end %>
+      <% if active && game.current_action["budget"] %>
+        <span class="tile-progress"><%= game.current_action["budget"] %> steps left</span>
+      <% end %>
     <% end %>
   <% end %>
 </div>
-
-<% if nomad_tiles.any? %>
-  <div class="player-tiles nomad-tiles">
-    <% nomad_tiles.each do |tile| %>
-      <% next unless (tile_klass = Tiles::Tile.for_klass(tile["klass"])) %>
-      <% tile_obj = tile_klass.new(0) %>
-      <% description = Tiles::Tile.for_klass(tile["klass"])&.new(0)&.description %>
-      <% type = tile["klass"].delete_suffix("Tile").downcase %>
-      <% used = engine.tile_used?(tile) %>
-
-      <% if tile_obj.outpost_tile? %>
-        <% outpost_on = game.current_action["outpost_active"] %>
-        <% selectable = my_turn && engine.outpost_activatable?(tile) %>
-        <% state = outpost_on ? "tile-active" : used ? "tile-used" : selectable ? "tile-activatable" : "tile-inactive" %>
-        <% if selectable %>
-          <%= button_to activate_outpost_game_path(game) do %>
-            <div class="player-tile <%= state %> spin" title="<%= description %>">
-              <div class="tile-container outpost"></div>
-            </div>
-          <% end %>
-        <% else %>
-          <div class="player-tile <%= state %>" title="<%= description %>">
-            <div class="tile-container outpost"></div>
-          </div>
-        <% end %>
-
-      <% else %>
-        <% active = my_turn && !used && game.current_action["type"] == type %>
-        <% activatable = my_turn && engine.tile_activatable?(tile) %>
-        <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
-        <% if activatable %>
-          <%= button_to select_action_game_path(game), params: { action_type: type } do %>
-            <div class="player-tile <%= state %>" title="<%= description %>">
-              <div class="tile-container <%= type %>"></div>
-            </div>
-          <% end %>
-        <% else %>
-          <div class="player-tile <%= state %>" title="<%= description %>">
-            <div class="tile-container <%= type %>"></div>
-          </div>
-        <% end %>
-        <% if active && game.current_action["remaining"] %>
-          <span class="tile-progress"><%= game.current_action["remaining"] %> left</span>
-        <% end %>
-        <% if active && game.current_action["budget"] %>
-          <span class="tile-progress"><%= game.current_action["budget"] %> steps left</span>
-        <% end %>
-      <% end %>
-    <% end %>
-  </div>
-<% end %>

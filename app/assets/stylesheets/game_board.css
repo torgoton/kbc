@@ -10,8 +10,8 @@
     --clr-p-d: #cccccc;
     --clr-p-e: #aa00aa;
 
-    --fx-hex-transparency: 15%;
-    --fx-loc-transparency: 15%;
+    --fx-hex-transparency: 20%;
+    --fx-loc-transparency: 35%;
 }
 
 html{
@@ -32,7 +32,7 @@ body.game-page {
     display: grid;
     grid-template-areas:
         "main players-area game-log";
-    grid-template-columns: 7fr 2fr 2fr;
+    grid-template-columns: 6fr 2fr 2fr;
     grid-template-rows: 1fr;
     flex: 1;
     min-height: 0;
@@ -93,7 +93,7 @@ section#log {
 
 #board {
     display: grid;
-    grid-template-columns: 10fr 10fr 1fr;
+    grid-template-columns: 28fr 28fr 1fr;
     margin-left: 5px;
     position: absolute;
     top: 0;
@@ -111,7 +111,8 @@ section#log {
 }
 
 .quadrant.right {
-    margin-left: -24px;
+    margin-left: -20px;
+    margin-right: 20px;
 }
 
 .quadrant.bottom {
@@ -150,8 +151,7 @@ section#log {
 .hex > .hex-outline polygon {
     fill: none;
     stroke: oklch(from var(--hex-bg, transparent) calc(l * 0.55) c h);
-    stroke-width: 4;
-    vector-effect: non-scaling-stroke;
+    stroke-width: 8px;
 }
 
 svg {
@@ -189,6 +189,10 @@ ul li .hex:hover .hex-bg {
     z-index: 10;
     transition: transform 0.1s ease-out;
     filter: drop-shadow(0 0 3px #f0c040) drop-shadow(0 0 8px rgba(240, 192, 64, 0.8));
+}
+
+.hex.warrior-blocked {
+    filter: drop-shadow(0 0 3px red) drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
 }
 
 @property --angle {
@@ -232,6 +236,7 @@ ul li .hex:hover .hex-bg {
     height: 100%;
     width: 100%;
     position: relative;
+    background-repeat: no-repeat;
 }
 
 .hex .tile-container {
@@ -292,10 +297,10 @@ ul li .hex:hover .hex-bg {
 
 .tile-counter {
     position: absolute;
-    top: 0%;
+    top: -5%;
     left: 50%;
     transform: translateX(-50%);
-    width: 30%;
+    width: 35%;
     aspect-ratio: 1;
     background: #cc1100;
     border-radius: 50%;
@@ -336,12 +341,13 @@ ul li .hex:hover .hex-bg {
     pointer-events: none;
     position: absolute;
     transform: translateX(-50%);
-    width: 160px;
+    width: 260px;
     will-change: transform, opacity;
     z-index: 200;
 }
 
-.hex:hover .tile-tooltip {
+.hex:hover .tile-tooltip,
+.player-tile:hover .tile-tooltip {
     display: block;
 }
 
@@ -361,6 +367,12 @@ ul li .hex:hover .hex-bg {
 .hex.top-row .tile-tooltip {
     bottom: auto;
     top: calc(100% + 6px);
+}
+
+.player-tile .tile-tooltip {
+    bottom: auto;
+    top: calc(100% + 6px);
+    width: 260px;
 }
 
 @keyframes tile-tooltip-in-left {
@@ -427,8 +439,8 @@ ul li .hex:hover .hex-bg {
 
 /* Special terrains */
 .hex.terrain-l, .hex.terrain-s {
-    width: 95%;
-    height: 4.974cqw;
+    width: 92%;
+    height: 132%;
     margin: auto;
 }
 
@@ -461,9 +473,9 @@ ul li .hex:hover .hex-bg {
     position: absolute;
     inset: 0;
     background-image: url("silver/castle.svg");
-    background-size: 100%;
     background-repeat: no-repeat;
-    background-position: 1px 3px;
+    background-size: 80%;
+    background-position: 5px 6px;
 }
 
 .hex .terrain-nomad {
@@ -471,196 +483,132 @@ ul li .hex:hover .hex-bg {
     inset: 0;
     background-image: url("silver/nomad.svg");
     background-size: 100%;
-    background-repeat: no-repeat;
     background-position: 1px 3px;
 }
 
 .tile-container.barn {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/barn.svg");
-    background-size: 100%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 80%;
+    background-position: center 45%;
 }
 
 .tile-container.farm {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/farm.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-position: center;
 }
 
 .tile-container.harbor {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/harbor.svg");
-    background-size: 100%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 88%;
+    background-position: center 50%;
 }
 
 .tile-container.oasis {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/oasis.svg");
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 75%;
+    background-position: center 50%;
 }
 
 .tile-container.oracle {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/oracle.svg");
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 70%;
+    background-position: center 55%;
 }
 
 .tile-container.paddock {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/paddock.svg");
-    background-size: 81%;
-    background-repeat: no-repeat;
-    background-position: center 65%;
+    background-size: 74%;
+    background-position: center 48%;
 }
 
 .tile-container.tavern {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/tavern.svg");
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-size: 75%;
+    background-position: center 50%;
 }
 
 .tile-container.tower {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/tower.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
+    background-position: center 50%;
 }
 
 .tile-container.mandatory {
-    height: 100%;
-    width: 100%;
-    background-image: url("gold/mandatory.svg");
+    background-image: url("permanent/mandatory.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.caravan {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/caravan.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.garden {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/garden.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.quarry {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/quarry.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.village {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/village.svg");
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.barracks {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/barracks.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.cityhall {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/cityhall.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.crossroads {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/crossroads.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.foresterslodge {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/foresterslodge.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.fort {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/fort.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.lighthouse {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/lighthouse.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.monastery {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/monastery.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
 .tile-container.wagon {
-    height: 100%;
-    width: 100%;
     background-image: url("gold/wagon.svg");
     background-size: 70%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
@@ -677,7 +625,6 @@ ul li .hex:hover .hex-bg {
 .tile-container.donationtimber,
 .tile-container.donationwater {
     background-size: 80%;
-    background-repeat: no-repeat;
     background-position: center 75%;
 }
 
@@ -693,20 +640,6 @@ ul li .hex:hover .hex-bg {
 .tile-container.donationmountain { background-image: url("nomad/donationmountain.svg"); }
 .tile-container.donationtimber   { background-image: url("nomad/donationtimber.svg"); }
 .tile-container.donationwater    { background-image: url("nomad/donationwater.svg"); }
-
-.hex .tile-container.donationcanyon,
-.hex .tile-container.donationdesert,
-.hex .tile-container.donationflower,
-.hex .tile-container.donationgrass,
-.hex .tile-container.donationmountain,
-.hex .tile-container.donationtimber,
-.hex .tile-container.donationwater,
-.hex .tile-container.outpost,
-.hex .tile-container.resettlement {
-    background-size: 80%;
-    background-repeat: no-repeat;
-    background-position: center 75%;
-}
 
 .hex .tile-container.donationcanyon   { background-image: url("nomad/donationcanyon.svg"); }
 .hex .tile-container.donationdesert   { background-image: url("nomad/donationdesert.svg"); }
@@ -1068,11 +1001,48 @@ ul li .hex:hover .hex-bg {
     height: 44px;
     border-radius: 6px;
     background-color: #1c1508;
+    border: 3px solid transparent;
+    position: relative;
     transition: opacity 0.2s, filter 0.2s, box-shadow 0.2s;
 }
 
-.player-tile .tile-container {
-    filter: invert(1);
+.player-tile.category-permanent {
+    background-color: silver;
+    border-color: black;
+}
+
+.player-tile.category-location {
+    background-color: goldenrod;
+    border-color: gold;
+}
+
+.player-tile.category-nomad {
+    background-color: silver;
+    border-color: silver;
+}
+
+.player-tile.tile-inactive.category-permanent {
+    background-color: color-mix(in srgb, silver, #333 20%);
+    border-color: color-mix(in srgb, black, #333 20%);
+}
+
+.player-tile.tile-inactive.category-location {
+    background-color: color-mix(in srgb, goldenrod, #333 20%);
+    border-color: color-mix(in srgb, gold, #333 20%);
+}
+
+.player-tile.tile-inactive.category-nomad {
+    background-color: color-mix(in srgb, silver, #333 20%);
+    border-color: color-mix(in srgb, silver, #333 20%);
+}
+
+.player-tile::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: conic-gradient(from var(--angle), #00000040, #ffffff40, #00000040, #ffffff40, #00000040);
+    height: 100%;
+    width: 100%;
 }
 
 .player-tiles form {
@@ -1086,6 +1056,9 @@ ul li .hex:hover .hex-bg {
 
 .tile-activatable {
     cursor: pointer;
+}
+
+.tile-activatable .tile-container {
     opacity: 1;
 }
 
@@ -1093,13 +1066,9 @@ ul li .hex:hover .hex-bg {
     box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.5);
 }
 
-.tile-inactive {
-    opacity: 0.55;
-}
-
-.tile-used {
-    filter: grayscale(100%);
-    opacity: 0.3;
+.tile-used,
+.tile-inactive .tile-container{
+    opacity: 0.5;
 }
 
 .tile-active {
@@ -1230,7 +1199,7 @@ ul li .hex:hover .hex-bg {
     display: inline-block;
     flex-shrink: 0;
     border-radius: 6px;
-    border: 2px solid rgba(0, 0, 0, 0.35);
+    /* border: 2px solid rgba(0, 0, 0, 0.35); */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
@@ -1239,24 +1208,24 @@ ul li .hex:hover .hex-bg {
 }
 
 .player-card.card-G {
-    background-image: url("grass.svg");
+    background-image: url("cards/grass-card.svg");
     background-position: 20%;
 }
 
 .player-card.card-C {
-    background-image: url("canyon.svg");
+    background-image: url("cards/canyon-card.svg");
 }
 
 .player-card.card-D {
-    background-image: url("desert.svg");
+    background-image: url("cards/desert-card.svg");
 }
 
 .player-card.card-F {
-    background-image: url("flowers.svg");
+    background-image: url("cards/flowers-card.svg");
 }
 
 .player-card.card-T {
-    background-image: url("timberland.svg");
+    background-image: url("cards/timberland-card.svg");
 }
 
 .player-card.card-shunned {

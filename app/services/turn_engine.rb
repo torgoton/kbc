@@ -310,7 +310,7 @@ class TurnEngine
     game_player = @game.current_player
     tile = game_player.find_unused_tile("CityHallTile")
     return "No City Hall tile" unless tile
-    tile_obj = Tiles::CityHallTile.new(0)
+    tile_obj = Tiles::Location::CityHallTile.new(0)
     return "Not available" unless legal_targets.include?([ row, col ])
 
     cluster = tile_obj.cluster_hexes(row, col, @game.board_contents)
@@ -569,7 +569,7 @@ class TurnEngine
     current_phase = @game.turn_phase
     chosen_terrain_before = current_phase.chosen_terrain
 
-    tile_obj = Tiles::QuarryTile.new(0)
+    tile_obj = Tiles::Location::QuarryTile.new(0)
     return "No stone walls left" if @game.stone_walls <= 0
     return "Not available" unless legal_targets.include?([ row, col ])
 
@@ -651,6 +651,7 @@ class TurnEngine
   end
 
   def turn_state
+    return "Game over" unless @game.current_player_id
     current_phase = @game.turn_phase
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -669,7 +670,7 @@ class TurnEngine
       remaining = current_phase.remaining
       remaining ? "#{msg} (#{remaining} remaining)" : msg
     else
-      has_activatable = (@game.current_player.tiles || []).any? { |t| tile_activatable?(t) }
+      has_activatable = (@game.current_player&.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
         terrain_name = if (ct = effective_terrain(@game.current_player))
           Boards::Board::TERRAIN_NAMES[ct]
@@ -891,7 +892,7 @@ class TurnEngine
     return {} unless @game.turn_phase.city_hall?
     @game.instantiate
     player = @game.current_player
-    tile_obj = Tiles::CityHallTile.new(0)
+    tile_obj = Tiles::Location::CityHallTile.new(0)
     centers = tile_obj.valid_destinations(
       board_contents: @game.board_contents,
       player_order: player.order, supply: player.supply_hash
@@ -1188,7 +1189,7 @@ class TurnEngine
   end
 
   def in_same_direction?(p1, p2, p3)
-    Tiles::PaddockTile::STRAIGHT_LINES.any? do |steps|
+    Tiles::Location::PaddockTile::STRAIGHT_LINES.any? do |steps|
       dr1, dc1 = steps[p1[0] % 2]
       mid = [ p1[0] + dr1, p1[1] + dc1 ]
       next false unless mid == p2

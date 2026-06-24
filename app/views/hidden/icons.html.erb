@@ -1,0 +1,4 @@
+<% content_for :title, "Icon preview" %>
+<% content_for :body_class, "game-page" %>
+<%= render partial: "games/game", locals: { game:, my_player:, engine: TurnEngine.new(game), scores: {} } %>
+<%= javascript_include_tag "gameboard" %>

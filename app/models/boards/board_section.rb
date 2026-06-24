@@ -353,8 +353,131 @@ module Boards
           { r: 2, c: 7, k: "Monastery" },
           { r: 8, c: 8, k: "Wagon" }
         ]
+      },
+      # HIDDEN SECTION - used for testing, not actually in the game
+      {
+        map: [
+          "WWWWWWWWWW",
+          "WBBBBBBBBW",
+          "WCCLLLLCCW",
+          "WDDLLLLDDW",
+          "WFSFFFFSFW",
+          "WGGGGGGGGW",
+          "WMMMMMMMMW",
+          "WPPPPPPPPW",
+          "WTTTTTTTTW",
+          "WWWWWWWWWW"
+        ],
+        silver_hexes: [
+          { r: 4, c: 2, k: "Castle" },
+          { r: 4, c: 7, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 2, c: 3, k: "Paddock" },
+          { r: 2, c: 4, k: "Farm" },
+          { r: 2, c: 5, k: "Barn" },
+          { r: 2, c: 6, k: "Tavern" },
+          { r: 3, c: 3, k: "Harbor" },
+          { r: 3, c: 4, k: "Tower" },
+          { r: 3, c: 5, k: "Oasis" },
+          { r: 3, c: 6, k: "Oracle" }
+        ]
+      },
+      {
+        map: [
+          "WWWWWWWWWW",
+          "WBBBBBBBBW",
+          "WCCCCCCCCW",
+          "WDSSSSSSDW",
+          "WFSSSSSSFW",
+          "WGSSSSSSGW",
+          "WMMMMMMMMW",
+          "WPPPPPPPPW",
+          "WTTTTTTTTW",
+          "WWWWWWWWWW"
+        ],
+        silver_hexes: [
+          { r: 3, c: 2, k: "Nomad" },
+          { r: 3, c: 3, k: "Nomad" },
+          { r: 3, c: 4, k: "Nomad" },
+          { r: 3, c: 5, k: "Nomad" },
+          { r: 3, c: 6, k: "Nomad" },
+          { r: 4, c: 2, k: "Nomad" },
+          { r: 4, c: 3, k: "Nomad" },
+          { r: 4, c: 4, k: "Nomad" },
+          { r: 4, c: 5, k: "Nomad" },
+          { r: 4, c: 6, k: "Nomad" },
+          { r: 5, c: 2, k: "Nomad" },
+          { r: 5, c: 3, k: "Nomad" },
+          { r: 5, c: 4, k: "Nomad" },
+          { r: 5, c: 5, k: "Nomad" },
+          { r: 5, c: 6, k: "Nomad" }
+        ],
+        location_hexes: []
+      },
+      {
+        map: [
+          "WWWWWWWWWW",
+          "WBBBBBBBBW",
+          "WCCLLLLCCW",
+          "WDDLLLLDDW",
+          "WFSFFFFSFW",
+          "WGGGGGGGGW",
+          "WMMMMMMMMW",
+          "WPPPPPPPPW",
+          "WTTTTTTTTW",
+          "WWWWWWWWWW"
+        ],
+        silver_hexes: [
+          { r: 4, c: 2, k: "Castle" },
+          { r: 4, c: 7, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 2, c: 3, k: "Caravan" },
+          { r: 2, c: 4, k: "Garden" },
+          { r: 2, c: 5, k: "Quarry" },
+          { r: 2, c: 6, k: "Village" },
+          { r: 3, c: 3, k: "Harbor" },
+          { r: 3, c: 4, k: "Tower" },
+          { r: 3, c: 5, k: "Oasis" },
+          { r: 3, c: 6, k: "Oracle" }
+        ]
+      },
+      {
+        map: [
+          "WWWWWWWWWW",
+          "WBBBBBBBBW",
+          "WCCLLLLCCW",
+          "WDDLLLLDDW",
+          "WFSFFFFSFW",
+          "WGGGGGGGGW",
+          "WMMMMMMMMW",
+          "WPPPPPPPPW",
+          "WTTTTTTTTW",
+          "WWWWWWWWWW"
+        ],
+        silver_hexes: [
+          { r: 4, c: 2, k: "Castle" },
+          { r: 4, c: 7, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 2, c: 3, k: "Lighthouse" },
+          { r: 2, c: 4, k: "ForestersLodge" },
+          { r: 2, c: 5, k: "Barracks" },
+          { r: 2, c: 6, k: "Crossroads" },
+          { r: 3, c: 3, k: "CityHall" },
+          { r: 3, c: 4, k: "Fort" },
+          { r: 3, c: 5, k: "Monastery" },
+          { r: 3, c: 6, k: "Wagon" }
+        ]
       }
     ].freeze
+    LAST_SECTION = 15
+
+    SILVER_HEX_KINDS = {
+      "Castle" => { css_class: "terrain-castlehex", description: "Castle - 3 points if you have an adjacent settlement" },
+      "Nomad"  => { css_class: "terrain-nomad", description: nil }
+    }.freeze
 
     attr_accessor :terrain
     attr_accessor :content
@@ -383,6 +506,14 @@ module Boards
 
     def silver_hex_kind(row, col)
       silver_hexes.find { |h| h[:r] == row && h[:c] == col }&.dig(:k)
+    end
+
+    def silver_hex_css_class(row, col)
+      SILVER_HEX_KINDS.dig(silver_hex_kind(row, col), :css_class)
+    end
+
+    def silver_hex_description(row, col)
+      SILVER_HEX_KINDS.dig(silver_hex_kind(row, col), :description)
     end
 
     def location_hexes

@@ -281,13 +281,13 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "turn_state returns oasis message when current_action is oasis" do
     @game.update!(current_action: { "type" => "oasis" })
 
-    assert_match(/must build on a Desert space/, @engine.turn_state)
+    assert_match(/must build on a Desert hex/, @engine.turn_state)
   end
 
   test "turn_state returns donation tile message for namespaced Nomad tile action" do
     @game.update!(current_action: { "type" => "donationdesert", "klass" => "DonationDesertTile", "remaining" => 3 })
 
-    assert_match(/must build on a Desert space/, @engine.turn_state)
+    assert_match(/must build on a Desert hex/, @engine.turn_state)
   end
 
   test "turn_state includes remaining count for donation tile action" do
@@ -670,7 +670,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "PaddockTile#builds_settlement? returns false" do
-    assert_not Tiles::PaddockTile.new(0).builds_settlement?
+    assert_not Tiles::Location::PaddockTile.new(0).builds_settlement?
   end
 
   test "buildable_cells for mandatory build returns buildable cells" do
@@ -779,7 +779,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     cells = @engine.buildable_cells
 
     @game.instantiate
-    expected = Tiles::PaddockTile.new(0).valid_destinations(
+    expected = Tiles::Location::PaddockTile.new(0).valid_destinations(
       from_row: spot[0], from_col: spot[1],
       board_contents: with_terrain(@game.board_contents, @game.board)
     )
@@ -915,14 +915,14 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(current_action: { "type" => "barn" })
     @game.current_player.update!(hand: [ "G" ])
 
-    assert_match(/must move a settlement to a Grass space/, @engine.turn_state)
+    assert_match(/must move a settlement to a Grass hex/, @engine.turn_state)
   end
 
   test "turn_state returns oracle message when current_action is oracle" do
     @game.update!(current_action: { "type" => "oracle" })
     @game.current_player.update!(hand: [ "G" ])
 
-    assert_match(/must build on a Grass space/, @engine.turn_state)
+    assert_match(/must build on a Grass hex/, @engine.turn_state)
   end
 
   test "buildable_cells for oracle action returns hand-terrain hexes" do
@@ -1194,7 +1194,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   end
 
   test "place_city_hall places 7 hexes on the board" do
-    center, settlement_hex = setup_city_hall_scenario
+    center, _settlement_hex = setup_city_hall_scenario
 
     @engine.place_city_hall(*center)
     @game.reload
@@ -1496,7 +1496,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.current_action["outpost_active"]
 
     non_adjacent_grass = [ 4, 4 ]
-    destinations = Tiles::FarmTile.new(0).valid_destinations(
+    destinations = Tiles::Location::FarmTile.new(0).valid_destinations(
       board_contents: with_terrain(@game.board_contents, @game.instantiate),
       player_order: player.order
     )

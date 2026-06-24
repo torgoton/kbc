@@ -20,16 +20,16 @@
           "terrain-#{terrain}",
           row.even? ? "even" : "odd",
           board_col < 10 ? "left" : "right",
-          board_row <= 2 ? "top-row" : nil,
-          ].compact.join(" ") do %>
+          index < 2 ? "top-row" : nil,
+          game.board_contents.warrior_blocked?(board_row, board_col) ? "warrior-blocked" : nil
+        ].compact.join(" ") do %>
         <div class="hex-bg"></div>
         <div class="terrain-icon"></div>
         <svg class="hex-outline" viewBox="0 0 100 115.47" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,0 100,28.87 100,86.60 50,115.47 0,86.60 0,28.87"/></svg>
         <% if terrain == "s" && !content.is_a?(Tiles::Tile) %>
-          <% silver_kind = quadrant.silver_hex_kind(row, col) %>
-          <%= content_tag :div, nil, class: silver_kind == "Nomad" ? "terrain-nomad" : "terrain-castlehex" %>
-          <% if silver_kind == "Castle" %>
-            <div class="tile-tooltip">Castle - 3 points if you have an adjacent settlement</div>
+          <%= content_tag :div, nil, class: quadrant.silver_hex_css_class(row, col) %>
+          <% if (silver_description = quadrant.silver_hex_description(row, col)) %>
+            <div class="tile-tooltip"><%= silver_description %></div>
           <% end %>
         <% end %>
         <% if content %>
@@ -43,15 +43,12 @@
                 <%# show quantity if any %>
                 <% if content.respond_to? :qty %>
                   <%= content_tag :div, content.qty, class: "tile-counter" %>
-                  <% content.qty.times do |n| %>
-                    <%= content_tag :div, nil, id:"tile-#{n+1}", class:"tile location-#{content_class}" %>
-                  <% end %>
                 <% end %>
               <% end %>
               <div class="tile-tooltip"><%= content.description.html_safe %></div>
             <% when Settlement %>
               <% meeple_tile_active = %w[BarracksTile LighthouseTile WagonTile].include?(game.current_action["klass"]) %>
-              <% show_popup = meeple_tile_active && content.player == game.current_player.order %>
+              <% show_popup = meeple_tile_active && content.player == game.current_player&.order %>
               <% if show_popup && (content.warrior? || content.ship? || content.wagon?) %>
                 <div data-controller="meeple-popup"
                      data-action="click->meeple-popup#toggle">

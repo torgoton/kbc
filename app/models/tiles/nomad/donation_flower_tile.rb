@@ -1,5 +1,5 @@
 module Tiles
-  module Nomad
+  class Nomad
     class DonationFlowerTile < Tiles::Nomad::DonationTile
       def build_terrain = "F"
     end

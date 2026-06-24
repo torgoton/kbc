@@ -1,6 +1,6 @@
 module Tiles
-  module Nomad
-    class TreasureTile < Tiles::NomadTile
+  class Nomad
+    class TreasureTile < Tiles::Nomad
       CREATOR = "Icon by Vector Place".freeze
       DESCRIPTION = "Immediately score 3 points when picked up.".freeze
 

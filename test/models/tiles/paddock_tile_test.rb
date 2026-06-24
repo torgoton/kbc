@@ -20,7 +20,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns buildable empty 2-hop cells" do
     ctx = setup_board
-    tile = Tiles::PaddockTile.new(0)
+    tile = Tiles::Location::PaddockTile.new(0)
 
     result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
 
@@ -35,7 +35,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
   test "valid_destinations excludes occupied cells" do
     ctx = setup_board { |s| s.place_settlement(0, 12, 1) }
-    tile = Tiles::PaddockTile.new(0)
+    tile = Tiles::Location::PaddockTile.new(0)
 
     result = tile.valid_destinations(from_row: 0, from_col: 14, board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
 
@@ -45,7 +45,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
 
   test "selectable_settlements returns settlements with valid destinations" do
     ctx = setup_board
-    tile = Tiles::PaddockTile.new(0)
+    tile = Tiles::Location::PaddockTile.new(0)
 
     result = tile.selectable_settlements(player_order: ctx[:chris].order,
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
@@ -58,7 +58,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
       s.place_settlement(0, 12, 1)
       s.place_settlement(0, 16, 1)
     end
-    tile = Tiles::PaddockTile.new(0)
+    tile = Tiles::Location::PaddockTile.new(0)
 
     result = tile.selectable_settlements(player_order: ctx[:chris].order,
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]))
@@ -71,7 +71,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     state = BoardState.new
     state.place_settlement(10, 10, 0)
     state.place_city_hall_hex(10, 14, 0)
-    tile = Tiles::PaddockTile.new(0)
+    tile = Tiles::Location::PaddockTile.new(0)
     result = tile.selectable_settlements(player_order: 0, board_contents: with_terrain(state, all_grass))
     assert_includes result, [ 10, 10 ]
     assert_not_includes result, [ 10, 14 ]
@@ -80,11 +80,11 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
   # --- from_hash ---
 
   test "from_hash returns a PaddockTile" do
-    assert_instance_of Tiles::PaddockTile, Tiles::Tile.from_hash("klass" => "PaddockTile")
+    assert_instance_of Tiles::Location::PaddockTile, Tiles::Tile.from_hash("klass" => "PaddockTile")
   end
 
   test "builds_settlement? returns false" do
-    assert_not Tiles::PaddockTile.new(0).builds_settlement?
+    assert_not Tiles::Location::PaddockTile.new(0).builds_settlement?
   end
 
   test "valid_destinations excludes hexes adjacent to a warrior" do
@@ -92,7 +92,7 @@ class Tiles::PaddockTileTest < ActiveSupport::TestCase
     # (0,14) settlement; (0,12) would be a valid destination (2-hop W)
     # Place a warrior adjacent to (0,12): e.g. at (0,11) — even row, E neighbor of (0,11) is (0,12)
     ctx[:board_contents].place_warrior(0, 11, 1)
-    tile = Tiles::PaddockTile.new(0)
+    tile = Tiles::Location::PaddockTile.new(0)
     result = tile.valid_destinations(
       from_row: 0, from_col: 14,
       board_contents: with_terrain(ctx[:board_contents], ctx[:board]), player_order: ctx[:chris].order

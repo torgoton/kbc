@@ -35,7 +35,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns empty when no 3-in-a-row exists" do
     ctx = setup_game([ [ 12, 1 ], [ 12, 2 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
@@ -47,7 +47,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
 
   test "valid_destinations returns both ends for a horizontal 3-in-a-row" do
     ctx = setup_game([ [ 12, 1 ], [ 12, 2 ], [ 12, 3 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
@@ -61,7 +61,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
   test "valid_destinations returns both ends for a diagonal 3-in-a-row" do
     # NE line: (15,5)→(14,6)→(13,6); SW extension=(16,5)=F; NE extension=(12,7)=C
     ctx = setup_game([ [ 15, 5 ], [ 14, 6 ], [ 13, 6 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
@@ -75,7 +75,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
   test "valid_destinations excludes water extensions" do
     # Row 13 (odd): D@(13,5) D@(13,6) C@(13,7); W ext=(13,4)=W; E ext=(13,8)=C
     ctx = setup_game([ [ 13, 5 ], [ 13, 6 ], [ 13, 7 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
@@ -96,7 +96,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
     end
     game.save
     game.instantiate
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(game.board_contents, game.board),
@@ -110,7 +110,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
   test "valid_destinations for a 4-in-a-row returns only the two outer ends" do
     # (12,0-3): W extension out of bounds; E extension (12,4)=F
     ctx = setup_game([ [ 12, 0 ], [ 12, 1 ], [ 12, 2 ], [ 12, 3 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
 
     result = tile.valid_destinations(
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board),
@@ -126,7 +126,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
 
   test "activatable? is true when a qualifying line exists" do
     ctx = setup_game([ [ 12, 1 ], [ 12, 2 ], [ 12, 3 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
     assert tile.activatable?(
       player_order: ctx[:chris].order,
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board)
@@ -135,7 +135,7 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
 
   test "activatable? is false when no qualifying line exists" do
     ctx = setup_game([ [ 12, 1 ], [ 12, 2 ] ])
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
     assert_not tile.activatable?(
       player_order: ctx[:chris].order,
       board_contents: with_terrain(ctx[:game].board_contents, ctx[:game].board)
@@ -145,15 +145,15 @@ class Tiles::TavernTileTest < ActiveSupport::TestCase
   # --- from_hash ---
 
   test "from_hash returns a TavernTile" do
-    assert_instance_of Tiles::TavernTile, Tiles::Tile.from_hash("klass" => "TavernTile")
+    assert_instance_of Tiles::Location::TavernTile, Tiles::Tile.from_hash("klass" => "TavernTile")
   end
 
   test "builds_settlement? returns true" do
-    assert Tiles::TavernTile.new(0).builds_settlement?
+    assert Tiles::Location::TavernTile.new(0).builds_settlement?
   end
 
   test "action_message returns end-of-row instruction" do
-    tile = Tiles::TavernTile.new(0)
+    tile = Tiles::Location::TavernTile.new(0)
     msg = tile.action_message(player_handle: "Alice", terrain_names: {})
     assert_equal "Alice must build at the end of a row", msg
   end

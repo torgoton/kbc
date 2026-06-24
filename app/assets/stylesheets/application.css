@@ -13,6 +13,17 @@
     --clr-ds-table: #004d00; /* the color of the "table" */
     --clr-ds-text: white;
     --clr-ds-link: #cccc00;
+
+    /* Terrain colors */
+    --clr-ter-b: #ff8800;
+    --clr-ter-c: #a52a2a;
+    --clr-ter-d: #ffd700;
+    --clr-ter-f: darkorchid;
+    --clr-ter-g: chartreuse;
+    --clr-ter-m: #444;
+    --clr-ter-p: cyan;
+    --clr-ter-t: forestgreen;
+    --clr-ter-w: royalblue;
  }
 
  * { box-sizing: border-box; }

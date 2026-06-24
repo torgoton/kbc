@@ -8,6 +8,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: "chris@example.com", password: "password" }
   end
 
+  test "hexes adjacent to a warrior render with the warrior-blocked class" do
+    game = games(:game2player)
+    game.board_contents = BoardState.new.tap { |s| s.place_warrior(5, 4, 0) }
+    game.save!
+
+    get game_url(game)
+
+    assert_select "#map-cell-5-5.warrior-blocked"
+    assert_select "#map-cell-0-0.warrior-blocked", count: 0
+  end
+
   test "game show includes a tile element for the mandatory action" do
     game = games(:game2player)
     chris = game_players(:chris)
@@ -547,6 +558,26 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil modal, "expected an end-game modal broadcast"
     assert_equal "append", modal["action"]
     assert_equal "completed", game.reload.state
+  end
+
+  test "no player-spinner or active tile shows for the player who would have gone next once the game completes" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    chris.tiles = [ { "klass" => "MandatoryTile", "used" => false } ]
+    chris.save!
+    game.update!(current_player: paula, mandatory_count: 0, end_trigger_count: 1)
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    post end_turn_game_url(game)
+    assert_equal "completed", game.reload.state
+    assert_nil game.current_player_id
+
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+    get game_url(game)
+
+    assert_select ".player-spinner", count: 0
+    assert_select ".player-tile.tile-active", count: 0
   end
 end
 
