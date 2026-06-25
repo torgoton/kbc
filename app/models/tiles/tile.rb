@@ -1,7 +1,7 @@
 module Tiles
   class Tile
-    def creator = "".freeze
-    def class_description = "should be overridden".freeze
+    def creator = "override".freeze
+    def class_description = "override".freeze
 
     def tile_description
       self.class.const_defined?(:DESCRIPTION) ? self.class::DESCRIPTION : "should be overridden"
