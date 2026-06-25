@@ -21,7 +21,7 @@
           row.even? ? "even" : "odd",
           board_col < 10 ? "left" : "right",
           index < 2 ? "top-row" : nil,
-          game.board_contents.warrior_blocked?(board_row, board_col) ? "warrior-blocked" : nil
+          (!%w[l s].include?(terrain)) && game.board_contents.warrior_blocked?(board_row, board_col) ? "warrior-blocked" : nil
         ].compact.join(" ") do %>
         <div class="hex-bg"></div>
         <div class="terrain-icon"></div>
