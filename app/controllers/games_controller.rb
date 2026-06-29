@@ -202,6 +202,13 @@ class GamesController < ApplicationController
     @game.broadcast_game_update
   end
 
+  def resign
+    game = Game.find(params[:id])
+    game_player = game.game_players.find_by(player: Current.user)
+    game_player.update!(resigned_at: Time.current) if game_player && !game_player.resigned?
+    redirect_to dashboard_path
+  end
+
   private
 
   def require_game_playing

@@ -29,6 +29,12 @@ paula:
   approved: true
   password_digest: <%= password_digest %>
 
+jules:
+  handle: "Jules"
+  email_address: jules@example.com
+  approved: true
+  password_digest: <%= password_digest %>
+
 exemplar:
   handle: "Exemplar"
   email_address: exemplar@example.com
