@@ -1,4 +1,4 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: ENV.fetch("SITE_EMAIL") # Raises if not set
+  default from: ENV.fetch("MAIL_FROM") # Raises if not set
   layout "mailer"
 end
