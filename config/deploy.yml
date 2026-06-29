@@ -39,7 +39,7 @@ env:
     - SMTP_PASSWORD
   clear:
     APP_HOST: kbc.chrisschumann.dev
-    MAIL_FROM: kbc@chrisschumann.dev
+    MAIL_FROM: kbc@mail.chrisschumann.dev
     REPLY_TO: chris.schumann@gmail.com
     SMTP_ADDRESS: smtp.resend.com
     SMTP_PORT: 587
