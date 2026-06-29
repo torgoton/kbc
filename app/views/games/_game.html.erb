@@ -1,20 +1,24 @@
-<div id="turn-state-bar">
-  <div id="dashboard-link-area">
-    <%= link_to "Dashboard", dashboard_path %>
-  </div>
-  <div id="sound-controls">
-    <span id="audio-unlock-prompt" title="Click anywhere to enable sounds">&#128265; click for sound</span>
-    <button id="mute-btn" type="button" aria-label="Toggle mute">&#128266;</button>
-    <input id="volume-slider" type="range" min="0" max="1" step="0.01"
-           aria-label="Volume">
-  </div>
-  <div id="turn-state">
-    <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: my_player&.id == game.current_player&.id } %>
-  </div>
-  <div id="end-turn-area">
-    <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: my_player&.id == game.current_player&.id } %>
-  </div>
-</div>
+<% my_turn = my_player&.id == game.current_player&.id %>
+
+<% content_for :turn_state do %>
+  <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: } %>
+<% end %>
+
+<% content_for :end_turn do %>
+  <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: } %>
+<% end %>
+
+<% if my_player && !my_player.resigned? %>
+  <% content_for :menu_items do %>
+    <li>
+      <%= link_to "Resign this game", resign_game_path(game),
+          data: { turbo_method: :post,
+                  turbo_confirm: "Are you sure you want to resign? Other players will continue playing.",
+                  action: "click->menu#close" } %>
+    </li>
+  <% end %>
+<% end %>
+
 <div id="game-area">
     <main>
       <%= render partial: "games/scoring", locals: { game: } %>
