@@ -33,8 +33,9 @@ registry:
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
   secret:
-    - RAILS_MASTER_KEY
+    - ADMIN_EMAIL
     - DATABASE_URL
+    - RAILS_MASTER_KEY
     - SMTP_PASSWORD
   clear:
     APP_HOST: kbc.chrisschumann.dev
