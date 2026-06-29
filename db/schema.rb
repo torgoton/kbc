@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_13_222737) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_29_191418) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -20,6 +20,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_13_222737) do
     t.integer "game_id", null: false
     t.json "hand"
     t.integer "order"
+    t.datetime "resigned_at"
     t.json "supply"
     t.json "taken_from"
     t.json "tiles"
