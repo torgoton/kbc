@@ -580,17 +580,20 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-tile.tile-active", count: 0
   end
 
-  test "POST resign sets resigned_at on the current user's game_player and redirects to dashboard" do
+  test "POST resign ends the game, logs the resignation, and stays on the game page" do
     game = games(:game2player)
     post resign_game_url(game)
-    assert_redirected_to dashboard_path
+    assert_redirected_to game_path(game)
     assert_not_nil game_players(:chris).reload.resigned_at
+    assert_equal "completed", game.reload.state
+    assert game.moves.exists?(action: "resign")
   end
 
-  test "POST resign redirects to dashboard without error when user is not a player in the game" do
+  test "POST resign does nothing when user is not a player in the game" do
     game = games(:paula_jules_game)
     post resign_game_url(game)
-    assert_redirected_to dashboard_path
+    assert_redirected_to game_path(game)
+    assert_equal "playing", game.reload.state
     assert_nil game_players(:paula_in_paula_jules_game).reload.resigned_at
   end
 end
