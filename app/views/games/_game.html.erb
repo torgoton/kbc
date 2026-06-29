@@ -1,5 +1,11 @@
 <% my_turn = my_player&.id == game.current_player&.id %>
 
+<% content_for :sound_controls do %>
+  <span id="audio-unlock-prompt" title="Click anywhere to enable sounds">&#128265; click for sound</span>
+  <button id="mute-btn" type="button" aria-label="Toggle mute">&#128266;</button>
+  <input id="volume-slider" type="range" min="0" max="1" step="0.01" aria-label="Volume">
+<% end %>
+
 <% content_for :turn_state do %>
   <%= render partial: "games/turn_state", locals: { game:, engine:, my_turn: } %>
 <% end %>
