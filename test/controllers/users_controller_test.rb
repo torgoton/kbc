@@ -75,6 +75,25 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_content
   end
 
+  test "signup enqueues an admin notification email" do
+    assert_enqueued_emails 1 do
+      post users_url, params: { user: {
+        handle: "Barney",
+        email_address: "brubble@example.com",
+        password: "abc123"
+      } }
+    end
+  end
+
+  test "failed signup does not enqueue an admin notification email" do
+    assert_enqueued_emails 0 do
+      post users_url, params: { user: {
+        handle: "Barney",
+        email_address: "brubble@example.com"
+      } }
+    end
+  end
+
   test "new users are not approved" do
     assert_difference("User.count", 1) do
       post users_url, params: { user: {

@@ -26,6 +26,7 @@ class UsersController < ApplicationController
 
     respond_to do |format|
       if @user.save
+        AdminMailer.new_signup(@user).deliver_later
         format.html { redirect_to unapproved_users_url, notice: "User was successfully created." }
         format.json { render :show, status: :created, location: @user }
       else
