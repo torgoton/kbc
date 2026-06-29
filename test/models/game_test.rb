@@ -942,6 +942,7 @@ class GameTest < ActiveSupport::TestCase
       chris.order.to_s => { "total" => 10 },
       paula.order.to_s => { "total" => 6 }
     }
+    game.state = "completed"
     game.save
 
     assert_equal [ chris ], game.winners
@@ -955,6 +956,7 @@ class GameTest < ActiveSupport::TestCase
       chris.order.to_s => { "total" => 8 },
       paula.order.to_s => { "total" => 8 }
     }
+    game.state = "completed"
     game.save
 
     assert_equal [ chris, paula ].map(&:id).sort, game.winners.map(&:id).sort
@@ -963,6 +965,33 @@ class GameTest < ActiveSupport::TestCase
   test "winners returns empty when scores are not yet stored" do
     game = games(:game2player)
     assert_empty game.winners
+  end
+
+  test "winners returns empty when game is not completed even if scores are present" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    game.scores = {
+      chris.order.to_s => { "total" => 10 },
+      paula.order.to_s => { "total" => 6 }
+    }
+    game.save
+    assert_empty game.winners
+  end
+
+  test "winners returns the non-resigned player even if they have a lower score" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    paula = game_players(:paula)
+    game.scores = {
+      chris.order.to_s => { "total" => 10 },
+      paula.order.to_s => { "total" => 6 }
+    }
+    game.state = "completed"
+    game.save
+    chris.update!(resigned_at: Time.current)
+
+    assert_equal [ paula ], game.winners
   end
 
   # ── Live scores ──────────────────────────────────────────────────────────────

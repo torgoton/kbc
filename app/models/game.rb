@@ -191,9 +191,11 @@ class Game < ApplicationRecord
   end
 
   def winners
-    return [] if scores.blank?
-    max_total = scores.values.map { |s| s["total"] }.max
-    game_players.select { |gp| scores[gp.order.to_s]["total"] == max_total }
+    return [] unless state == "completed" && scores.present?
+    eligible = game_players.reject(&:resigned?)
+    return eligible if eligible.length < game_players.length
+    max_total = eligible.map { |gp| scores[gp.order.to_s]["total"] }.max
+    eligible.select { |gp| scores[gp.order.to_s]["total"] == max_total }
   end
 
   def instantiate

@@ -71,6 +71,19 @@ chris_waiting_game:
   state: "waiting"
   move_count: 0
 
+paula_jules_game:
+  boards: []
+  board_contents: {}
+  deck: []
+  discard: []
+  goals: []
+  current_player: paula_in_paula_jules_game
+  mandatory_count: 0
+  state: "playing"
+  move_count: 0
+  current_action:
+    type: "mandatory"
+
 completed_game:
   boards: []
   board_contents: {}

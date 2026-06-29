@@ -84,6 +84,7 @@ Rails.application.routes.draw do
       post :remove_meeple
       post :select_meeple
       post :activate_fort
+      post :resign
     end
   end
 

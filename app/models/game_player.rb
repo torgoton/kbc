@@ -6,6 +6,7 @@
 #  bonus_scores :jsonb            not null
 #  hand         :json
 #  order        :integer
+#  resigned_at  :datetime
 #  supply       :json
 #  taken_from   :json
 #  tiles        :json
@@ -219,5 +220,9 @@ class GamePlayer < ApplicationRecord
     updated = tiles.dup
     updated[idx] = updated[idx].merge("used" => false)
     self.tiles = updated
+  end
+
+  def resigned?
+    resigned_at.present?
   end
 end

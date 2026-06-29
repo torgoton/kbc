@@ -7,6 +7,7 @@
 #  bonus_scores :jsonb            not null
 #  hand         :json
 #  order        :integer
+#  resigned_at  :datetime
 #  supply       :json
 #  taken_from   :json
 #  tiles        :json
@@ -81,6 +82,22 @@ chris_in_completed_game:
 paula_in_completed_game:
   player: paula
   game: completed_game
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 1
+
+paula_in_paula_jules_game:
+  player: paula
+  game: paula_jules_game
+  hand: <%= ["D"].to_json %>
+  supply: <%= { "settlements" => 40 }.to_json %>
+  tiles: <%= [].to_json %>
+  order: 0
+
+jules_in_paula_jules_game:
+  player: jules
+  game: paula_jules_game
+  hand: <%= ["D"].to_json %>
   supply: <%= { "settlements" => 40 }.to_json %>
   tiles: <%= [].to_json %>
   order: 1

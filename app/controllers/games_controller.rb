@@ -202,6 +202,25 @@ class GamesController < ApplicationController
     @game.broadcast_game_update
   end
 
+  def resign
+    game = Game.find(params[:id])
+    game_player = game.game_players.find_by(player: Current.user)
+    if game_player && !game_player.resigned?
+      game_player.update!(resigned_at: Time.current)
+      game.move_count += 1
+      game.moves.create!(
+        order: game.move_count,
+        game_player: game_player,
+        action: "resign",
+        message: "#{game_player.player.handle} resigned",
+        deliberate: true,
+        reversible: false
+      )
+      game.complete!
+    end
+    redirect_to game_path(game)
+  end
+
   private
 
   def require_game_playing
