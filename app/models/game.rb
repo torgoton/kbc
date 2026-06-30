@@ -200,10 +200,6 @@ class Game < ApplicationRecord
 
   def instantiate
     # Create objects from the serialized game state
-    instantiate_board
-  end
-
-  def instantiate_board
     @board ||= Boards::Board.new(self)
     board_contents.terrain_source = @board
     @board
@@ -362,7 +358,7 @@ class Game < ApplicationRecord
 
   def populate_boards(options = {})
     state = BoardState.new
-    instantiate_board
+    instantiate
     @board.map.each_with_index do |board, i|
       board.location_hexes.each do |loc|
         # MVP (and base game) always have 2 tiles per location
@@ -403,7 +399,7 @@ class Game < ApplicationRecord
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
 
   def select_goals
-    instantiate_board
+    instantiate
     castle_goal = board_has_castles? ? [ "castles" ] : []
     self.goals = castle_goal + OPTIONAL_GOALS.sample(3)
     @board = nil

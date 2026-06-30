@@ -19,7 +19,7 @@ class HiddenController < ApplicationController
 
     # set up locations and tiles
     @game.send(:populate_boards)
-    @game.instantiate_board
+    @game.instantiate
     render :icons, locals: { game: @game, my_player: @player }
   end
 end
