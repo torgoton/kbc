@@ -126,6 +126,15 @@ section#log-chat {
     flex: 0 0 auto;
 }
 
+.chat-composer form {
+    display: flex;
+}
+
+.chat-composer input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
 .chat-closed-note {
     opacity: 0.7;
     font-style: italic;

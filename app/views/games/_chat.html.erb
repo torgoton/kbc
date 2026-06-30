@@ -14,7 +14,7 @@
      <% if game.completed? && game.chat_open? %>data-chat-close-at="<%= (game.completed_at + Game::CHAT_OPEN_AFTER_COMPLETION).to_i %>"<% end %>>
   <% if my_player && !my_player.resigned? && game.chat_open? %>
     <%= form_with url: game_chat_messages_path(game), method: :post, data: { action: "turbo:submit-end->chat#clearInput" } do |f| %>
-      <%= f.text_field :body, maxlength: 500, placeholder: "Say something...", data: { chat_target: "input" } %>
+      <%= f.text_field :body, maxlength: 500, size: false, placeholder: "Say something...", data: { chat_target: "input" } %>
       <%= f.submit "Send" %>
     <% end %>
   <% else %>
