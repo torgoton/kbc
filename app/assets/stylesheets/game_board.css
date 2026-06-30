@@ -58,13 +58,81 @@ main {
     cursor: grabbing;
 }
 
-section#log {
+section#log-chat {
     grid-area: game-log;
-    overflow-y: auto;
-    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
-#log .move {
+#log-chat #log {
+    flex: var(--log-flex, 1);
+    overflow-y: auto;
+    min-height: 0;
+}
+
+#log-chat .divider {
+    flex: 0 0 auto;
+    height: 6px;
+    cursor: row-resize;
+    background-color: oklch(from var(--clr-g-text) l c h / 15%);
+}
+
+#log-chat #chat {
+    flex: var(--chat-flex, 1);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#log-chat #chat.minimized {
+    flex: 0 0 auto;
+}
+
+#log-chat #chat.minimized #chat-messages,
+#log-chat #chat.minimized .chat-composer {
+    display: none;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+}
+
+.chat-minimize-btn {
+    position: relative;
+}
+
+.chat-badge {
+    background-color: #e63946;
+    border-radius: 1em;
+    padding: 0 0.4em;
+    font-size: 0.75em;
+}
+
+.chat-badge.hidden {
+    display: none;
+}
+
+#chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.chat-composer {
+    flex: 0 0 auto;
+}
+
+.chat-closed-note {
+    opacity: 0.7;
+    font-style: italic;
+}
+
+#log .move,
+.chat-message {
     margin: 1px;
     padding: 1px;
     &.a { background-color: oklch(from var(--clr-p-a) l c h / 30%); }
@@ -72,6 +140,12 @@ section#log {
     &.c { background-color: oklch(from var(--clr-p-c) l c h / 30%); }
     &.d { background-color: oklch(from var(--clr-p-d) l c h / 30%); }
     &.e { background-color: oklch(from var(--clr-p-e) l c h / 30%); }
+    &.system { opacity: 0.7; font-style: italic; }
+}
+
+.chat-message .handle {
+    font-weight: bold;
+    margin-right: 0.3em;
 }
 
 .game-section {

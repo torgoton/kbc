@@ -1,0 +1,23 @@
+<div class="chat-header">
+  <span class="chat-title">Chat</span>
+  <button type="button" class="chat-minimize-btn" aria-label="Toggle chat" data-action="click->chat#toggleMinimize">
+    <span class="chat-badge hidden" data-chat-target="badge">0</span>
+    &#9650;
+  </button>
+</div>
+<div id="chat-messages" data-chat-target="messages">
+  <% game.chat_messages.includes(:game_player).order(:created_at).each do |message| %>
+    <%= render partial: "games/chat_message", locals: { message: } %>
+  <% end %>
+</div>
+<div class="chat-composer" data-chat-target="composer"
+     <% if game.completed? && game.chat_open? %>data-chat-close-at="<%= (game.completed_at + Game::CHAT_OPEN_AFTER_COMPLETION).to_i %>"<% end %>>
+  <% if my_player && !my_player.resigned? && game.chat_open? %>
+    <%= form_with url: game_chat_messages_path(game), method: :post, data: { action: "turbo:submit-end->chat#clearInput" } do |f| %>
+      <%= f.text_field :body, maxlength: 500, placeholder: "Say something...", data: { chat_target: "input" } %>
+      <%= f.submit "Send" %>
+    <% end %>
+  <% else %>
+    <p class="chat-closed-note">Chat closed</p>
+  <% end %>
+</div>

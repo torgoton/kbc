@@ -30,6 +30,7 @@ class GamePlayer < ApplicationRecord
   belongs_to :player, foreign_key: :user_id, class_name: "User"
 
   has_many :moves, dependent: :destroy
+  has_many :chat_messages, dependent: :destroy
 
   scope :in_player_order, -> { order(order: :asc) }
 

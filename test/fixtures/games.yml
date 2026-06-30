@@ -7,6 +7,7 @@
 #  id                :bigint           not null, primary key
 #  board_contents    :json
 #  boards            :json
+#  completed_at      :datetime
 #  current_action    :json
 #  deck              :json
 #  discard           :json
@@ -90,6 +91,6 @@ completed_game:
   deck: []
   discard: []
   goals: []
-  scores: <%= { "chris" => 10, "paula" => 8 }.to_json %>
+  scores: <%= { "0" => { "total" => 10 }, "1" => { "total" => 8 } }.to_json %>
   state: "completed"
   move_count: 0

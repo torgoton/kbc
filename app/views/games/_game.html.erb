@@ -37,7 +37,13 @@
     <aside>
       <%= render partial: "games/players", locals: { game:, engine:, scores: } %>
     </aside>
-    <section id="log">
-      <%= render partial: "games/log", locals: { game: } %>
+    <section id="log-chat" data-controller="chat">
+      <div id="log" data-chat-target="log">
+        <%= render partial: "games/log", locals: { game: } %>
+      </div>
+      <div class="divider" data-chat-target="divider" data-action="mousedown->chat#startDrag"></div>
+      <div id="chat" data-chat-target="panel">
+        <%= render partial: "games/chat", locals: { game:, my_player: } %>
+      </div>
     </section>
 </div>
