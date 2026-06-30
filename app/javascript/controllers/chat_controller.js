@@ -8,11 +8,14 @@ export default class extends Controller {
 
   connect() {
     this.unreadCount = 0
+    this._pendingChatMessages = 0
     this._restoreMinimized()
     this._restoreSplit()
     this._scheduleCloseTimer()
 
-    this._streamHandler = () => {
+    this._streamHandler = (event) => {
+      if (event.target?.target !== "chat-messages") return
+      this._pendingChatMessages += 1
       clearTimeout(this._streamDebounce)
       this._streamDebounce = setTimeout(() => this._onStreamSettled(), 50)
     }
@@ -77,11 +80,15 @@ export default class extends Controller {
   }
 
   _onStreamSettled() {
+    const newMessages = this._pendingChatMessages
+    this._pendingChatMessages = 0
+    if (newMessages === 0) return
+
     if (this.hasMessagesTarget) {
       this.messagesTarget.scrollTop = this.messagesTarget.scrollHeight
     }
     if (this.panelTarget.classList.contains("minimized")) {
-      this.unreadCount += 1
+      this.unreadCount += newMessages
       this._showBadge()
     }
   }
