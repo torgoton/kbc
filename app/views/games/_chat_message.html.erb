@@ -1,0 +1,4 @@
+<div class="chat-message <%= message.game_player ? 'abcde'.chars[message.game_player.order] : 'system' %>">
+  <% if message.game_player %><span class="handle"><%= message.game_player.player.handle %></span><% end %>
+  <%= message.body %>
+</div>

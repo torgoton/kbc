@@ -5,6 +5,7 @@
 #  id                :bigint           not null, primary key
 #  board_contents    :json
 #  boards            :json
+#  completed_at      :datetime
 #  current_action    :json
 #  deck              :json
 #  discard           :json
@@ -34,6 +35,7 @@ class Game < ApplicationRecord
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
   has_many :moves, dependent: :destroy
+  has_many :chat_messages, dependent: :destroy
   belongs_to :current_player, class_name: "GamePlayer", optional: true
 
   serialize :board_contents, coder: BoardState
@@ -70,6 +72,12 @@ class Game < ApplicationRecord
 
   def completed?
     state.to_s == "completed"
+  end
+
+  CHAT_OPEN_AFTER_COMPLETION = 10.minutes
+
+  def chat_open?
+    !completed? || (completed_at.present? && Time.current < completed_at + CHAT_OPEN_AFTER_COMPLETION)
   end
 
   def start(safe = true, options = {})
@@ -176,7 +184,9 @@ class Game < ApplicationRecord
     self.current_player = nil
     self.scores = Scoring.new(self).compute
     self.mandatory_count = 0
+    self.completed_at = Time.current
     save!
+    chat_messages.create!(body: "Game ended.")
     broadcast_end_game
     broadcast_dashboard_update
   end

@@ -86,6 +86,8 @@ Rails.application.routes.draw do
       post :activate_fort
       post :resign
     end
+
+    resources :chat_messages, only: [ :create ]
   end
 
   get "home/index"

@@ -5,6 +5,7 @@
 #  id                :bigint           not null, primary key
 #  board_contents    :json
 #  boards            :json
+#  completed_at      :datetime
 #  current_action    :json
 #  deck              :json
 #  discard           :json
@@ -1083,6 +1084,44 @@ class GameTest < ActiveSupport::TestCase
     game.reload
 
     assert_nil game.current_player_id
+  end
+
+  test "complete! sets completed_at" do
+    game = new_started_game
+    assert_nil game.completed_at, "sanity check: not yet completed"
+
+    game.complete!
+    game.reload
+
+    assert_not_nil game.completed_at
+  end
+
+  test "chat_open? is true for a game that has not completed" do
+    game = games(:game2player)
+    assert game.chat_open?
+  end
+
+  test "chat_open? is true within 10 minutes of completion" do
+    game = games(:completed_game)
+    game.update!(completed_at: 9.minutes.ago)
+    assert game.chat_open?
+  end
+
+  test "chat_open? is false 10 or more minutes after completion" do
+    game = games(:completed_game)
+    game.update!(completed_at: 10.minutes.ago)
+    assert_not game.chat_open?
+  end
+
+  test "complete! posts a system chat message" do
+    game = new_started_game
+    game.complete!
+    game.reload
+
+    system_message = game.chat_messages.last
+    assert_not_nil system_message
+    assert_nil system_message.game_player
+    assert_equal "Game ended.", system_message.body
   end
 
   test "end_turn clears current_player when it completes the game" do

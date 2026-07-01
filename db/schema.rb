@@ -10,9 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_29_191418) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_30_223331) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "chat_messages", force: :cascade do |t|
+    t.string "body", null: false
+    t.datetime "created_at", null: false
+    t.bigint "game_id", null: false
+    t.bigint "game_player_id"
+    t.datetime "updated_at", null: false
+    t.index ["game_id"], name: "index_chat_messages_on_game_id"
+    t.index ["game_player_id"], name: "index_chat_messages_on_game_player_id"
+  end
 
   create_table "game_players", force: :cascade do |t|
     t.jsonb "bonus_scores", default: {}, null: false
@@ -33,6 +43,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_191418) do
   create_table "games", force: :cascade do |t|
     t.json "board_contents"
     t.json "boards"
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.json "current_action", default: {"name" => "none"}
     t.integer "current_player_id"
@@ -231,6 +242,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_191418) do
     t.index ["handle"], name: "index_users_on_handle", unique: true
   end
 
+  add_foreign_key "chat_messages", "game_players"
+  add_foreign_key "chat_messages", "games"
   add_foreign_key "game_players", "games"
   add_foreign_key "game_players", "users"
   add_foreign_key "moves", "game_players"
