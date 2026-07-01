@@ -268,6 +268,29 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span#current-action[data-type='mandatory']"
   end
 
+  test "game show renders each player's provisional rating badge" do
+    game = games(:game2player)
+
+    get game_url(game)
+
+    assert_select ".rating-badge", text: "(1500?)", count: 2
+  end
+
+  test "game show renders rating deltas in the end game modal once rated" do
+    game = games(:game2player)
+    game.update!(
+      state: "completed",
+      scores: { "0" => { "total" => 10 }, "1" => { "total" => 5 } }
+    )
+    game_players(:chris).update!(rating_before: 1500, rating_after: 1510)
+    game_players(:paula).update!(rating_before: 1500, rating_after: 1490)
+
+    get game_url(game)
+
+    assert_select "#end-game-modal .rating-row .score-value", text: /1500.*1510.*\+10/
+    assert_select "#end-game-modal .rating-row .score-value", text: /1500.*1490.*-10/
+  end
+
   test "game show renders treasure bonus scores in the end game modal" do
     game = games(:game2player)
     game.update!(

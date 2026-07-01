@@ -1113,6 +1113,19 @@ class GameTest < ActiveSupport::TestCase
     assert_not game.chat_open?
   end
 
+  test "complete! rates the game, updating both users' ratings" do
+    game = new_started_game
+    game.complete!
+    game.reload
+
+    chris_gp = game.game_players.find { |gp| gp.player == users(:chris) }
+    paula_gp = game.game_players.find { |gp| gp.player == users(:paula) }
+    assert_not_nil chris_gp.rating_after
+    assert_not_nil paula_gp.rating_after
+    assert_equal chris_gp.rating_after, users(:chris).reload.rating
+    assert_equal paula_gp.rating_after, users(:paula).reload.rating
+  end
+
   test "complete! posts a system chat message" do
     game = new_started_game
     game.complete!

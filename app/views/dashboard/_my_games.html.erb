@@ -11,12 +11,12 @@
       </span>
       <%= link_to game_path(game) do %>
         <span>
-          Game <%= game.id %> with <%= game.player_handles %> &mdash; <%= game.turn_state %>
+          Game <%= game.id %> with <%= rated_list(game) %> &mdash; <%= game.turn_state %>
         </span>
       <% end %>
     <% else %>
       <span>
-        Game <%= game.id %> with <%= game.player_handles %> &mdash; <%= game.turn_state %>
+        Game <%= game.id %> with <%= rated_list(game) %> &mdash; <%= game.turn_state %>
       </span>
     <% end %>
   </div>

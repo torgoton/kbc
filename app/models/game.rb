@@ -185,7 +185,10 @@ class Game < ApplicationRecord
     self.scores = Scoring.new(self).compute
     self.mandatory_count = 0
     self.completed_at = Time.current
-    save!
+    transaction do
+      save!
+      Rating.new(self).apply!
+    end
     chat_messages.create!(body: "Game ended.")
     broadcast_end_game
     broadcast_dashboard_update

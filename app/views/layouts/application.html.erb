@@ -27,7 +27,7 @@
       <div id="turn-state-bar" data-controller="menu">
         <div id="dashboard-link-area">
           <button type="button" data-action="click->menu#toggle" class="hamburger-btn" aria-label="Menu">
-            &#9776; <%= Current.user.handle %>
+            &#9776; <%= Current.user.handle %> (<%= rating_badge(Current.user) %>)
           </button>
           <ul class="hamburger-menu hidden" data-menu-target="menu">
             <li><%= link_to "Dashboard", dashboard_path, data: { action: "click->menu#close" } %></li>
