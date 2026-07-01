@@ -273,7 +273,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
     get game_url(game)
 
-    assert_select ".rating-badge", text: "1500?", count: 2
+    assert_select ".rating-badge", text: "(1500?)", count: 2
   end
 
   test "game show renders rating deltas in the end game modal once rated" do
