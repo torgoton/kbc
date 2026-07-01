@@ -1179,6 +1179,10 @@ ul li .hex:hover .hex-bg {
     font-size: 1.5rem;
 }
 
+.rating-badge {
+    font-size: 0.8rem;
+}
+
 .first-player-marker {
     margin-left: 0.3rem;
     vertical-align: middle;

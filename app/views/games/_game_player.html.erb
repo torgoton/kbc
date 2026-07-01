@@ -8,7 +8,7 @@
         <% end %>
       <% end %>
       <%= player.player.handle %>
-      <span class="rating-badge"><%= rating_badge(player.player) %></span>
+      <span class="rating-badge">(<%= rating_badge(player.player) %>)</span>
       <% if player.order == 0 %>
         <%= content_tag :span, class: "first-player-marker", title: "First player" do %>
           <%= image_tag "first.svg", alt: "First player" %>
