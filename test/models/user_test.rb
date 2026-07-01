@@ -7,6 +7,7 @@
 #  email_address   :string           not null
 #  handle          :string           not null
 #  password_digest :string           not null
+#  rating          :integer          default(1500), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #

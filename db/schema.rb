@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_30_223331) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_01_130344) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -30,6 +30,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_223331) do
     t.integer "game_id", null: false
     t.json "hand"
     t.integer "order"
+    t.integer "rating_after"
+    t.integer "rating_before"
     t.datetime "resigned_at"
     t.json "supply"
     t.json "taken_from"
@@ -237,6 +239,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_223331) do
     t.string "email_address", null: false
     t.string "handle", null: false
     t.string "password_digest", null: false
+    t.integer "rating", default: 1500, null: false
     t.datetime "updated_at", null: false
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.index ["handle"], name: "index_users_on_handle", unique: true

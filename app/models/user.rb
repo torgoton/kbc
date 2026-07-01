@@ -7,6 +7,7 @@
 #  email_address   :string           not null
 #  handle          :string           not null
 #  password_digest :string           not null
+#  rating          :integer          default(1500), not null
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #
@@ -38,5 +39,9 @@ class User < ApplicationRecord
 
   def completed_games
     games.completed
+  end
+
+  def rated_games_count
+    game_players.where.not(rating_after: nil).count
   end
 end

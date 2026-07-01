@@ -35,6 +35,18 @@
             <td class="score-value"><%= scores[player.order.to_s]["total"] %></td>
           <% end %>
         </tr>
+        <% if players.all?(&:rating_after) %>
+          <tr class="rating-row">
+            <td>Rating</td>
+            <% players.each do |player| %>
+              <% delta = player.rating_after - player.rating_before %>
+              <td class="score-value">
+                <%= player.rating_before %> &rarr; <%= player.rating_after %>
+                (<%= delta >= 0 ? "+" : "" %><%= delta %>)
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
       </tbody>
     </table>
   <% end %>
