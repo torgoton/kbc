@@ -157,7 +157,7 @@ function initBoardZoom() {
 
 // Re-mark selectable hexes after Turbo Stream updates.
 // The 50ms debounce ensures prepForMove runs once after all streams have settled.
-let prepDebounceTimer = null;
+var prepDebounceTimer = null;
 document.addEventListener("turbo:before-stream-render", () => {
   clearTimeout(prepDebounceTimer);
   prepDebounceTimer = setTimeout(prepForMove, 50);
