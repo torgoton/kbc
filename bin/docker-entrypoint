@@ -6,8 +6,11 @@ if [ -z "${LD_PRELOAD+x}" ]; then
     export LD_PRELOAD
 fi
 
-# If running the rails server then create or migrate existing database
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+# If running the rails server then create or migrate existing database.
+# Allow extra server flags after the command, and match the production
+# CMD which prefixes the server with ./bin/thrust.
+if { [ "${1:-}" = "./bin/rails" ] && [ "${2:-}" = "server" ]; } || \
+   { [ "${1:-}" = "./bin/thrust" ] && [ "${2:-}" = "./bin/rails" ] && [ "${3:-}" = "server" ]; }; then
   ./bin/rails db:prepare
 fi
 
