@@ -1,6 +1,8 @@
 function enableClicks() {
   document.querySelector("#board").
     addEventListener("click", function (e) {
+      const myTurnFlag = document.getElementById("my-turn-flag");
+      if (!myTurnFlag || myTurnFlag.dataset.myTurn !== "true") return;
       const hex = e.target.closest(".hex");
       if (!hex || !hex.classList.contains("selectable")) {
         return;
@@ -23,8 +25,8 @@ function unmarkAvailableCells() {
 
 function prepForMove() {
   unmarkAvailableCells();
-  const myTurnFlag = document.getElementById("my-turn-flag");
-  if (!myTurnFlag || myTurnFlag.dataset.myTurn !== "true") return;
+  // All viewers see selectable/selected hexes so observers can follow the
+  // active player's move; clicking is gated to the current player in enableClicks.
   const actionEl = document.getElementById("current-action");
   if (!actionEl) return;
 

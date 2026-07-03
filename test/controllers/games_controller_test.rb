@@ -56,6 +56,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-tile.tile-used .tile-container.mandatory", count: 0
   end
 
+  test "the current player's active tile shows as tile-active to other players" do
+    # paula_turn_game: paula is the current player; chris (logged in) is watching.
+    game = games(:paula_turn_game)
+    game.update!(current_action: { "type" => "farm" })
+    game_players(:paula_in_paula_turn_game).update!(tiles: [ { "klass" => "FarmTile", "used" => false } ])
+    game_players(:chris_in_paula_turn_game).update!(tiles: [ { "klass" => "FarmTile", "used" => false } ])
+
+    get game_url(game)
+
+    # Only the current player's (paula's) farm tile is active, not the observer's own.
+    assert_select ".player-tile.tile-active .tile-container.farm", count: 1
+  end
+
   test "select_action sets current_action type on the game" do
     game = games(:game2player)
     post select_action_game_url(game), params: { action_type: "paddock" }
