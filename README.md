@@ -76,7 +76,7 @@ make stop      # pause containers
 make down      # stop and remove containers (database data is preserved)
 ```
 
-The `app` directory is mounted into the container, so code changes sync immediately while Rails runs in development mode.
+The `app` directory is mounted into the container, so code changes sync immediately while Rails runs in development mode. The container runs as root, so files it creates in the mounted source tree (e.g. `tmp/cache`, `log/`) will be root-owned on the host; run `docker run --rm -v "$PWD":/work alpine chown -R "$(id -u):$(id -g)" /work` if that blocks cleanup.
 
 Reset the database (`make reset` will prompt before deleting the database volume):
 
