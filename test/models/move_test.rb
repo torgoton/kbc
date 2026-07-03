@@ -15,7 +15,7 @@
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  game_id         :bigint           not null
-#  game_player_id  :bigint           not null
+#  game_player_id  :bigint
 #
 # Indexes
 #
@@ -109,6 +109,12 @@ class MoveTest < ActiveSupport::TestCase
     assert_no_turbo_stream_broadcasts("game_#{game.id}") do
       game.moves.create!(game_player: gp, action: "score_goal", order: 2)
     end
+  end
+
+  test "a system move (no game_player) can be created" do
+    game = games(:game2player)
+    move = game.moves.create!(game_player: nil, action: "end_game", order: 1)
+    assert_nil move.game_player_id
   end
 
   test "creating a Move with a malicious select_action payload does not broadcast" do

@@ -94,10 +94,11 @@ class Game < ApplicationRecord
     else
       Rails.logger.debug "FORCING start of game #{id} in state #{state}"
       reset_players
+      self.moves.destroy_all
     end
-    self.moves.destroy_all
     self.state = "playing"
-    self.move_count = 0
+    self.move_count = (move_count || 0) + 1
+    moves.build(order: move_count, action: "start_game", message: "Game started.", deliberate: false, reversible: false)
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
     populate_boards(options)
@@ -366,17 +367,29 @@ class Game < ApplicationRecord
     while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
     end
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "select_boards",
+      message: "Boards selected: #{boards.inspect}",
+      payload: { "boards" => boards },
+      deliberate: false,
+      reversible: false
+    )
     save
   end
 
   def populate_boards(options = {})
     state = BoardState.new
     instantiate
+    placements = []
     @board.map.each_with_index do |board, i|
       board.location_hexes.each do |loc|
         # MVP (and base game) always have 2 tiles per location
         row, col = overall_location(i, loc[:r], loc[:c])
-        state.place_tile(row, col, "#{loc[:k]}Tile", 2)
+        klass = "#{loc[:k]}Tile"
+        state.place_tile(row, col, klass, 2)
+        placements << { row:, col:, klass:, qty: 2 }
       end
     end
     nomad_pool = Boards::Board::NOMAD_TILE_POOL.shuffle
@@ -387,12 +400,23 @@ class Game < ApplicationRecord
       board_section.silver_hexes.select { |h| h[:k] == "Nomad" }.each do |nomad_hex|
         row, col = overall_location(i, nomad_hex[:r], nomad_hex[:c])
         klass = nomad_pool.shift
-        state.place_tile(row, col, klass, 1) if klass
+        next unless klass
+        state.place_tile(row, col, klass, 1)
+        placements << { row:, col:, klass:, qty: 1 }
       end
     end
     self.board_contents = state
     @board = nil # board was created before tiles were placed; reset so next instantiate is fresh
     Rails.logger.debug("CONTENT AT START: #{self.board_contents}")
+    self.move_count = (move_count || 0) + 1
+    moves.build(
+      order: move_count,
+      action: "populate_boards",
+      message: "Tiles placed: #{placements.map { |p| "[#{p[:row]},#{p[:col]}] #{p[:klass]} x#{p[:qty]}" }.join(', ')}",
+      payload: { "tiles" => placements },
+      deliberate: false,
+      reversible: false
+    )
   end
 
   def initialize_terrain_deck

@@ -990,7 +990,7 @@ class TurnEngine
       from: "supply",
       to: "[#{row}, #{col}]",
       payload: payload,
-      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]}"
+      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]} at [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
     @game.board_contents.place_settlement(row, col, game_player.order)
@@ -1110,7 +1110,7 @@ class TurnEngine
       from: tile[:key],
       to: "player_#{game_player.order}",
       payload: { "klass" => tile[:klass], "qty_before" => qty_before },
-      message: "#{game_player.player.handle} picked up #{/\A[AEIOU]/.match?(tile[:klass]) ? "an" : "a"} #{tile[:klass].delete_suffix("Tile")} tile"
+      message: "#{game_player.player.handle} picked up #{/\A[AEIOU]/.match?(tile[:klass]) ? "an" : "a"} #{tile[:klass].delete_suffix("Tile")} tile at #{tile[:key]}"
     )
     @game.board_contents_will_change!
     @game.board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))

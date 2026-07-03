@@ -10,6 +10,7 @@ class GamesController < ApplicationController
     @game.add_player(Current.user)
     respond_to do |format|
       if @game.save
+        log_table_opened
         @game.broadcast_dashboard_update
         format.html { redirect_to dashboard_path, notice: "Game created" }
         format.json { render :show, status: :created, location: @game }
@@ -106,6 +107,7 @@ class GamesController < ApplicationController
       Rails.logger.error "ERROR saving game: #{@game.errors.inspect}"
       return
     end
+    log_table_joined
     # MVP: 2 players every game, so just start it now
     @game.start
     @game.broadcast_game_update
@@ -222,6 +224,42 @@ class GamesController < ApplicationController
   end
 
   private
+
+  def log_table_opened
+    game_player = @game.game_players.find_by(player: Current.user)
+    @game.move_count = (@game.move_count || 0) + 1
+    @game.moves.create!(
+      order: @game.move_count,
+      game_player: game_player,
+      action: "open_table",
+      message: "#{game_player.player.handle} opened the table",
+      deliberate: true,
+      reversible: false
+    )
+    @game.move_count += 1
+    @game.moves.create!(
+      order: @game.move_count,
+      action: "game_options",
+      message: "Game options: None available",
+      deliberate: true,
+      reversible: false
+    )
+    @game.save!
+  end
+
+  def log_table_joined
+    game_player = @game.game_players.find_by(player: Current.user)
+    @game.move_count = (@game.move_count || 0) + 1
+    @game.moves.create!(
+      order: @game.move_count,
+      game_player: game_player,
+      action: "join_table",
+      message: "#{game_player.player.handle} joined the table",
+      deliberate: true,
+      reversible: false
+    )
+    @game.save!
+  end
 
   def require_game_playing
     @game = Current.user.games.find(params[:id])

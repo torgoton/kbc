@@ -15,7 +15,7 @@
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  game_id         :bigint           not null
-#  game_player_id  :bigint           not null
+#  game_player_id  :bigint
 #
 # Indexes
 #
@@ -43,7 +43,7 @@ class Move < ApplicationRecord
   }.freeze
 
   belongs_to :game
-  belongs_to :game_player
+  belongs_to :game_player, optional: true
 
   after_create_commit :broadcast_sound
 

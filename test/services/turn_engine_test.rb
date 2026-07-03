@@ -21,6 +21,17 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 39, @game.current_player.supply["settlements"]
   end
 
+  test "build_settlement logs the location in the move message" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+
+    @engine.build_settlement(*spot)
+    @game.reload
+
+    move = @game.moves.find_by(action: "build")
+    assert_includes move.message, "[#{spot[0]}, #{spot[1]}]"
+  end
+
   test "mandatory builds gate turn_endable?" do
     force_hand("G")
 
@@ -65,13 +76,14 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 39, player.reload.supply["settlements"]
     assert @engine.undo_allowed?
 
-    @engine.undo_last_move
+    assert_difference("@game.moves.count", -1) do
+      @engine.undo_last_move
+    end
     @game.reload
 
     assert_equal 3, @game.mandatory_count
     assert_equal 40, player.reload.supply["settlements"]
     assert @game.board_contents.empty?(*spot)
-    assert_equal 0, @game.moves.count
   end
 
   test "building adjacent to a tile location picks it up and decrements qty" do
@@ -324,11 +336,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     @engine.select_action("paddock")
     assert_equal "paddock", @game.reload.current_action["type"]
 
-    @engine.undo_last_move
+    assert_difference("@game.moves.count", -1) do
+      @engine.undo_last_move
+    end
     @game.reload
 
     assert_equal "mandatory", @game.current_action["type"]
-    assert_equal 0, @game.moves.count
   end
 
   test "select_action for paddock preserves klass" do
@@ -511,11 +524,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     @engine.select_settlement(5, 5)
     assert_equal "[5, 5]", @game.reload.current_action["from"]
 
-    @engine.undo_last_move
+    assert_difference("@game.moves.count", -1) do
+      @engine.undo_last_move
+    end
     @game.reload
 
     assert_nil @game.current_action["from"]
-    assert_equal 0, @game.moves.count
   end
 
   test "end_turn creates an end_game move when the last player ends and game is ending" do
@@ -1421,13 +1435,14 @@ class TurnEngineTest < ActiveSupport::TestCase
       { "klass" => "OutpostTile", "from" => "[3, 3]", "used" => false }
     ])
 
-    @engine.activate_outpost
+    assert_difference("@game.moves.count", 1) do
+      @engine.activate_outpost
+    end
     @game.reload
 
     assert @game.current_action["outpost_active"]
     outpost = @game.current_player.tiles.find { |t| t["klass"] == "OutpostTile" }
     assert outpost["used"]
-    assert_equal 1, @game.moves.count
     assert_equal "activate_outpost", @game.moves.last.action
   end
 
@@ -1523,13 +1538,14 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.reload
     assert @game.current_action["outpost_active"]
 
-    @engine.undo_last_move
+    assert_difference("@game.moves.count", -1) do
+      @engine.undo_last_move
+    end
     @game.reload
 
     assert_nil @game.current_action["outpost_active"]
     outpost = @game.current_player.tiles.find { |t| t["klass"] == "OutpostTile" }
     assert_equal false, outpost["used"]
-    assert_equal 0, @game.moves.count
   end
 
   test "undo of an Outpost build restores the active Outpost build state" do
@@ -2094,18 +2110,17 @@ class TurnEngineTest < ActiveSupport::TestCase
       { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
     ])
 
-    @engine.activate_fort_tile
+    assert_difference("@game.moves.count", 2) do
+      @engine.activate_fort_tile
+    end
     @game.reload
 
-    moves = @game.moves.order(:order)
-    assert_equal 2, moves.count
+    fort_move, draw_move = @game.moves.order(:order).last(2)
 
-    fort_move = moves.first
     assert_equal "activate_fort", fort_move.action
     assert fort_move.deliberate
     assert_not fort_move.reversible
 
-    draw_move = moves.last
     assert_equal "draw_fort_card", draw_move.action
     assert_not draw_move.deliberate
     assert_not draw_move.reversible
@@ -2162,10 +2177,12 @@ class TurnEngineTest < ActiveSupport::TestCase
     ])
     @game.update!(current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => "G" })
 
-    result = @engine.activate_fort_tile
+    result = nil
+    assert_no_difference("@game.moves.count") do
+      result = @engine.activate_fort_tile
+    end
 
     assert_equal "Not available", result
-    assert_equal 0, @game.reload.moves.count
   end
 
   # ---------------------------------------------------------------------------
