@@ -56,6 +56,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-tile.tile-used .tile-container.mandatory", count: 0
   end
 
+  test "game show renders a system log entry (no game_player) as a system move" do
+    game = games(:game2player)
+    game.moves.create!(game_player: nil, action: "end_game", message: "Game ended.", order: 1)
+
+    get game_url(game)
+
+    assert_select ".move.system", text: "Game ended."
+  end
+
   test "the current player's active tile shows as tile-active to other players" do
     # paula_turn_game: paula is the current player; chris (logged in) is watching.
     game = games(:paula_turn_game)
@@ -360,6 +369,23 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to dashboard_path
   end
 
+  test "POST create logs the table opening and game options as deliberate, irreversible moves" do
+    post games_url
+    game = Game.last
+
+    opened = game.moves.find_by(action: "open_table")
+    assert_equal "Chris opened the table", opened.message
+    assert_equal game.game_players.find_by(player: users(:chris)), opened.game_player
+    assert opened.deliberate
+    assert_not opened.reversible
+
+    options = game.moves.find_by(action: "game_options")
+    assert_equal "Game options: None available", options.message
+    assert_nil options.game_player_id
+    assert options.deliberate
+    assert_not options.reversible
+  end
+
   test "POST action with mandatory current_action dispatches build_settlement" do
     game = games(:game2player)
     chris = game_players(:chris)
@@ -432,6 +458,20 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post join_game_url(game)
 
     assert_redirected_to game_path(game)
+  end
+
+  test "POST join logs the joining player as a deliberate, irreversible move" do
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+    post join_game_url(game)
+
+    joined = game.reload.moves.find_by(action: "join_table")
+    assert_equal "Paula joined the table", joined.message
+    assert_equal game.game_players.find_by(player: users(:paula)), joined.game_player
+    assert joined.deliberate
+    assert_not joined.reversible
   end
 
   test "POST undo_move redirects to the game" do

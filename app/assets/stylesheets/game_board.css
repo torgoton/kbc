@@ -149,7 +149,7 @@ section#log-chat {
     &.c { background-color: oklch(from var(--clr-p-c) l c h / 30%); }
     &.d { background-color: oklch(from var(--clr-p-d) l c h / 30%); }
     &.e { background-color: oklch(from var(--clr-p-e) l c h / 30%); }
-    &.system { opacity: 0.7; font-style: italic; }
+    &.system { background-color: oklch(from gray l c h / 30%); opacity: 0.7; font-style: italic; }
 }
 
 .chat-message .handle {

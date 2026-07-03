@@ -864,6 +864,15 @@ class GameTest < ActiveSupport::TestCase
     assert_match(/picked up an Oasis tile/, pickup_move.message)
   end
 
+  test "pick_up_tile message includes the tile's location" do
+    game = game_with_tile_at_2_7(qty: 2)
+
+    engine(game).build_settlement(1, 7)
+
+    pickup_move = game.moves.find_by(action: "pick_up_tile")
+    assert_includes pickup_move.message, "[2, 7]"
+  end
+
   test "forfeit_tile stores tile klass in payload" do
     game = games(:game2player)
     chris = game_players(:chris)
@@ -1217,6 +1226,47 @@ class GameTest < ActiveSupport::TestCase
   test "start randomizes board selection across games" do
     boards_seen = 10.times.map { new_started_game.boards.map(&:first) }
     assert boards_seen.uniq.size > 1, "expected varied board selection, got always #{boards_seen.first}"
+  end
+
+  test "start logs a system move (no game_player) recording the game started" do
+    game = new_started_game
+
+    move = game.moves.find_by(action: "start_game")
+    assert_equal "Game started.", move.message
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+  end
+
+  test "start logs a system move recording the selected boards" do
+    game = new_started_game
+
+    move = game.moves.find_by(action: "select_boards")
+    assert_equal "Boards selected: #{game.boards.inspect}", move.message
+    assert_equal game.boards, move.payload["boards"]
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+  end
+
+  test "start logs a single system move recording every tile placement" do
+    game = new_started_game
+
+    move = game.moves.find_by(action: "populate_boards")
+    tiles = move.payload["tiles"]
+    assert tiles.size > 0
+    tiles.each do |t|
+      assert t.key?("row")
+      assert t.key?("col")
+      assert t.key?("klass")
+      assert t.key?("qty")
+    end
+
+    first = tiles.first
+    assert_includes move.message, "[#{first['row']},#{first['col']}] #{first['klass']} x#{first['qty']}"
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
   end
 
   test "broadcast_game_update broadcasts dashboard update to participants" do
