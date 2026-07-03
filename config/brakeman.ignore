@@ -1,0 +1,304 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "b9330dadeffdaab3d869917999d414d3d0d2f032806531ce432312995ea0c80c",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/games/_quadrant.html.erb",
+      "line": 48,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "Tiles::Tile.description",
+      "render_path": [
+        {
+          "type": "template",
+          "name": "games/_board",
+          "line": 1,
+          "file": "app/views/games/_board.html.erb",
+          "rendered": {
+            "name": "games/_quadrant",
+            "file": "app/views/games/_quadrant.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "games/_quadrant"
+      },
+      "user_input": null,
+      "confidence": "Medium",
+      "cwe_id": [
+        79
+      ],
+      "note": "False positive: description strings are built from hardcoded class names and DESCRIPTION constants (see Tiles::Tile#description), not user input. The <br> tags are intentionally rendered unescaped."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "d631a515636967e29ae958bff584a9aaf0b8ff4a2fef78f56c26c879a67d5e78",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/games/_tiles.html.erb",
+      "line": 21,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "Tiles::Tile.for_klass(tile[\"klass\"]).new(0).description",
+      "render_path": [
+        {
+          "type": "template",
+          "name": "games/_game",
+          "line": 38,
+          "file": "app/views/games/_game.html.erb",
+          "rendered": {
+            "name": "games/_players",
+            "file": "app/views/games/_players.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_players",
+          "line": 30,
+          "file": "app/views/games/_players.html.erb",
+          "rendered": {
+            "name": "games/_game_player",
+            "file": "app/views/games/_game_player.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_game_player",
+          "line": 72,
+          "file": "app/views/games/_game_player.html.erb",
+          "rendered": {
+            "name": "games/_tiles",
+            "file": "app/views/games/_tiles.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "games/_tiles"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "cwe_id": [
+        79
+      ],
+      "note": "False positive: description strings are built from hardcoded class names and DESCRIPTION constants (see Tiles::Tile#description), not user input. The <br> tags are intentionally rendered unescaped."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "d631a515636967e29ae958bff584a9aaf0b8ff4a2fef78f56c26c879a67d5e78",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/games/_tiles.html.erb",
+      "line": 27,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "Tiles::Tile.for_klass(tile[\"klass\"]).new(0).description",
+      "render_path": [
+        {
+          "type": "template",
+          "name": "games/_game",
+          "line": 38,
+          "file": "app/views/games/_game.html.erb",
+          "rendered": {
+            "name": "games/_players",
+            "file": "app/views/games/_players.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_players",
+          "line": 30,
+          "file": "app/views/games/_players.html.erb",
+          "rendered": {
+            "name": "games/_game_player",
+            "file": "app/views/games/_game_player.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_game_player",
+          "line": 72,
+          "file": "app/views/games/_game_player.html.erb",
+          "rendered": {
+            "name": "games/_tiles",
+            "file": "app/views/games/_tiles.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "games/_tiles"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "cwe_id": [
+        79
+      ],
+      "note": "False positive: description strings are built from hardcoded class names and DESCRIPTION constants (see Tiles::Tile#description), not user input. The <br> tags are intentionally rendered unescaped."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "d631a515636967e29ae958bff584a9aaf0b8ff4a2fef78f56c26c879a67d5e78",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/games/_tiles.html.erb",
+      "line": 42,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "Tiles::Tile.for_klass(tile[\"klass\"]).new(0).description",
+      "render_path": [
+        {
+          "type": "template",
+          "name": "games/_game",
+          "line": 38,
+          "file": "app/views/games/_game.html.erb",
+          "rendered": {
+            "name": "games/_players",
+            "file": "app/views/games/_players.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_players",
+          "line": 30,
+          "file": "app/views/games/_players.html.erb",
+          "rendered": {
+            "name": "games/_game_player",
+            "file": "app/views/games/_game_player.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_game_player",
+          "line": 72,
+          "file": "app/views/games/_game_player.html.erb",
+          "rendered": {
+            "name": "games/_tiles",
+            "file": "app/views/games/_tiles.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "games/_tiles"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "cwe_id": [
+        79
+      ],
+      "note": "False positive: description strings are built from hardcoded class names and DESCRIPTION constants (see Tiles::Tile#description), not user input. The <br> tags are intentionally rendered unescaped."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "d631a515636967e29ae958bff584a9aaf0b8ff4a2fef78f56c26c879a67d5e78",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/games/_tiles.html.erb",
+      "line": 55,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "Tiles::Tile.for_klass(tile[\"klass\"]).new(0).description",
+      "render_path": [
+        {
+          "type": "template",
+          "name": "games/_game",
+          "line": 38,
+          "file": "app/views/games/_game.html.erb",
+          "rendered": {
+            "name": "games/_players",
+            "file": "app/views/games/_players.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_players",
+          "line": 30,
+          "file": "app/views/games/_players.html.erb",
+          "rendered": {
+            "name": "games/_game_player",
+            "file": "app/views/games/_game_player.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_game_player",
+          "line": 72,
+          "file": "app/views/games/_game_player.html.erb",
+          "rendered": {
+            "name": "games/_tiles",
+            "file": "app/views/games/_tiles.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "games/_tiles"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "cwe_id": [
+        79
+      ],
+      "note": "False positive: description strings are built from hardcoded class names and DESCRIPTION constants (see Tiles::Tile#description), not user input. The <br> tags are intentionally rendered unescaped."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 2,
+      "fingerprint": "d631a515636967e29ae958bff584a9aaf0b8ff4a2fef78f56c26c879a67d5e78",
+      "check_name": "CrossSiteScripting",
+      "message": "Unescaped model attribute",
+      "file": "app/views/games/_tiles.html.erb",
+      "line": 61,
+      "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
+      "code": "Tiles::Tile.for_klass(tile[\"klass\"]).new(0).description",
+      "render_path": [
+        {
+          "type": "template",
+          "name": "games/_game",
+          "line": 38,
+          "file": "app/views/games/_game.html.erb",
+          "rendered": {
+            "name": "games/_players",
+            "file": "app/views/games/_players.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_players",
+          "line": 30,
+          "file": "app/views/games/_players.html.erb",
+          "rendered": {
+            "name": "games/_game_player",
+            "file": "app/views/games/_game_player.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_game_player",
+          "line": 72,
+          "file": "app/views/games/_game_player.html.erb",
+          "rendered": {
+            "name": "games/_tiles",
+            "file": "app/views/games/_tiles.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "games/_tiles"
+      },
+      "user_input": null,
+      "confidence": "High",
+      "cwe_id": [
+        79
+      ],
+      "note": "False positive: description strings are built from hardcoded class names and DESCRIPTION constants (see Tiles::Tile#description), not user input. The <br> tags are intentionally rendered unescaped."
+    }
+  ],
+  "updated": "2026-07-03 14:21:22 +0000",
+  "brakeman_version": "8.0.5"
+}
