@@ -66,7 +66,7 @@ In the app, request at least two accounts, then from a Rails console set the app
 
 ### Container notes
 
-`docker compose` runs the app in `RAILS_ENV=development` against the `kbc_development` database. The Rails server listens on port `3000` inside the container; override the host port with `KBC_HOST_PORT` (default `3000`).
+`docker compose` runs the app in `RAILS_ENV=development` against the `kbc_development` database. The Rails server listens on port `3000` inside the container; override the host port with `KBC_HOST_PORT` (default `3000`). Postgres is published to the host on `KBC_DB_PORT` (default `5432`).
 
 Start, stop, and tear down the stack:
 
@@ -90,10 +90,10 @@ Connect to Postgres from inside the container:
 docker compose exec db psql -U postgres -d kbc_development
 ```
 
-Or from the host via the published port (use your configured `KBC_HOST_PORT`):
+Or from the host via the published port (use your configured `KBC_DB_PORT`):
 
 ```bash
-psql -h localhost -p ${KBC_HOST_PORT:-3000} -U postgres -d kbc_development
+psql -h localhost -p ${KBC_DB_PORT:-5432} -U postgres -d kbc_development
 ```
 
 ---
