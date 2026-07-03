@@ -28,7 +28,7 @@
         </div>
       <% end %>
     <% else %>
-      <% active = my_turn && !used && game.current_action["type"] == type && marked_active_type != type %>
+      <% active = player.id == game.current_player_id && !used && game.current_action["type"] == type && marked_active_type != type %>
       <% marked_active_type = type if active %>
       <% activatable = my_turn && engine.tile_activatable?(tile) %>
       <% state = active ? "tile-active" : used ? "tile-used" : activatable ? "tile-activatable" : "tile-inactive" %>
