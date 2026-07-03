@@ -62,6 +62,31 @@ class MoveTest < ActiveSupport::TestCase
 
     move = build_move(action: "select_action", payload: { "klass" => "OasisTile" })
     assert_equal "oasis", move.send(:sound_key)
+
+    move = build_move(action: "select_action", payload: { "klass" => "CityHallTile" })
+    assert_equal "cityhall", move.send(:sound_key)
+
+    move = build_move(action: "select_action", payload: { "klass" => "ForestersLodgeTile" })
+    assert_equal "foresterslodge", move.send(:sound_key)
+  end
+
+  test "sound_key maps every donation subtile to the shared donation sound" do
+    %w[
+      DonationCanyonTile DonationDesertTile DonationFlowerTile DonationGrassTile
+      DonationTimberTile DonationWaterTile DonationMountainTile
+    ].each do |klass|
+      move = build_move(action: "select_action", payload: { "klass" => klass })
+      assert_equal "donation", move.send(:sound_key), "#{klass} should map to donation"
+    end
+  end
+
+  test "every playable tile's sound_key resolves to an actual sound asset" do
+    Boards::Board::TILE_CLASSES.each_key do |klass|
+      move = build_move(action: "select_action", payload: { "klass" => klass })
+      key = move.send(:sound_key)
+      path = Rails.root.join("app/assets/sounds/#{key}.ogg")
+      assert File.exist?(path), "#{klass} maps to sound_key #{key.inspect}, but #{path} does not exist"
+    end
   end
 
   test "sound_key returns nil for unmapped actions" do

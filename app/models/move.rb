@@ -55,6 +55,12 @@ class Move < ApplicationRecord
 
   def sound_key
     return SOUNDS[action] if SOUNDS.key?(action)
-    payload["klass"].delete_suffix("Tile").downcase if action == "select_action" && payload&.dig("klass")
+    return nil unless action == "select_action" && payload&.dig("klass")
+
+    klass_name = payload["klass"]
+    tile_class = Tiles::Tile.for_klass(klass_name)
+    return "donation" if tile_class && tile_class < Tiles::Nomad::DonationTile
+
+    klass_name.delete_suffix("Tile").downcase
   end
 end
