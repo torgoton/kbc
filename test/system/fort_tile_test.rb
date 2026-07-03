@@ -34,5 +34,6 @@ class FortTileSystemTest < ApplicationSystemTestCase
 
     assert_selector "#current-action[data-type='fort']", visible: false
     assert_text "Chris drew a Desert card"
+    assert_selector ".fort-drawn .player-card.card-D"
   end
 end

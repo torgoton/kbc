@@ -44,6 +44,13 @@
       <% shunned = chosen && card != chosen %>
       <%= content_tag :span, card, title: Boards::Board::TERRAIN_NAMES[card], class: "player-card card-#{card}#{" card-shunned" if shunned}" %>
     <% end %>
+    <% fort_terrain = (game.current_player_id == player.id) ? game.current_action["fort_terrain"] : nil %>
+    <% if fort_terrain %>
+      <span class="fort-drawn" title="Fort drew <%= Boards::Board::TERRAIN_NAMES[fort_terrain] %>">
+        <span class="fort-drawn-label">Fort drew</span>
+        <%= content_tag :span, fort_terrain, class: "player-card card-#{fort_terrain}" %>
+      </span>
+    <% end %>
     <div class="supply-display">
       <div class="supply-settlements">
         <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
