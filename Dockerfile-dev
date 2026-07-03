@@ -1,4 +1,5 @@
-FROM ruby:3.4
+# Keep this in sync with .ruby-version.
+FROM ruby:3.4.8
 
 WORKDIR /usr/src/app
 
