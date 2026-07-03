@@ -190,6 +190,7 @@ class Game < ApplicationRecord
       save!
       Rating.new(self).apply!
     end
+    log_game_results
     chat_messages.create!(body: "Game ended.")
     broadcast_end_game
     broadcast_dashboard_update
@@ -358,7 +359,48 @@ class Game < ApplicationRecord
     board.map.any? { |s| s.location_hexes.any? { |h| h[:k] == "Quarry" } }
   end
 
+  def next_card
+    card = deck.shift
+    shuffle_terrain_deck if deck.size < 1
+    save
+    card
+  end
+
+  def shuffle_terrain_deck
+    discard_count = discard.size
+    self.deck = discard.shuffle
+    self.discard.clear
+    self.move_count = (move_count || 0) + 1
+    moves.build(
+      order: move_count,
+      action: "shuffle_discards",
+      message: "Shuffled #{discard_count} discards into deck",
+      deliberate: false,
+      reversible: false
+    )
+    save
+  end
+
   private
+
+  def log_game_results
+    ordered = game_players.order(:order).to_a
+    score_line = ordered.map { |gp| "#{gp.player.handle} #{scores[gp.order.to_s]['total']}" }.join(", ")
+    rating_line = ordered.map { |gp| "#{gp.player.handle} #{gp.rating_before} → #{gp.rating_after}" }.join(", ")
+    self.move_count = (move_count || 0) + 1
+    moves.create!(
+      order: move_count,
+      action: "game_results",
+      message: "Scores: #{score_line}. Ratings: #{rating_line}",
+      payload: {
+        "scores" => scores,
+        "ratings" => ordered.map { |gp| { "handle" => gp.player.handle, "rating_before" => gp.rating_before, "rating_after" => gp.rating_after } }
+      },
+      deliberate: false,
+      reversible: false
+    )
+    save!
+  end
 
   def select_boards(options = {})
     min = options[:min_board] || 0
@@ -424,12 +466,6 @@ class Game < ApplicationRecord
     shuffle_terrain_deck
   end
 
-  def shuffle_terrain_deck
-    self.deck = discard.shuffle
-    self.discard.clear
-    save
-  end
-
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
   # OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
@@ -440,12 +476,32 @@ class Game < ApplicationRecord
     castle_goal = board_has_castles? ? [ "castles" ] : []
     self.goals = castle_goal + OPTIONAL_GOALS.sample(3)
     @board = nil
+    self.move_count = (move_count || 0) + 1
+    moves.build(
+      order: move_count,
+      action: "select_goals",
+      message: "Goals selected: #{goals.join(', ')}",
+      payload: { "goals" => goals },
+      deliberate: false,
+      reversible: false
+    )
     save
   end
 
   def select_tasks
     crossroads_count = boards.count { |id, _| CROSSROADS_BOARD_IDS.include?(id) }
     self.tasks = TASKS.sample(crossroads_count)
+    if tasks.any?
+      self.move_count = (move_count || 0) + 1
+      moves.build(
+        order: move_count,
+        action: "select_tasks",
+        message: "Tasks selected: #{tasks.join(', ')}",
+        payload: { "tasks" => tasks },
+        deliberate: false,
+        reversible: false
+      )
+    end
     save
   end
 
@@ -471,6 +527,14 @@ class Game < ApplicationRecord
   def choose_start_player
     game_players.shuffle.each_with_index { |p, n| p.update(order: n) }
     update(current_player: first_player)
+    self.move_count = (move_count || 0) + 1
+    moves.build(
+      order: move_count,
+      action: "choose_start_player",
+      message: "Player order: #{game_players.order(:order).map { |gp| gp.player.handle }.join(', ')}",
+      deliberate: false,
+      reversible: false
+    )
   end
 
   def overall_location(board, row, col)
@@ -479,12 +543,5 @@ class Game < ApplicationRecord
 
   def first_player
     game_players.where(order: 0).first
-  end
-
-  def next_card
-    card = deck.shift
-    shuffle_terrain_deck if deck.size < 1
-    save
-    card
   end
 end

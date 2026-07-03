@@ -696,8 +696,8 @@ class TurnEngine
     game_player = @game.current_player
     card_discarded = game_player.hand
     @game.discard.push(*game_player.hand)
-    new_cards = [ next_card ]
-    new_cards << next_card if has_crossroads_tile?(game_player)
+    new_cards = [ @game.next_card ]
+    new_cards << @game.next_card if has_crossroads_tile?(game_player)
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
@@ -1211,19 +1211,6 @@ class TurnEngine
     game_player.bonus_scores = (game_player.bonus_scores || {}).merge(
       goal => (game_player.bonus_scores&.dig(goal) || 0) + points
     )
-  end
-
-  def next_card
-    card = @game.deck.shift
-    shuffle_terrain_deck if @game.deck.size < 1
-    @game.save
-    card
-  end
-
-  def shuffle_terrain_deck
-    @game.deck = @game.discard.shuffle
-    @game.discard.clear
-    @game.save
   end
 
   def lock_terrain!(terrain, before)

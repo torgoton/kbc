@@ -44,6 +44,12 @@ class GameTest < ActiveSupport::TestCase
     # Check that the deck is shuffled and discard is cleared
     assert_equal [], game.discard
     assert_not_equal [ "A" ], game.deck
+
+    move = game.moves.find_by(action: "shuffle_discards")
+    assert_equal "Shuffled 5 discards into deck", move.message # 4 discarded + 1 returned hand card
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
   end
 
   # Tile pickup tests
@@ -1146,6 +1152,28 @@ class GameTest < ActiveSupport::TestCase
     assert_equal "Game ended.", system_message.body
   end
 
+  test "complete! logs a system move recording detailed scores and rating changes" do
+    game = new_started_game
+    game.complete!
+    game.reload
+
+    move = game.moves.find_by(action: "game_results")
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+
+    ordered = game.game_players.order(:order).to_a
+    ordered.each do |gp|
+      total = game.scores[gp.order.to_s]["total"]
+      assert_includes move.message, "#{gp.player.handle} #{total}"
+      assert_includes move.message, "#{gp.player.handle} #{gp.rating_before} → #{gp.rating_after}"
+    end
+
+    assert_equal game.scores, move.payload["scores"]
+    expected_ratings = ordered.map { |gp| { "handle" => gp.player.handle, "rating_before" => gp.rating_before, "rating_after" => gp.rating_after } }
+    assert_equal expected_ratings, move.payload["ratings"]
+  end
+
   test "end_turn clears current_player when it completes the game" do
     game = new_started_game
     last_gp = game.game_players.max_by(&:order)
@@ -1264,6 +1292,77 @@ class GameTest < ActiveSupport::TestCase
 
     first = tiles.first
     assert_includes move.message, "[#{first['row']},#{first['col']}] #{first['klass']} x#{first['qty']}"
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+  end
+
+  test "start logs a system move recording the player order" do
+    game = new_started_game
+
+    move = game.moves.find_by(action: "choose_start_player")
+    ordered_handles = game.game_players.order(:order).map { |gp| gp.player.handle }
+    assert_equal "Player order: #{ordered_handles.join(', ')}", move.message
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+  end
+
+  test "select_goals logs a system move recording the selected goals" do
+    game = games(:game2player)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    game.move_count = 0
+    game.save!
+
+    game.send(:select_goals)
+
+    move = game.moves.find_by(action: "select_goals")
+    assert_equal "Goals selected: #{game.goals.join(', ')}", move.message
+    assert_equal game.goals, move.payload["goals"]
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+  end
+
+  test "select_tasks logs a system move when tasks are assigned" do
+    game = games(:game2player)
+    game.boards = [ [ 12, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ] # board 12 is a crossroads board
+    game.move_count = 0
+    game.save!
+
+    game.send(:select_tasks)
+
+    assert game.tasks.any?
+    move = game.moves.find_by(action: "select_tasks")
+    assert_equal "Tasks selected: #{game.tasks.join(', ')}", move.message
+    assert_equal game.tasks, move.payload["tasks"]
+    assert_nil move.game_player_id
+    assert_not move.deliberate
+    assert_not move.reversible
+  end
+
+  test "select_tasks logs no move when no tasks are assigned" do
+    game = games(:game2player)
+    game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ] # no crossroads boards
+    game.move_count = 0
+    game.save!
+
+    game.send(:select_tasks)
+
+    assert_empty game.tasks
+    assert_nil game.moves.find_by(action: "select_tasks")
+  end
+
+  test "shuffle_terrain_deck logs a system move recording the discard count" do
+    game = games(:game2player)
+    game.discard = %w[C D F G T]
+    game.move_count = 0
+    game.save!
+
+    game.shuffle_terrain_deck
+
+    move = game.moves.find_by(action: "shuffle_discards")
+    assert_equal "Shuffled 5 discards into deck", move.message
     assert_nil move.game_player_id
     assert_not move.deliberate
     assert_not move.reversible
