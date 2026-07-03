@@ -14,7 +14,7 @@
   <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: } %>
 <% end %>
 
-<% if my_player && !my_player.resigned? %>
+<% if my_player && !my_player.resigned? && game.playing? %>
   <% content_for :menu_items do %>
     <li>
       <%= link_to "Resign this game", resign_game_path(game),
