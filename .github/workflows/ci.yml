@@ -82,6 +82,7 @@ jobs:
         env:
           RAILS_ENV: test
           DB_HOST: localhost
+          MAIL_FROM: test@example.com
         run: bin/rails db:test:prepare test test:system
 
       - name: Keep screenshots from failed system tests
