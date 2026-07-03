@@ -385,8 +385,8 @@ class Game < ApplicationRecord
 
   def log_game_results
     ordered = game_players.order(:order).to_a
-    score_line = ordered.map { |gp| "#{gp.player.handle} #{scores[gp.order.to_s]['total']}" }.join(', ')
-    rating_line = ordered.map { |gp| "#{gp.player.handle} #{gp.rating_before} → #{gp.rating_after}" }.join(', ')
+    score_line = ordered.map { |gp| "#{gp.player.handle} #{scores[gp.order.to_s]['total']}" }.join(", ")
+    rating_line = ordered.map { |gp| "#{gp.player.handle} #{gp.rating_before} → #{gp.rating_after}" }.join(", ")
     self.move_count = (move_count || 0) + 1
     moves.create!(
       order: move_count,
