@@ -183,7 +183,10 @@ section#log-chat {
     left: 0;
     width: 100%;
     transform-origin: 0 0;
-    will-change: transform;
+    /* ponytail: no `will-change: transform` — it pins Chrome to a base-scale
+       cached raster texture, so zooming in upscales that bitmap and pixellates
+       every SVG (terrain icons, settlements). Repaint-on-zoom keeps them crisp.
+       If pan ever janks on huge boards, toggle will-change only during drag. */
 }
 
 .quadrant {
