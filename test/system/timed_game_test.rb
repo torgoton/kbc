@@ -38,4 +38,24 @@ class TimedGameTest < ApplicationSystemTestCase
     assert_equal "completed", game.reload.state
     assert current.reload.resigned?
   end
+
+  test "opening and closing the timed-games help dialog does not create a game" do
+    sign_in(email_address: "chris@example.com")
+    visit new_game_path
+    assert_selector "h1", text: "New Game"
+
+    assert_no_difference("Game.count") do
+      page.execute_script(<<~JS)
+        document.querySelector("button[aria-label='What is a timed game?']").click()
+      JS
+      assert_selector "dialog[open]"
+
+      page.execute_script(<<~JS)
+        document.querySelector("dialog button").click()
+      JS
+      assert_no_selector "dialog[open]"
+    end
+
+    assert_selector "h1", text: "New Game"
+  end
 end
