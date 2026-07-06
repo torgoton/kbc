@@ -173,6 +173,14 @@ class Game < ApplicationRecord
     timed? && playing? && game_player == current_player && time_remaining_for(game_player) <= 0
   end
 
+  # Whether game_player's clock is ticking right now: their turn AND they've
+  # made their first real game move (clock_started_at is stamped only by
+  # TurnEngine#record_move on the first deliberate move — opening or joining
+  # a table never starts a clock). Drives the countdown display.
+  def clock_running_for?(game_player)
+    timed? && playing? && game_player == current_player && game_player.clock_started_at.present?
+  end
+
   # View logic lives here, not in the controller/view: an opponent may claim
   # victory once the current player is flagged.
   def claimable_by?(user)

@@ -510,6 +510,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_not joined.reversible
   end
 
+  test "POST join starts a timed game without stamping anyone's clock_started_at" do
+    game = Game.create!(state: "waiting", speed: "blitz")
+    game.add_player(users(:chris))
+
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+    post join_game_url(game)
+
+    assert game.reload.playing?
+    game.game_players.each { |gp| assert_nil gp.clock_started_at }
+  end
+
   test "POST undo_move redirects to the game" do
     game = games(:game2player)
     post undo_move_game_url(game)

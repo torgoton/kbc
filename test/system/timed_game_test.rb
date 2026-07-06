@@ -67,6 +67,20 @@ class TimedGameTest < ApplicationSystemTestCase
     assert_includes options_move.message, "Untimed"
   end
 
+  test "a freshly started blitz game renders the current player's clock as not running" do
+    game = Game.create!(state: "waiting", speed: "blitz")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+
+    sign_in(email_address: game.current_player.player.email_address)
+    visit game_path(game)
+
+    assert_selector ".player-clock[data-clock-running-value='false']", count: 2
+    assert_no_selector ".player-clock[data-clock-running-value='true']"
+  end
+
   test "the create button sits on its own row, apart from the game options" do
     sign_in(email_address: "chris@example.com")
     visit new_game_path

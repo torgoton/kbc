@@ -1574,6 +1574,30 @@ class GameTest < ActiveSupport::TestCase
     assert_not game.claimable_by?(opponent.player)
   end
 
+  test "clock_running_for? is false for the current player before their first game move" do
+    game = new_started_game(speed: "blitz")
+    assert_not game.clock_running_for?(game.current_player)
+  end
+
+  test "clock_running_for? is true for the current player once their clock has started" do
+    game = new_started_game(speed: "blitz")
+    game.current_player.update!(clock_started_at: Time.current)
+    assert game.clock_running_for?(game.current_player)
+  end
+
+  test "clock_running_for? is false for an opponent even with a started clock" do
+    game = new_started_game(speed: "blitz")
+    other = game.game_players.find { |gp| gp != game.current_player }
+    other.update!(clock_started_at: Time.current)
+    assert_not game.clock_running_for?(other)
+  end
+
+  test "clock_running_for? is false in an untimed game" do
+    game = new_started_game
+    game.current_player.update!(clock_started_at: Time.current)
+    assert_not game.clock_running_for?(game.current_player)
+  end
+
   test "speed_label describes the bank and increment for a timed game" do
     game = Game.create!(state: "waiting", speed: "blitz")
     assert_equal "⚡ Blitz 3+15", game.speed_label
