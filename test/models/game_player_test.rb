@@ -278,4 +278,36 @@ class GamePlayerTest < ActiveSupport::TestCase
     assert @gp.tiles[1]["used"]
     assert @gp.tiles[1]["permanent"]
   end
+
+  # --- resign! ---
+
+  test "resign! marks the player resigned, records a resign move, and completes the game" do
+    game = games(:game2player)
+
+    # +2: the resign move itself, plus the game_results move complete! logs.
+    assert_difference("game.moves.count", 2) do
+      @gp.resign!(message: "Chris resigned", deliberate: true)
+    end
+
+    assert @gp.resigned?
+    assert_equal "completed", game.reload.state
+    assert game.moves.exists?(action: "resign", message: "Chris resigned", deliberate: true)
+  end
+
+  test "resign! does nothing when the player has already resigned" do
+    @gp.update!(resigned_at: 1.hour.ago)
+    game = games(:game2player)
+
+    assert_no_difference("game.moves.count") do
+      @gp.resign!(message: "Chris resigned again", deliberate: true)
+    end
+  end
+
+  test "resign! records the move as non-deliberate when it is a consequence, not a direct action" do
+    game = games(:game2player)
+
+    @gp.resign!(message: "Chris ran out of time", deliberate: false)
+
+    assert game.moves.exists?(action: "resign", deliberate: false)
+  end
 end

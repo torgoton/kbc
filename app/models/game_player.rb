@@ -230,4 +230,24 @@ class GamePlayer < ApplicationRecord
   def resigned?
     resigned_at.present?
   end
+
+  # Root-cause reuse: the resign flow (mark resigned, log the move, complete
+  # the game) is shared by the resign action, claim victory, and the timed
+  # game sweep job. deliberate: true for a player's own resignation or an
+  # opponent's claim; false when it's a consequence of the sweep job noticing
+  # an abandoned clock, not a direct action by anyone.
+  def resign!(message:, deliberate:)
+    return if resigned?
+    update!(resigned_at: Time.current)
+    game.move_count += 1
+    game.moves.create!(
+      order: game.move_count,
+      game_player: self,
+      action: "resign",
+      message: message,
+      deliberate: deliberate,
+      reversible: false
+    )
+    game.complete!
+  end
 end

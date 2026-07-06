@@ -1457,10 +1457,127 @@ class GameTest < ActiveSupport::TestCase
     end
   end
 
+  test "timed? is false for an untimed game" do
+    assert_not games(:game2player).timed?
+  end
+
+  test "timed? is true for a blitz game" do
+    assert Game.create!(state: "waiting", speed: "blitz").timed?
+  end
+
+  test "start on a blitz game sets each player's time bank and stamps turn_started_at" do
+    frozen_at = Time.current.change(usec: 0)
+    travel_to frozen_at do
+      game = new_started_game(speed: "blitz")
+      assert_equal frozen_at, game.turn_started_at
+      game.game_players.each do |gp|
+        assert_equal Game::SPEEDS["blitz"][:bank_ms], gp.time_remaining_ms
+      end
+    end
+  end
+
+  test "start on an untimed game leaves the clock fields blank" do
+    game = new_started_game
+    assert_nil game.turn_started_at
+    game.game_players.each { |gp| assert_nil gp.time_remaining_ms }
+  end
+
+  test "time_remaining_for returns the stored bank before the player has made their first move" do
+    game = new_started_game(speed: "blitz")
+    assert_equal Game::SPEEDS["blitz"][:bank_ms], game.time_remaining_for(game.current_player)
+  end
+
+  test "time_remaining_for live-deducts elapsed time once the player's clock has started" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    base = Time.current
+    travel_to(base, with_usec: true) { current.update!(clock_started_at: Time.current) }
+
+    travel_to(base + 10.seconds, with_usec: true) do
+      assert_equal Game::SPEEDS["blitz"][:bank_ms] - 10_000, game.time_remaining_for(current)
+    end
+  end
+
+  test "time_remaining_for does not live-deduct for a player whose turn it is not" do
+    game = new_started_game(speed: "blitz")
+    other = game.game_players.find { |gp| gp != game.current_player }
+    other.update!(clock_started_at: Time.current)
+
+    travel 10.seconds do
+      assert_equal Game::SPEEDS["blitz"][:bank_ms], game.time_remaining_for(other)
+    end
+  end
+
+  test "flagged? is true once the current player's live bank reaches zero" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 5_000)
+
+    travel 6.seconds do
+      assert game.flagged?(current)
+    end
+  end
+
+  test "flagged? is false while the current player still has time on the clock" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 5_000)
+
+    travel 1.second do
+      assert_not game.flagged?(current)
+    end
+  end
+
+  test "flagged? is false for a player who is not the current player" do
+    game = new_started_game(speed: "blitz")
+    other = game.game_players.find { |gp| gp != game.current_player }
+    other.update!(time_remaining_ms: -5_000)
+
+    assert_not game.flagged?(other)
+  end
+
+  test "claimable_by? is true for an opponent when the current player is flagged" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+
+    travel 2.seconds do
+      assert game.claimable_by?(opponent.player)
+    end
+  end
+
+  test "claimable_by? is false for the flagged player themselves" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+
+    travel 2.seconds do
+      assert_not game.claimable_by?(current.player)
+    end
+  end
+
+  test "claimable_by? is false for a user who is not in the game" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+
+    travel 2.seconds do
+      assert_not game.claimable_by?(users(:jules))
+    end
+  end
+
+  test "claimable_by? is false when the game is untimed" do
+    game = new_started_game
+    opponent = game.game_players.find { |gp| gp != game.current_player }
+
+    assert_not game.claimable_by?(opponent.player)
+  end
+
   private
 
-  def new_started_game
-    game = Game.create!(state: "waiting")
+  def new_started_game(speed: nil)
+    game = Game.create!(state: "waiting", speed: speed)
     game.add_player(users(:chris))
     game.add_player(users(:paula))
     game.start

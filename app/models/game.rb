@@ -33,6 +33,10 @@ class Game < ApplicationRecord
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
+  SPEEDS = {
+    "blitz" => { bank_ms: 180_000, increment_ms: 15_000 },
+    "normal" => { bank_ms: 600_000, increment_ms: 30_000 }
+  }.freeze
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -43,6 +47,7 @@ class Game < ApplicationRecord
   serialize :board_contents, coder: BoardState
 
   validates :state, inclusion: { in: STATES }
+  validates :speed, inclusion: { in: SPEEDS.keys }, allow_nil: true
 
   attr_accessor :board
 
@@ -110,6 +115,7 @@ class Game < ApplicationRecord
     populate_player_supplies
     deal_terrain_cards
     choose_start_player
+    start_clocks
     self.current_action = { "type" => "mandatory" }
     save
   end
@@ -146,6 +152,33 @@ class Game < ApplicationRecord
 
   def my_turn?(user)
     playing? && current_player&.player == user
+  end
+
+  def timed?
+    speed.present?
+  end
+
+  # Live remaining bank for game_player, in ms. Only the current player's
+  # clock ticks, and only after their first deliberate move of the game
+  # (clock_started_at); everyone else just sees their stored value.
+  def time_remaining_for(game_player)
+    stored = game_player.time_remaining_ms.to_i
+    return stored unless playing? && game_player == current_player && game_player.clock_started_at.present?
+    window_start = [ turn_started_at, game_player.clock_started_at ].compact.max
+    elapsed_ms = ((Time.current - window_start) * 1000).to_i
+    stored - elapsed_ms
+  end
+
+  def flagged?(game_player)
+    timed? && playing? && game_player == current_player && time_remaining_for(game_player) <= 0
+  end
+
+  # View logic lives here, not in the controller/view: an opponent may claim
+  # victory once the current player is flagged.
+  def claimable_by?(user)
+    return false unless timed? && current_player && flagged?(current_player)
+    game_player = game_players.find { |gp| gp.player == user }
+    game_player.present? && game_player != current_player && !game_player.resigned?
   end
 
   def player_handles
@@ -509,6 +542,13 @@ class Game < ApplicationRecord
 
   def board_has_castles?
     board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
+  end
+
+  def start_clocks
+    return unless timed?
+    bank_ms = SPEEDS.fetch(speed)[:bank_ms]
+    game_players.each { |p| p.update(time_remaining_ms: bank_ms) }
+    self.turn_started_at = Time.current
   end
 
   def populate_player_supplies
