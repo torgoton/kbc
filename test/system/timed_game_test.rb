@@ -67,6 +67,19 @@ class TimedGameTest < ApplicationSystemTestCase
     assert_includes options_move.message, "Untimed"
   end
 
+  test "the create button sits on its own row, apart from the game options" do
+    sign_in(email_address: "chris@example.com")
+    visit new_game_path
+    assert_selector "h1", text: "New Game"
+
+    shares_row_with_speed_option = evaluate_script(<<~JS)
+      document.querySelector("select[name='game[speed]']").closest("div") ===
+        document.querySelector("form[action='#{games_path}'] input[type='submit']").closest("div")
+    JS
+    assert_not shares_row_with_speed_option,
+      "Create button should be in its own row, not beside the speed option"
+  end
+
   test "opening and closing the timed-games help dialog does not create a game" do
     sign_in(email_address: "chris@example.com")
     visit new_game_path
