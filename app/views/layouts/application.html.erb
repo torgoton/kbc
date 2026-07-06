@@ -24,6 +24,7 @@
 
   <%= tag.body(class: content_for?(:body_class) ? yield(:body_class) : "default") do %>
     <% if Current.user %>
+      <div data-controller="presence"></div>
       <div id="turn-state-bar" data-controller="menu">
         <div id="dashboard-link-area">
           <button type="button" data-action="click->menu#toggle" class="hamburger-btn" aria-label="Menu">

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_03_151655) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_06_145430) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -26,6 +26,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_03_151655) do
 
   create_table "game_players", force: :cascade do |t|
     t.jsonb "bonus_scores", default: {}, null: false
+    t.datetime "clock_started_at"
     t.datetime "created_at", null: false
     t.integer "game_id", null: false
     t.json "hand"
@@ -36,6 +37,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_03_151655) do
     t.json "supply"
     t.json "taken_from"
     t.json "tiles"
+    t.integer "time_remaining_ms"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["game_id"], name: "index_game_players_on_game_id"
@@ -56,10 +58,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_03_151655) do
     t.integer "mandatory_count"
     t.integer "move_count"
     t.json "scores"
+    t.string "speed"
     t.string "state"
     t.integer "stone_walls", default: 25, null: false
     t.json "tasks"
     t.integer "turn_number", default: 0, null: false
+    t.datetime "turn_started_at"
     t.datetime "updated_at", null: false
     t.index ["current_player_id"], name: "index_games_on_current_player_id"
   end
@@ -238,6 +242,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_03_151655) do
     t.datetime "created_at", null: false
     t.string "email_address", null: false
     t.string "handle", null: false
+    t.datetime "last_seen_at"
     t.string "password_digest", null: false
     t.integer "rating", default: 1500, null: false
     t.datetime "updated_at", null: false

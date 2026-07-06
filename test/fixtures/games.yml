@@ -16,10 +16,12 @@
 #  mandatory_count   :integer
 #  move_count        :integer
 #  scores            :json
+#  speed             :string
 #  state             :string
 #  stone_walls       :integer          default(25), not null
 #  tasks             :json
 #  turn_number       :integer          default(0), not null
+#  turn_started_at   :datetime
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  current_player_id :integer

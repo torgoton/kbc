@@ -6,6 +6,7 @@
 #  approved        :boolean          default(FALSE)
 #  email_address   :string           not null
 #  handle          :string           not null
+#  last_seen_at    :datetime
 #  password_digest :string           not null
 #  rating          :integer          default(1500), not null
 #  created_at      :datetime         not null
@@ -43,5 +44,9 @@ class User < ApplicationRecord
 
   def rated_games_count
     game_players.where.not(rating_after: nil).count
+  end
+
+  def online?
+    last_seen_at.present? && last_seen_at > 1.minute.ago
   end
 end
