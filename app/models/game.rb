@@ -181,6 +181,15 @@ class Game < ApplicationRecord
     game_player.present? && game_player != current_player && !game_player.resigned?
   end
 
+  # Short badge for dashboard listings, e.g. "⚡ Blitz 3+15", so nobody joins
+  # a timed table unknowingly.
+  def speed_label
+    return nil unless timed?
+    bank_min = SPEEDS[speed][:bank_ms] / 60_000
+    increment_sec = SPEEDS[speed][:increment_ms] / 1_000
+    "⚡ #{speed.capitalize} #{bank_min}+#{increment_sec}"
+  end
+
   def player_handles
     game_players.map { |gp| gp.player.handle }.join(", ")
   end
@@ -327,7 +336,7 @@ class Game < ApplicationRecord
         "game_player_#{viewer.id}_private",
         target: "end-turn-area",
         partial: "games/end_turn",
-        locals: { game: self, engine: engine, my_turn: my_turn }
+        locals: { game: self, engine: engine, my_turn: my_turn, my_player: viewer }
       )
     end
 

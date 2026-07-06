@@ -19,4 +19,26 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "td", text: /Paula \(1500\?\)/
   end
+
+  test "waiting tables list shows a speed badge for a timed table" do
+    game = Game.create!(state: "waiting", speed: "blitz")
+    game.add_player(users(:paula))
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+
+    get dashboard_url
+
+    assert_select ".speed-badge", { text: /Blitz/, count: 1 }
+  end
+
+  test "my games list shows a speed badge for a timed game" do
+    game = Game.create!(state: "waiting", speed: "normal")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+
+    get dashboard_url
+
+    assert_select ".speed-badge", text: /Normal/
+  end
 end

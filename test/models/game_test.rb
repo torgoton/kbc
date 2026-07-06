@@ -1574,6 +1574,15 @@ class GameTest < ActiveSupport::TestCase
     assert_not game.claimable_by?(opponent.player)
   end
 
+  test "speed_label describes the bank and increment for a timed game" do
+    game = Game.create!(state: "waiting", speed: "blitz")
+    assert_equal "⚡ Blitz 3+15", game.speed_label
+  end
+
+  test "speed_label is nil for an untimed game" do
+    assert_nil games(:game2player).speed_label
+  end
+
   private
 
   def new_started_game(speed: nil)

@@ -362,6 +362,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "GET new renders a speed select offering blitz and normal" do
+    get new_game_url
+    assert_select "select[name=?]", "game[speed]" do
+      assert_select "option[value=blitz]"
+      assert_select "option[value=normal]"
+    end
+  end
+
+  test "GET new renders a help dialog explaining timed games" do
+    get new_game_url
+    assert_select "dialog"
+  end
+
   test "POST create creates a game and redirects to dashboard" do
     assert_difference("Game.count", 1) do
       post games_url
@@ -750,6 +763,62 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
     assert_not game_players(:chris).reload.resigned?
     assert_equal "playing", game.reload.state
+  end
+
+  test "Claim victory button appears for an opponent once the current player is flagged" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      get game_url(game)
+    end
+
+    assert_select "form[action=?]", claim_victory_game_path(game)
+  end
+
+  test "Claim victory button is absent when the current player is not flagged" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 100_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    get game_url(game)
+
+    assert_select "form[action=?]", claim_victory_game_path(game), count: 0
+  end
+
+  test "Claim victory button is absent for the flagged player themselves" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: current.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      get game_url(game)
+    end
+
+    assert_select "form[action=?]", claim_victory_game_path(game), count: 0
+  end
+
+  test "per-player clocks render for a timed game" do
+    game = new_timed_game(speed: "blitz")
+    post session_url, params: { email_address: game.current_player.player.email_address, password: "password" }
+
+    get game_url(game)
+
+    assert_select ".player-clock", 2
+  end
+
+  test "no clocks render for an untimed game" do
+    game = games(:game2player)
+
+    get game_url(game)
+
+    assert_select ".player-clock", 0
   end
 
   def new_timed_game(speed:)

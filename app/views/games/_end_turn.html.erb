@@ -1,7 +1,12 @@
 <% my_turn = local_assigns.fetch(:my_turn, false) %>
+<% my_player = local_assigns[:my_player] %>
 <span id="my-turn-flag" data-my-turn="<%= my_turn %>" hidden></span>
 <% if my_turn && engine.tile_action_endable? %>
   <%= button_to "End action", end_tile_action_game_path(game) %>
 <% elsif my_turn && engine.turn_endable? %>
   <%= button_to "End turn", end_turn_game_path(game) %>
+<% end %>
+<% if my_player && game.claimable_by?(my_player.player) %>
+  <%= button_to "Claim victory", claim_victory_game_path(game), class: "claim-victory-btn",
+      data: { turbo_confirm: "The current player's clock has run out. Claim victory and end the game?" } %>
 <% end %>
