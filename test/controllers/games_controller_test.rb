@@ -386,6 +386,29 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_not options.reversible
   end
 
+  test "POST create with a speed param sets the game's speed" do
+    post games_url, params: { game: { speed: "blitz" } }
+    assert_equal "blitz", Game.last.speed
+  end
+
+  test "POST create without a speed param leaves the game untimed" do
+    post games_url
+    assert_nil Game.last.speed
+  end
+
+  test "POST create logs the chosen speed in the game_options move message" do
+    post games_url, params: { game: { speed: "blitz" } }
+    options = Game.last.moves.find_by(action: "game_options")
+    assert_includes options.message, "Blitz"
+  end
+
+  test "POST create rejects a speed that is not a recognized option" do
+    assert_no_difference("Game.count") do
+      post games_url, params: { game: { speed: "warp" } }
+    end
+    assert_response :unprocessable_content
+  end
+
   test "POST action with mandatory current_action dispatches build_settlement" do
     game = games(:game2player)
     chris = game_players(:chris)
@@ -671,6 +694,70 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to game_path(game)
     assert_equal "playing", game.reload.state
     assert_nil game_players(:paula_in_paula_jules_game).reload.resigned_at
+  end
+
+  test "POST claim_victory resigns the flagged current player and completes the game" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      post claim_victory_game_url(game)
+    end
+
+    assert_redirected_to game_path(game)
+    assert current.reload.resigned?
+    assert_equal "completed", game.reload.state
+    assert game.moves.exists?(action: "resign")
+  end
+
+  test "POST claim_victory does nothing when the current player is not flagged" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 100_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    post claim_victory_game_url(game)
+
+    assert_redirected_to game_path(game)
+    assert_not current.reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
+  test "POST claim_victory does nothing when the requester is not an opponent" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: current.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      post claim_victory_game_url(game)
+    end
+
+    assert_not current.reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
+  test "POST claim_victory does nothing for an untimed game" do
+    game = games(:game2player)
+    paula = game_players(:paula)
+    post session_url, params: { email_address: paula.player.email_address, password: "password" }
+
+    post claim_victory_game_url(game)
+
+    assert_not game_players(:chris).reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
+  def new_timed_game(speed:)
+    game = Game.create!(state: "waiting", speed: speed)
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
   end
 end
 

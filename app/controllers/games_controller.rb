@@ -211,6 +211,21 @@ class GamesController < ApplicationController
     redirect_to game_path(game)
   end
 
+  # An opponent claims victory once the current player's clock has flagged
+  # (server-side check via Game#claimable_by? — never trust the client).
+  def claim_victory
+    game = Game.find(params[:id])
+    if game.claimable_by?(Current.user)
+      flagged_player = game.current_player
+      claimant = game.game_players.find_by(player: Current.user)
+      flagged_player.resign!(
+        message: "#{flagged_player.player.handle} ran out of time — #{claimant.player.handle} claimed victory",
+        deliberate: true
+      )
+    end
+    redirect_to game_path(game)
+  end
+
   private
 
   def log_table_opened
@@ -228,11 +243,17 @@ class GamesController < ApplicationController
     @game.moves.create!(
       order: @game.move_count,
       action: "game_options",
-      message: "Game options: None available",
+      message: "Game options: #{game_options_message}",
       deliberate: true,
       reversible: false
     )
     @game.save!
+  end
+
+  def game_options_message
+    return "None available" unless @game.timed?
+    speed = Game::SPEEDS.fetch(@game.speed)
+    "#{@game.speed.capitalize} (#{speed[:bank_ms] / 60_000} min + #{speed[:increment_ms] / 1_000} s/turn)"
   end
 
   def log_table_joined
@@ -259,6 +280,6 @@ class GamesController < ApplicationController
   end
 
   def create_game_params
-    { state: "waiting" }
+    { state: "waiting", speed: params.fetch(:game, {}).permit(:speed)[:speed].presence }
   end
 end

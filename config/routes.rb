@@ -85,6 +85,7 @@ Rails.application.routes.draw do
       post :select_meeple
       post :activate_fort
       post :resign
+      post :claim_victory
     end
 
     resources :chat_messages, only: [ :create ]
