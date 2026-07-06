@@ -39,6 +39,34 @@ class TimedGameTest < ApplicationSystemTestCase
     assert current.reload.resigned?
   end
 
+  test "opening a blitz table via the form logs the chosen speed as the game-options move" do
+    sign_in(email_address: "chris@example.com")
+    visit new_game_path
+    assert_selector "h1", text: "New Game"
+
+    select_el = find("select[name='game[speed]']")
+    set_field(select_el, "blitz")
+    submit_form find("form[action='#{games_path}']")
+
+    assert_selector "h1", text: "KBC Dashboard"
+    game = Game.order(:id).last
+    assert_equal "blitz", game.speed
+    options_move = game.moves.find_by(action: "game_options")
+    assert_includes options_move.message, "Blitz"
+  end
+
+  test "opening an untimed table via the form logs that no options are chosen" do
+    sign_in(email_address: "chris@example.com")
+    visit new_game_path
+    submit_form find("form[action='#{games_path}']")
+
+    assert_selector "h1", text: "KBC Dashboard"
+    game = Game.order(:id).last
+    assert_nil game.speed
+    options_move = game.moves.find_by(action: "game_options")
+    assert_includes options_move.message, "None available"
+  end
+
   test "opening and closing the timed-games help dialog does not create a game" do
     sign_in(email_address: "chris@example.com")
     visit new_game_path
