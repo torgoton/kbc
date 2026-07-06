@@ -694,6 +694,7 @@ class TurnEngine
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
     @game.instantiate
     game_player = @game.current_player
+    apply_clock!(game_player) if @game.timed?
     card_discarded = game_player.hand
     @game.discard.push(*game_player.hand)
     new_cards = [ @game.next_card ]
@@ -703,6 +704,7 @@ class TurnEngine
     reshuffled = @game.discard.empty?
     @game.mandatory_count = Game::MANDATORY_COUNT
     @game.current_action = { "type" => "mandatory" }
+    @game.turn_started_at = Time.current if @game.timed?
     next_order = (@game.current_player.order + 1) % @game.game_players.count
     Rails.logger.debug(" - next in order #{next_order}")
     @game.current_player = @game.game_players.find { |p| p.order == next_order }
@@ -923,14 +925,41 @@ class TurnEngine
     @game.game_players.reset
   end
 
+  # Fischer-with-cap clock accounting for the mover at end_turn: deduct time
+  # elapsed since their clock started running, credit the speed's increment,
+  # and cap at the bank (a negative result is allowed — the player keeps
+  # playing until an opponent claims victory). No deduction at all if the
+  # mover hasn't made a deliberate move yet this game (clock_started_at nil);
+  # the window otherwise starts at whichever is later, the turn's start or
+  # the mover's clock_started_at (it can fall mid-turn on their first move).
+  def apply_clock!(game_player)
+    bank_ms = Game::SPEEDS.fetch(@game.speed)[:bank_ms]
+    increment_ms = Game::SPEEDS.fetch(@game.speed)[:increment_ms]
+    elapsed_ms =
+      if game_player.clock_started_at.nil?
+        0
+      else
+        window_start = [ @game.turn_started_at, game_player.clock_started_at ].compact.max
+        ((Time.current - window_start) * 1000).to_i
+      end
+    remaining = game_player.time_remaining_ms.to_i - elapsed_ms + increment_ms
+    game_player.time_remaining_ms = [ remaining, bank_ms ].min
+  end
+
   # Single seam for recording moves. Increments move_count, defaults the
   # game_player to the current player, and attaches the request's pre-click
-  # snapshot to deliberate moves so undo can restore it (ADR-0002).
+  # snapshot to deliberate moves so undo can restore it (ADR-0002). Also the
+  # single place a timed player's clock_started_at gets stamped, on their
+  # first deliberate move of the game: free thinking time before that.
   def record_move(action:, deliberate:, reversible:, message: nil, game_player: nil, from: nil, to: nil, payload: nil)
+    mover = game_player || @game.current_player
+    if deliberate && @game.timed? && mover&.clock_started_at.nil?
+      mover.update!(clock_started_at: Time.current)
+    end
     @game.move_count += 1
     @game.moves.create!(
       order: @game.move_count,
-      game_player: game_player || @game.current_player,
+      game_player: mover,
       action: action,
       deliberate: deliberate,
       reversible: reversible,
