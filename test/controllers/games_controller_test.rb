@@ -765,6 +765,21 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "playing", game.reload.state
   end
 
+  test "POST claim_victory does nothing once the game is already completed" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+    travel(2.seconds) { post claim_victory_game_url(game) }
+    assert_equal "completed", game.reload.state
+
+    post claim_victory_game_url(game)
+
+    assert_response :redirect
+    assert_equal "completed", game.reload.state
+  end
+
   test "Claim victory button appears for an opponent once the current player is flagged" do
     game = new_timed_game(speed: "blitz")
     current = game.current_player
