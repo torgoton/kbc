@@ -2331,6 +2331,23 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not_nil mover.reload.clock_started_at
   end
 
+  test "undo_last_move does not touch the clock" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    force_hand("G", game: game)
+    spot = empty_hexes_of("G", 1, game: game).first
+
+    engine.build_settlement(*spot)
+    stamped_at = mover.reload.clock_started_at
+    remaining_before_undo = mover.time_remaining_ms
+
+    engine.undo_last_move
+    mover.reload
+
+    assert_equal stamped_at, mover.clock_started_at
+    assert_equal remaining_before_undo, mover.time_remaining_ms
+  end
+
   test "record_move does not overwrite clock_started_at on a later deliberate move" do
     game, engine = start_timed_game("blitz")
     mover = game.current_player
