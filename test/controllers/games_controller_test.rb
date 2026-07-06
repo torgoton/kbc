@@ -393,7 +393,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_not opened.reversible
 
     options = game.moves.find_by(action: "game_options")
-    assert_equal "Game options: None available", options.message
+    assert_equal "Game options: Untimed", options.message
     assert_nil options.game_player_id
     assert options.deliberate
     assert_not options.reversible

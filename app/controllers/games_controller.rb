@@ -251,7 +251,7 @@ class GamesController < ApplicationController
   end
 
   def game_options_message
-    return "None available" unless @game.timed?
+    return "Untimed" unless @game.timed?
     speed = Game::SPEEDS.fetch(@game.speed)
     "#{@game.speed.capitalize} (#{speed[:bank_ms] / 60_000} min + #{speed[:increment_ms] / 1_000} s/turn)"
   end

@@ -55,7 +55,7 @@ class TimedGameTest < ApplicationSystemTestCase
     assert_includes options_move.message, "Blitz"
   end
 
-  test "opening an untimed table via the form logs that no options are chosen" do
+  test "opening an untimed table via the form logs the untimed choice" do
     sign_in(email_address: "chris@example.com")
     visit new_game_path
     submit_form find("form[action='#{games_path}']")
@@ -64,7 +64,7 @@ class TimedGameTest < ApplicationSystemTestCase
     game = Game.order(:id).last
     assert_nil game.speed
     options_move = game.moves.find_by(action: "game_options")
-    assert_includes options_move.message, "None available"
+    assert_includes options_move.message, "Untimed"
   end
 
   test "opening and closing the timed-games help dialog does not create a game" do
