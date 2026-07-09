@@ -1,4 +1,4 @@
-<% my_turn = n == 0 && player.id == game.current_player&.id %>
+<% my_turn = is_me && player.id == game.current_player&.id %>
 <div class="player-info-zone">
   <div class="player-header">
     <%= content_tag :div, class: "handle #{' my-turn' if my_turn }" do %>
@@ -33,12 +33,12 @@
         </div>
       </div>
     <% end %>
-    <% if n == 0 && game.id %>
+    <% if is_me && game.id %>
       <%= button_to("Undo", undo_move_game_path(game), class: "undo-btn", disabled: !(my_turn && engine.undo_allowed?)) %>
     <% end %>
   </div>
   <div class="player-stats">
-    <% display_cards = (n == 0 || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "Z" } %>
+    <% display_cards = (is_me || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "Z" } %>
     <% chosen = (game.current_player_id == player.id) ? game.current_action["chosen_terrain"] : nil %>
     <% display_cards.each do |card| %>
       <% shunned = chosen && card != chosen %>

@@ -1437,6 +1437,34 @@ class GameTest < ActiveSupport::TestCase
     assert_not_includes chris_panel.to_s, "card-Z"
   end
 
+  test "broadcast_game_update sends observers a masked public player panel per player" do
+    # paula_jules_game: chris is not a player, so chris only ever gets the public per-player channels.
+    game = games(:paula_jules_game)
+    paula = game_players(:paula_in_paula_jules_game)
+    jules = game_players(:jules_in_paula_jules_game)
+    paula.update!(hand: [ "D" ])
+    jules.update!(hand: [ "M" ])
+    game.update!(current_player: jules)
+
+    paula_broadcasts = capture_turbo_stream_broadcasts("game_player_#{paula.id}") do
+      game.broadcast_game_update
+    end
+    jules_broadcasts = capture_turbo_stream_broadcasts("game_player_#{jules.id}") do
+      game.broadcast_game_update
+    end
+
+    paula_panel = paula_broadcasts.find { |broadcast| broadcast.to_s.include?(%(target="game_player_#{paula.id}")) }
+    jules_panel = jules_broadcasts.find { |broadcast| broadcast.to_s.include?(%(target="game_player_#{jules.id}")) }
+
+    assert paula_panel, "expected the public channel to update paula's panel for observers"
+    assert jules_panel, "expected the public channel to update jules's panel for observers"
+    # paula is not the current player: her card must stay masked to observers, even as turns change live.
+    assert_not_includes paula_panel.to_s, "card-D"
+    assert_includes paula_panel.to_s, "card-Z"
+    # jules is the current player: her card is publicly displayed live.
+    assert_includes jules_panel.to_s, "card-M"
+  end
+
   test "broadcast_sound emits a play_sound turbo stream to the game channel" do
     game = games(:game2player)
     broadcasts = capture_turbo_stream_broadcasts("game_#{game.id}") do
