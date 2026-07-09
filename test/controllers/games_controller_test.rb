@@ -78,6 +78,23 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-tile.tile-active .tile-container.farm", count: 1
   end
 
+  test "observer viewing a game they're not in only sees the current player's terrain card" do
+    # chris is logged in but is not a player in paula_jules_game.
+    game = games(:paula_jules_game)
+    paula = game_players(:paula_in_paula_jules_game)
+    jules = game_players(:jules_in_paula_jules_game)
+    paula.update!(hand: [ "D" ])
+    jules.update!(hand: [ "M" ])
+    game.update!(current_player: jules)
+
+    get game_url(game)
+
+    # jules is the current player: their card is publicly displayed per the rules.
+    assert_select ".player-card.card-M"
+    # paula is not the current player and chris is not paula: her card must stay hidden.
+    assert_select ".player-card.card-D", count: 0
+  end
+
   test "select_action sets current_action type on the game" do
     game = games(:game2player)
     post select_action_game_url(game), params: { action_type: "paddock" }

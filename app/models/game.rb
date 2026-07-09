@@ -283,6 +283,7 @@ class Game < ApplicationRecord
             game: self,
             player: displayed_player,
             n: viewer == displayed_player ? 0 : 1,
+            is_me: viewer == displayed_player,
             engine: engine,
             scores: scores
           }
@@ -293,6 +294,25 @@ class Game < ApplicationRecord
         target: "end-turn-area",
         partial: "games/end_turn",
         locals: { game: self, engine: engine, my_turn: my_turn }
+      )
+    end
+
+    # public per-player panel - lets observers (non-players) see live updates,
+    # masked exactly like a fresh page load would mask them (never a real hand,
+    # except the current player's, which is publicly displayed per the rules).
+    game_players.each do |displayed_player|
+      broadcast_update_to(
+        "game_player_#{displayed_player.id}",
+        target: "game_player_#{displayed_player.id}",
+        partial: "games/game_player",
+        locals: {
+          game: self,
+          player: displayed_player,
+          n: 1,
+          is_me: false,
+          engine: engine,
+          scores: scores
+        }
       )
     end
 

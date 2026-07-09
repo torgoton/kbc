@@ -14,20 +14,22 @@
   </div>
   <%# Language note: "player" is a GamePlayer model; "player.player" is a User %>
   <% players = game.game_players.sort_by(&:order) %>
-  <% Rails.logger.debug "CU: #{current_user.inspect}" %>
+  <% viewer_is_player = current_user && players.any? { |p| p.player == current_user } %>
   <% offset = ( current_user ? players.find { |p| p.player == current_user }&.order : nil ) || 0 %>
   <% players.size.times do |n| %>
     <%# Always display current user first %>
     <% index = (n + offset) % players.size %>
     <% player = players[index] %>
-    <% if n == 0 && current_user == player.player %>
+    <% is_me = current_user == player.player %>
+    <% if is_me %>
       <%= turbo_stream_from "game_player_#{player.id}_private" %>
-    <%# else %>
-      <%# = turbo_stream_from "game_player_#{player.id}" %>
+    <% elsif !viewer_is_player %>
+      <%# Observer: no private channel of their own, so subscribe to each player's public panel. %>
+      <%= turbo_stream_from "game_player_#{player.id}" %>
     <% end %>
     <div class="player-area">
       <%= content_tag :div, id: "game_player_#{player.id}" do %>
-        <%= render partial: "games/game_player", locals: { game:, player:, n:, engine:, scores: } %>
+        <%= render partial: "games/game_player", locals: { game:, player:, n:, is_me:, engine:, scores: } %>
       <% end %>
     </div>
   <% end %>
