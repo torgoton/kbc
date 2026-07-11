@@ -192,6 +192,10 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
 
   def mandatory_build? = true
 
+  def click(coordinate, engine)
+    engine.build_settlement(coordinate.row, coordinate.col)
+  end
+
   def with_outpost_active
     self.class.new(chosen_terrain: chosen_terrain, builds: builds, outpost_active: true)
   end
