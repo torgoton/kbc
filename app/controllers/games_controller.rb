@@ -1,5 +1,5 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_settlement, :place_wall, :remove_meeple, :select_meeple, :activate_fort ]
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
     @game = Game.new
@@ -125,30 +125,6 @@ class GamesController < ApplicationController
   def activate_fort
     return unless @game.game_players.find_by(player: Current.user) == @game.current_player
     TurnEngine.new(@game).activate_fort_tile
-    respond_to do |format|
-      format.html { head :no_content }
-      format.turbo_stream { head :no_content }
-    end
-    @game.broadcast_game_update
-  end
-
-  def remove_settlement
-    current_gp = @game.game_players.find_by(player: Current.user)
-    return unless current_gp == @game.current_player
-    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
-    TurnEngine.new(@game).remove_settlement(coord.row, coord.col)
-    respond_to do |format|
-      format.html { head :no_content }
-      format.turbo_stream { head :no_content }
-    end
-    @game.broadcast_game_update
-  end
-
-  def place_wall
-    current_gp = @game.game_players.find_by(player: Current.user)
-    return unless current_gp == @game.current_player
-    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
-    TurnEngine.new(@game).place_wall(coord.row, coord.col)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
