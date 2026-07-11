@@ -126,6 +126,35 @@ class TurnPhase
     end
   end
 
+  # Interpret a board-cell click for this phase and drive the engine (State
+  # pattern: phase = State, engine = Context). Base class reproduces the legacy
+  # tile-predicate dispatch; concrete phases override with their own meaning.
+  def click(coordinate, engine)
+    row = coordinate.row
+    col = coordinate.col
+    # klass_name alone isn't enough: several phase subclasses only carry a
+    # "klass" key when one was explicitly recorded (e.g. via select_action),
+    # so fall back to the type-derived name exactly as
+    # TurnEngine#current_action_tile_klass does.
+    effective_klass_name = klass_name || "#{type.capitalize}Tile"
+    tile = Tiles::Tile.for_klass(effective_klass_name)&.new(0)
+    if tile&.moves_settlement?
+      from ? engine.move_settlement(row, col) : engine.select_settlement(row, col)
+    elsif tile&.sword_tile?
+      engine.remove_settlement(row, col)
+    elsif tile&.places_wall?
+      engine.place_wall(row, col)
+    elsif tile&.places_meeple?
+      engine.execute_meeple_action(row, col)
+    elsif tile&.places_city_hall?
+      engine.place_city_hall(row, col)
+    elsif tile&.builds_settlement?
+      engine.activate_tile_build(row, col)
+    else
+      engine.build_settlement(row, col)
+    end
+  end
+
   def transition(_event, _facts)
     raise InvalidTransition, "#{self.class.name} does not accept that event"
   end

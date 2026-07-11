@@ -4,27 +4,7 @@ class TurnEngine
   end
 
   def click(coordinate)
-    row = coordinate.row
-    col = coordinate.col
-    action_type = @game.current_action["type"]
-    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
-    tile_klass = Tiles::Tile.for_klass(klass_name) if action_type != "mandatory"
-    tile_obj = tile_klass&.new(0)
-    if tile_obj&.moves_settlement?
-      @game.current_action["from"] ? move_settlement(row, col) : select_settlement(row, col)
-    elsif tile_obj&.sword_tile?
-      remove_settlement(row, col)
-    elsif tile_obj&.places_wall?
-      place_wall(row, col)
-    elsif tile_obj&.places_meeple?
-      execute_meeple_action(row, col)
-    elsif tile_obj&.places_city_hall?
-      place_city_hall(row, col)
-    elsif tile_obj&.builds_settlement?
-      activate_tile_build(row, col)
-    else
-      build_settlement(row, col)
-    end
+    @game.turn_phase.click(coordinate, self)
   end
 
   def available_list(active_player, terrain)
