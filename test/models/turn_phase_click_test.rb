@@ -67,4 +67,11 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     phase.click(coord(8, 9), engine)
     assert_equal [ [ :remove_settlement, 8, 9 ] ], engine.sent
   end
+
+  test "CityHallPhase#click tells the engine to place_city_hall" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::CityHallPhase.new(action_type: "cityhall", klass_name: "CityHallTile")
+    phase.click(coord(10, 10), engine)
+    assert_equal [ [ :place_city_hall, 10, 10 ] ], engine.sent
+  end
 end

@@ -697,6 +697,10 @@ class TurnPhase::CityHallPhase < TurnPhase
 
   def city_hall? = true
 
+  def click(coordinate, engine)
+    engine.place_city_hall(coordinate.row, coordinate.col)
+  end
+
   def serialize
     {
       "type" => action_type,
