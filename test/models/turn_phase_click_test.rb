@@ -102,4 +102,17 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     phase.click(coord(5, 5), engine)
     assert_equal [ [ :activate_tile_build, 5, 5 ] ], engine.sent
   end
+
+  test "base TurnPhase#click rejects clicks (every concrete phase overrides it)" do
+    base = TurnPhase.allocate # bare base instance, no subclass behavior
+    assert_raises(TurnPhase::InvalidTransition) do
+      base.click(coord(0, 0), RecordingEngine.new)
+    end
+  end
+
+  test "LegacyPhase#click builds a settlement for unknown mandatory-shaped data" do
+    engine = RecordingEngine.new
+    TurnPhase::LegacyPhase.new({ "type" => "mandatory" }).click(coord(1, 1), engine)
+    assert_equal [ [ :build_settlement, 1, 1 ] ], engine.sent
+  end
 end
