@@ -1,6 +1,7 @@
 class GamesController < ApplicationController
   before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
   before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
     @game = Game.new
@@ -41,7 +42,6 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def select_action
@@ -50,7 +50,6 @@ class GamesController < ApplicationController
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def end_turn
@@ -61,7 +60,6 @@ class GamesController < ApplicationController
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def join
@@ -93,7 +91,6 @@ class GamesController < ApplicationController
       format.turbo_stream { head :no_content }
     end
     @game.broadcast_sound("undo")
-    @game.broadcast_game_update
   end
 
   def end_tile_action
@@ -102,7 +99,6 @@ class GamesController < ApplicationController
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def activate_outpost
@@ -111,7 +107,6 @@ class GamesController < ApplicationController
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def activate_fort
@@ -120,7 +115,6 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def remove_meeple
@@ -130,7 +124,6 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def select_meeple
@@ -140,7 +133,6 @@ class GamesController < ApplicationController
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
-    @game.broadcast_game_update
   end
 
   def resign
@@ -216,6 +208,10 @@ class GamesController < ApplicationController
 
   def require_current_player
     head :no_content unless @game.game_players.find_by(player: Current.user) == @game.current_player
+  end
+
+  def broadcast_game_update
+    @game.broadcast_game_update
   end
 
   def action_params
