@@ -624,6 +624,10 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
 
   # consume_target is inherited from TurnPhase — its self.class is this class.
 
+  def click(coordinate, engine)
+    engine.remove_settlement(coordinate.row, coordinate.col)
+  end
+
   def serialize
     {
       "type" => action_type,
