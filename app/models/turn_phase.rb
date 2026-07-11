@@ -390,6 +390,14 @@ class TurnPhase::SettlementMovePhase < TurnPhase
 
   def accepts_source_selection? = true
 
+  def click(coordinate, engine)
+    if from
+      engine.move_settlement(coordinate.row, coordinate.col)
+    else
+      engine.select_settlement(coordinate.row, coordinate.col)
+    end
+  end
+
   def transition(event, facts)
     case event
     when TurnPhase::Events::SourceSelected
@@ -446,6 +454,14 @@ class TurnPhase::ResettlementPhase < TurnPhase
 
   def klass_name
     "ResettlementTile"
+  end
+
+  def click(coordinate, engine)
+    if from
+      engine.move_settlement(coordinate.row, coordinate.col)
+    else
+      engine.select_settlement(coordinate.row, coordinate.col)
+    end
   end
 
   def budget
