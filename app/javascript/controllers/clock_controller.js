@@ -44,5 +44,11 @@ export default class extends Controller {
     this.element.textContent = `${negative ? "-" : ""}${minutes}:${seconds}`
     this.element.classList.toggle("clock-low", ms >= 0 && ms < 30_000)
     this.element.classList.toggle("clock-flagged", ms <= 0)
+    // Only the current player's clock is running; when it flags, tell any
+    // opponent's hidden claim-victory button to reveal itself (once).
+    if (this.runningValue && ms <= 0 && !this.flagged) {
+      this.flagged = true
+      window.dispatchEvent(new CustomEvent("clock:flagged"))
+    }
   }
 }

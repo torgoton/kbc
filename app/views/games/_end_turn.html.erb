@@ -6,7 +6,9 @@
 <% elsif my_turn && engine.turn_endable? %>
   <%= button_to "End turn", end_turn_game_path(game) %>
 <% end %>
-<% if my_player && game.claimable_by?(my_player.player) %>
-  <%= button_to "Claim victory", claim_victory_game_path(game), class: "claim-victory-btn",
-      data: { turbo_confirm: "The current player's clock has run out. Claim victory and end the game?" } %>
+<% if my_player && game.potential_claimant?(my_player.player) %>
+  <div data-controller="claim-victory"<%= " hidden" unless game.claimable_by?(my_player.player) %>>
+    <%= button_to "Claim victory", claim_victory_game_path(game), class: "claim-victory-btn",
+        data: { turbo_confirm: "The current player's clock has run out. Claim victory and end the game?" } %>
+  </div>
 <% end %>

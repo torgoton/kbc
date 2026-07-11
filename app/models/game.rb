@@ -184,7 +184,16 @@ class Game < ApplicationRecord
   # View logic lives here, not in the controller/view: an opponent may claim
   # victory once the current player is flagged.
   def claimable_by?(user)
-    return false unless timed? && current_player && flagged?(current_player)
+    potential_claimant?(user) && flagged?(current_player)
+  end
+
+  # An opponent (non-current, unresigned player) in a live timed game: the set
+  # of viewers who *could* claim victory once the current player flags. The
+  # claim button is rendered hidden for them so clock_controller can reveal it
+  # the instant the clock runs out, with no server broadcast (only the current
+  # player can move on their own turn, so an idle flag emits none).
+  def potential_claimant?(user)
+    return false unless timed? && playing? && current_player
     game_player = game_players.find { |gp| gp.player == user }
     game_player.present? && game_player != current_player && !game_player.resigned?
   end

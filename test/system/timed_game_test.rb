@@ -39,6 +39,29 @@ class TimedGameTest < ApplicationSystemTestCase
     assert current.reload.resigned?
   end
 
+  test "an opponent's claim-victory button appears live when the clock runs out, without reloading" do
+    game = Game.create!(state: "waiting", speed: "blitz")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+
+    sign_in(email_address: opponent.player.email_address)
+    # Set the running clock *after* sign-in so only the game-page load elapses
+    # against it: the opponent arrives before the flag and watches it run out.
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 2_500)
+    visit game_path(game)
+
+    # Not flagged yet, so the (server-gated) claim button is present but hidden.
+    assert_no_selector "form[action='#{claim_victory_game_path(game)}']"
+
+    # The Stimulus clock ticks down to zero locally and reveals the button,
+    # with no server broadcast and no page reload.
+    assert_selector "form[action='#{claim_victory_game_path(game)}']", wait: 6
+  end
+
   test "opening a blitz table via the form logs the chosen speed as the game-options move" do
     sign_in(email_address: "chris@example.com")
     visit new_game_path
