@@ -364,6 +364,10 @@ class TurnPhase::FortPhase < TurnPhase
     fort_terrain_value
   end
 
+  def click(coordinate, engine)
+    engine.activate_tile_build(coordinate.row, coordinate.col)
+  end
+
   def serialize
     {
       "type" => "fort",

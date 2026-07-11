@@ -95,4 +95,11 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     phase.click(coord(3, 6), engine)
     assert_equal [ [ :place_wall, 3, 6 ] ], engine.sent
   end
+
+  test "FortPhase#click tells the engine to activate_tile_build" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::FortPhase.new(fort_terrain: "G")
+    phase.click(coord(5, 5), engine)
+    assert_equal [ [ :activate_tile_build, 5, 5 ] ], engine.sent
+  end
 end
