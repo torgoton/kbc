@@ -61,6 +61,14 @@ class TurnPhase
     serialize["klass"]
   end
 
+  # The tile class name for this phase's action, applying the type-derived
+  # fallback for phases that carry no explicit "klass" (e.g. a quarry action
+  # serializes only its type). Single source of truth for both #click and
+  # TurnEngine#current_action_tile_klass.
+  def tile_klass_name
+    klass_name || "#{type.capitalize}Tile"
+  end
+
   def chosen_terrain
     serialize["chosen_terrain"]
   end
@@ -133,11 +141,8 @@ class TurnPhase
     row = coordinate.row
     col = coordinate.col
     # klass_name alone isn't enough: several phase subclasses only carry a
-    # "klass" key when one was explicitly recorded (e.g. via select_action),
-    # so fall back to the type-derived name exactly as
-    # TurnEngine#current_action_tile_klass does.
-    effective_klass_name = klass_name || "#{type.capitalize}Tile"
-    tile = Tiles::Tile.for_klass(effective_klass_name)&.new(0)
+    # "klass" key when one was explicitly recorded (e.g. via select_action).
+    tile = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
     if tile&.moves_settlement?
       from ? engine.move_settlement(row, col) : engine.select_settlement(row, col)
     elsif tile&.sword_tile?
