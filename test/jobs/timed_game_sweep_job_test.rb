@@ -27,6 +27,23 @@ class TimedGameSweepJobTest < ActiveSupport::TestCase
     assert_equal "playing", game.reload.state
   end
 
+  test "leaves a flagged player alone if the game has had a move within the last 10 minutes" do
+    game = new_started_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 0)
+
+    travel 11.minutes do
+      game.moves.create!(
+        game_player: current, action: "build", order: 1, deliberate: true, reversible: true,
+        created_at: 2.minutes.ago
+      )
+      TimedGameSweepJob.perform_now
+    end
+
+    assert_not current.reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
   test "deletes a waiting timed table whose opener has been offline for 10 minutes" do
     game = Game.create!(state: "waiting", speed: "blitz")
     game.add_player(users(:chris))

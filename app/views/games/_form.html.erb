@@ -15,7 +15,7 @@
     <label for="game_speed">Speed</label>
     <%= form.select :speed, [
       [ "Untimed", "" ],
-      [ "Blitz — 3 min + 15 s/turn", "blitz" ],
+      [ "Blitz — 5 min + 20 s/turn", "blitz" ],
       [ "Normal — 10 min + 30 s/turn", "normal" ]
     ] %>
     <button type="button" onclick="this.nextElementSibling.showModal()" aria-label="What is a timed game?">?</button>
@@ -23,7 +23,7 @@
       <h3>Timed games</h3>
       <p>Each player gets a time bank that only drains on their own turn, plus a small increment credited each time they end their turn (Fischer clock) — so slow play only costs the slow player.</p>
       <p>Your clock doesn't start until your first move of the game; think as long as you like before that.</p>
-      <p>If your bank runs out, you're <strong>flagged</strong>: the game doesn't end automatically, but any opponent can claim victory.</p>
+      <p>If your bank runs out, you're <strong>flagged</strong>: any opponent can claim victory right away. If nobody does and the game goes quiet for 10 more minutes, you're auto-resigned — but as long as either player keeps making moves, that won't happen.</p>
       <p>Unstarted and abandoned timed tables are cleaned up automatically after a period of inactivity; untimed tables are never removed.</p>
       <%# No <form method="dialog"> here: it would nest inside the game form,
           nested forms are invalid HTML, and the parser drops the inner tag —

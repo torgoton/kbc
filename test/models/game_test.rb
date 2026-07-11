@@ -1243,6 +1243,21 @@ class GameTest < ActiveSupport::TestCase
     end
   end
 
+  test "complete! broadcasts a live game update so a running clock stops for connected viewers" do
+    game = games(:game2player)
+    game.update!(speed: "blitz")
+    chris = game_players(:chris)
+    chris.update!(clock_started_at: 1.minute.ago, time_remaining_ms: 60_000)
+
+    broadcasts = capture_turbo_stream_broadcasts("game_player_#{chris.id}_private") do
+      game.complete!
+    end
+
+    panel = broadcasts.find { |broadcast| broadcast.to_s.include?(%(target="game_player_#{chris.id}")) }
+    assert panel, "expected complete! to push a live player-panel update, not just the end-game modal"
+    assert_includes panel.to_s, 'data-clock-running-value="false"'
+  end
+
   # Board selection tests
 
   test "start selects 4 unique boards from the known pool" do
@@ -1600,7 +1615,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "speed_label describes the bank and increment for a timed game" do
     game = Game.create!(state: "waiting", speed: "blitz")
-    assert_equal "⚡ Blitz 3+15", game.speed_label
+    assert_equal "⚡ Blitz 5+20", game.speed_label
   end
 
   test "speed_label is nil for an untimed game" do

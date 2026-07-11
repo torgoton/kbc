@@ -34,7 +34,7 @@ class Game < ApplicationRecord
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
   SPEEDS = {
-    "blitz" => { bank_ms: 180_000, increment_ms: 15_000 },
+    "blitz" => { bank_ms: 300_000, increment_ms: 20_000 },
     "normal" => { bank_ms: 600_000, increment_ms: 30_000 }
   }.freeze
 
@@ -109,8 +109,8 @@ class Game < ApplicationRecord
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
     populate_boards(options)
-    initialize_terrain_deck
     select_goals
+    initialize_terrain_deck
     select_tasks
     populate_player_supplies
     deal_terrain_cards
@@ -244,6 +244,7 @@ class Game < ApplicationRecord
     end
     log_game_results
     chat_messages.create!(body: "Game ended.")
+    broadcast_game_update
     broadcast_end_game
     broadcast_dashboard_update
   end
