@@ -1,9 +1,9 @@
 # Email templates
 
 Standalone, hand-sent HTML emails — **not** wired to ActionMailer. Author an
-announcement, then paste it into the sender (Resend broadcast) on your own
-schedule. Styled to match the game: dark-green card, chartreuse/gold accents,
-hex-spectrum divider, gold uppercase labels from the in-game scoring row.
+announcement, then send it from your mail client on your own schedule. Styled to
+match the game: dark-green card, chartreuse/gold accents, hex-spectrum divider,
+gold uppercase labels from the in-game scoring row.
 
 ## `announcement.html`
 
@@ -17,9 +17,12 @@ timed-games launch — replace it per send.
 - the three labelled "what's new" items
 - the CTA `href` (two places: the `<!--[if mso]>` VML button and the normal `<a>`)
 
-**Sending via Resend broadcast:** the footer's unsubscribe uses
-`{{{RESEND_UNSUBSCRIBE_URL}}}`, which Resend substitutes automatically. For a
-plain paste-into-a-client send, swap that token for a real URL.
+**Sending from Thunderbird:** compose a new message in HTML mode, then
+**Insert → HTML…**, paste this whole file, and Insert (don't paste into the
+visual body — that escapes the tags). Put every recipient in **BCC** so players
+don't see each other's addresses. The footer's Unsubscribe is a `mailto:` that
+drafts you an opt-out email to action by hand (there's no managed opt-out list
+for hand-sent mail).
 
 ## Notes
 
