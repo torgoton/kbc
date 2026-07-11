@@ -791,7 +791,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "completed", game.reload.state
   end
 
-  test "Claim victory button appears for an opponent once the current player is flagged" do
+  test "Claim victory button is visible for an opponent once the current player is flagged" do
     game = new_timed_game(speed: "blitz")
     current = game.current_player
     opponent = game.game_players.find { |gp| gp != current }
@@ -802,10 +802,10 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
       get game_url(game)
     end
 
-    assert_select "form[action=?]", claim_victory_game_path(game)
+    assert_select "[data-controller='claim-victory']:not([hidden]) form[action=?]", claim_victory_game_path(game)
   end
 
-  test "Claim victory button is absent when the current player is not flagged" do
+  test "Claim victory button renders hidden for an opponent while the current player is not flagged" do
     game = new_timed_game(speed: "blitz")
     current = game.current_player
     opponent = game.game_players.find { |gp| gp != current }
@@ -814,7 +814,9 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
     get game_url(game)
 
-    assert_select "form[action=?]", claim_victory_game_path(game), count: 0
+    # Present but hidden: clock_controller reveals it live the instant the
+    # clock flags, so no reload/broadcast is needed to surface the button.
+    assert_select "[data-controller='claim-victory'][hidden] form[action=?]", claim_victory_game_path(game)
   end
 
   test "Claim victory button is absent for the flagged player themselves" do
