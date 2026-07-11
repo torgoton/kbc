@@ -11,7 +11,7 @@
 <% end %>
 
 <% content_for :end_turn do %>
-  <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn: } %>
+  <%= render partial: "games/end_turn", locals: { game:, engine:, my_turn:, my_player: } %>
 <% end %>
 
 <% if my_player && !my_player.resigned? && game.playing? %>

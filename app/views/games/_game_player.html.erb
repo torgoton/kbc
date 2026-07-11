@@ -14,6 +14,11 @@
           <%= image_tag "first.svg", alt: "First player" %>
         <% end %>
       <% end %>
+      <% if game.timed? %>
+        <span class="player-clock" data-controller="clock"
+              data-clock-remaining-ms-value="<%= game.time_remaining_for(player) %>"
+              data-clock-running-value="<%= game.clock_running_for?(player) %>"></span>
+      <% end %>
     <% end %>
     <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
     <% if score_data %>

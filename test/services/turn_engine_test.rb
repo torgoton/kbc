@@ -2306,22 +2306,184 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.board_contents.empty?(5, 6)
   end
 
-  def force_hand(terrain)
-    @game.current_player.update!(hand: [ terrain ])
+  # --- Timed games: clock accounting ---
+
+  test "end_turn does not touch the clock for an untimed game" do
+    force_hand("G")
+    empty_hexes_of("G", 3).each { |spot| @engine.build_settlement(*spot) }
+    mover = @game.current_player
+
+    @engine.end_turn
+
+    assert_nil mover.reload.time_remaining_ms
+    assert_nil @game.reload.turn_started_at
   end
 
-  def empty_hexes_of(terrain, n)
-    @game.instantiate
+  test "record_move stamps clock_started_at on a timed player's first deliberate move" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    assert_nil mover.clock_started_at
+
+    force_hand("G", game: game)
+    spot = empty_hexes_of("G", 1, game: game).first
+    engine.build_settlement(*spot)
+
+    assert_not_nil mover.reload.clock_started_at
+  end
+
+  test "undo_last_move does not touch the clock" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    force_hand("G", game: game)
+    spot = empty_hexes_of("G", 1, game: game).first
+
+    engine.build_settlement(*spot)
+    stamped_at = mover.reload.clock_started_at
+    remaining_before_undo = mover.time_remaining_ms
+
+    engine.undo_last_move
+    mover.reload
+
+    assert_equal stamped_at, mover.clock_started_at
+    assert_equal remaining_before_undo, mover.time_remaining_ms
+  end
+
+  test "record_move does not overwrite clock_started_at on a later deliberate move" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    force_hand("G", game: game)
+    spots = empty_hexes_of("G", 2, game: game)
+    engine.build_settlement(*spots[0])
+    first_stamp = mover.reload.clock_started_at
+
+    travel 5.seconds do
+      engine.build_settlement(*spots[1])
+    end
+
+    assert_equal first_stamp, mover.reload.clock_started_at
+  end
+
+  test "record_move does not stamp clock_started_at for an untimed game" do
+    force_hand("G")
+    spot = empty_hexes_of("G", 1).first
+
+    @engine.build_settlement(*spot)
+
+    assert_nil @game.current_player.reload.clock_started_at
+  end
+
+  test "end_turn deducts elapsed time from the mover and credits the increment" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    base = Time.current
+    mover.update!(clock_started_at: base, time_remaining_ms: 100_000)
+    game.update!(turn_started_at: base)
+    force_hand("G", game: game)
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+
+    travel_to(base + 20.seconds, with_usec: true) { engine.end_turn }
+
+    expected = 100_000 - 20_000 + Game::SPEEDS["blitz"][:increment_ms]
+    assert_equal expected, mover.reload.time_remaining_ms
+  end
+
+  test "end_turn allows the bank to go negative once elapsed time exceeds it" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    base = Time.current
+    mover.update!(clock_started_at: base, time_remaining_ms: 5_000)
+    game.update!(turn_started_at: base)
+    force_hand("G", game: game)
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+
+    travel_to(base + 60.seconds, with_usec: true) { engine.end_turn }
+
+    assert_operator mover.reload.time_remaining_ms, :<, 0
+  end
+
+  test "end_turn caps the credited bank at the speed's initial amount" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    base = Time.current
+    mover.update!(clock_started_at: base, time_remaining_ms: Game::SPEEDS["blitz"][:bank_ms])
+    game.update!(turn_started_at: base)
+    force_hand("G", game: game)
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+
+    # No time elapses; the increment alone would exceed the bank if uncapped.
+    travel_to(base, with_usec: true) { engine.end_turn }
+
+    assert_equal Game::SPEEDS["blitz"][:bank_ms], mover.reload.time_remaining_ms
+  end
+
+  test "end_turn does not deduct when the mover has not made a deliberate move yet" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    base = Time.current
+    mover.update!(time_remaining_ms: 50_000, clock_started_at: nil)
+    game.update!(turn_started_at: base, mandatory_count: 0)
+
+    travel_to(base + 30.seconds, with_usec: true) { engine.end_turn }
+
+    assert_equal 50_000 + Game::SPEEDS["blitz"][:increment_ms], mover.reload.time_remaining_ms
+  end
+
+  test "end_turn's deduction window starts at clock_started_at when it falls mid-turn" do
+    game, engine = start_timed_game("blitz")
+    mover = game.current_player
+    turn_start = Time.current
+    game.update!(turn_started_at: turn_start)
+    mover.update!(time_remaining_ms: 100_000, clock_started_at: nil)
+    force_hand("G", game: game)
+    spots = empty_hexes_of("G", 3, game: game)
+
+    clock_start = turn_start + 15.seconds
+    travel_to(clock_start, with_usec: true) { engine.build_settlement(*spots[0]) }
+    engine.build_settlement(*spots[1])
+    engine.build_settlement(*spots[2])
+
+    travel_to(clock_start + 10.seconds, with_usec: true) { engine.end_turn }
+
+    expected = 100_000 - 10_000 + Game::SPEEDS["blitz"][:increment_ms]
+    assert_equal expected, mover.reload.time_remaining_ms
+  end
+
+  test "end_turn stamps turn_started_at to the moment the turn changes" do
+    game, engine = start_timed_game("blitz")
+    force_hand("G", game: game)
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+
+    travel_to(Time.current + 5.seconds, with_usec: true) do
+      engine.end_turn
+      assert_in_delta Time.current, game.reload.turn_started_at, 0.001
+    end
+  end
+
+  def force_hand(terrain, game: @game)
+    game.current_player.update!(hand: [ terrain ])
+  end
+
+  def empty_hexes_of(terrain, n, game: @game)
+    game.instantiate
     spots = []
     20.times do |row|
       20.times do |col|
-        next unless @game.board.terrain_at(row, col) == terrain
-        next unless @game.board_contents.empty?(row, col)
+        next unless game.board.terrain_at(row, col) == terrain
+        next unless game.board_contents.empty?(row, col)
         spots << [ row, col ]
         return spots if spots.size >= n
       end
     end
     spots
+  end
+
+  def start_timed_game(speed)
+    game = Game.create!(state: "waiting", speed: speed)
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+    [ game, TurnEngine.new(game) ]
   end
 
   def valid_meeple_destination(tile_klass)

@@ -8,3 +8,15 @@
 #     command: "SoftDeletedRecord.due.delete_all"
 #     priority: 2
 #     schedule: at 5am every day
+
+production:
+  timed_game_sweep:
+    class: TimedGameSweepJob
+    queue: default
+    schedule: every minute
+
+development:
+  timed_game_sweep:
+    class: TimedGameSweepJob
+    queue: default
+    schedule: every minute

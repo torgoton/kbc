@@ -7,6 +7,9 @@
         <td>
           Game <%= game.id %>:
           <%= rated_list(game) %>
+          <% if game.speed_label %>
+            <span class="speed-badge"><%= game.speed_label %></span>
+          <% end %>
         </td>
       </tr>
     <% end %>

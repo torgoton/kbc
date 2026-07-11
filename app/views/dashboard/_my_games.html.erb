@@ -12,11 +12,17 @@
       <%= link_to game_path(game) do %>
         <span>
           Game <%= game.id %> with <%= rated_list(game) %> &mdash; <%= game.turn_state %>
+          <% if game.speed_label %>
+            <span class="speed-badge"><%= game.speed_label %></span>
+          <% end %>
         </span>
       <% end %>
     <% else %>
       <span>
         Game <%= game.id %> with <%= rated_list(game) %> &mdash; <%= game.turn_state %>
+        <% if game.speed_label %>
+          <span class="speed-badge"><%= game.speed_label %></span>
+        <% end %>
       </span>
     <% end %>
   </div>

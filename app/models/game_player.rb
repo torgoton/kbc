@@ -2,20 +2,22 @@
 #
 # Table name: game_players
 #
-#  id            :bigint           not null, primary key
-#  bonus_scores  :jsonb            not null
-#  hand          :json
-#  order         :integer
-#  rating_after  :integer
-#  rating_before :integer
-#  resigned_at   :datetime
-#  supply        :json
-#  taken_from    :json
-#  tiles         :json
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#  game_id       :integer          not null
-#  user_id       :integer          not null
+#  id                :bigint           not null, primary key
+#  bonus_scores      :jsonb            not null
+#  clock_started_at  :datetime
+#  hand              :json
+#  order             :integer
+#  rating_after      :integer
+#  rating_before     :integer
+#  resigned_at       :datetime
+#  supply            :json
+#  taken_from        :json
+#  tiles             :json
+#  time_remaining_ms :integer
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  game_id           :integer          not null
+#  user_id           :integer          not null
 #
 # Indexes
 #
@@ -227,5 +229,25 @@ class GamePlayer < ApplicationRecord
 
   def resigned?
     resigned_at.present?
+  end
+
+  # Root-cause reuse: the resign flow (mark resigned, log the move, complete
+  # the game) is shared by the resign action, claim victory, and the timed
+  # game sweep job. deliberate: true for a player's own resignation or an
+  # opponent's claim; false when it's a consequence of the sweep job noticing
+  # an abandoned clock, not a direct action by anyone.
+  def resign!(message:, deliberate:)
+    return if resigned?
+    update!(resigned_at: Time.current)
+    game.move_count += 1
+    game.moves.create!(
+      order: game.move_count,
+      game_player: self,
+      action: "resign",
+      message: message,
+      deliberate: deliberate,
+      reversible: false
+    )
+    game.complete!
   end
 end

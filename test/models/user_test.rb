@@ -6,6 +6,7 @@
 #  approved        :boolean          default(FALSE)
 #  email_address   :string           not null
 #  handle          :string           not null
+#  last_seen_at    :datetime
 #  password_digest :string           not null
 #  rating          :integer          default(1500), not null
 #  created_at      :datetime         not null
@@ -85,5 +86,27 @@ class UserTest < ActiveSupport::TestCase
     user = User.new(email_address: "unique@example.com", handle: users(:chris).handle, password: "abc123")
     assert_not user.valid?
     assert_includes user.errors[:handle], "has already been taken"
+  end
+
+  # --- online? ---
+
+  test "online? is false when last_seen_at has never been set" do
+    users(:chris).update!(last_seen_at: nil)
+    assert_not users(:chris).online?
+  end
+
+  test "online? is true immediately after a heartbeat" do
+    users(:chris).update!(last_seen_at: Time.current)
+    assert users(:chris).online?
+  end
+
+  test "online? is true just inside the one minute window" do
+    users(:chris).update!(last_seen_at: 59.seconds.ago)
+    assert users(:chris).online?
+  end
+
+  test "online? is false once the one minute window has elapsed" do
+    users(:chris).update!(last_seen_at: 61.seconds.ago)
+    assert_not users(:chris).online?
   end
 end

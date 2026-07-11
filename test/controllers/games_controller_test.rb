@@ -379,6 +379,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "GET new renders a speed select offering blitz and normal" do
+    get new_game_url
+    assert_select "select[name=?]", "game[speed]" do
+      assert_select "option[value=blitz]"
+      assert_select "option[value=normal]"
+    end
+  end
+
+  test "GET new renders a help dialog explaining timed games" do
+    get new_game_url
+    assert_select "dialog"
+  end
+
   test "POST create creates a game and redirects to dashboard" do
     assert_difference("Game.count", 1) do
       post games_url
@@ -397,10 +410,33 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_not opened.reversible
 
     options = game.moves.find_by(action: "game_options")
-    assert_equal "Game options: None available", options.message
+    assert_equal "Game options: Untimed", options.message
     assert_nil options.game_player_id
     assert options.deliberate
     assert_not options.reversible
+  end
+
+  test "POST create with a speed param sets the game's speed" do
+    post games_url, params: { game: { speed: "blitz" } }
+    assert_equal "blitz", Game.last.speed
+  end
+
+  test "POST create without a speed param leaves the game untimed" do
+    post games_url
+    assert_nil Game.last.speed
+  end
+
+  test "POST create logs the chosen speed in the game_options move message" do
+    post games_url, params: { game: { speed: "blitz" } }
+    options = Game.last.moves.find_by(action: "game_options")
+    assert_includes options.message, "Blitz"
+  end
+
+  test "POST create rejects a speed that is not a recognized option" do
+    assert_no_difference("Game.count") do
+      post games_url, params: { game: { speed: "warp" } }
+    end
+    assert_response :unprocessable_content
   end
 
   test "POST action with mandatory current_action dispatches build_settlement" do
@@ -489,6 +525,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal game.game_players.find_by(player: users(:paula)), joined.game_player
     assert joined.deliberate
     assert_not joined.reversible
+  end
+
+  test "POST join starts a timed game without stamping anyone's clock_started_at" do
+    game = Game.create!(state: "waiting", speed: "blitz")
+    game.add_player(users(:chris))
+
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+    post join_game_url(game)
+
+    assert game.reload.playing?
+    game.game_players.each { |gp| assert_nil gp.clock_started_at }
   end
 
   test "POST undo_move redirects to the game" do
@@ -688,6 +735,143 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to game_path(game)
     assert_equal "playing", game.reload.state
     assert_nil game_players(:paula_in_paula_jules_game).reload.resigned_at
+  end
+
+  test "POST claim_victory resigns the flagged current player and completes the game" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      post claim_victory_game_url(game)
+    end
+
+    assert_redirected_to game_path(game)
+    assert current.reload.resigned?
+    assert_equal "completed", game.reload.state
+    assert game.moves.exists?(action: "resign")
+  end
+
+  test "POST claim_victory does nothing when the current player is not flagged" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 100_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    post claim_victory_game_url(game)
+
+    assert_redirected_to game_path(game)
+    assert_not current.reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
+  test "POST claim_victory does nothing when the requester is not an opponent" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: current.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      post claim_victory_game_url(game)
+    end
+
+    assert_not current.reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
+  test "POST claim_victory does nothing for an untimed game" do
+    game = games(:game2player)
+    paula = game_players(:paula)
+    post session_url, params: { email_address: paula.player.email_address, password: "password" }
+
+    post claim_victory_game_url(game)
+
+    assert_not game_players(:chris).reload.resigned?
+    assert_equal "playing", game.reload.state
+  end
+
+  test "POST claim_victory does nothing once the game is already completed" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+    travel(2.seconds) { post claim_victory_game_url(game) }
+    assert_equal "completed", game.reload.state
+
+    post claim_victory_game_url(game)
+
+    assert_response :redirect
+    assert_equal "completed", game.reload.state
+  end
+
+  test "Claim victory button is visible for an opponent once the current player is flagged" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      get game_url(game)
+    end
+
+    assert_select "[data-controller='claim-victory']:not([hidden]) form[action=?]", claim_victory_game_path(game)
+  end
+
+  test "Claim victory button renders hidden for an opponent while the current player is not flagged" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    opponent = game.game_players.find { |gp| gp != current }
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 100_000)
+    post session_url, params: { email_address: opponent.player.email_address, password: "password" }
+
+    get game_url(game)
+
+    # Present but hidden: clock_controller reveals it live the instant the
+    # clock flags, so no reload/broadcast is needed to surface the button.
+    assert_select "[data-controller='claim-victory'][hidden] form[action=?]", claim_victory_game_path(game)
+  end
+
+  test "Claim victory button is absent for the flagged player themselves" do
+    game = new_timed_game(speed: "blitz")
+    current = game.current_player
+    current.update!(clock_started_at: Time.current, time_remaining_ms: 1_000)
+    post session_url, params: { email_address: current.player.email_address, password: "password" }
+
+    travel 2.seconds do
+      get game_url(game)
+    end
+
+    assert_select "form[action=?]", claim_victory_game_path(game), count: 0
+  end
+
+  test "per-player clocks render for a timed game" do
+    game = new_timed_game(speed: "blitz")
+    post session_url, params: { email_address: game.current_player.player.email_address, password: "password" }
+
+    get game_url(game)
+
+    assert_select ".player-clock", 2
+  end
+
+  test "no clocks render for an untimed game" do
+    game = games(:game2player)
+
+    get game_url(game)
+
+    assert_select ".player-clock", 0
+  end
+
+  def new_timed_game(speed:)
+    game = Game.create!(state: "waiting", speed: speed)
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
   end
 end
 

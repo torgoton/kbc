@@ -1195,6 +1195,44 @@ ul li .hex:hover .hex-bg {
     width: 40px;
 }
 
+.player-clock {
+    margin-left: 0.5rem;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.4);
+    color: #ddd;
+}
+
+.player-clock.clock-low {
+    color: #f0c040;
+}
+
+.player-clock.clock-flagged {
+    color: #e05a5a;
+}
+
+.claim-victory-btn {
+    font-size: 1rem;
+    padding: 3px 9px;
+    background: #a52a2a;
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    border-radius: 4px;
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+.speed-badge {
+    font-size: 0.8rem;
+    margin-left: 0.4rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.15);
+}
+
 .player-order {
     display: none;
 }

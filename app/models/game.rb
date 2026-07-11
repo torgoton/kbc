@@ -14,10 +14,12 @@
 #  mandatory_count   :integer
 #  move_count        :integer
 #  scores            :json
+#  speed             :string
 #  state             :string
 #  stone_walls       :integer          default(25), not null
 #  tasks             :json
 #  turn_number       :integer          default(0), not null
+#  turn_started_at   :datetime
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  current_player_id :integer
@@ -31,6 +33,10 @@ class Game < ApplicationRecord
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
+  SPEEDS = {
+    "blitz" => { bank_ms: 300_000, increment_ms: 20_000 },
+    "normal" => { bank_ms: 600_000, increment_ms: 30_000 }
+  }.freeze
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -41,6 +47,7 @@ class Game < ApplicationRecord
   serialize :board_contents, coder: BoardState
 
   validates :state, inclusion: { in: STATES }
+  validates :speed, inclusion: { in: SPEEDS.keys }, allow_nil: true
 
   attr_accessor :board
 
@@ -102,12 +109,13 @@ class Game < ApplicationRecord
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
     populate_boards(options)
-    initialize_terrain_deck
     select_goals
+    initialize_terrain_deck
     select_tasks
     populate_player_supplies
     deal_terrain_cards
     choose_start_player
+    start_clocks
     self.current_action = { "type" => "mandatory" }
     save
   end
@@ -144,6 +152,59 @@ class Game < ApplicationRecord
 
   def my_turn?(user)
     playing? && current_player&.player == user
+  end
+
+  def timed?
+    speed.present?
+  end
+
+  # Live remaining bank for game_player, in ms. Only the current player's
+  # clock ticks, and only after their first deliberate move of the game
+  # (clock_started_at); everyone else just sees their stored value.
+  def time_remaining_for(game_player)
+    stored = game_player.time_remaining_ms.to_i
+    return stored unless playing? && game_player == current_player && game_player.clock_started_at.present?
+    window_start = [ turn_started_at, game_player.clock_started_at ].compact.max
+    elapsed_ms = ((Time.current - window_start) * 1000).to_i
+    stored - elapsed_ms
+  end
+
+  def flagged?(game_player)
+    timed? && playing? && game_player == current_player && time_remaining_for(game_player) <= 0
+  end
+
+  # Whether game_player's clock is ticking right now: their turn AND they've
+  # made their first real game move (clock_started_at is stamped only by
+  # TurnEngine#record_move on the first deliberate move — opening or joining
+  # a table never starts a clock). Drives the countdown display.
+  def clock_running_for?(game_player)
+    timed? && playing? && game_player == current_player && game_player.clock_started_at.present?
+  end
+
+  # View logic lives here, not in the controller/view: an opponent may claim
+  # victory once the current player is flagged.
+  def claimable_by?(user)
+    potential_claimant?(user) && flagged?(current_player)
+  end
+
+  # An opponent (non-current, unresigned player) in a live timed game: the set
+  # of viewers who *could* claim victory once the current player flags. The
+  # claim button is rendered hidden for them so clock_controller can reveal it
+  # the instant the clock runs out, with no server broadcast (only the current
+  # player can move on their own turn, so an idle flag emits none).
+  def potential_claimant?(user)
+    return false unless timed? && playing? && current_player
+    game_player = game_players.find { |gp| gp.player == user }
+    game_player.present? && game_player != current_player && !game_player.resigned?
+  end
+
+  # Short badge for dashboard listings, e.g. "⚡ Blitz 3+15", so nobody joins
+  # a timed table unknowingly.
+  def speed_label
+    return nil unless timed?
+    bank_min = SPEEDS[speed][:bank_ms] / 60_000
+    increment_sec = SPEEDS[speed][:increment_ms] / 1_000
+    "⚡ #{speed.capitalize} #{bank_min}+#{increment_sec}"
   end
 
   def player_handles
@@ -192,6 +253,7 @@ class Game < ApplicationRecord
     end
     log_game_results
     chat_messages.create!(body: "Game ended.")
+    broadcast_game_update
     broadcast_end_game
     broadcast_dashboard_update
   end
@@ -293,7 +355,7 @@ class Game < ApplicationRecord
         "game_player_#{viewer.id}_private",
         target: "end-turn-area",
         partial: "games/end_turn",
-        locals: { game: self, engine: engine, my_turn: my_turn }
+        locals: { game: self, engine: engine, my_turn: my_turn, my_player: viewer }
       )
     end
 
@@ -527,6 +589,13 @@ class Game < ApplicationRecord
 
   def board_has_castles?
     board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
+  end
+
+  def start_clocks
+    return unless timed?
+    bank_ms = SPEEDS.fetch(speed)[:bank_ms]
+    game_players.each { |p| p.update(time_remaining_ms: bank_ms) }
+    self.turn_started_at = Time.current
   end
 
   def populate_player_supplies

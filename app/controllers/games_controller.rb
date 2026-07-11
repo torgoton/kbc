@@ -207,18 +207,21 @@ class GamesController < ApplicationController
   def resign
     game = Game.find(params[:id])
     game_player = game.game_players.find_by(player: Current.user)
-    if game_player && !game_player.resigned?
-      game_player.update!(resigned_at: Time.current)
-      game.move_count += 1
-      game.moves.create!(
-        order: game.move_count,
-        game_player: game_player,
-        action: "resign",
-        message: "#{game_player.player.handle} resigned",
-        deliberate: true,
-        reversible: false
+    game_player&.resign!(message: "#{game_player.player.handle} resigned", deliberate: true)
+    redirect_to game_path(game)
+  end
+
+  # An opponent claims victory once the current player's clock has flagged
+  # (server-side check via Game#claimable_by? — never trust the client).
+  def claim_victory
+    game = Game.find(params[:id])
+    if game.claimable_by?(Current.user)
+      flagged_player = game.current_player
+      claimant = game.game_players.find_by(player: Current.user)
+      flagged_player.resign!(
+        message: "#{flagged_player.player.handle} ran out of time — #{claimant.player.handle} claimed victory",
+        deliberate: true
       )
-      game.complete!
     end
     redirect_to game_path(game)
   end
@@ -240,11 +243,17 @@ class GamesController < ApplicationController
     @game.moves.create!(
       order: @game.move_count,
       action: "game_options",
-      message: "Game options: None available",
+      message: "Game options: #{game_options_message}",
       deliberate: true,
       reversible: false
     )
     @game.save!
+  end
+
+  def game_options_message
+    return "Untimed" unless @game.timed?
+    speed = Game::SPEEDS.fetch(@game.speed)
+    "#{@game.speed.capitalize} (#{speed[:bank_ms] / 60_000} min + #{speed[:increment_ms] / 1_000} s/turn)"
   end
 
   def log_table_joined
@@ -271,6 +280,6 @@ class GamesController < ApplicationController
   end
 
   def create_game_params
-    { state: "waiting" }
+    { state: "waiting", speed: params.fetch(:game, {}).permit(:speed)[:speed].presence }
   end
 end

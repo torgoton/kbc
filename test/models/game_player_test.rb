@@ -2,20 +2,22 @@
 #
 # Table name: game_players
 #
-#  id            :bigint           not null, primary key
-#  bonus_scores  :jsonb            not null
-#  hand          :json
-#  order         :integer
-#  rating_after  :integer
-#  rating_before :integer
-#  resigned_at   :datetime
-#  supply        :json
-#  taken_from    :json
-#  tiles         :json
-#  created_at    :datetime         not null
-#  updated_at    :datetime         not null
-#  game_id       :integer          not null
-#  user_id       :integer          not null
+#  id                :bigint           not null, primary key
+#  bonus_scores      :jsonb            not null
+#  clock_started_at  :datetime
+#  hand              :json
+#  order             :integer
+#  rating_after      :integer
+#  rating_before     :integer
+#  resigned_at       :datetime
+#  supply            :json
+#  taken_from        :json
+#  tiles             :json
+#  time_remaining_ms :integer
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  game_id           :integer          not null
+#  user_id           :integer          not null
 #
 # Indexes
 #
@@ -275,5 +277,37 @@ class GamePlayerTest < ActiveSupport::TestCase
     assert_not @gp.tiles[0]["used"]
     assert @gp.tiles[1]["used"]
     assert @gp.tiles[1]["permanent"]
+  end
+
+  # --- resign! ---
+
+  test "resign! marks the player resigned, records a resign move, and completes the game" do
+    game = games(:game2player)
+
+    # +2: the resign move itself, plus the game_results move complete! logs.
+    assert_difference("game.moves.count", 2) do
+      @gp.resign!(message: "Chris resigned", deliberate: true)
+    end
+
+    assert @gp.resigned?
+    assert_equal "completed", game.reload.state
+    assert game.moves.exists?(action: "resign", message: "Chris resigned", deliberate: true)
+  end
+
+  test "resign! does nothing when the player has already resigned" do
+    @gp.update!(resigned_at: 1.hour.ago)
+    game = games(:game2player)
+
+    assert_no_difference("game.moves.count") do
+      @gp.resign!(message: "Chris resigned again", deliberate: true)
+    end
+  end
+
+  test "resign! records the move as non-deliberate when it is a consequence, not a direct action" do
+    game = games(:game2player)
+
+    @gp.resign!(message: "Chris ran out of time", deliberate: false)
+
+    assert game.moves.exists?(action: "resign", deliberate: false)
   end
 end
