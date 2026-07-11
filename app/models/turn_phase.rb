@@ -273,6 +273,20 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
   def tile_action_endable? = walls_placed.to_i >= 1
 
+  # This phase spans both wall tiles (quarry) and build tiles (village, farm,
+  # ...), so it asks its OWN reconstructed tile which one it is.
+  # tile_klass_name (not bare klass_name) applies the type-derived fallback:
+  # a quarry action serializes no "klass" key, so bare klass_name is nil and
+  # would misroute to activate_tile_build.
+  def click(coordinate, engine)
+    tile = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
+    if tile&.places_wall?
+      engine.place_wall(coordinate.row, coordinate.col)
+    else
+      engine.activate_tile_build(coordinate.row, coordinate.col)
+    end
+  end
+
   def with_outpost_active
     self.class.new(
       action_type: action_type,

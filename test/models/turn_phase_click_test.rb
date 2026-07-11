@@ -74,4 +74,25 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     phase.click(coord(10, 10), engine)
     assert_equal [ [ :place_city_hall, 10, 10 ] ], engine.sent
   end
+
+  test "TileBuildPhase#click places a wall for a wall tile" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::TileBuildPhase.new(action_type: "quarry", klass_name: "QuarryTile", walls_placed: 0)
+    phase.click(coord(3, 6), engine)
+    assert_equal [ [ :place_wall, 3, 6 ] ], engine.sent
+  end
+
+  test "TileBuildPhase#click activates a tile build for a build tile" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::TileBuildPhase.new(action_type: "village", klass_name: "VillageTile")
+    phase.click(coord(3, 6), engine)
+    assert_equal [ [ :activate_tile_build, 3, 6 ] ], engine.sent
+  end
+
+  test "TileBuildPhase#click places a wall for a klass-less quarry action" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::TileBuildPhase.new(action_type: "quarry", klass_name: nil, walls_placed: 0)
+    phase.click(coord(3, 6), engine)
+    assert_equal [ [ :place_wall, 3, 6 ] ], engine.sent
+  end
 end
