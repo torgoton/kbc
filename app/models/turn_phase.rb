@@ -555,6 +555,10 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
   def tile_action_endable? = moves.to_i >= 1
   def accepts_source_selection? = true
 
+  def click(coordinate, engine)
+    engine.execute_meeple_action(coordinate.row, coordinate.col)
+  end
+
   def transition(event, facts)
     case event
     when TurnPhase::Events::SourceSelected
@@ -650,6 +654,10 @@ class TurnPhase::MeepleActionPhase < TurnPhase
 
   def klass_name
     klass_value
+  end
+
+  def click(coordinate, engine)
+    engine.execute_meeple_action(coordinate.row, coordinate.col)
   end
 
   def serialize

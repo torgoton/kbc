@@ -46,4 +46,18 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     phase.click(coord(6, 7), engine)
     assert_equal [ [ :move_settlement, 6, 7 ] ], engine.sent
   end
+
+  test "MeepleActionPhase#click tells the engine to execute_meeple_action" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::MeepleActionPhase.new(action_type: "barracks", klass_name: "BarracksTile")
+    phase.click(coord(2, 3), engine)
+    assert_equal [ [ :execute_meeple_action, 2, 3 ] ], engine.sent
+  end
+
+  test "MeepleMovementPhase#click tells the engine to execute_meeple_action" do
+    engine = RecordingEngine.new
+    phase = TurnPhase::MeepleMovementPhase.new(action_type: "wagon", klass_name: "WagonTile")
+    phase.click(coord(2, 3), engine)
+    assert_equal [ [ :execute_meeple_action, 2, 3 ] ], engine.sent
+  end
 end
