@@ -35,39 +35,13 @@ class GamesController < ApplicationController
   def action
     return unless @game.game_players.find_by(player: Current.user) == @game.current_player
 
-    Rails.logger.debug("TURN ACTION PARAMS: #{action_params.inspect}")
-
-    coord = Coordinate.new(action_params[:build_row], action_params[:build_col])
-    engine = TurnEngine.new(@game)
-    action_type = @game.current_action["type"]
-    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
-    tile_klass = Tiles::Tile.for_klass(klass_name) if action_type != "mandatory"
-    tile_obj = tile_klass&.new(0)
-    if tile_obj&.moves_settlement?
-      if @game.current_action["from"]
-        engine.move_settlement(coord.row, coord.col)
-      else
-        engine.select_settlement(coord.row, coord.col)
-      end
-    elsif tile_obj&.sword_tile?
-      engine.remove_settlement(coord.row, coord.col)
-    elsif tile_obj&.places_wall?
-      engine.place_wall(coord.row, coord.col)
-    elsif tile_obj&.places_meeple?
-      engine.execute_meeple_action(coord.row, coord.col)
-    elsif tile_obj&.places_city_hall?
-      engine.place_city_hall(coord.row, coord.col)
-    elsif tile_obj&.builds_settlement?
-      engine.activate_tile_build(coord.row, coord.col)
-    else
-      engine.build_settlement(coord.row, coord.col)
-    end
+    TurnEngine.new(@game).click(
+      Coordinate.new(action_params[:build_row], action_params[:build_col])
+    )
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
-    # animate_build_settlement(@game, @game.current_player, coord.row, coord.col)
-    # update all clients
     @game.broadcast_game_update
   end
 
