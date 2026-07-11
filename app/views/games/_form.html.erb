@@ -25,6 +25,8 @@
       <p>Your clock doesn't start until your first move of the game; think as long as you like before that.</p>
       <p>If your bank runs out, you're <strong>flagged</strong>: any opponent can claim victory right away. If nobody does and the game goes quiet for 10 more minutes, you're auto-resigned — but as long as either player keeps making moves, that won't happen.</p>
       <p>Unstarted and abandoned timed tables are cleaned up automatically after a period of inactivity; untimed tables are never removed.</p>
+      <p>If you open a timed table and leave, the game will be cleaned up with no penalty to you. If you open a timed table and make a move, your clock starts and you must play to avoid being flagged.</p>
+      <p>In short: timed games are for players who want to play quickly, and untimed games are for players who want to play slowly.</p>
       <%# No <form method="dialog"> here: it would nest inside the game form,
           nested forms are invalid HTML, and the parser drops the inner tag —
           making Close submit the game form. Plain type="button" instead. %>
