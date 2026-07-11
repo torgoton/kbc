@@ -1,5 +1,6 @@
 class GamesController < ApplicationController
   before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
     @game = Game.new
@@ -33,8 +34,6 @@ class GamesController < ApplicationController
   # 2. use a tile that I have to build a settlement on the board
   # 3. use a tile that I have to move a piece on the board
   def action
-    return unless @game.game_players.find_by(player: Current.user) == @game.current_player
-
     TurnEngine.new(@game).click(
       Coordinate.new(action_params[:build_row], action_params[:build_col])
     )
@@ -46,8 +45,6 @@ class GamesController < ApplicationController
   end
 
   def select_action
-    current_gp = @game.game_players.find_by(player: Current.user)
-    return unless current_gp == @game.current_player
     TurnEngine.new(@game).select_action(params[:action_type])
     respond_to do |format|
       format.html { redirect_to @game }
@@ -58,9 +55,8 @@ class GamesController < ApplicationController
 
   def end_turn
     Rails.logger.debug("END TURN action")
-    current_gp = @game.game_players.find_by(player: Current.user)
     engine = TurnEngine.new(@game)
-    engine.end_turn if current_gp == @game.current_player && engine.turn_endable?
+    engine.end_turn if engine.turn_endable?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }
@@ -101,8 +97,6 @@ class GamesController < ApplicationController
   end
 
   def end_tile_action
-    current_gp = @game.game_players.find_by(player: Current.user)
-    return unless current_gp == @game.current_player
     TurnEngine.new(@game).end_tile_action
     respond_to do |format|
       format.html { redirect_to @game }
@@ -112,8 +106,6 @@ class GamesController < ApplicationController
   end
 
   def activate_outpost
-    current_gp = @game.game_players.find_by(player: Current.user)
-    return unless current_gp == @game.current_player
     TurnEngine.new(@game).activate_outpost
     respond_to do |format|
       format.html { redirect_to @game }
@@ -123,7 +115,6 @@ class GamesController < ApplicationController
   end
 
   def activate_fort
-    return unless @game.game_players.find_by(player: Current.user) == @game.current_player
     TurnEngine.new(@game).activate_fort_tile
     respond_to do |format|
       format.html { head :no_content }
@@ -133,7 +124,6 @@ class GamesController < ApplicationController
   end
 
   def remove_meeple
-    return unless @game.game_players.find_by(player: Current.user) == @game.current_player
     coord = Coordinate.new(params[:row], params[:col])
     TurnEngine.new(@game).remove_meeple_action(coord.row, coord.col)
     respond_to do |format|
@@ -144,7 +134,6 @@ class GamesController < ApplicationController
   end
 
   def select_meeple
-    return unless @game.game_players.find_by(player: Current.user) == @game.current_player
     coord = Coordinate.new(params[:row], params[:col])
     TurnEngine.new(@game).select_meeple_for_move(coord.row, coord.col)
     respond_to do |format|
@@ -223,6 +212,10 @@ class GamesController < ApplicationController
   def require_game_playing
     @game = Current.user.games.find(params[:id])
     head :no_content unless @game.playing?
+  end
+
+  def require_current_player
+    head :no_content unless @game.game_players.find_by(player: Current.user) == @game.current_player
   end
 
   def action_params
