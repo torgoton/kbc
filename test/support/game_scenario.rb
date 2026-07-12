@@ -130,6 +130,27 @@ class GameScenario
     gp.save!
   end
 
+  # Make a given player the current player (e.g. to drive an opponent's turn,
+  # such as a Sword removal). Direct state construction; no turn accounting.
+  def make_current(player)
+    @game.update!(current_player: game_player(player))
+  end
+
+  # Set a player's remaining settlement supply (e.g. to 1, so the next build is
+  # their last and triggers the end of the game).
+  def set_settlements(player, count)
+    gp = game_player(player)
+    gp.supply["settlements"] = count
+    gp.save!
+    @game.reload
+  end
+
+  # Set how many mandatory builds remain this turn (e.g. to 1 so a single build
+  # completes the turn, or 0 so the turn can end immediately).
+  def set_mandatory(count)
+    @game.update!(mandatory_count: count)
+  end
+
   def give_warriors(player, qty)
     gp = game_player(player)
     gp.add_warriors!(qty)
@@ -246,6 +267,17 @@ class GameScenario
 
   def mandatory_remaining
     @game.mandatory_count
+  end
+
+  # How many players have triggered the end of the game (0 until someone builds
+  # their last settlement; the game ends once the last player finishes a turn
+  # while this is positive).
+  def end_trigger_count
+    @game.end_trigger_count
+  end
+
+  def state
+    @game.reload.state
   end
 
   # Deterministic on a fixed board: scans row-major for empty hexes of the
