@@ -69,6 +69,13 @@ class TurnPhase
     klass_name || "#{type.capitalize}Tile"
   end
 
+  # The tile object backing this phase's action (built from tile_klass_name),
+  # used by legal_targets to delegate to the tile's own valid_destinations /
+  # selectable_settlements. nil for phases with no tile (e.g. mandatory).
+  def tile
+    Tiles::Tile.for_klass(tile_klass_name)&.new(0)
+  end
+
   def chosen_terrain
     serialize["chosen_terrain"]
   end
@@ -97,6 +104,14 @@ class TurnPhase
   # Clicking one of your own pieces starts a transition(SourceSelected) rather
   # than the LegacyPhase fallback. True for the move/resettlement phases.
   def accepts_source_selection? = false
+
+  # The set of board cells (as [row, col]) that are legal action targets in
+  # this phase — the cells the UI highlights and every action guard checks
+  # (via TurnEngine#legal_targets). Each concrete phase owns its own rule
+  # (State pattern); the base has none. `board_contents` is terrain-aware.
+  def legal_targets(board_contents:, player:)
+    []
+  end
 
   # Return a copy of this phase with the outpost power active. Non-build phases
   # fall back to a fresh mandatory build (the engine only activates the outpost
@@ -347,6 +362,12 @@ class TurnPhase::FortPhase < TurnPhase
 
   def fort_terrain
     fort_terrain_value
+  end
+
+  def legal_targets(board_contents:, player:)
+    tile.valid_destinations(
+      board_contents: board_contents, player_order: player.order, hand: fort_terrain
+    )
   end
 
   def click(coordinate, engine)
@@ -627,6 +648,12 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
 
   # consume_target is inherited from TurnPhase — its self.class is this class.
 
+  def legal_targets(board_contents:, player:)
+    pending_orders.flat_map do |order|
+      board_contents.settlements_for(order).reject { |r, c| board_contents.city_hall_at?(r, c) }
+    end
+  end
+
   def click(coordinate, engine)
     engine.remove_settlement(coordinate.row, coordinate.col)
   end
@@ -699,6 +726,12 @@ class TurnPhase::CityHallPhase < TurnPhase
   end
 
   def city_hall? = true
+
+  def legal_targets(board_contents:, player:)
+    tile.valid_destinations(
+      board_contents: board_contents, player_order: player.order, supply: player.supply_hash
+    )
+  end
 
   def click(coordinate, engine)
     engine.place_city_hall(coordinate.row, coordinate.col)

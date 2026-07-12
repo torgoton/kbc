@@ -784,10 +784,7 @@ class TurnEngine
         if tile
           tile_obj = Tiles::Tile.from_hash(tile)
           if tile_obj.sword_tile?
-            pending_orders = current_phase.pending_orders
-            pending_orders.flat_map { |order|
-              @game.board_contents.settlements_for(order).reject { |r, c| @game.board_contents.city_hall_at?(r, c) }
-            }
+            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
           elsif tile_obj.places_meeple?
             if current_phase.from
               from = Coordinate.from_key(current_phase.from)
@@ -847,9 +844,7 @@ class TurnEngine
               end
             end
           elsif tile_obj.places_city_hall?
-            tile_obj.valid_destinations(
-              board_contents: @game.board_contents, player_order: player.order, supply: player.supply_hash
-            )
+            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
           else
             if tile_obj.builds_settlement? && current_phase.outpost_active?
               terrains = outpost_build_terrains(tile_obj, current_phase, player)
@@ -860,10 +855,7 @@ class TurnEngine
                 end
               end
             elsif tile_obj.fort_tile?
-              hand = current_phase.fort_terrain
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents, player_order: player.order, hand: hand
-              )
+              current_phase.legal_targets(board_contents: @game.board_contents, player: player)
             elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
               player.hand.flat_map { |t|
                 tile_obj.valid_destinations(
