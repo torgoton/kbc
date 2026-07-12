@@ -61,6 +61,14 @@ class TurnPhase
     serialize["klass"]
   end
 
+  # The tile class name for this phase's action, applying the type-derived
+  # fallback for phases that carry no explicit "klass" (e.g. a quarry action
+  # serializes only its type). Single source of truth for both #click and
+  # TurnEngine#current_action_tile_klass.
+  def tile_klass_name
+    klass_name || "#{type.capitalize}Tile"
+  end
+
   def chosen_terrain
     serialize["chosen_terrain"]
   end
@@ -126,6 +134,13 @@ class TurnPhase
     end
   end
 
+  # Interpret a board-cell click for this phase and drive the engine (State
+  # pattern: phase = State, engine = Context). Every concrete phase overrides
+  # this with its own meaning; the base class never accepts a click directly.
+  def click(_coordinate, _engine)
+    raise InvalidTransition, "#{self.class.name} does not accept a board click"
+  end
+
   def transition(_event, _facts)
     raise InvalidTransition, "#{self.class.name} does not accept that event"
   end
@@ -157,6 +172,10 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
   end
 
   def mandatory_build? = true
+
+  def click(coordinate, engine)
+    engine.build_settlement(coordinate.row, coordinate.col)
+  end
 
   def with_outpost_active
     self.class.new(chosen_terrain: chosen_terrain, builds: builds, outpost_active: true)
@@ -239,6 +258,20 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
   def tile_action_endable? = walls_placed.to_i >= 1
 
+  # This phase spans both wall tiles (quarry) and build tiles (village, farm,
+  # ...), so it asks its OWN reconstructed tile which one it is.
+  # tile_klass_name (not bare klass_name) applies the type-derived fallback:
+  # a quarry action serializes no "klass" key, so bare klass_name is nil and
+  # would misroute to activate_tile_build.
+  def click(coordinate, engine)
+    tile = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
+    if tile&.places_wall?
+      engine.place_wall(coordinate.row, coordinate.col)
+    else
+      engine.activate_tile_build(coordinate.row, coordinate.col)
+    end
+  end
+
   def with_outpost_active
     self.class.new(
       action_type: action_type,
@@ -316,6 +349,10 @@ class TurnPhase::FortPhase < TurnPhase
     fort_terrain_value
   end
 
+  def click(coordinate, engine)
+    engine.activate_tile_build(coordinate.row, coordinate.col)
+  end
+
   def serialize
     {
       "type" => "fort",
@@ -355,6 +392,14 @@ class TurnPhase::SettlementMovePhase < TurnPhase
   end
 
   def accepts_source_selection? = true
+
+  def click(coordinate, engine)
+    if from
+      engine.move_settlement(coordinate.row, coordinate.col)
+    else
+      engine.select_settlement(coordinate.row, coordinate.col)
+    end
+  end
 
   def transition(event, facts)
     case event
@@ -412,6 +457,14 @@ class TurnPhase::ResettlementPhase < TurnPhase
 
   def klass_name
     "ResettlementTile"
+  end
+
+  def click(coordinate, engine)
+    if from
+      engine.move_settlement(coordinate.row, coordinate.col)
+    else
+      engine.select_settlement(coordinate.row, coordinate.col)
+    end
   end
 
   def budget
@@ -505,6 +558,10 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
   def tile_action_endable? = moves.to_i >= 1
   def accepts_source_selection? = true
 
+  def click(coordinate, engine)
+    engine.execute_meeple_action(coordinate.row, coordinate.col)
+  end
+
   def transition(event, facts)
     case event
     when TurnPhase::Events::SourceSelected
@@ -570,6 +627,10 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
 
   # consume_target is inherited from TurnPhase — its self.class is this class.
 
+  def click(coordinate, engine)
+    engine.remove_settlement(coordinate.row, coordinate.col)
+  end
+
   def serialize
     {
       "type" => action_type,
@@ -600,6 +661,10 @@ class TurnPhase::MeepleActionPhase < TurnPhase
 
   def klass_name
     klass_value
+  end
+
+  def click(coordinate, engine)
+    engine.execute_meeple_action(coordinate.row, coordinate.col)
   end
 
   def serialize
@@ -634,6 +699,10 @@ class TurnPhase::CityHallPhase < TurnPhase
   end
 
   def city_hall? = true
+
+  def click(coordinate, engine)
+    engine.place_city_hall(coordinate.row, coordinate.col)
+  end
 
   def serialize
     {
@@ -680,6 +749,31 @@ class TurnPhase::LegacyPhase < TurnPhase
 
   def moves
     data["moves"]
+  end
+
+  # The honest catch-all: reproduces the legacy tile-predicate dispatch for
+  # phases that didn't resolve to a dedicated TurnPhase subclass.
+  def click(coordinate, engine)
+    row = coordinate.row
+    col = coordinate.col
+    # tile_klass_name applies the type-derived fallback (Task 2 fix) so phases
+    # carrying no serialized "klass" still resolve their tile.
+    tile = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
+    if tile&.moves_settlement?
+      from ? engine.move_settlement(row, col) : engine.select_settlement(row, col)
+    elsif tile&.sword_tile?
+      engine.remove_settlement(row, col)
+    elsif tile&.places_wall?
+      engine.place_wall(row, col)
+    elsif tile&.places_meeple?
+      engine.execute_meeple_action(row, col)
+    elsif tile&.places_city_hall?
+      engine.place_city_hall(row, col)
+    elsif tile&.builds_settlement?
+      engine.activate_tile_build(row, col)
+    else
+      engine.build_settlement(row, col)
+    end
   end
 
   def serialize

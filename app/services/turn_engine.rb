@@ -3,6 +3,10 @@ class TurnEngine
     @game = game
   end
 
+  def click(coordinate)
+    @game.turn_phase.click(coordinate, self)
+  end
+
   def available_list(active_player, terrain)
     return nil unless @game.playing?
     available = Array.new(20) { Array.new(20, false) }
@@ -988,11 +992,8 @@ class TurnEngine
   end
 
   # Returns the tile klass name (without "Tiles::" prefix) for the current action.
-  # Uses "klass" from current_action if present (stored by select_action),
-  # otherwise falls back to the capitalize convention for existing tiles.
   def current_action_tile_klass
-    phase = @game.turn_phase
-    phase.klass_name || "#{phase.type.capitalize}Tile"
+    @game.turn_phase.tile_klass_name
   end
 
   # Derives the tile klass name from the action type string.

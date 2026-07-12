@@ -206,7 +206,9 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game.save
     post session_url, params: { email_address: "paula@example.com", password: "password" }
 
-    post action_game_url(game), params: { build_row: 3, build_col: 6 }
+    assert_no_difference -> { game.reload.move_count.to_i } do
+      post action_game_url(game), params: { build_row: 3, build_col: 6 }
+    end
 
     assert game.reload.board_contents.empty?(3, 6)
   end
