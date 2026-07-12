@@ -63,7 +63,7 @@ class GameTest < ActiveSupport::TestCase
   test "build_settlement adjacent to tile picks it up and decrements qty" do
     game = game_with_tile_at_2_7(qty: 2)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_equal 1, game.board_contents.tile_qty(2, 7)
@@ -76,7 +76,7 @@ class GameTest < ActiveSupport::TestCase
   test "taking the last tile keeps the board_contents entry at qty zero" do
     game = game_with_tile_at_2_7(qty: 1)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_not game.board_contents.empty?(2, 7), "entry must remain so the tile class is not lost"
@@ -90,7 +90,7 @@ class GameTest < ActiveSupport::TestCase
     chris.save
     game.reload  # clear association cache
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_equal 2, game.board_contents.tile_qty(2, 7), "tile qty must be unchanged"
@@ -100,7 +100,7 @@ class GameTest < ActiveSupport::TestCase
   test "build_settlement does not pick up a tile whose qty is already zero" do
     game = game_with_tile_at_2_7(qty: 0)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_equal 0, game.board_contents.tile_qty(2, 7), "tile qty must stay at zero"
@@ -110,7 +110,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "undo_last_move after a tile pickup restores tile and removes it from the player" do
     game = game_with_tile_at_2_7(qty: 2)
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     engine(game).undo_last_move
@@ -125,7 +125,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "undo_last_move increments a zero-qty tile back to one" do
     game = game_with_tile_at_2_7(qty: 1)
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     engine(game).undo_last_move
@@ -802,7 +802,7 @@ class GameTest < ActiveSupport::TestCase
   test "build stores the terrain card played in payload" do
     game = game_with_tile_at_2_7(qty: 0)  # Oasis board, Chris hand "T", build at (1,7)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
 
     build_move = game.moves.find_by(action: "build")
     assert_equal "T", build_move.payload["card"]
@@ -856,7 +856,7 @@ class GameTest < ActiveSupport::TestCase
   test "pick_up_tile stores tile klass and qty_before in payload" do
     game = game_with_tile_at_2_7(qty: 2)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
 
     pickup_move = game.moves.find_by(action: "pick_up_tile")
     assert_equal "OasisTile", pickup_move.payload["klass"]
@@ -866,7 +866,7 @@ class GameTest < ActiveSupport::TestCase
   test "pick_up_tile message uses correct article for vowel-initial tile names" do
     game = game_with_tile_at_2_7(qty: 2)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
 
     pickup_move = game.moves.find_by(action: "pick_up_tile")
     assert_match(/picked up an Oasis tile/, pickup_move.message)
@@ -875,7 +875,7 @@ class GameTest < ActiveSupport::TestCase
   test "pick_up_tile message includes the tile's location" do
     game = game_with_tile_at_2_7(qty: 2)
 
-    engine(game).build_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
 
     pickup_move = game.moves.find_by(action: "pick_up_tile")
     assert_includes pickup_move.message, "[2, 7]"
@@ -1039,7 +1039,7 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     chris.update!(supply: { "settlements" => 1 }, hand: [ "G" ])
 
-    engine(game).build_settlement(0, 7)  # OasisBoard (0,7)=G
+    engine(game).click(Coordinate.new(0, 7))  # OasisBoard (0,7)=G
     game.reload
 
     assert game.ending?, "ending must be set when last settlement is placed"
@@ -1053,7 +1053,7 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     chris.update!(supply: { "settlements" => 2 }, hand: [ "G" ])
 
-    engine(game).build_settlement(0, 7)
+    engine(game).click(Coordinate.new(0, 7))
     game.reload
 
     assert_not game.ending?, "ending must not be set when settlements remain"
@@ -1203,7 +1203,7 @@ class GameTest < ActiveSupport::TestCase
     chris = game_players(:chris)
     chris.update!(supply: { "settlements" => 1 }, hand: [ "G" ])
 
-    engine(game).build_settlement(0, 7)
+    engine(game).click(Coordinate.new(0, 7))
     game.reload
     assert game.ending?
 

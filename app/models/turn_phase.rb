@@ -237,8 +237,56 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     end
   end
 
+  # Build a mandatory settlement. This phase owns the action; the engine supplies
+  # the shared primitives. Outpost waives adjacency and re-derives the card from
+  # the clicked hex; otherwise a still-unlocked two-card hand is disambiguated by
+  # which card can legally build on the clicked cell (available_list).
   def click(coordinate, engine)
-    engine.build_settlement(coordinate.row, coordinate.col)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "No settlements left" unless game_player.settlements_remaining?
+    chosen_terrain_before = chosen_terrain
+    card_terrain = effective_terrain(game_player)
+
+    if outpost_active?
+      return "Not available" unless engine.legal_targets.include?([ row, col ])
+      card_terrain ||= game_player.hand.find { |t| game.board_contents.terrain_at(row, col) == t }
+      engine.lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
+      engine.build_on_terrain(card_terrain, row, col, game_player)
+      game.mandatory_count -= 1
+      phase_result = transition(
+        TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
+        TurnPhase::Facts::BuildChoice.new(locked_terrain: card_terrain)
+      )
+      game.turn_phase = TurnPhase::MandatoryBuildPhase.new(
+        chosen_terrain: phase_result.next_phase.chosen_terrain,
+        builds: phase_result.next_phase.builds
+      )
+    else
+      return "Not available" unless engine.legal_targets.include?([ row, col ])
+      if card_terrain.nil?
+        card_terrain = game_player.hand.find { |t|
+          list = engine.available_list(game_player.order, t)
+          list.any? ? list[row][col] : true
+        }
+        engine.lock_terrain!(card_terrain, chosen_terrain_before)
+      end
+      engine.build_on_terrain(card_terrain, row, col, game_player)
+      game.mandatory_count -= 1
+      phase_result = transition(
+        TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
+        TurnPhase::Facts::BuildChoice.new(locked_terrain: card_terrain)
+      )
+      game.turn_phase = phase_result.next_phase
+    end
+
+    builds = game.turn_phase.builds || []
+    engine.check_families_goal(game_player) if builds.size == 3
+    game_player.save
+    game.save
   end
 
   def with_outpost_active

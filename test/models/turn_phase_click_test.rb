@@ -13,12 +13,6 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
 
   def coord(row, col) = Coordinate.new(row, col)
 
-  test "MandatoryBuildPhase#click tells the engine to build_settlement" do
-    engine = RecordingEngine.new
-    TurnPhase::MandatoryBuildPhase.new.click(coord(3, 6), engine)
-    assert_equal [ [ :build_settlement, 3, 6 ] ], engine.sent
-  end
-
   test "base TurnPhase#click rejects clicks (every concrete phase overrides it)" do
     base = TurnPhase.allocate # bare base instance, no subclass behavior
     assert_raises(TurnPhase::InvalidTransition) do

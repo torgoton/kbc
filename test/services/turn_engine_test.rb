@@ -14,7 +14,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     force_hand("G")
     spot = empty_hexes_of("G", 1).first
 
-    @engine.build_settlement(*spot)
+    @engine.click(Coordinate.new(*spot))
     @game.reload
 
     assert_equal 2, @game.mandatory_count
@@ -25,7 +25,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     force_hand("G")
     spot = empty_hexes_of("G", 1).first
 
-    @engine.build_settlement(*spot)
+    @engine.click(Coordinate.new(*spot))
     @game.reload
 
     move = @game.moves.find_by(action: "build")
@@ -37,11 +37,11 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     assert_not @engine.turn_endable?
     2.times do
-      @engine.build_settlement(*TurnEngine.new(@game).buildable_cells.first)
+      @engine.click(Coordinate.new(*TurnEngine.new(@game).buildable_cells.first))
       @game.reload
       assert_not @engine.turn_endable?
     end
-    @engine.build_settlement(*TurnEngine.new(@game).buildable_cells.first)
+    @engine.click(Coordinate.new(*TurnEngine.new(@game).buildable_cells.first))
     @game.reload
     assert @engine.turn_endable?
   end
@@ -49,7 +49,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "end_turn advances to next player and resets tiles" do
     first_player = @game.current_player
     force_hand("G")
-    empty_hexes_of("G", 3).each { |spot| @engine.build_settlement(*spot) }
+    empty_hexes_of("G", 3).each { |spot| @engine.click(Coordinate.new(*spot)) }
 
     @game.reload
     next_player = @game.game_players.find { |gp| gp.id != first_player.id }
@@ -68,7 +68,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     force_hand("G")
     @game.current_player.update!(supply: { "settlements" => 0 })
 
-    result = @engine.build_settlement(*empty_hexes_of("G", 1).first)
+    result = @engine.click(Coordinate.new(*empty_hexes_of("G", 1).first))
 
     assert_equal "No settlements left", result
   end
@@ -428,7 +428,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
   test "end_turn does not touch the clock for an untimed game" do
     force_hand("G")
-    empty_hexes_of("G", 3).each { |spot| @engine.build_settlement(*spot) }
+    empty_hexes_of("G", 3).each { |spot| @engine.click(Coordinate.new(*spot)) }
     mover = @game.current_player
 
     @engine.end_turn
@@ -444,7 +444,7 @@ class TurnEngineTest < ActiveSupport::TestCase
 
     force_hand("G", game: game)
     spot = empty_hexes_of("G", 1, game: game).first
-    engine.build_settlement(*spot)
+    engine.click(Coordinate.new(*spot))
 
     assert_not_nil mover.reload.clock_started_at
   end
@@ -455,7 +455,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     force_hand("G", game: game)
     spot = empty_hexes_of("G", 1, game: game).first
 
-    engine.build_settlement(*spot)
+    engine.click(Coordinate.new(*spot))
     stamped_at = mover.reload.clock_started_at
     remaining_before_undo = mover.time_remaining_ms
 
@@ -471,11 +471,11 @@ class TurnEngineTest < ActiveSupport::TestCase
     mover = game.current_player
     force_hand("G", game: game)
     spots = empty_hexes_of("G", 2, game: game)
-    engine.build_settlement(*spots[0])
+    engine.click(Coordinate.new(*spots[0]))
     first_stamp = mover.reload.clock_started_at
 
     travel 5.seconds do
-      engine.build_settlement(*spots[1])
+      engine.click(Coordinate.new(*spots[1]))
     end
 
     assert_equal first_stamp, mover.reload.clock_started_at
@@ -485,7 +485,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     force_hand("G")
     spot = empty_hexes_of("G", 1).first
 
-    @engine.build_settlement(*spot)
+    @engine.click(Coordinate.new(*spot))
 
     assert_nil @game.current_player.reload.clock_started_at
   end
@@ -497,7 +497,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     mover.update!(clock_started_at: base, time_remaining_ms: 100_000)
     game.update!(turn_started_at: base)
     force_hand("G", game: game)
-    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.click(Coordinate.new(*spot)) }
 
     travel_to(base + 20.seconds, with_usec: true) { engine.end_turn }
 
@@ -512,7 +512,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     mover.update!(clock_started_at: base, time_remaining_ms: 5_000)
     game.update!(turn_started_at: base)
     force_hand("G", game: game)
-    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.click(Coordinate.new(*spot)) }
 
     travel_to(base + 60.seconds, with_usec: true) { engine.end_turn }
 
@@ -526,7 +526,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     mover.update!(clock_started_at: base, time_remaining_ms: Game::SPEEDS["blitz"][:bank_ms])
     game.update!(turn_started_at: base)
     force_hand("G", game: game)
-    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.click(Coordinate.new(*spot)) }
 
     # No time elapses; the increment alone would exceed the bank if uncapped.
     travel_to(base, with_usec: true) { engine.end_turn }
@@ -556,9 +556,9 @@ class TurnEngineTest < ActiveSupport::TestCase
     spots = empty_hexes_of("G", 3, game: game)
 
     clock_start = turn_start + 15.seconds
-    travel_to(clock_start, with_usec: true) { engine.build_settlement(*spots[0]) }
-    engine.build_settlement(*spots[1])
-    engine.build_settlement(*spots[2])
+    travel_to(clock_start, with_usec: true) { engine.click(Coordinate.new(*spots[0])) }
+    engine.click(Coordinate.new(*spots[1]))
+    engine.click(Coordinate.new(*spots[2]))
 
     travel_to(clock_start + 10.seconds, with_usec: true) { engine.end_turn }
 
@@ -569,7 +569,7 @@ class TurnEngineTest < ActiveSupport::TestCase
   test "end_turn stamps turn_started_at to the moment the turn changes" do
     game, engine = start_timed_game("blitz")
     force_hand("G", game: game)
-    empty_hexes_of("G", 3, game: game).each { |spot| engine.build_settlement(*spot) }
+    empty_hexes_of("G", 3, game: game).each { |spot| engine.click(Coordinate.new(*spot)) }
 
     travel_to(Time.current + 5.seconds, with_usec: true) do
       engine.end_turn

@@ -22,58 +22,6 @@ class TurnEngine
     grid
   end
 
-  def build_settlement(row, col)
-    capture_undo_snapshot
-    Rails.logger.debug("Attempt to build at #{row}, #{col}")
-    @game.instantiate
-    game_player = @game.current_player
-    Rails.logger.debug(" I have #{game_player.settlements_remaining} settlements remaining")
-    return "No settlements left" unless game_player.settlements_remaining?
-    current_phase = @game.turn_phase
-    chosen_terrain_before = current_phase.chosen_terrain
-    card_terrain = effective_terrain(game_player)
-
-    if current_phase.mandatory_build? && current_phase.outpost_active?
-      return "Not available" unless legal_targets.include?([ row, col ])
-      card_terrain ||= game_player.hand.find { |t| @game.board_contents.terrain_at(row, col) == t }
-      lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
-      build_on_terrain(card_terrain, row, col, game_player)
-      @game.mandatory_count -= 1
-      phase_result = current_phase.transition(
-        TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
-        TurnPhase::Facts::BuildChoice.new(locked_terrain: card_terrain)
-      )
-      @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(
-        chosen_terrain: phase_result.next_phase.chosen_terrain,
-        builds: phase_result.next_phase.builds
-      )
-      builds = @game.turn_phase.builds || []
-      check_families_goal(game_player) if builds.size == 3
-    else
-      return "Not available" unless legal_targets.include?([ row, col ])
-      if card_terrain.nil?
-        card_terrain = game_player.hand.find { |t|
-          list = available_list(game_player.order, t)
-          list.any? ? list[row][col] : true
-        }
-        lock_terrain!(card_terrain, chosen_terrain_before)
-      end
-      build_on_terrain(card_terrain, row, col, game_player)
-      @game.mandatory_count -= 1
-      phase_result = current_phase.transition(
-        TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
-        TurnPhase::Facts::BuildChoice.new(locked_terrain: card_terrain)
-      )
-      @game.turn_phase = phase_result.next_phase
-      builds = @game.turn_phase.builds || []
-      check_families_goal(game_player) if builds.size == 3
-    end
-
-    Rails.logger.debug("Building settlement at #{row}, #{col} for player #{game_player.order}")
-    game_player.save
-    @game.save
-  end
-
   def activate_outpost
     capture_undo_snapshot
     @game.instantiate
@@ -759,7 +707,9 @@ class TurnEngine
   # The shared mutation primitives a Sub-phase's #click calls to carry out its
   # action (State pattern: the phase orchestrates, the engine owns these shared
   # steps). Defined among the privates above; re-exposed here as the phase-
-  # facing interface. Still called internally by the not-yet-migrated mutators.
+  # facing interface. Also called by the engine's own turn-level gestures
+  # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
   public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
-         :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps
+         :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
+         :check_families_goal
 end
