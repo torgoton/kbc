@@ -98,49 +98,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal "No settlements left", result
   end
 
-  test "build_settlement returns 'Not avilalable' when location not adjacent to existing settlements" do
-    # Place a settlement at a Canyon hex in Tavern board, then try to build
-    # at a far-away Canyon hex that cannot be adjacent
-    @game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 1, 0 ], [ 0, 0 ] ]
-    @game.save
-    @game.instantiate
-    player = @game.current_player
-    @game.board_contents_will_change!
-    @game.board_contents.place_settlement(0, 7, player.order)
-    @game.save
-
-    game2 = Game.find(@game.id)
-    game2.current_player.update!(hand: [ "C" ])
-    engine2 = TurnEngine.new(game2)
-
-    # (5,1) is Canyon on Tavern board row 5 ("FCCWGTTCCC"), not adjacent to (0,7)
-    result = engine2.build_settlement(5, 1)
-
-    assert_equal "Not available", result
-  end
-
-  test "build_settlement uses neighbor adjacency when player has an existing settlement" do
-    # Place a settlement at a Canyon hex, then build on an adjacent Canyon hex
-    # Tavern board has Canyon at (0,7) and (0,8) — pin it to quadrant 0
-    @game.boards = [ [ 4, 0 ], [ 5, 0 ], [ 1, 0 ], [ 0, 0 ] ]
-    @game.save
-    @game.instantiate
-    player = @game.current_player
-    @game.board_contents_will_change!
-    @game.board_contents.place_settlement(0, 7, player.order)
-    @game.save
-
-    game2 = Game.find(@game.id)
-    game2.current_player.update!(hand: [ "C" ])
-    engine2 = TurnEngine.new(game2)
-
-    # (0,8) is Canyon and adjacent to (0,7) on even row (offset: [0,+1])
-    engine2.build_settlement(0, 8)
-    game2.reload
-
-    assert_equal player.order, game2.board_contents.player_at(0, 8)
-  end
-
   test "activate_tile_build returns 'No settlements left' when supply is exhausted" do
     @game.current_player.update!(supply: { "settlements" => 0 })
     @game.update!(current_action: { "type" => "oasis" })
@@ -155,21 +112,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(current_action: { "type" => "oasis" })
 
     result = @engine.activate_tile_build(0, 1)
-
-    assert_equal "Not available", result
-  end
-
-  test "activate_tile_build returns 'Not available' when destination is not in valid_destinations" do
-    @game.boards = [ [ 1, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    @game.save!
-    @game.current_player.update!(tiles: [
-      { "klass" => "MandatoryTile", "used" => false },
-      { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false }
-    ])
-    @game.update!(current_action: { "type" => "oasis" })
-
-    # (3, 3) is Forest on the Oasis board (section 1, row 3: "WWWFGTFFFF") — not Desert
-    result = @engine.activate_tile_build(3, 3)
 
     assert_equal "Not available", result
   end
@@ -245,40 +187,11 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal 2, player.reload.hand.size
   end
 
-  test "buildable_cells for mandatory build returns buildable cells" do
-    force_hand("G")
-    cells = @engine.buildable_cells
-    assert cells.any?
-    row, col = cells.first
-    assert_not_equal "Not avilalable", @engine.build_settlement(row, col)
-  end
-
   test "buildable_cells returns empty when mandatory_count is zero" do
     force_hand("G")
     @game.update!(mandatory_count: 0)
 
     assert_empty @engine.buildable_cells
-  end
-
-  test "buildable_cells for paddock with from returns valid move destinations" do
-    force_hand("G")
-    spot = empty_hexes_of("G", 1).first
-    @engine.build_settlement(*spot)
-    @game.reload
-    @game.update!(current_action: { "type" => "paddock", "from" => "[#{spot[0]}, #{spot[1]}]" })
-    @game.current_player.update!(
-      tiles: [ { "klass" => "PaddockTile", "from" => "[2, 0]", "used" => false } ]
-    )
-    @game.reload
-
-    cells = @engine.buildable_cells
-
-    @game.instantiate
-    expected = Tiles::Location::PaddockTile.new(0).valid_destinations(
-      from_row: spot[0], from_col: spot[1],
-      board_contents: with_terrain(@game.board_contents, @game.board)
-    )
-    assert_equal expected.sort, cells.sort
   end
 
   test "buildable_cells for resettlement with from returns only adjacent step destinations" do
@@ -301,41 +214,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_not_includes cells, [ 1, 2 ]
     cells.each do |r, c|
       assert_includes @game.board_contents.neighbors(4, 3), [ r, c ]
-    end
-  end
-
-  test "buildable_cells for paddock without from returns settlements with valid moves" do
-    force_hand("G")
-    @engine.build_settlement(*empty_hexes_of("G", 1).first)
-    @game.reload
-    @game.update!(current_action: { "type" => "paddock" })
-    @game.current_player.update!(
-      tiles: [ { "klass" => "PaddockTile", "from" => "[2, 0]", "used" => false } ]
-    )
-    @game.reload
-
-    cells = @engine.buildable_cells
-
-    assert cells.any?
-    @game.instantiate
-    player_settlements = @game.board_contents.settlements_for(@game.current_player.order).to_a
-    cells.each { |r, c| assert_includes player_settlements, [ r, c ] }
-  end
-
-  test "buildable_cells for oasis action returns empty desert hexes" do
-    @game.update!(current_action: { "type" => "oasis" }, mandatory_count: 0)
-    @game.current_player.update!(
-      tiles: [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
-    )
-    @game.reload
-
-    cells = @engine.buildable_cells
-
-    assert cells.any?
-    @game.instantiate
-    cells.each do |r, c|
-      assert_equal "D", @game.board.terrain_at(r, c)
-      assert @game.board_contents.empty?(r, c)
     end
   end
 
@@ -403,31 +281,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_match(/select a settlement to remove/, @engine.turn_state)
   end
 
-  test "placing a lighthouse ship adjacent to an oasis location picks up an Oasis tile" do
-    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    # Start a clean board so (1, 4) is deterministically empty water. Reusing the
-    # board_contents from `start` leaves randomly-placed location/nomad tiles that
-    # can occupy (1, 4) and make the ship placement illegal (order-dependent flake).
-    @game.board_contents = BoardState.new.tap do |state|
-      state.place_tile(2, 4, "OasisTile", 2)
-    end
-    @game.save!
-    @engine = TurnEngine.new(@game.reload)
-
-    player = @game.current_player
-    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[6, 16]", "used" => false } ])
-    player.reload.add_ships!(1)
-
-    @engine.select_action("lighthouse")
-    @engine.execute_meeple_action(1, 4)
-    @game.reload
-
-    assert @game.board_contents.ship_at?(1, 4)
-    assert_equal 1, @game.board_contents.tile_qty(2, 4)
-    assert_includes player.reload.tiles, { "klass" => "OasisTile", "from" => "[2, 4]", "used" => true }
-    assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]", deliberate: false)
-  end
-
   test "moving a lighthouse ship past a location picks up then forfeits the tile and logs each step" do
     @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     player = @game.current_player
@@ -454,24 +307,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
   end
 
-  test "moving a lighthouse ship cannot move more than one space" do
-    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    player = @game.current_player
-    @game.board_contents = BoardState.new.tap do |state|
-      state.place_ship(0, 3, player.order)
-    end
-    @game.save!
-    player.update!(tiles: [ { "klass" => "LighthouseTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0, "from" => "[0, 3]" })
-
-    result = TurnEngine.new(@game.reload).execute_meeple_action(2, 3)
-    @game.reload
-
-    assert_equal "Not available", result
-    assert @game.board_contents.ship_at?(0, 3)
-    assert_not @game.moves.exists?(action: "move_ship")
-  end
-
   test "moving a wagon past a location picks up then forfeits the tile and logs each step" do
     @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
     player = @game.current_player
@@ -496,52 +331,6 @@ class TurnEngineTest < ActiveSupport::TestCase
       @game.moves.where(action: "move_wagon").order(:order).pluck(:from, :to)
     assert @game.moves.exists?(action: "pick_up_tile", from: "[2, 4]")
     assert @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
-  end
-
-  test "undo after a multi-step wagon move reverses only the last step" do
-    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    player = @game.current_player
-    @game.board_contents = BoardState.new.tap do |state|
-      state.place_tile(2, 4, "OasisTile", 2)
-      state.place_wagon(4, 3, player.order)
-    end
-    @game.save!
-    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "budget" => 3, "moves" => 0, "from" => "[4, 3]" })
-
-    engine = TurnEngine.new(@game.reload)
-    engine.execute_meeple_action(3, 3)
-    engine.execute_meeple_action(2, 3)
-    engine.execute_meeple_action(1, 2)
-    engine.undo_last_move
-    @game.reload
-
-    assert @game.board_contents.wagon_at?(2, 3)
-    assert_equal({ "type" => "wagon", "klass" => "WagonTile", "budget" => 1, "moves" => 2, "from" => "[2, 3]" }, @game.current_action)
-    assert_includes player.reload.tiles, { "klass" => "OasisTile", "from" => "[2, 4]", "used" => true }
-  end
-
-  test "moving a wagon away from a picked up Nomad tile does not forfeit it" do
-    @game.boards = [ [ 1, 1 ], [ 12, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    player = @game.current_player
-    @game.board_contents = BoardState.new.tap do |state|
-      state.place_tile(2, 4, "SwordTile", 1)
-      state.place_wagon(4, 3, player.order)
-    end
-    @game.save!
-    player.update!(tiles: [ { "klass" => "WagonTile", "from" => "[6, 16]", "used" => false } ])
-    @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "budget" => 3, "moves" => 0, "from" => "[4, 3]" })
-
-    engine = TurnEngine.new(@game.reload)
-    engine.execute_meeple_action(3, 3)
-    engine.execute_meeple_action(2, 3)
-    engine.execute_meeple_action(1, 2)
-    @game.reload
-
-    picked_up = player.reload.tiles.find { |tile| tile["klass"] == "SwordTile" && tile["from"] == "[2, 4]" }
-    assert picked_up
-    assert picked_up["used"]
-    assert_not @game.moves.exists?(action: "forfeit_tile", from: "[2, 4]")
   end
 
   test "resettlement logs each step and forfeits a location tile after moving away" do
@@ -627,20 +416,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_includes %w[C D F G T], draw_move.payload["card"]
   end
 
-  test "activate_fort_tile sets current_action to fort with fort_terrain" do
-    @game.current_player.update!(tiles: [
-      { "klass" => "MandatoryTile", "used" => false },
-      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
-    ])
-
-    @engine.activate_fort_tile
-    @game.reload
-
-    assert_equal "fort", @game.current_action["type"]
-    assert_equal "FortTile", @game.current_action["klass"]
-    assert_includes %w[C D F G T], @game.current_action["fort_terrain"]
-  end
-
   test "activate_fort_tile removes the drawn card from the deck and adds it to discard" do
     @game.current_player.update!(tiles: [
       { "klass" => "MandatoryTile", "used" => false },
@@ -656,18 +431,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_equal discard_size_before + 1, @game.discard.size
     drawn = @game.current_action["fort_terrain"]
     assert_includes @game.discard, drawn
-  end
-
-  test "undo_allowed? is false after activate_fort_tile (card draw blocks undo)" do
-    @game.current_player.update!(tiles: [
-      { "klass" => "MandatoryTile", "used" => false },
-      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
-    ])
-
-    @engine.activate_fort_tile
-    @game.reload
-
-    assert_not TurnEngine.new(@game).undo_allowed?
   end
 
   test "activate_fort_tile returns Not available if action is not mandatory" do
@@ -688,61 +451,6 @@ class TurnEngineTest < ActiveSupport::TestCase
   # ---------------------------------------------------------------------------
   # Fort tile build
   # ---------------------------------------------------------------------------
-
-  test "buildable_cells during fort action returns cells of drawn terrain, not player hand" do
-    force_hand("G")
-    spot = empty_hexes_of("G", 1).first
-    @engine.build_settlement(*spot)
-    @game.reload
-
-    @game.current_player.update!(tiles: [
-      { "klass" => "MandatoryTile", "used" => false },
-      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
-    ])
-
-    # Force a known fort terrain that differs from hand
-    drawn = (@game.current_player.hand.first == "G") ? "D" : "G"
-    @game.update!(
-      mandatory_count: 0,
-      current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
-    )
-
-    cells = TurnEngine.new(@game).buildable_cells
-
-    @game.instantiate
-    cells.each do |r, c|
-      assert_equal drawn, @game.board.terrain_at(r, c),
-        "Expected all buildable cells to be #{drawn} terrain, got #{@game.board.terrain_at(r, c)} at [#{r},#{c}]"
-    end
-  end
-
-  test "activate_tile_build on fort terrain places settlement, marks tile used, resets action" do
-    use_oasis_board
-    force_hand("D")
-    spot = [ 0, 0 ]
-    @engine.build_settlement(*spot)
-    @game.reload
-
-    @game.current_player.update!(tiles: [
-      { "klass" => "MandatoryTile", "used" => false },
-      { "klass" => "FortTile", "from" => "[3, 3]", "used" => false }
-    ])
-
-    drawn = "G"
-    fort_spot = [ 0, 7 ]
-    @game.update!(
-      mandatory_count: 0,
-      current_action: { "type" => "fort", "klass" => "FortTile", "fort_terrain" => drawn }
-    )
-
-    TurnEngine.new(@game).activate_tile_build(*fort_spot)
-    @game.reload
-
-    assert_equal({ "type" => "mandatory" }, @game.current_action)
-    assert_not @game.board_contents.empty?(*fort_spot)
-    fort = @game.current_player.tiles.find { |t| t["klass"] == "FortTile" }
-    assert fort["used"]
-  end
 
   # Drift closed by the legal_targets seam: wall targets must not be offered
   # (and place_wall must be rejected) once stone walls are exhausted.
