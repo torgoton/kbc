@@ -176,7 +176,7 @@ class GameScenario
   # Remove an opponent's settlement (e.g. via Nomad::SwordTile's targeted
   # removal phase), returning it to their supply.
   def remove_settlement(at:)
-    perform { |engine| engine.remove_settlement(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # --- queries ---

@@ -753,8 +753,50 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
     end
   end
 
+  # Remove a targeted settlement (State pattern: this phase owns the action's
+  # orchestration; the engine supplies the shared primitives it calls —
+  # capture_undo_snapshot / legal_targets / record_move / apply_tile_forfeit).
   def click(coordinate, engine)
-    engine.remove_settlement(coordinate.row, coordinate.col)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+
+    return "Not a valid target" unless engine.legal_targets.include?([ row, col ])
+    owner_order = game.board_contents.player_at(row, col)
+    owner = game.game_players.find { |gp| gp.order == owner_order }
+
+    phase_result = consume_target(owner_order)
+    tile_used = phase_result.action_completed
+    meeple = game.board_contents.meeple_at(row, col)
+
+    engine.record_move(
+      action: "remove_settlement",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      to: "player_#{owner_order}_supply",
+      payload: { "owner_order" => owner_order, "tile_used" => tile_used, "meeple" => meeple },
+      message: "#{game_player.player.handle} removed #{owner.player.handle}'s #{meeple || 'settlement'}"
+    )
+
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    owner.return_piece_to_supply!(meeple)
+    engine.apply_tile_forfeit(owner)
+
+    if tile_used
+      game_player.mark_tile_used!(tile_klass_name)
+      game.turn_phase = TurnPhase::MandatoryBuildPhase.new
+    else
+      game.turn_phase = phase_result.next_phase
+    end
+
+    owner.save
+    game_player.save
+    game.save
   end
 
   def serialize

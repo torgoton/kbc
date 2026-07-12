@@ -61,13 +61,6 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     assert_equal [ [ :execute_meeple_action, 2, 3 ] ], engine.sent
   end
 
-  test "TargetedRemovalPhase#click tells the engine to remove_settlement" do
-    engine = RecordingEngine.new
-    phase = TurnPhase::TargetedRemovalPhase.new(action_type: "sword", klass_name: "SwordTile", pending_orders: [ 1 ])
-    phase.click(coord(8, 9), engine)
-    assert_equal [ [ :remove_settlement, 8, 9 ] ], engine.sent
-  end
-
   test "TileBuildPhase#click places a wall for a wall tile" do
     engine = RecordingEngine.new
     phase = TurnPhase::TileBuildPhase.new(action_type: "quarry", klass_name: "QuarryTile", walls_placed: 0)
