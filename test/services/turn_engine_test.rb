@@ -64,31 +64,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.current_player.reload.tiles.all? { |t| t["used"] == false }
   end
 
-  test "forfeiting a tile preserves taken_from (cannot re-seize the same location)" do
-    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    raise "No valid trigger position found" unless tile_row
-
-    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
-    tile_key = "[#{tile_row}, #{tile_col}]"
-
-    @engine.build_settlement(trigger_row, trigger_col)
-    @game.reload
-    assert_includes @game.current_player.reload.taken_from || [], tile_key
-
-    @game.board_contents_will_change!
-    @game.board_contents.remove(trigger_row, trigger_col)
-    @game.save
-    @engine.send(:apply_tile_forfeit, @game.current_player)
-    @game.current_player.save
-    @game.save
-    reloaded = @game.current_player.reload
-
-    assert_empty reloaded.tiles.reject { |t| t["klass"] == "MandatoryTile" },
-      "tile should have been forfeited"
-    assert_includes reloaded.taken_from || [], tile_key,
-      "taken_from must survive forfeit so the location cannot be re-seized"
-  end
-
   test "build_settlement returns 'No settlements left' when supply is exhausted" do
     force_hand("G")
     @game.current_player.update!(supply: { "settlements" => 0 })
@@ -241,35 +216,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.reload
     @game.instantiate
     @engine = TurnEngine.new(@game)
-  end
-
-  def find_meeple_tile_trigger_pair
-    meeple_klasses = %w[BarracksTile LighthouseTile WagonTile]
-    board = @game.instantiate
-    @game.board_contents.locations_with_remaining_tiles.each do |t_row, t_col|
-      klass = @game.board_contents.tile_klass(t_row, t_col)
-      next unless meeple_klasses.include?(klass)
-      @game.board_contents.neighbors(t_row, t_col).each do |nr, nc|
-        terrain = board.terrain_at(nr, nc)
-        if @game.board_contents.empty?(nr, nc) && %w[C D F G T].include?(terrain)
-          return [ t_row, t_col, nr, nc ]
-        end
-      end
-    end
-    nil
-  end
-
-  def find_tile_trigger_pair
-    board = @game.instantiate
-    @game.board_contents.locations_with_remaining_tiles.each do |t_row, t_col|
-      @game.board_contents.neighbors(t_row, t_col).each do |nr, nc|
-        terrain = board.terrain_at(nr, nc)
-        if @game.board_contents.empty?(nr, nc) && %w[C D F G T].include?(terrain)
-          return [ t_row, t_col, nr, nc ]
-        end
-      end
-    end
-    nil
   end
 
   test "turn_state with sword action tells player to select a settlement to remove" do

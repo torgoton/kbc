@@ -66,4 +66,34 @@ class TilePickupScenarioTest < ActiveSupport::TestCase
     assert_equal 1, scenario.tile_qty(tile_hex), "no second tile is taken from a seized location"
     assert_equal 1, scenario.held_tiles(0, klass: "OasisTile").size
   end
+
+  test "cannot re-seize a location after moving away and forfeiting the tile taken from it" do
+    # Fixed-board geometry (see paddock_tile_test for the jump rule):
+    #   SEIZE    - grass hex adjacent to the location, the only settlement near it
+    #   AWAY     - the 2-hex paddock jump from SEIZE, not adjacent to the location
+    #              (jumping here breaks adjacency and forfeits the picked-up tile)
+    #   REBUILD  - grass hex adjacent to BOTH the location and AWAY (so the second
+    #              build is legal once the settlement sits on AWAY)
+    location = [ 0, 8 ].freeze
+    seize    = [ 0, 9 ].freeze
+    away     = [ 2, 8 ].freeze
+    rebuild  = [ 1, 8 ].freeze
+    scenario = GameScenario.new(hands: { 0 => "G", 1 => "D" })
+    scenario.place_tile("OasisTile", at: location, qty: 2)
+    scenario.give_tile(0, "PaddockTile", from: [ 0, 0 ])
+
+    scenario.build_settlement(at: seize) # picks up an OasisTile from the location
+    assert scenario.holds_tile?(0, klass: "OasisTile", from: location)
+
+    scenario.activate_tile(:paddock) # jump the settlement off the location, forfeiting the tile
+    scenario.select_settlement(at: seize)
+    scenario.move_step(to: away)
+    assert_equal 0, scenario.owner_at(away)
+    assert_empty scenario.held_tiles(0, klass: "OasisTile"), "moving away forfeits the tile"
+
+    scenario.build_settlement(at: rebuild) # build next to the same location again
+
+    assert_empty scenario.held_tiles(0, klass: "OasisTile"),
+      "a location already taken from yields nothing on a later build, even after the tile was lost"
+  end
 end
