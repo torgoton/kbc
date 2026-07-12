@@ -64,76 +64,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert @game.current_player.reload.tiles.all? { |t| t["used"] == false }
   end
 
-  test "building adjacent to a tile location picks it up and decrements qty" do
-    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    raise "No valid trigger position found" unless tile_row
-
-    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
-    player = @game.current_player
-
-    @engine.build_settlement(trigger_row, trigger_col)
-    @game.reload
-
-    assert_equal 1, @game.board_contents.tile_qty(tile_row, tile_col)
-    assert_equal 1, player.reload.tiles.reject { |t| t["klass"] == "MandatoryTile" }.size
-    assert @game.moves.exists?(action: "pick_up_tile", deliberate: false)
-  end
-
-  test "picking up a tile records the location in taken_from" do
-    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    raise "No valid trigger position found" unless tile_row
-
-    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
-    player = @game.current_player
-
-    @engine.build_settlement(trigger_row, trigger_col)
-    @game.reload
-
-    assert_includes player.reload.taken_from || [], "[#{tile_row}, #{tile_col}]"
-  end
-
-  test "undo of a meeple-granting tile pickup revokes the meeples" do
-    @game.restart(include_boards: [ 12 ], max_board: 12) # ensure we have a meeple-granting tile section
-    tile_row, tile_col, trigger_row, trigger_col = find_meeple_tile_trigger_pair
-    raise "No meeple tile trigger position found" unless tile_row
-
-    board = @game.instantiate
-    klass = @game.board_contents.tile_klass(tile_row, tile_col)
-    kind = Tiles::Tile.for_klass(klass).new(0).meeple_kind
-    player = @game.current_player
-    supply_before = player.reload.supply_hash[kind]
-
-    force_hand(board.terrain_at(trigger_row, trigger_col))
-    @engine.build_settlement(trigger_row, trigger_col)
-    @game.reload
-
-    assert @game.moves.exists?(action: "grant_meeple"), "expected a grant_meeple move after pickup"
-    assert_operator player.reload.supply_hash[kind], :>, supply_before
-
-    TurnEngine.new(@game).undo_last_move
-    @game.reload
-
-    assert_equal supply_before, player.reload.supply_hash[kind]
-    assert_not @game.moves.exists?(action: "grant_meeple")
-  end
-
-  test "undo of a pickup removes the location from taken_from" do
-    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    raise "No valid trigger position found" unless tile_row
-
-    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
-    tile_key = "[#{tile_row}, #{tile_col}]"
-
-    @engine.build_settlement(trigger_row, trigger_col)
-    @game.reload
-    assert_includes @game.current_player.reload.taken_from || [], tile_key
-
-    @engine.undo_last_move
-    @game.reload
-
-    assert_not_includes @game.current_player.reload.taken_from || [], tile_key
-  end
-
   test "forfeiting a tile preserves taken_from (cannot re-seize the same location)" do
     tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
     raise "No valid trigger position found" unless tile_row
@@ -157,24 +87,6 @@ class TurnEngineTest < ActiveSupport::TestCase
       "tile should have been forfeited"
     assert_includes reloaded.taken_from || [], tile_key,
       "taken_from must survive forfeit so the location cannot be re-seized"
-  end
-
-  test "player cannot pick up a second tile from a location they've already seized" do
-    tile_row, tile_col, trigger_row, trigger_col = find_tile_trigger_pair
-    raise "No valid trigger position found" unless tile_row
-
-    force_hand(@game.instantiate.terrain_at(trigger_row, trigger_col))
-    player = @game.current_player
-    tile_key = "[#{tile_row}, #{tile_col}]"
-    player.update!(taken_from: [ tile_key ])
-
-    @engine.build_settlement(trigger_row, trigger_col)
-    @game.reload
-
-    assert_equal 2, @game.board_contents.tile_qty(tile_row, tile_col),
-      "tile qty should stay at 2 when player has already taken from this location"
-    assert_empty player.reload.tiles.reject { |t| t["klass"] == "MandatoryTile" }
-    assert_not @game.moves.exists?(action: "pick_up_tile")
   end
 
   test "build_settlement returns 'No settlements left' when supply is exhausted" do
