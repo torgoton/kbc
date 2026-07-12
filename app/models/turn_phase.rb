@@ -160,6 +160,13 @@ class TurnPhase
     raise InvalidTransition, "#{self.class.name} does not accept a board click"
   end
 
+  # Popup gestures for clicking your own meeple. Only the meeple phases act on
+  # them (MeepleOrchestration overrides these); any other phase degrades to
+  # "Not available", as the engine's former remove_meeple_action /
+  # select_meeple_for_move did via their held-tile guard — never a 500.
+  def remove_meeple(_coordinate, _engine) = "Not available"
+  def select_meeple(_coordinate, _engine) = "Not available"
+
   def transition(_event, _facts)
     raise InvalidTransition, "#{self.class.name} does not accept that event"
   end
