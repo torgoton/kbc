@@ -312,16 +312,16 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert first_step
     assert second_step
 
-    engine.select_settlement(4, 3)
+    engine.click(Coordinate.new(4, 3))
     @game.reload
-    engine.move_settlement(*first_step)
+    engine.click(Coordinate.new(*first_step))
     @game.reload
     assert_equal 3, @game.current_action["budget"]
     assert_nil @game.current_action["from"]
 
-    engine.select_settlement(2, 7)
+    engine.click(Coordinate.new(2, 7))
     @game.reload
-    engine.move_settlement(*second_step)
+    engine.click(Coordinate.new(*second_step))
     @game.reload
 
     assert @game.board_contents.player_at(*second_step)
@@ -419,7 +419,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.board_contents.place_settlement(5, 5, @game.current_player.order)
     @game.save!
     # [5, 6] is one hex away — not a legal Paddock move (which is two in a line).
-    assert_equal "Not available", @engine.move_settlement(5, 6)
+    assert_equal "Not available", @engine.click(Coordinate.new(5, 6))
     assert_equal @game.current_player.order, @game.reload.board_contents.player_at(5, 5)
     assert @game.board_contents.empty?(5, 6)
   end

@@ -566,8 +566,53 @@ class TurnPhase::FortPhase < TurnPhase
   end
 end
 
+# Shared click orchestration for the settlement movers (SettlementMovePhase,
+# ResettlementPhase): the first click selects the source, the next resolves the
+# move. select_source is identical for both; each phase supplies its own move_to
+# (a single move vs a stepped/budgeted one). Companion to SettlementMoveTargets,
+# which owns the legal-target rule.
+module TurnPhase::SettlementMoveOrchestration
+  def click(coordinate, engine)
+    if from
+      move_to(coordinate, engine)
+    else
+      select_source(coordinate, engine)
+    end
+  end
+
+  def select_source(coordinate, engine)
+    engine.capture_undo_snapshot
+    game = engine.game
+    key = "[#{coordinate.row}, #{coordinate.col}]"
+    engine.record_move(
+      action: "select_settlement",
+      deliberate: true,
+      reversible: true,
+      from: key,
+      message: "#{game.current_player.player.handle} selected a settlement at #{key}"
+    )
+    phase_result = transition(TurnPhase::Events::SourceSelected.new(coordinate_key: key), nil)
+    game.turn_phase = phase_result.next_phase
+    game.save
+  end
+
+  private
+
+  # Lock the played terrain before a move resolves, for a played-terrain mover
+  # (Barn) on a still-unlocked two-card hand. Mirrors the engine's former
+  # preamble: locking replaces game.turn_phase, so move_to reads the resulting
+  # terrain back from game.turn_phase (not self, which stays pre-lock).
+  def lock_move_terrain(row, col, engine)
+    game = engine.game
+    if tile&.uses_played_terrain? && chosen_terrain.nil? && game.current_player.hand.size > 1
+      engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
+    end
+  end
+end
+
 class TurnPhase::SettlementMovePhase < TurnPhase
   include TurnPhase::SettlementMoveTargets
+  include TurnPhase::SettlementMoveOrchestration
   attr_reader :action_type, :klass_value, :from_value
 
   def self.from_hash(hash)
@@ -596,12 +641,44 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     from_value
   end
 
-  def click(coordinate, engine)
-    if from
-      engine.move_settlement(coordinate.row, coordinate.col)
-    else
-      engine.select_settlement(coordinate.row, coordinate.col)
-    end
+  # A single settlement move (paddock/harbor/barn). Reads hand terrain back from
+  # game.turn_phase so a locked two-card Barn move validates against the locked
+  # terrain; from/transition come from self (pre-lock, so the source survives).
+  def move_to(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    from_coord = Coordinate.from_key(from)
+    tile_klass = tile_klass_name
+    tile_obj = tile
+    lock_move_terrain(row, col, engine)
+    hand_arg = game.turn_phase.effective_terrain(game.current_player) || game.current_player.hand.first
+    return "Not available" unless tile_obj.valid_destinations(
+      from_row: from_coord.row, from_col: from_coord.col,
+      board_contents: game.board_contents, player_order: game.current_player.order, hand: hand_arg
+    ).include?([ row, col ])
+    engine.record_move(
+      action: "move_settlement",
+      deliberate: true,
+      reversible: true,
+      from: from,
+      to: Coordinate.new(row, col).to_key,
+      payload: { "tile_klass" => tile_klass },
+      message: "#{game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
+    )
+    game.board_contents_will_change!
+    game.board_contents.move_settlement(*from_coord, row, col)
+    phase_result = transition(
+      TurnPhase::Events::DestinationChosen.new,
+      TurnPhase::Facts::DestinationChoice.new(next_phase: TurnPhase::MandatoryBuildPhase.new)
+    )
+    game.turn_phase = phase_result.next_phase
+    game.current_player.mark_tile_used!(tile_klass)
+    engine.apply_tile_forfeit(game.current_player)
+    engine.apply_tile_pickup(game.current_player, row, col)
+    game.current_player.save
+    game.save
   end
 
   def transition(event, facts)
@@ -636,6 +713,7 @@ end
 
 class TurnPhase::ResettlementPhase < TurnPhase
   include TurnPhase::SettlementMoveTargets
+  include TurnPhase::SettlementMoveOrchestration
   attr_reader :budget_value, :moves_value, :from_value
 
   def self.from_hash(hash)
@@ -661,12 +739,52 @@ class TurnPhase::ResettlementPhase < TurnPhase
     "ResettlementTile"
   end
 
-  def click(coordinate, engine)
-    if from
-      engine.move_settlement(coordinate.row, coordinate.col)
+  # One step of a budgeted resettlement move. The budget/moves come from self;
+  # the tile validates the single-step destination against the remaining budget.
+  def move_to(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    from_coord = Coordinate.from_key(from)
+    tile_klass = tile_klass_name
+    tile_obj = tile
+    lock_move_terrain(row, col, engine)
+    return "Not available" unless budget.to_i > 0 &&
+      tile_obj.valid_destinations(
+        from_row: from_coord.row, from_col: from_coord.col,
+        board_contents: game.board_contents,
+        player_order: game.current_player.order, budget: budget.to_i
+      ).include?([ row, col ])
+
+    new_budget = budget.to_i - 1
+    new_moves = moves.to_i + 1
+    next_phase =
+      if new_budget <= 0
+        TurnPhase::MandatoryBuildPhase.new
+      else
+        TurnPhase::ResettlementPhase.new(budget: new_budget, moves: new_moves)
+      end
+    engine.log_piece_movement_steps(
+      action: "move_settlement",
+      game_player: game.current_player,
+      from_row: from_coord.row, from_col: from_coord.col,
+      path: [ [ row, col ] ],
+      payload: { "tile_klass" => tile_klass },
+      message_piece: "settlement"
+    )
+    if new_budget <= 0
+      game.current_player.mark_tile_used!(tile_klass)
+      game.turn_phase = next_phase
     else
-      engine.select_settlement(coordinate.row, coordinate.col)
+      phase_result = transition(
+        TurnPhase::Events::DestinationChosen.new,
+        TurnPhase::Facts::DestinationChoice.new(next_phase: next_phase)
+      )
+      game.turn_phase = phase_result.next_phase
     end
+    game.current_player.save
+    game.save
   end
 
   def budget

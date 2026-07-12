@@ -317,106 +317,6 @@ class TurnEngine
     @game.save
   end
 
-  def select_settlement(row, col)
-    capture_undo_snapshot
-    record_move(
-      action: "select_settlement",
-      deliberate: true,
-      reversible: true,
-      from: "[#{row}, #{col}]",
-      message: "#{@game.current_player.player.handle} selected a settlement at [#{row}, #{col}]"
-    )
-    phase_result = @game.turn_phase.transition(
-      TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
-      nil
-    )
-    @game.turn_phase = phase_result.next_phase
-    @game.save
-  end
-
-  def move_settlement(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    current_phase = @game.turn_phase
-    from = current_phase.from
-    from_coord = Coordinate.from_key(from)
-    tile_klass_name = current_action_tile_klass
-    tile_obj = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
-    chosen_terrain_before = current_phase.chosen_terrain
-    if tile_obj&.uses_played_terrain? && chosen_terrain_before.nil? && @game.current_player.hand.size > 1
-      lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
-    end
-    if tile_obj&.resettles?
-      return "Not available" unless current_phase.budget.to_i > 0 &&
-        tile_obj.valid_destinations(
-          from_row: from_coord.row, from_col: from_coord.col,
-          board_contents: @game.board_contents,
-          player_order: @game.current_player.order, budget: current_phase.budget.to_i
-        ).include?([ row, col ])
-
-      budget = current_phase.budget.to_i - 1
-      moves = current_phase.moves.to_i + 1
-      next_phase =
-        if budget <= 0
-          TurnPhase::MandatoryBuildPhase.new
-        else
-          TurnPhase::ResettlementPhase.new(
-            budget: budget,
-            moves: moves
-          )
-        end
-      log_piece_movement_steps(
-        action: "move_settlement",
-        game_player: @game.current_player,
-        from_row: from_coord.row, from_col: from_coord.col,
-        path: [ [ row, col ] ],
-        payload: { "tile_klass" => tile_klass_name },
-        message_piece: "settlement"
-      )
-      if budget <= 0
-        @game.current_player.mark_tile_used!(tile_klass_name)
-        @game.turn_phase = next_phase
-      else
-        phase_result = current_phase.transition(
-          TurnPhase::Events::DestinationChosen.new,
-          TurnPhase::Facts::DestinationChoice.new(next_phase: next_phase)
-        )
-        @game.turn_phase = phase_result.next_phase
-      end
-    else
-      # move_settlement resolves its tile from current_action (not the player's
-      # hand), so it validates against that tile's destinations directly rather
-      # than legal_targets (which requires the tile to be held).
-      hand_arg = effective_terrain(@game.current_player) || @game.current_player.hand.first
-      return "Not available" unless tile_obj.valid_destinations(
-        from_row: from_coord.row, from_col: from_coord.col,
-        board_contents: @game.board_contents, player_order: @game.current_player.order, hand: hand_arg
-      ).include?([ row, col ])
-      record_move(
-        action: "move_settlement",
-        deliberate: true,
-        reversible: true,
-        from: from,
-        to: Coordinate.new(row, col).to_key,
-        payload: { "tile_klass" => tile_klass_name },
-        message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
-      )
-      @game.board_contents_will_change!
-      @game.board_contents.move_settlement(*from_coord, row, col)
-      phase_result = current_phase.transition(
-        TurnPhase::Events::DestinationChosen.new,
-        TurnPhase::Facts::DestinationChoice.new(next_phase: TurnPhase::MandatoryBuildPhase.new)
-      )
-      @game.turn_phase = phase_result.next_phase
-      @game.current_player.mark_tile_used!(tile_klass_name)
-      apply_tile_forfeit(@game.current_player)
-      apply_tile_pickup(@game.current_player, row, col)
-    end
-
-    @game.current_player.save
-    @game.save
-  end
-
   def end_tile_action
     @game.instantiate
     game_player = @game.current_player
@@ -1125,5 +1025,5 @@ class TurnEngine
   # steps). Defined among the privates above; re-exposed here as the phase-
   # facing interface. Still called internally by the not-yet-migrated mutators.
   public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
-         :lock_terrain!, :build_on_terrain
+         :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps
 end

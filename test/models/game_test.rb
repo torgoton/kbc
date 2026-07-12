@@ -159,7 +159,7 @@ class GameTest < ActiveSupport::TestCase
     game.current_action = { "type" => "paddock" }
     game.save
 
-    engine(game).select_settlement(5, 5)
+    engine(game).click(Coordinate.new(5, 5))
     game.reload
 
     assert_equal "paddock", game.current_action["type"]
@@ -174,7 +174,7 @@ class GameTest < ActiveSupport::TestCase
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
 
-    engine(game).move_settlement(5, 7)
+    engine(game).click(Coordinate.new(5, 7))
     game.reload
 
     assert game.board_contents.empty?(5, 5), "settlement must leave its old location"
@@ -194,7 +194,7 @@ class GameTest < ActiveSupport::TestCase
     chris.save
 
     # Move to [1,5] — a valid paddock hop, not adjacent to [2,7]
-    engine(game).move_settlement(1, 5)
+    engine(game).click(Coordinate.new(1, 5))
 
     assert_empty game_players(:chris).reload.tiles
   end
@@ -213,7 +213,7 @@ class GameTest < ActiveSupport::TestCase
     game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
     game.save
 
-    engine(game).move_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_equal 1, game.board_contents.tile_qty(2, 7)
@@ -232,7 +232,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]" } ]
     chris.save
 
-    engine(game).move_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_equal 2, game.board_contents.tile_qty(2, 7), "tile qty must be unchanged"
@@ -248,7 +248,7 @@ class GameTest < ActiveSupport::TestCase
     game.current_action = { "type" => "paddock", "from" => "[1, 5]" }
     game.save
 
-    engine(game).move_settlement(1, 7)
+    engine(game).click(Coordinate.new(1, 7))
     game.reload
 
     assert_equal 0, game.board_contents.tile_qty(2, 7), "tile qty must stay at zero"
@@ -262,7 +262,7 @@ class GameTest < ActiveSupport::TestCase
     game.current_action = { "type" => "paddock", "from" => "[5, 5]" }
     game.save
 
-    engine(game).move_settlement(5, 7)
+    engine(game).click(Coordinate.new(5, 7))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -293,7 +293,7 @@ class GameTest < ActiveSupport::TestCase
     game.current_action = { "type" => "paddock" }
     game.save
 
-    engine(game).select_settlement(5, 5)
+    engine(game).click(Coordinate.new(5, 5))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -407,7 +407,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(1, 5)
+    engine(game).click(Coordinate.new(1, 5))
 
     forfeit_move = game.moves.find_by(action: "forfeit_tile")
     assert forfeit_move, "forfeit_tile Move must be created"
@@ -431,7 +431,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(1, 5)
+    engine(game).click(Coordinate.new(1, 5))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -457,7 +457,7 @@ class GameTest < ActiveSupport::TestCase
     ]
     chris.save
 
-    engine(game).move_settlement(5, 7)
+    engine(game).click(Coordinate.new(5, 7))
     chris.reload
 
     paddock_tiles = chris.tiles.select { |t| t["klass"] == "PaddockTile" }
@@ -479,7 +479,7 @@ class GameTest < ActiveSupport::TestCase
     ]
     chris.save
 
-    engine(game).move_settlement(5, 7)
+    engine(game).click(Coordinate.new(5, 7))
     game.reload
     engine(game).undo_last_move
     chris.reload
@@ -497,7 +497,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "HarborTile", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(5, 7)
+    engine(game).click(Coordinate.new(5, 7))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -517,7 +517,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "HarborTile", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(5, 7)
+    engine(game).click(Coordinate.new(5, 7))
     engine(game).undo_last_move
     chris.reload
 
@@ -894,7 +894,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(1, 5)
+    engine(game).click(Coordinate.new(1, 5))
 
     forfeit_move = game.moves.find_by(action: "forfeit_tile")
     assert_equal "OasisTile", forfeit_move.payload["klass"]
@@ -913,7 +913,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(1, 5)
+    engine(game).click(Coordinate.new(1, 5))
 
     forfeit_move = game.moves.find_by(action: "forfeit_tile")
     assert_match(/forfeited an oasis tile/, forfeit_move.message)
@@ -934,7 +934,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    engine(game).move_settlement(1, 5)
+    engine(game).click(Coordinate.new(1, 5))
     game.reload
 
     # Remove the tile entry from board_contents so undo cannot read klass from it

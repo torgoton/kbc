@@ -68,12 +68,12 @@ class GameScenario
   end
 
   def select_settlement(at:)
-    perform { |engine| engine.select_settlement(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # One step of a stepped settlement move (resettlement, paddock, etc.).
   def move_step(to:)
-    perform { |engine| engine.move_settlement(*to) }
+    perform { |engine| engine.click(Coordinate.new(*to)) }
   end
 
   # Select an on-board wagon/ship before moving it step by step.
