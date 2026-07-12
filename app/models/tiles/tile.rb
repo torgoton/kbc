@@ -39,22 +39,8 @@ module Tiles
       terrain = build_terrain || hand
       return [] unless terrain
 
-      settlements = board_contents.settlements_for(player_order)
-      settlements = settlements.reject { |r, c| r == from_row && c == from_col } if from_row && from_col
-
-      adjacent = settlements.flat_map do |r, c|
-        board_contents.neighbors_where(r, c) do |nr, nc|
-          board_contents.available_for_building?(nr, nc) && board_contents.terrain_at(nr, nc) == terrain
-        end
-      end.uniq
-
-      return adjacent unless adjacent.empty?
-
-      (0..19).flat_map do |r|
-        (0..19).filter_map do |c|
-          [ r, c ] if board_contents.available_for_building?(r, c) && board_contents.terrain_at(r, c) == terrain
-        end
-      end
+      excluding = (from_row && from_col) ? [ from_row, from_col ] : nil
+      board_contents.buildable_cells_for(player_order, terrain, excluding: excluding)
     end
 
     def selectable_settlements(player_order:, board_contents:, hand: nil, supply: Hash.new(0), budget: nil)

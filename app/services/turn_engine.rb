@@ -7,33 +7,15 @@ class TurnEngine
     @game.turn_phase.click(coordinate, self)
   end
 
+  # A 20x20 boolean grid of the cells legal for a mandatory-style build of
+  # `terrain` (used for 2-card terrain disambiguation and view highlighting).
+  # A grid view of BoardState#buildable_cells_for — the adjacent-if-possible
+  # rule lives there, not here.
   def available_list(active_player, terrain)
     return nil unless @game.playing?
-    available = Array.new(20) { Array.new(20, false) }
-
-    any = false
-    20.times do |row|
-      20.times do |col|
-        if @game.board_contents.player_at(row, col) == active_player
-          @game.board_contents.neighbors(row, col).each do |nr, nc|
-            if @game.board_contents.empty?(nr, nc) && @game.board_contents.terrain_at(nr, nc) == terrain &&
-               !@game.board_contents.warrior_blocked?(nr, nc)
-              any = available[nr][nc] = true
-            end
-          end
-        end
-      end
-    end
-    return available if any
-
-    20.times do |row|
-      20.times do |col|
-        if @game.board_contents.terrain_at(row, col) == terrain && !@game.board_contents.warrior_blocked?(row, col)
-          available[row][col] = true if @game.board_contents.empty?(row, col)
-        end
-      end
-    end
-    available
+    grid = Array.new(20) { Array.new(20, false) }
+    @game.board_contents.buildable_cells_for(active_player, terrain).each { |row, col| grid[row][col] = true }
+    grid
   end
 
   def build_settlement(row, col)
@@ -748,46 +730,16 @@ class TurnEngine
     end
   end
 
+  # The cells the current player may legally target right now, owned by the
+  # active sub-phase (State pattern). Recomputed each call (no memo): a derived
+  # view of mutable game state that the guards read mid-action, so caching
+  # across a mutation would be unsafe.
   def buildable_cells
     return [] unless @game.playing?
-    # Recomputed each call (no memo): it is a derived view of mutable game state,
-    # and the guards now read it mid-action, so caching across a mutation is unsafe.
-    begin
-      @game.instantiate
-      player = @game.current_player
-      current_phase = @game.turn_phase
-      action = current_phase.type
-
-      if action == "mandatory"
-        if player.settlements_remaining? && @game.mandatory_count > 0
-          if current_phase.outpost_active?
-            terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
-            (0..19).flat_map do |r|
-              (0..19).filter_map do |c|
-                [ r, c ] if @game.board_contents.available_for_building?(r, c) &&
-                  terrains.include?(@game.board_contents.terrain_at(r, c))
-              end
-            end
-          else
-            terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
-            terrains.flat_map { |t|
-              list = available_list(player.order, t)
-              (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
-            }.uniq
-          end
-        else
-          []
-        end
-      else
-        klass = current_action_tile_klass
-        tile = player.find_unused_tile(klass)
-        if tile
-          current_phase.legal_targets(board_contents: @game.board_contents, player: player, game: @game)
-        else
-          []
-        end
-      end
-    end
+    @game.instantiate
+    @game.turn_phase.legal_targets(
+      board_contents: @game.board_contents, player: @game.current_player, game: @game
+    )
   end
 
   # Canonical set of hexes the current player may legally click right now, for

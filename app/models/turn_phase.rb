@@ -230,6 +230,16 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
 
   def mandatory_build? = true
 
+  def legal_targets(board_contents:, player:, game: nil)
+    return [] unless player.settlements_remaining? && game.mandatory_count > 0
+    terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
+    if outpost_active?
+      board_contents.available_cells_of(terrains)
+    else
+      terrains.flat_map { |terrain| board_contents.buildable_cells_for(player.order, terrain) }.uniq
+    end
+  end
+
   def click(coordinate, engine)
     engine.build_settlement(coordinate.row, coordinate.col)
   end

@@ -94,6 +94,23 @@ class BoardState
     empty?(row, col) && !warrior_blocked?(row, col)
   end
 
+  # The "adjacent if possible, else anywhere" build rule (ADR-0001): buildable
+  # cells of `terrain` adjacent to one of player_order's pieces; or, when the
+  # player has no such adjacency, every buildable cell of that terrain. Pass
+  # `excluding` to drop a source cell (a settlement mid-relocation). Shared by
+  # mandatory builds (MandatoryBuildPhase) and the location build tiles
+  # (Tiles::Tile#valid_destinations) so the rule lives in exactly one place.
+  def buildable_cells_for(player_order, terrain, excluding: nil)
+    sources = settlements_for(player_order)
+    sources = sources.reject { |cell| cell == excluding } if excluding
+    adjacent = sources.flat_map do |row, col|
+      neighbors_where(row, col) { |nr, nc| available_for_building?(nr, nc) && terrain_at(nr, nc) == terrain }
+    end.uniq
+    return adjacent unless adjacent.empty?
+
+    available_cells_of([ terrain ])
+  end
+
   # Every buildable cell (empty, not warrior-blocked) whose terrain is in
   # `terrains`, row-major. The "anywhere on this terrain" set used by the
   # Outpost power (ADR-0001's "all buildable terrain cells" primitive).

@@ -141,6 +141,30 @@ class TurnPhaseLegalTargetsTest < ActiveSupport::TestCase
     assert targets.any?
   end
 
+  test "MandatoryBuildPhase uses the adjacent-else-anywhere rule, and none once mandatory is done" do
+    game, player = playing_game(hand: [ "G" ])
+    board = with_terrain(game.board_contents, game.instantiate)
+    phase = TurnPhase::MandatoryBuildPhase.new
+
+    assert_equal board.buildable_cells_for(player.order, "G"),
+      phase.legal_targets(board_contents: board, player: player, game: game)
+
+    game.update!(mandatory_count: 0)
+    assert_empty phase.legal_targets(board_contents: board, player: player, game: game)
+  end
+
+  test "MandatoryBuildPhase with a two-card hand spans both terrains" do
+    game, player = playing_game(hand: %w[G D])
+    board = with_terrain(game.board_contents, game.instantiate)
+    phase = TurnPhase::MandatoryBuildPhase.new
+
+    targets = phase.legal_targets(board_contents: board, player: player, game: game)
+    terrains = targets.map { |cell| board.terrain_at(*cell) }.uniq
+
+    assert_includes terrains, "G"
+    assert_includes terrains, "D"
+  end
+
   private
 
   # A minimal playing game on the scenario's fixed board, with a clean board.
