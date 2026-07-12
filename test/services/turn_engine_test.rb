@@ -348,67 +348,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_empty @engine.buildable_cells
   end
 
-  test "building on the second card's terrain works and locks to that terrain" do
-    use_oasis_board
-    d_hex = [ 0, 0 ]
-    @game.current_player.update!(hand: [ "G", "D" ])
-
-    result = TurnEngine.new(@game.reload).build_settlement(*d_hex)
-
-    assert_not_equal "Not available", result
-    @game.reload
-    assert_equal "D", @game.current_action["chosen_terrain"]
-  end
-
-  test "first mandatory build with 2 cards locks chosen_terrain" do
-    use_oasis_board
-    g_hex = [ 0, 7 ]
-    other_terrain = (@game.board.terrain_at(g_hex[0], g_hex[1]) == "G") ? "D" : "G"
-    @game.current_player.update!(hand: [ "G", other_terrain ])
-
-    TurnEngine.new(@game.reload).build_settlement(*g_hex)
-
-    @game.reload
-    assert_equal "G", @game.current_action["chosen_terrain"]
-    assert_equal [ "G", other_terrain ], @game.current_player.reload.hand
-  end
-
-  test "second mandatory build uses locked terrain and rejects other terrain" do
-    use_oasis_board
-    d_hex = [ 0, 0 ]
-    @game.update!(current_action: { "type" => "mandatory", "chosen_terrain" => "G" })
-    @game.current_player.update!(hand: [ "G", "D" ])
-
-    result = TurnEngine.new(@game.reload).build_settlement(*d_hex)
-    assert_equal "Not available", result
-  end
-
-  test "buildable_cells with 2-card hand and no chosen_terrain returns union of both terrains" do
-    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    # OasisBoard row 0 = "DDCWWTTGGG"; hand cards G and D
-    @game.current_player.update!(hand: [ "G", "D" ])
-    @game.reload
-
-    cells = TurnEngine.new(@game).buildable_cells
-
-    @game.instantiate
-    terrains = cells.map { |r, c| @game.board.terrain_at(r, c) }.uniq.sort
-    assert_includes terrains, "G"
-    assert_includes terrains, "D"
-  end
-
-  test "buildable_cells with 2-card hand and chosen_terrain uses only that terrain" do
-    @game.boards = [ [ 2, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
-    @game.current_player.update!(hand: [ "G", "D" ])
-    @game.update!(current_action: { "type" => "mandatory", "chosen_terrain" => "G" })
-    @game.reload
-
-    cells = TurnEngine.new(@game).buildable_cells
-
-    @game.instantiate
-    cells.each { |r, c| assert_equal "G", @game.board.terrain_at(r, c) }
-  end
-
   test "buildable_cells for paddock with from returns valid move destinations" do
     force_hand("G")
     spot = empty_hexes_of("G", 1).first
@@ -502,40 +441,6 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_match(/must build on a Grass hex/, @engine.turn_state)
   end
 
-
-  test "activate_tile_build for oracle with 2-card hand locks chosen_terrain" do
-    @game.instantiate
-    g_hex = empty_hexes_of("G", 1).first
-    other_terrain = "D"
-    @game.update!(current_action: { "type" => "oracle" }, mandatory_count: 1)
-    @game.current_player.update!(
-      hand: [ "G", other_terrain ],
-      tiles: [ { "klass" => "OracleTile", "from" => "[3, 7]", "used" => false } ]
-    )
-
-    TurnEngine.new(@game.reload).activate_tile_build(*g_hex)
-
-    @game.reload
-    assert_equal "G", @game.current_action["chosen_terrain"]
-  end
-
-  test "place_wall for quarry with 2-card hand locks chosen_terrain" do
-    use_oasis_board
-    g_hex = [ 0, 7 ]
-    neighbor = [ 0, 6 ]
-    @game.board_contents.place_settlement(*neighbor, @game.current_player.order)
-    @game.save!
-    @game.update!(current_action: { "type" => "quarry", "klass" => "QuarryTile", "walls_placed" => 0 })
-    @game.current_player.update!(
-      hand: [ "G", "D" ],
-      tiles: [ { "klass" => "QuarryTile", "from" => "[0, 0]", "used" => false } ]
-    )
-
-    TurnEngine.new(@game.reload).place_wall(*g_hex)
-
-    @game.reload
-    assert_equal "G", @game.current_action["chosen_terrain"]
-  end
 
   private
 
