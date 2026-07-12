@@ -232,6 +232,24 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal game_players(:chris).id, game.reload.current_player_id, "current player must not have changed"
   end
 
+  test "POST undo_move does nothing when the requesting player is not the current player" do
+    game = games(:game2player)
+    # Give the game an undoable last move so undo would otherwise fire.
+    game.moves.create!(
+      order: (game.moves.maximum(:order) || 0) + 1,
+      game_player: game_players(:chris),
+      action: "build_settlement",
+      deliberate: true,
+      reversible: true,
+      snapshot_before: game.capture_snapshot
+    )
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    assert_no_difference -> { game.reload.moves.count } do
+      post undo_move_game_url(game)
+    end
+  end
+
   test "POST end_turn does not call end_turn when paddock action is in progress" do
     game = games(:game2player)
     game.mandatory_count = 0

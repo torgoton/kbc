@@ -1,8 +1,6 @@
 class GamesController < ApplicationController
   before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  # ponytail: undo_move intentionally excluded — it was never current-player-gated at baseline.
-  # Whether a non-current player should be able to undo is an open question tracked as a follow-up.
-  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
   after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
