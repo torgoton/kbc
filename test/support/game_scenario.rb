@@ -34,13 +34,7 @@ class GameScenario
   # --- actions (domain intent; raise IllegalMove when the rules forbid it) ---
 
   def build_settlement(at:)
-    perform do |engine|
-      if current_tile_obj&.builds_settlement?
-        engine.activate_tile_build(*at)
-      else
-        engine.build_settlement(*at)
-      end
-    end
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   def undo
@@ -74,32 +68,32 @@ class GameScenario
   end
 
   def select_settlement(at:)
-    perform { |engine| engine.select_settlement(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # One step of a stepped settlement move (resettlement, paddock, etc.).
   def move_step(to:)
-    perform { |engine| engine.move_settlement(*to) }
+    perform { |engine| engine.click(Coordinate.new(*to)) }
   end
 
   # Select an on-board wagon/ship before moving it step by step.
   def select_meeple(at:)
-    perform { |engine| engine.select_meeple_for_move(*at) }
+    perform { |engine| engine.game.turn_phase.select_meeple(Coordinate.new(*at), engine) }
   end
 
   # One step of a stepped wagon/ship move (or the initial placement).
   def move_meeple_step(to:)
-    perform { |engine| engine.execute_meeple_action(*to) }
+    perform { |engine| engine.click(Coordinate.new(*to)) }
   end
 
   # Place a stone wall (QuarryTile).
   def place_wall(at:)
-    perform { |engine| engine.place_wall(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # Place a City Hall cluster centered on `at:` (CityHallTile).
   def place_city_hall(at:)
-    perform { |engine| engine.place_city_hall(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # --- setup (direct state construction; no rules applied) ---
@@ -170,13 +164,13 @@ class GameScenario
   # Remove a warrior/wagon/ship meeple the current player owns (e.g. via
   # BarracksTile). Counterpart to move_meeple_step's placement path.
   def remove_meeple(at:)
-    perform { |engine| engine.remove_meeple_action(*at) }
+    perform { |engine| engine.game.turn_phase.remove_meeple(Coordinate.new(*at), engine) }
   end
 
   # Remove an opponent's settlement (e.g. via Nomad::SwordTile's targeted
   # removal phase), returning it to their supply.
   def remove_settlement(at:)
-    perform { |engine| engine.remove_settlement(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # --- queries ---
@@ -402,14 +396,6 @@ class GameScenario
 
   private
 
-  # The tile object for the currently active tile action (as set by
-  # activate_tile), or nil during a mandatory build phase.
-  def current_tile_obj
-    action_type = @game.current_action["type"]
-    return nil if action_type == "mandatory"
-    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
-    Tiles::Tile.for_klass(klass_name)&.new(0)
-  end
 
   def create_player(order, hand)
     user = User.create!(

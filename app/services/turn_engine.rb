@@ -1,4 +1,8 @@
 class TurnEngine
+  # Exposed so a Sub-phase's #click can reach the game to orchestrate its own
+  # action (State pattern: phase = State, engine = Context).
+  attr_reader :game
+
   def initialize(game)
     @game = game
   end
@@ -16,58 +20,6 @@ class TurnEngine
     grid = Array.new(20) { Array.new(20, false) }
     @game.board_contents.buildable_cells_for(active_player, terrain).each { |row, col| grid[row][col] = true }
     grid
-  end
-
-  def build_settlement(row, col)
-    capture_undo_snapshot
-    Rails.logger.debug("Attempt to build at #{row}, #{col}")
-    @game.instantiate
-    game_player = @game.current_player
-    Rails.logger.debug(" I have #{game_player.settlements_remaining} settlements remaining")
-    return "No settlements left" unless game_player.settlements_remaining?
-    current_phase = @game.turn_phase
-    chosen_terrain_before = current_phase.chosen_terrain
-    card_terrain = effective_terrain(game_player)
-
-    if current_phase.mandatory_build? && current_phase.outpost_active?
-      return "Not available" unless legal_targets.include?([ row, col ])
-      card_terrain ||= game_player.hand.find { |t| @game.board_contents.terrain_at(row, col) == t }
-      lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
-      build_on_terrain(card_terrain, row, col, game_player)
-      @game.mandatory_count -= 1
-      phase_result = current_phase.transition(
-        TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
-        TurnPhase::Facts::BuildChoice.new(locked_terrain: card_terrain)
-      )
-      @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(
-        chosen_terrain: phase_result.next_phase.chosen_terrain,
-        builds: phase_result.next_phase.builds
-      )
-      builds = @game.turn_phase.builds || []
-      check_families_goal(game_player) if builds.size == 3
-    else
-      return "Not available" unless legal_targets.include?([ row, col ])
-      if card_terrain.nil?
-        card_terrain = game_player.hand.find { |t|
-          list = available_list(game_player.order, t)
-          list.any? ? list[row][col] : true
-        }
-        lock_terrain!(card_terrain, chosen_terrain_before)
-      end
-      build_on_terrain(card_terrain, row, col, game_player)
-      @game.mandatory_count -= 1
-      phase_result = current_phase.transition(
-        TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
-        TurnPhase::Facts::BuildChoice.new(locked_terrain: card_terrain)
-      )
-      @game.turn_phase = phase_result.next_phase
-      builds = @game.turn_phase.builds || []
-      check_families_goal(game_player) if builds.size == 3
-    end
-
-    Rails.logger.debug("Building settlement at #{row}, #{col} for player #{game_player.order}")
-    game_player.save
-    @game.save
   end
 
   def activate_outpost
@@ -124,238 +76,6 @@ class TurnEngine
     @game.save
   end
 
-  def remove_settlement(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-
-    return "Not a valid target" unless legal_targets.include?([ row, col ])
-    current_phase = @game.turn_phase
-    owner_order = @game.board_contents.player_at(row, col)
-    owner = @game.game_players.find { |gp| gp.order == owner_order }
-
-    phase_result = current_phase.consume_target(owner_order)
-    tile_used = phase_result.action_completed
-    meeple = @game.board_contents.meeple_at(row, col)
-
-    record_move(
-      action: "remove_settlement",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      from: "[#{row}, #{col}]",
-      to: "player_#{owner_order}_supply",
-      payload: { "owner_order" => owner_order, "tile_used" => tile_used, "meeple" => meeple },
-      message: "#{game_player.player.handle} removed #{owner.player.handle}'s #{meeple || 'settlement'}"
-    )
-
-    @game.board_contents_will_change!
-    @game.board_contents.remove(row, col)
-    owner.return_piece_to_supply!(meeple)
-    apply_tile_forfeit(owner)
-
-    if tile_used
-      klass_name = current_action_tile_klass
-      game_player.mark_tile_used!(klass_name)
-      @game.turn_phase = TurnPhase::MandatoryBuildPhase.new
-    else
-      @game.turn_phase = phase_result.next_phase
-    end
-
-    owner.save
-    game_player.save
-    @game.save
-  end
-
-  def execute_meeple_action(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    tile_klass = current_action_tile_klass
-    tile = game_player.find_unused_tile(tile_klass)
-    return "Not available" unless tile
-
-    tile_obj = Tiles::Tile.from_hash(tile)
-
-    current_phase = @game.turn_phase
-
-    movement_step = false
-    if current_phase.from
-      # complete a ship or wagon move to destination
-      return "Not available" unless legal_targets.include?([ row, col ])
-      movement_result = case tile_obj.meeple_kind
-      when "ship"  then move_ship(row, col, game_player, tile_klass:)
-      when "wagon" then move_wagon(row, col, game_player, tile_klass:)
-      end
-      return movement_result if movement_result.is_a?(String)
-      movement_step = true
-    elsif @game.board_contents.wagon_at?(row, col) &&
-          @game.board_contents.player_at(row, col) == game_player.order
-      return "Not available"  # handled by popup: remove_meeple_action or select_meeple_for_move
-    elsif @game.board_contents.ship_at?(row, col) &&
-          @game.board_contents.player_at(row, col) == game_player.order
-      return "Not available"  # handled by popup: remove_meeple_action or select_meeple_for_move
-    elsif @game.board_contents.warrior_at?(row, col) &&
-          @game.board_contents.player_at(row, col) == game_player.order
-      return "Not available"  # handled by popup: remove_meeple_action
-    else
-      return "Not available" unless legal_targets.include?([ row, col ])
-      case tile_obj.meeple_kind
-      when "ship"    then place_ship(row, col, game_player, tile_klass:)
-      when "wagon"   then place_wagon(row, col, game_player, tile_klass:)
-      when "warrior" then place_warrior(row, col, game_player, tile_klass:)
-      end
-    end
-
-    unless movement_step && @game.turn_phase.meeple_movement?
-      game_player.mark_tile_used!(tile_klass)
-      reset_to_mandatory
-    end
-    game_player.save
-    @game.save
-  end
-
-  def remove_meeple_action(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    tile_klass = current_action_tile_klass
-    tile = game_player.find_unused_tile(tile_klass)
-    return "Not available" unless tile
-
-    if @game.board_contents.warrior_at?(row, col) &&
-       @game.board_contents.player_at(row, col) == game_player.order
-      remove_warrior(row, col, game_player, tile_klass:)
-    elsif @game.board_contents.ship_at?(row, col) &&
-          @game.board_contents.player_at(row, col) == game_player.order
-      remove_ship(row, col, game_player, tile_klass:)
-    elsif @game.board_contents.wagon_at?(row, col) &&
-          @game.board_contents.player_at(row, col) == game_player.order
-      remove_wagon(row, col, game_player, tile_klass:)
-    else
-      return "Not available"
-    end
-
-    game_player.mark_tile_used!(tile_klass)
-    reset_to_mandatory
-    game_player.save
-    @game.save
-  end
-
-  def select_meeple_for_move(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    tile_klass = current_action_tile_klass
-    tile = game_player.find_unused_tile(tile_klass)
-    return "Not available" unless tile
-
-    tile_obj = Tiles::Tile.from_hash(tile)
-    moveable = case tile_obj.meeple_kind
-    when "ship"  then @game.board_contents.ship_at?(row, col)
-    when "wagon" then @game.board_contents.wagon_at?(row, col)
-    else false
-    end
-    return "Not available" unless moveable
-    return "Not available" unless @game.board_contents.player_at(row, col) == game_player.order
-
-    destinations = tile_obj.valid_destinations(
-      from_row: row, from_col: col,
-      board_contents: @game.board_contents,
-      player_order: game_player.order
-    )
-    return "Not available" unless destinations.any?
-
-    action_word = tile_obj.meeple_kind
-    record_move(
-      action: "select_#{action_word}",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      from: "[#{row}, #{col}]",
-      message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
-    )
-    current_phase = @game.turn_phase
-    if current_phase.accepts_source_selection?
-      phase_result = current_phase.transition(
-        TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
-        nil
-      )
-      @game.turn_phase = phase_result.next_phase
-    else
-      @game.turn_phase = TurnPhase::LegacyPhase.new(
-        @game.current_action.merge("from" => "[#{row}, #{col}]")
-      )
-    end
-    @game.save
-  end
-
-  def place_city_hall(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    tile = game_player.find_unused_tile("CityHallTile")
-    return "No City Hall tile" unless tile
-    tile_obj = Tiles::Location::CityHallTile.new(0)
-    return "Not available" unless legal_targets.include?([ row, col ])
-
-    cluster = tile_obj.cluster_hexes(row, col, @game.board_contents)
-
-    record_move(
-      action: "place_city_hall",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      message: "#{game_player.player.handle} placed their City Hall at [#{row}, #{col}]"
-    )
-
-    @game.board_contents_will_change!
-    cluster.each { |r, c| @game.board_contents.place_city_hall_hex(r, c, game_player.order) }
-    game_player.decrement_city_hall_supply!
-    game_player.mark_tile_permanently_used!("CityHallTile")
-    reset_to_mandatory
-    game_player.save
-    @game.save
-  end
-
-  def activate_tile_build(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    return "No settlements left" unless game_player.settlements_remaining?
-    tile_klass = current_action_tile_klass
-    tile = game_player.find_unused_tile(tile_klass)
-    return "Not available" unless tile
-    tile_obj = Tiles::Tile.from_hash(tile)
-    current_phase = @game.turn_phase
-    chosen_terrain_before = current_phase.chosen_terrain
-    return "Not available" unless legal_targets.include?([ row, col ])
-    if tile_obj.uses_played_terrain? && chosen_terrain_before.nil? && game_player.hand.size > 1
-      lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
-    end
-    build_on_terrain(@game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
-    if tile_obj.repeats_build?
-      remaining = current_phase.remaining.to_i - 1
-      if remaining > 0
-        @game.turn_phase = TurnPhase::TileBuildPhase.new(
-          action_type: current_phase.type,
-          klass_name: current_phase.klass_name,
-          chosen_terrain: current_phase.chosen_terrain,
-          remaining: remaining
-        )
-      else
-        game_player.mark_tile_used!(tile_klass)
-        reset_to_mandatory
-      end
-    else
-      game_player.mark_tile_used!(tile_klass)
-      reset_to_mandatory
-    end
-    game_player.save
-    @game.save
-  end
-
   def select_action(type)
     capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
@@ -392,24 +112,27 @@ class TurnEngine
           action_type: type,
           klass_name: klass_name
         )
+      elsif tile_obj&.places_city_hall?
+        TurnPhase::CityHallPhase.new(
+          action_type: type,
+          klass_name: klass_name
+        )
+      elsif tile_obj&.sword_tile?
+        opponents = @game.game_players
+          .reject { |gp| gp == @game.current_player }
+          .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
+          .map(&:order)
+          .sort
+        return "No opponents with settlements" if opponents.empty?
+        payload["pending_orders"] = opponents
+        TurnPhase::TargetedRemovalPhase.new(
+          action_type: type,
+          klass_name: klass_name,
+          pending_orders: opponents
+        )
       else
-        action = { "type" => type, "klass" => klass_name }
-        TurnPhase::LegacyPhase.new(action)
+        raise ArgumentError, "no TurnPhase for action type #{type.inspect}"
       end
-    if tile_obj&.sword_tile?
-      opponents = @game.game_players
-        .reject { |gp| gp == @game.current_player }
-        .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
-        .map(&:order)
-        .sort
-      return "No opponents with settlements" if opponents.empty?
-      payload["pending_orders"] = opponents
-      selected_phase = TurnPhase::TargetedRemovalPhase.new(
-        action_type: type,
-        klass_name: klass_name,
-        pending_orders: opponents
-      )
-    end
     record_move(
       action: "select_action",
       deliberate: true,
@@ -426,113 +149,6 @@ class TurnEngine
     @game.save
   end
 
-  def select_settlement(row, col)
-    capture_undo_snapshot
-    record_move(
-      action: "select_settlement",
-      deliberate: true,
-      reversible: true,
-      from: "[#{row}, #{col}]",
-      message: "#{@game.current_player.player.handle} selected a settlement at [#{row}, #{col}]"
-    )
-    current_phase = @game.turn_phase
-    if current_phase.accepts_source_selection?
-      phase_result = current_phase.transition(
-        TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
-        nil
-      )
-      @game.turn_phase = phase_result.next_phase
-    else
-      @game.turn_phase = TurnPhase::LegacyPhase.new(
-        @game.current_action.merge("from" => "[#{row}, #{col}]")
-      )
-    end
-    @game.save
-  end
-
-  def move_settlement(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    current_phase = @game.turn_phase
-    from = current_phase.from
-    from_coord = Coordinate.from_key(from)
-    tile_klass_name = current_action_tile_klass
-    tile_obj = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
-    chosen_terrain_before = current_phase.chosen_terrain
-    if tile_obj&.uses_played_terrain? && chosen_terrain_before.nil? && @game.current_player.hand.size > 1
-      lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
-    end
-    if tile_obj&.resettles?
-      return "Not available" unless current_phase.budget.to_i > 0 &&
-        tile_obj.valid_destinations(
-          from_row: from_coord.row, from_col: from_coord.col,
-          board_contents: @game.board_contents,
-          player_order: @game.current_player.order, budget: current_phase.budget.to_i
-        ).include?([ row, col ])
-
-      budget = current_phase.budget.to_i - 1
-      moves = current_phase.moves.to_i + 1
-      next_phase =
-        if budget <= 0
-          TurnPhase::MandatoryBuildPhase.new
-        else
-          TurnPhase::ResettlementPhase.new(
-            budget: budget,
-            moves: moves
-          )
-        end
-      log_piece_movement_steps(
-        action: "move_settlement",
-        game_player: @game.current_player,
-        from_row: from_coord.row, from_col: from_coord.col,
-        path: [ [ row, col ] ],
-        payload: { "tile_klass" => tile_klass_name },
-        message_piece: "settlement"
-      )
-      if budget <= 0
-        @game.current_player.mark_tile_used!(tile_klass_name)
-        @game.turn_phase = next_phase
-      else
-        phase_result = current_phase.transition(
-          TurnPhase::Events::DestinationChosen.new,
-          TurnPhase::Facts::DestinationChoice.new(next_phase: next_phase)
-        )
-        @game.turn_phase = phase_result.next_phase
-      end
-    else
-      # move_settlement resolves its tile from current_action (not the player's
-      # hand), so it validates against that tile's destinations directly rather
-      # than legal_targets (which requires the tile to be held).
-      hand_arg = effective_terrain(@game.current_player) || @game.current_player.hand.first
-      return "Not available" unless tile_obj.valid_destinations(
-        from_row: from_coord.row, from_col: from_coord.col,
-        board_contents: @game.board_contents, player_order: @game.current_player.order, hand: hand_arg
-      ).include?([ row, col ])
-      record_move(
-        action: "move_settlement",
-        deliberate: true,
-        reversible: true,
-        from: from,
-        to: Coordinate.new(row, col).to_key,
-        payload: { "tile_klass" => tile_klass_name },
-        message: "#{@game.current_player.player.handle} moved a settlement to [#{row}, #{col}]"
-      )
-      @game.board_contents_will_change!
-      @game.board_contents.move_settlement(*from_coord, row, col)
-      phase_result = current_phase.transition(
-        TurnPhase::Events::DestinationChosen.new,
-        TurnPhase::Facts::DestinationChoice.new(next_phase: TurnPhase::MandatoryBuildPhase.new)
-      )
-      @game.turn_phase = phase_result.next_phase
-      @game.current_player.mark_tile_used!(tile_klass_name)
-      apply_tile_forfeit(@game.current_player)
-      apply_tile_pickup(@game.current_player, row, col)
-    end
-
-    @game.current_player.save
-    @game.save
-  end
-
   def end_tile_action
     @game.instantiate
     game_player = @game.current_player
@@ -544,54 +160,6 @@ class TurnEngine
 
     game_player.mark_tile_used!(tile_klass_name)
     reset_to_mandatory
-    game_player.save
-    @game.save
-  end
-
-  def place_wall(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    current_phase = @game.turn_phase
-    chosen_terrain_before = current_phase.chosen_terrain
-
-    tile_obj = Tiles::Location::QuarryTile.new(0)
-    return "No stone walls left" if @game.stone_walls <= 0
-    return "Not available" unless legal_targets.include?([ row, col ])
-
-    if chosen_terrain_before.nil? && game_player.hand.size > 1
-      hex_terrain = @game.board_contents.terrain_at(row, col)
-      lock_terrain!(hex_terrain, chosen_terrain_before)
-      current_phase = @game.turn_phase
-    end
-    wall_terrain = effective_terrain(game_player)
-
-    walls_placed = current_phase.walls_placed.to_i + 1
-
-    record_move(
-      action: "place_wall",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      message: "#{game_player.player.handle} placed a stone wall at [#{row}, #{col}]"
-    )
-
-    @game.board_contents_will_change!
-    @game.board_contents.place_wall(row, col)
-    @game.stone_walls -= 1
-
-    remaining = tile_obj.valid_destinations(
-      board_contents: @game.board_contents,
-      player_order: game_player.order, hand: wall_terrain || game_player.hand.first
-    )
-    if walls_placed >= 2 || remaining.empty?
-      game_player.mark_tile_used!("QuarryTile")
-      reset_to_mandatory
-    else
-      @game.turn_phase = current_phase.increment_walls_placed
-    end
-
     game_player.save
     @game.save
   end
@@ -1136,151 +704,12 @@ class TurnEngine
     end
   end
 
-  # One move step is legal when a hop remains this turn and the destination is
-  # among the piece's adjacent single-step destinations (the tile owns the
-  # terrain rule via valid_destinations).
-
-  def place_warrior(row, col, game_player, tile_klass:)
-    record_move(
-      action: "place_warrior",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      payload: { "klass" => tile_klass },
-      message: "#{game_player.player.handle} placed a warrior at [#{row}, #{col}]"
-    )
-    @game.board_contents_will_change!
-    @game.board_contents.place_warrior(row, col, game_player.order)
-    game_player.decrement_warrior_supply!
-    apply_tile_pickup(game_player, row, col)
-  end
-
-  def remove_warrior(row, col, game_player, tile_klass:)
-    record_move(
-      action: "remove_warrior",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      from: "[#{row}, #{col}]",
-      payload: { "klass" => tile_klass },
-      message: "#{game_player.player.handle} removed a warrior from [#{row}, #{col}]"
-    )
-    @game.board_contents_will_change!
-    @game.board_contents.remove(row, col)
-    game_player.increment_warrior_supply!
-    apply_tile_forfeit(game_player)
-  end
-
-  def place_ship(row, col, game_player, tile_klass:)
-    record_move(
-      action: "place_ship",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      payload: { "klass" => tile_klass },
-      message: "#{game_player.player.handle} placed their ship at [#{row}, #{col}]"
-    )
-    @game.board_contents_will_change!
-    @game.board_contents.place_ship(row, col, game_player.order)
-    game_player.decrement_ship_supply!
-    apply_tile_pickup(game_player, row, col)
-  end
-
-  def remove_ship(row, col, game_player, tile_klass:)
-    record_move(
-      action: "remove_ship",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      from: "[#{row}, #{col}]",
-      payload: { "klass" => tile_klass },
-      message: "#{game_player.player.handle} removed their ship from [#{row}, #{col}]"
-    )
-    @game.board_contents_will_change!
-    @game.board_contents.remove(row, col)
-    game_player.increment_ship_supply!
-    apply_tile_forfeit(game_player)
-  end
-
-  def move_ship(row, col, game_player, tile_klass:)
-    from = @game.turn_phase.from
-    from_coord = Coordinate.from_key(from)
-    meeple_phase_after_step(row, col, tile_klass)
-
-    log_piece_movement_steps(
-      action: "move_ship",
-      game_player: game_player,
-      from_row: from_coord.row, from_col: from_coord.col,
-      path: [ [ row, col ] ],
-      payload: { "klass" => tile_klass },
-      message_piece: "ship"
-    )
-  end
-
-  def place_wagon(row, col, game_player, tile_klass:)
-    record_move(
-      action: "place_wagon",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      payload: { "klass" => tile_klass },
-      message: "#{game_player.player.handle} placed their wagon at [#{row}, #{col}]"
-    )
-    @game.board_contents_will_change!
-    @game.board_contents.place_wagon(row, col, game_player.order)
-    game_player.decrement_wagon_supply!
-    apply_tile_pickup(game_player, row, col)
-  end
-
-  def remove_wagon(row, col, game_player, tile_klass:)
-    record_move(
-      action: "remove_wagon",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      from: "[#{row}, #{col}]",
-      payload: { "klass" => tile_klass },
-      message: "#{game_player.player.handle} removed their wagon from [#{row}, #{col}]"
-    )
-    @game.board_contents_will_change!
-    @game.board_contents.remove(row, col)
-    game_player.increment_wagon_supply!
-    apply_tile_forfeit(game_player)
-  end
-
-  def move_wagon(row, col, game_player, tile_klass:)
-    from = @game.turn_phase.from
-    from_coord = Coordinate.from_key(from)
-    meeple_phase_after_step(row, col, tile_klass)
-
-    log_piece_movement_steps(
-      action: "move_wagon",
-      game_player: game_player,
-      from_row: from_coord.row, from_col: from_coord.col,
-      path: [ [ row, col ] ],
-      payload: { "klass" => tile_klass },
-      message_piece: "wagon"
-    )
-  end
-
-  def meeple_phase_after_step(row, col, tile_klass)
-    current_phase = @game.turn_phase
-    budget = current_phase.budget.to_i - 1
-    moves = current_phase.moves.to_i + 1
-    if budget <= 0
-      @game.current_player.mark_tile_used!(tile_klass)
-      @game.turn_phase = TurnPhase::MandatoryBuildPhase.new
-    else
-      @game.turn_phase = TurnPhase::MeepleMovementPhase.new(
-        action_type: current_phase.type,
-        klass_name: current_phase.klass_name,
-        from: Coordinate.new(row, col).to_key,
-        budget: budget,
-        moves: moves
-      )
-    end
-  end
+  # The shared mutation primitives a Sub-phase's #click calls to carry out its
+  # action (State pattern: the phase orchestrates, the engine owns these shared
+  # steps). Defined among the privates above; re-exposed here as the phase-
+  # facing interface. Also called by the engine's own turn-level gestures
+  # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
+  public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
+         :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
+         :check_families_goal
 end

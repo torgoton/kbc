@@ -180,6 +180,24 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal chris.order, game.board_contents.player_at(0, 0), "tower tile must have built at border"
   end
 
+  test "remove_meeple in a non-meeple phase degrades to no_content, not a 500" do
+    game = games(:game2player)
+    game.update!(current_action: { "type" => "mandatory" })
+
+    post remove_meeple_game_url(game), params: { row: 5, col: 5 }
+
+    assert_response :no_content
+  end
+
+  test "select_meeple in a non-meeple phase degrades to no_content, not a 500" do
+    game = games(:game2player)
+    game.update!(current_action: { "type" => "mandatory" })
+
+    post select_meeple_game_url(game), params: { row: 5, col: 5 }
+
+    assert_response :no_content
+  end
+
   test "End turn button is absent for non-current player" do
     game = games(:game2player)
     post session_url, params: { email_address: "paula@example.com", password: "password" }
