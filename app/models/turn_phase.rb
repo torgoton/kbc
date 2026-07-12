@@ -281,7 +281,53 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
   end
 end
 
+# Shared build orchestration for the tile-build phases: TileBuildPhase's
+# non-wall branch (village/farm/oracle/donationdesert/...) and FortPhase. The
+# including phase supplies its own type/klass_name/chosen_terrain/remaining; the
+# engine supplies the shared mutation primitives. self's chosen_terrain and
+# remaining are read directly — self is immutable, so they carry the pre-lock
+# values, matching the engine's former stale `current_phase` reads exactly.
+module TurnPhase::TileBuildOrchestration
+  def build_tile(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "No settlements left" unless game_player.settlements_remaining?
+    tile_klass = tile_klass_name
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+    tile_obj = Tiles::Tile.from_hash(tile)
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+    if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand.size > 1
+      engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
+    end
+    engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
+    if tile_obj.repeats_build?
+      remaining_after = remaining.to_i - 1
+      if remaining_after > 0
+        game.turn_phase = TurnPhase::TileBuildPhase.new(
+          action_type: type,
+          klass_name: klass_name,
+          chosen_terrain: chosen_terrain,
+          remaining: remaining_after
+        )
+      else
+        game_player.mark_tile_used!(tile_klass)
+        engine.reset_to_mandatory
+      end
+    else
+      game_player.mark_tile_used!(tile_klass)
+      engine.reset_to_mandatory
+    end
+    game_player.save
+    game.save
+  end
+end
+
 class TurnPhase::TileBuildPhase < TurnPhase
+  include TurnPhase::TileBuildOrchestration
   attr_reader :action_type, :klass_value, :chosen_terrain_value, :remaining, :walls_placed, :outpost_active_value
 
   def self.from_hash(hash)
@@ -332,16 +378,14 @@ class TurnPhase::TileBuildPhase < TurnPhase
   end
 
   # This phase spans both wall tiles (quarry) and build tiles (village, farm,
-  # ...), so it asks its OWN reconstructed tile which one it is.
-  # tile_klass_name (not bare klass_name) applies the type-derived fallback:
-  # a quarry action serializes no "klass" key, so bare klass_name is nil and
-  # would misroute to activate_tile_build.
+  # ...), so it asks its OWN reconstructed tile which one it is (`tile` applies
+  # the type-derived klass fallback — a quarry action serializes no "klass").
+  # Walls have their own orchestration; everything else shares build_tile.
   def click(coordinate, engine)
-    tile = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
     if tile&.places_wall?
-      engine.place_wall(coordinate.row, coordinate.col)
+      place_wall_step(coordinate, engine)
     else
-      engine.activate_tile_build(coordinate.row, coordinate.col)
+      build_tile(coordinate, engine)
     end
   end
 
@@ -400,6 +444,57 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
   private
 
+  # Place one stone wall (QuarryTile). Locking the played terrain replaces
+  # game.turn_phase with a locked copy, so after a lock we continue from that
+  # new phase (current_phase) — its increment_walls_placed keeps the lock.
+  def place_wall_step(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+
+    tile_obj = Tiles::Location::QuarryTile.new(0)
+    return "No stone walls left" if game.stone_walls <= 0
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    current_phase = self
+    if chosen_terrain.nil? && game_player.hand.size > 1
+      engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
+      current_phase = game.turn_phase
+    end
+    wall_terrain = current_phase.effective_terrain(game_player)
+
+    walls_placed_after = current_phase.walls_placed.to_i + 1
+
+    engine.record_move(
+      action: "place_wall",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      message: "#{game_player.player.handle} placed a stone wall at [#{row}, #{col}]"
+    )
+
+    game.board_contents_will_change!
+    game.board_contents.place_wall(row, col)
+    game.stone_walls -= 1
+
+    remaining = tile_obj.valid_destinations(
+      board_contents: game.board_contents,
+      player_order: game_player.order, hand: wall_terrain || game_player.hand.first
+    )
+    if walls_placed_after >= 2 || remaining.empty?
+      game_player.mark_tile_used!("QuarryTile")
+      engine.reset_to_mandatory
+    else
+      game.turn_phase = current_phase.increment_walls_placed
+    end
+
+    game_player.save
+    game.save
+  end
+
   # Destinations on the tile's terrain: a fixed-terrain tile (Farm/Oasis/...)
   # ignores the hand; a played-terrain tile (Oracle/Quarry) uses the locked
   # terrain, or spans both cards of an as-yet-unlocked two-card hand.
@@ -429,6 +524,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
 end
 
 class TurnPhase::FortPhase < TurnPhase
+  include TurnPhase::TileBuildOrchestration
   attr_reader :fort_terrain_value
 
   def self.from_hash(hash)
@@ -458,7 +554,7 @@ class TurnPhase::FortPhase < TurnPhase
   end
 
   def click(coordinate, engine)
-    engine.activate_tile_build(coordinate.row, coordinate.col)
+    build_tile(coordinate, engine)
   end
 
   def serialize

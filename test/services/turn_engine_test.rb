@@ -77,7 +77,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.current_player.update!(supply: { "settlements" => 0 })
     @game.update!(current_action: { "type" => "oasis" })
 
-    result = @engine.activate_tile_build(0, 1)
+    result = @engine.click(Coordinate.new(0, 1))
 
     assert_equal "No settlements left", result
   end
@@ -86,7 +86,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     # Player starts with only a MandatoryTile, not an OasisTile
     @game.update!(current_action: { "type" => "oasis" })
 
-    result = @engine.activate_tile_build(0, 1)
+    result = @engine.click(Coordinate.new(0, 1))
 
     assert_equal "Not available", result
   end
@@ -406,7 +406,7 @@ class TurnEngineTest < ActiveSupport::TestCase
     spot = empty_hexes_of("G", 1).first
 
     assert_empty TurnEngine.new(@game).buildable_cells
-    assert_equal "No stone walls left", @engine.place_wall(*spot)
+    assert_equal "No stone walls left", @engine.click(Coordinate.new(*spot))
     assert @game.reload.board_contents.empty?(*spot)
   end
 

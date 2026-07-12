@@ -662,7 +662,7 @@ class GameTest < ActiveSupport::TestCase
     game = game_in_oasis_action
     chris = game_players(:chris)
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
     game.reload
 
     assert_equal chris.order, game.board_contents.player_at(0, 1)
@@ -671,7 +671,7 @@ class GameTest < ActiveSupport::TestCase
   test "build_on_terrain decrements the player supply by one" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
 
     assert_equal 39, game_players(:chris).reload.supply["settlements"]
   end
@@ -679,7 +679,7 @@ class GameTest < ActiveSupport::TestCase
   test "build_on_terrain marks the activating tile as used" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
 
     oasis_tile = game_players(:chris).reload.tiles.find { |t| t["klass"] == "OasisTile" }
     assert oasis_tile["used"]
@@ -688,7 +688,7 @@ class GameTest < ActiveSupport::TestCase
   test "build_on_terrain resets current_action to mandatory" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
     game.reload
 
     assert_equal({ "type" => "mandatory" }, game.current_action)
@@ -710,7 +710,7 @@ class GameTest < ActiveSupport::TestCase
     chris.tiles = [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => false } ]
     chris.save
 
-    engine(game).activate_tile_build(7, 6)
+    engine(game).click(Coordinate.new(7, 6))
     game.reload
 
     assert game.moves.exists?(action: "pick_up_tile"), "tile pickup must be triggered"
@@ -720,7 +720,7 @@ class GameTest < ActiveSupport::TestCase
   test "undo_last_move after build_on_terrain removes the settlement and restores supply" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -732,7 +732,7 @@ class GameTest < ActiveSupport::TestCase
   test "undo_last_move after build_on_terrain unmarks the activating tile" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -744,7 +744,7 @@ class GameTest < ActiveSupport::TestCase
   test "undo_last_move after build_on_terrain restores current_action to the tile action type" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
     game.reload
     engine(game).undo_last_move
     game.reload
@@ -812,7 +812,7 @@ class GameTest < ActiveSupport::TestCase
   test "build_on_terrain stores terrain card and tile_klass in payload" do
     game = game_in_oasis_action
 
-    engine(game).activate_tile_build(0, 1)
+    engine(game).click(Coordinate.new(0, 1))
 
     build_move = game.moves.find_by(action: "build")
     assert_equal "D", build_move.payload["card"]

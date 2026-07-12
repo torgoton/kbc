@@ -244,43 +244,6 @@ class TurnEngine
     @game.save
   end
 
-  def activate_tile_build(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    return "No settlements left" unless game_player.settlements_remaining?
-    tile_klass = current_action_tile_klass
-    tile = game_player.find_unused_tile(tile_klass)
-    return "Not available" unless tile
-    tile_obj = Tiles::Tile.from_hash(tile)
-    current_phase = @game.turn_phase
-    chosen_terrain_before = current_phase.chosen_terrain
-    return "Not available" unless legal_targets.include?([ row, col ])
-    if tile_obj.uses_played_terrain? && chosen_terrain_before.nil? && game_player.hand.size > 1
-      lock_terrain!(@game.board_contents.terrain_at(row, col), chosen_terrain_before)
-    end
-    build_on_terrain(@game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
-    if tile_obj.repeats_build?
-      remaining = current_phase.remaining.to_i - 1
-      if remaining > 0
-        @game.turn_phase = TurnPhase::TileBuildPhase.new(
-          action_type: current_phase.type,
-          klass_name: current_phase.klass_name,
-          chosen_terrain: current_phase.chosen_terrain,
-          remaining: remaining
-        )
-      else
-        game_player.mark_tile_used!(tile_klass)
-        reset_to_mandatory
-      end
-    else
-      game_player.mark_tile_used!(tile_klass)
-      reset_to_mandatory
-    end
-    game_player.save
-    @game.save
-  end
-
   def select_action(type)
     capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
@@ -465,54 +428,6 @@ class TurnEngine
 
     game_player.mark_tile_used!(tile_klass_name)
     reset_to_mandatory
-    game_player.save
-    @game.save
-  end
-
-  def place_wall(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    current_phase = @game.turn_phase
-    chosen_terrain_before = current_phase.chosen_terrain
-
-    tile_obj = Tiles::Location::QuarryTile.new(0)
-    return "No stone walls left" if @game.stone_walls <= 0
-    return "Not available" unless legal_targets.include?([ row, col ])
-
-    if chosen_terrain_before.nil? && game_player.hand.size > 1
-      hex_terrain = @game.board_contents.terrain_at(row, col)
-      lock_terrain!(hex_terrain, chosen_terrain_before)
-      current_phase = @game.turn_phase
-    end
-    wall_terrain = effective_terrain(game_player)
-
-    walls_placed = current_phase.walls_placed.to_i + 1
-
-    record_move(
-      action: "place_wall",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      message: "#{game_player.player.handle} placed a stone wall at [#{row}, #{col}]"
-    )
-
-    @game.board_contents_will_change!
-    @game.board_contents.place_wall(row, col)
-    @game.stone_walls -= 1
-
-    remaining = tile_obj.valid_destinations(
-      board_contents: @game.board_contents,
-      player_order: game_player.order, hand: wall_terrain || game_player.hand.first
-    )
-    if walls_placed >= 2 || remaining.empty?
-      game_player.mark_tile_used!("QuarryTile")
-      reset_to_mandatory
-    else
-      @game.turn_phase = current_phase.increment_walls_placed
-    end
-
     game_player.save
     @game.save
   end
@@ -1209,5 +1124,6 @@ class TurnEngine
   # action (State pattern: the phase orchestrates, the engine owns these shared
   # steps). Defined among the privates above; re-exposed here as the phase-
   # facing interface. Still called internally by the not-yet-migrated mutators.
-  public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit
+  public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
+         :lock_terrain!, :build_on_terrain
 end

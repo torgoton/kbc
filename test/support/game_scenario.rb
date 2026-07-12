@@ -34,13 +34,7 @@ class GameScenario
   # --- actions (domain intent; raise IllegalMove when the rules forbid it) ---
 
   def build_settlement(at:)
-    perform do |engine|
-      if current_tile_obj&.builds_settlement?
-        engine.activate_tile_build(*at)
-      else
-        engine.build_settlement(*at)
-      end
-    end
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   def undo
@@ -94,7 +88,7 @@ class GameScenario
 
   # Place a stone wall (QuarryTile).
   def place_wall(at:)
-    perform { |engine| engine.place_wall(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # Place a City Hall cluster centered on `at:` (CityHallTile).
@@ -402,14 +396,6 @@ class GameScenario
 
   private
 
-  # The tile object for the currently active tile action (as set by
-  # activate_tile), or nil during a mandatory build phase.
-  def current_tile_obj
-    action_type = @game.current_action["type"]
-    return nil if action_type == "mandatory"
-    klass_name = @game.current_action["klass"] || "#{action_type.capitalize}Tile"
-    Tiles::Tile.for_klass(klass_name)&.new(0)
-  end
 
   def create_player(order, hand)
     user = User.create!(
