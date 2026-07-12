@@ -109,10 +109,4 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
       base.click(coord(0, 0), RecordingEngine.new)
     end
   end
-
-  test "LegacyPhase#click builds a settlement for unknown mandatory-shaped data" do
-    engine = RecordingEngine.new
-    TurnPhase::LegacyPhase.new({ "type" => "mandatory" }).click(coord(1, 1), engine)
-    assert_equal [ [ :build_settlement, 1, 1 ] ], engine.sent
-  end
 end

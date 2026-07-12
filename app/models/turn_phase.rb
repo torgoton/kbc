@@ -49,7 +49,7 @@ class TurnPhase
     elsif tile && tile.moves_settlement?
       SettlementMovePhase.from_hash(hash)
     else
-      LegacyPhase.new(hash)
+      raise ArgumentError, "no TurnPhase for #{hash.inspect}"
     end
   end
 
@@ -101,9 +101,6 @@ class TurnPhase
   def mandatory_build? = false
   def city_hall? = false
   def tile_action_endable? = false
-  # Clicking one of your own pieces starts a transition(SourceSelected) rather
-  # than the LegacyPhase fallback. True for the move/resettlement phases.
-  def accepts_source_selection? = false
 
   # The set of board cells (as [row, col]) that are legal action targets in
   # this phase — the cells the UI highlights and every action guard checks
@@ -503,8 +500,6 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     from_value
   end
 
-  def accepts_source_selection? = true
-
   def click(coordinate, engine)
     if from
       engine.move_settlement(coordinate.row, coordinate.col)
@@ -566,8 +561,6 @@ class TurnPhase::ResettlementPhase < TurnPhase
   end
 
   def tile_action_endable? = moves.to_i >= 1
-  def accepts_source_selection? = true
-
   def klass_name
     "ResettlementTile"
   end
@@ -669,8 +662,6 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
 
   def meeple_movement? = true
   def tile_action_endable? = moves.to_i >= 1
-  def accepts_source_selection? = true
-
   def legal_targets(board_contents:, player:, game: nil)
     if from
       return [] if budget.to_i <= 0
@@ -856,74 +847,5 @@ class TurnPhase::CityHallPhase < TurnPhase
       "type" => action_type,
       "klass" => klass_name
     }
-  end
-end
-
-class TurnPhase::LegacyPhase < TurnPhase
-  attr_reader :data
-
-  def initialize(data)
-    @data = data.deep_stringify_keys
-  end
-
-  def builds
-    Array(data["builds"])
-  end
-
-  def pending_orders
-    Array(data["pending_orders"])
-  end
-
-  def outpost_active?
-    data["outpost_active"] == true
-  end
-
-  def remaining
-    data["remaining"]
-  end
-
-  def walls_placed
-    data["walls_placed"]
-  end
-
-  def fort_terrain
-    data["fort_terrain"]
-  end
-
-  def budget
-    data["budget"]
-  end
-
-  def moves
-    data["moves"]
-  end
-
-  # The honest catch-all: reproduces the legacy tile-predicate dispatch for
-  # phases that didn't resolve to a dedicated TurnPhase subclass.
-  def click(coordinate, engine)
-    row = coordinate.row
-    col = coordinate.col
-    # tile_klass_name applies the type-derived fallback (Task 2 fix) so phases
-    # carrying no serialized "klass" still resolve their tile.
-    tile = Tiles::Tile.for_klass(tile_klass_name)&.new(0)
-    if tile&.moves_settlement?
-      from ? engine.move_settlement(row, col) : engine.select_settlement(row, col)
-    elsif tile&.sword_tile?
-      engine.remove_settlement(row, col)
-    elsif tile&.places_wall?
-      engine.place_wall(row, col)
-    elsif tile&.places_meeple?
-      engine.execute_meeple_action(row, col)
-    elsif tile&.places_city_hall?
-      engine.place_city_hall(row, col)
-    elsif tile&.builds_settlement?
-      engine.activate_tile_build(row, col)
-    else
-      engine.build_settlement(row, col)
-    end
-  end
-
-  def serialize
-    data.deep_dup
   end
 end

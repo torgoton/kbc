@@ -275,18 +275,11 @@ class TurnEngine
       from: "[#{row}, #{col}]",
       message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
     )
-    current_phase = @game.turn_phase
-    if current_phase.accepts_source_selection?
-      phase_result = current_phase.transition(
-        TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
-        nil
-      )
-      @game.turn_phase = phase_result.next_phase
-    else
-      @game.turn_phase = TurnPhase::LegacyPhase.new(
-        @game.current_action.merge("from" => "[#{row}, #{col}]")
-      )
-    end
+    phase_result = @game.turn_phase.transition(
+      TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
+      nil
+    )
+    @game.turn_phase = phase_result.next_phase
     @game.save
   end
 
@@ -392,24 +385,27 @@ class TurnEngine
           action_type: type,
           klass_name: klass_name
         )
+      elsif tile_obj&.places_city_hall?
+        TurnPhase::CityHallPhase.new(
+          action_type: type,
+          klass_name: klass_name
+        )
+      elsif tile_obj&.sword_tile?
+        opponents = @game.game_players
+          .reject { |gp| gp == @game.current_player }
+          .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
+          .map(&:order)
+          .sort
+        return "No opponents with settlements" if opponents.empty?
+        payload["pending_orders"] = opponents
+        TurnPhase::TargetedRemovalPhase.new(
+          action_type: type,
+          klass_name: klass_name,
+          pending_orders: opponents
+        )
       else
-        action = { "type" => type, "klass" => klass_name }
-        TurnPhase::LegacyPhase.new(action)
+        raise ArgumentError, "no TurnPhase for action type #{type.inspect}"
       end
-    if tile_obj&.sword_tile?
-      opponents = @game.game_players
-        .reject { |gp| gp == @game.current_player }
-        .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
-        .map(&:order)
-        .sort
-      return "No opponents with settlements" if opponents.empty?
-      payload["pending_orders"] = opponents
-      selected_phase = TurnPhase::TargetedRemovalPhase.new(
-        action_type: type,
-        klass_name: klass_name,
-        pending_orders: opponents
-      )
-    end
     record_move(
       action: "select_action",
       deliberate: true,
@@ -435,18 +431,11 @@ class TurnEngine
       from: "[#{row}, #{col}]",
       message: "#{@game.current_player.player.handle} selected a settlement at [#{row}, #{col}]"
     )
-    current_phase = @game.turn_phase
-    if current_phase.accepts_source_selection?
-      phase_result = current_phase.transition(
-        TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
-        nil
-      )
-      @game.turn_phase = phase_result.next_phase
-    else
-      @game.turn_phase = TurnPhase::LegacyPhase.new(
-        @game.current_action.merge("from" => "[#{row}, #{col}]")
-      )
-    end
+    phase_result = @game.turn_phase.transition(
+      TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
+      nil
+    )
+    @game.turn_phase = phase_result.next_phase
     @game.save
   end
 

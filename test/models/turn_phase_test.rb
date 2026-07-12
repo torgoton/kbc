@@ -170,18 +170,6 @@ class TurnPhaseTest < ActiveSupport::TestCase
     assert_equal true, walled.tile_action_endable?
   end
 
-  test "move and resettlement phases accept source selection; others fall back" do
-    paddock = TurnPhase.deserialize({ "type" => "paddock", "klass" => "PaddockTile" })
-    resettlement = TurnPhase.deserialize({ "type" => "resettlement", "klass" => "ResettlementTile", "budget" => 3, "moves" => 0 })
-    lighthouse = TurnPhase.deserialize({ "type" => "lighthouse", "klass" => "LighthouseTile" })
-    barracks = TurnPhase.deserialize({ "type" => "barracks", "klass" => "BarracksTile" })
-
-    assert_equal true, paddock.accepts_source_selection?
-    assert_equal true, resettlement.accepts_source_selection?
-    assert_equal true, lighthouse.accepts_source_selection?
-    assert_equal false, barracks.accepts_source_selection?
-  end
-
   test "phases identify their build kind" do
     mandatory = TurnPhase.deserialize({ "type" => "mandatory" })
     tile_build = TurnPhase.deserialize({ "type" => "oasis", "klass" => "OasisTile" })
