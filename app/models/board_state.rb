@@ -94,6 +94,17 @@ class BoardState
     empty?(row, col) && !warrior_blocked?(row, col)
   end
 
+  # Every buildable cell (empty, not warrior-blocked) whose terrain is in
+  # `terrains`, row-major. The "anywhere on this terrain" set used by the
+  # Outpost power (ADR-0001's "all buildable terrain cells" primitive).
+  def available_cells_of(terrains)
+    (0..19).flat_map do |row|
+      (0..19).filter_map do |col|
+        [ row, col ] if available_for_building?(row, col) && terrains.include?(terrain_at(row, col))
+      end
+    end
+  end
+
   def move_settlement(from_row, from_col, to_row, to_col)
     cell = @cells.delete([ from_row, from_col ])
     @cells[[ to_row, to_col ]] = cell

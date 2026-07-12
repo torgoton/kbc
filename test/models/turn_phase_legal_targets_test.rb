@@ -109,6 +109,38 @@ class TurnPhaseLegalTargetsTest < ActiveSupport::TestCase
     assert_empty spent.legal_targets(board_contents: board, player: player)
   end
 
+  test "TileBuildPhase (quarry) has no wall targets when stone walls are exhausted" do
+    game, player = playing_game(hand: [ "G" ])
+    game.update!(stone_walls: 0)
+    board = with_terrain(game.board_contents, game.instantiate)
+    board.place_settlement(5, 6, player.order)
+    phase = TurnPhase::TileBuildPhase.new(action_type: "quarry", klass_name: "QuarryTile")
+
+    assert_empty phase.legal_targets(board_contents: board, player: player, game: game)
+  end
+
+  test "TileBuildPhase (build tile) targets the tile's terrain" do
+    game, player = playing_game(hand: [ "G" ])
+    board = with_terrain(game.board_contents, game.instantiate)
+    tile = Tiles::Tile.for_klass("OasisTile").new(0) # builds on Desert
+    phase = TurnPhase::TileBuildPhase.new(action_type: "oasis", klass_name: "OasisTile")
+
+    targets = phase.legal_targets(board_contents: board, player: player, game: game)
+    assert_equal tile.valid_destinations(board_contents: board, player_order: player.order, hand: "G"), targets
+    assert targets.any?
+  end
+
+  test "TileBuildPhase with outpost active spans the whole build terrain, adjacency waived" do
+    game, player = playing_game(hand: [ "D" ])
+    board = with_terrain(game.board_contents, game.instantiate)
+    phase = TurnPhase::TileBuildPhase.new(action_type: "oasis", klass_name: "OasisTile", outpost_active: true)
+
+    targets = phase.legal_targets(board_contents: board, player: player, game: game)
+
+    assert_equal board.available_cells_of([ "D" ]).to_set, targets.to_set
+    assert targets.any?
+  end
+
   private
 
   # A minimal playing game on the scenario's fixed board, with a clean board.

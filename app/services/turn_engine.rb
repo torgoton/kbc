@@ -782,52 +782,7 @@ class TurnEngine
         klass = current_action_tile_klass
         tile = player.find_unused_tile(klass)
         if tile
-          tile_obj = Tiles::Tile.from_hash(tile)
-          if tile_obj.sword_tile?
-            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
-          elsif tile_obj.places_meeple?
-            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
-          elsif tile_obj.places_wall?
-            if @game.stone_walls <= 0
-              []
-            elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-              player.hand.flat_map { |t|
-                tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: player.order, hand: t)
-              }.uniq
-            else
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents,
-                player_order: player.order, hand: effective_terrain(player) || player.hand.first
-              )
-            end
-          elsif tile_obj.moves_settlement?
-            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
-          elsif tile_obj.places_city_hall?
-            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
-          else
-            if tile_obj.builds_settlement? && current_phase.outpost_active?
-              terrains = outpost_build_terrains(tile_obj, current_phase, player)
-              (0..19).flat_map do |r|
-                (0..19).filter_map do |c|
-                  [ r, c ] if @game.board_contents.available_for_building?(r, c) &&
-                    terrains.include?(@game.board_contents.terrain_at(r, c))
-                end
-              end
-            elsif tile_obj.fort_tile?
-              current_phase.legal_targets(board_contents: @game.board_contents, player: player)
-            elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-              player.hand.flat_map { |t|
-                tile_obj.valid_destinations(
-                  board_contents: @game.board_contents, player_order: player.order, hand: t
-                )
-              }.uniq
-            else
-              hand = effective_terrain(player) || player.hand.first
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents, player_order: player.order, hand: hand
-              )
-            end
-          end
+          current_phase.legal_targets(board_contents: @game.board_contents, player: player, game: @game)
         else
           []
         end
@@ -932,15 +887,6 @@ class TurnEngine
     klass&.new(0)&.builds_settlement? || false
   end
 
-  def outpost_build_terrains(tile_obj, current_phase, game_player)
-    if tile_obj.fort_tile?
-      [ current_phase.fort_terrain ].compact
-    elsif tile_obj.uses_played_terrain? && effective_terrain(game_player).nil?
-      game_player.hand
-    else
-      [ tile_obj.build_terrain || effective_terrain(game_player) || game_player.hand.first ].compact
-    end
-  end
 
   # Returns the tile klass name (without "Tiles::" prefix) for the current action.
   def current_action_tile_klass
