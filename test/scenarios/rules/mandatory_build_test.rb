@@ -22,4 +22,24 @@ class MandatoryBuildScenarioTest < ActiveSupport::TestCase
     assert_nil scenario.owner_at(desert_spot)
     assert_equal 40, scenario.settlements_remaining(0)
   end
+
+  test "with a two-card hand, both terrains are buildable before the first build" do
+    scenario = GameScenario.new(hands: { 0 => %w[G D] })
+
+    terrains = scenario.buildable_cells.map { |cell| scenario.terrain_at(cell) }.uniq
+
+    assert_includes terrains, "G"
+    assert_includes terrains, "D"
+  end
+
+  test "the first build locks a two-card hand to that terrain for the rest of the turn" do
+    scenario = GameScenario.new(hands: { 0 => %w[G D] })
+
+    scenario.build_settlement(at: scenario.empty_hexes("G", 1).first)
+
+    scenario.buildable_cells.each { |cell| assert_equal "G", scenario.terrain_at(cell) }
+    assert_raises(GameScenario::IllegalMove) do
+      scenario.build_settlement(at: scenario.empty_hexes("D", 1).first)
+    end
+  end
 end

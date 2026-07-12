@@ -118,6 +118,43 @@ class MeepleMovementContractTest < ActiveSupport::TestCase
 
       assert_raises(GameScenario::IllegalMove) { scenario.move_meeple_step(to: extra) }
     end
+
+    test "#{cfg[:piece_name]} cannot cover more than one hex in a single step" do
+      scenario = GameScenario.new(hands: { 0 => "G", 1 => "D" })
+      scenario.give_tile(0, cfg[:tile_klass], from: [ 0, 0 ])
+      start = scenario.empty_hexes(cfg[:start_terrain], 1).first
+      cfg[:place].call(scenario, 0, at: start)
+      neighbours = scenario.neighbors(start)
+      two_away = scenario.empty_hexes(cfg[:start_terrain], 400).find do |hex|
+        hex != start && !neighbours.include?(hex) && cfg[:suitable_terrain?].call(scenario, hex)
+      end
+      raise "fixed board should offer a hex two steps away" unless two_away
+
+      scenario.activate_tile(cfg[:action])
+      scenario.select_meeple(at: start)
+
+      assert_raises(GameScenario::IllegalMove) { scenario.move_meeple_step(to: two_away) }
+    end
+
+    test "#{cfg[:piece_name]} undo reverses only the last step of a multi-step move" do
+      scenario = GameScenario.new(hands: { 0 => "G", 1 => "D" })
+      scenario.give_tile(0, cfg[:tile_klass], from: [ 0, 0 ])
+      start = scenario.empty_hexes(cfg[:start_terrain], 1).first
+      cfg[:place].call(scenario, 0, at: start)
+      first, second = find_step_path(scenario, cfg, [ start ], 2)
+      raise "fixed board should offer a 2-step suitable path" unless second
+
+      scenario.activate_tile(cfg[:action])
+      scenario.select_meeple(at: start)
+      scenario.move_meeple_step(to: first)
+      scenario.move_meeple_step(to: second)
+
+      scenario.undo
+
+      assert_equal 0, scenario.owner_at(first), "undo returns the meeple to the previous step"
+      assert_nil scenario.owner_at(second)
+      assert_nil scenario.owner_at(start)
+    end
   end
 
   # Backtracking search for a length-`steps` path of suitable, empty hexes

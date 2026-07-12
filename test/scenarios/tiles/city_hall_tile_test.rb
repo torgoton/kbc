@@ -51,4 +51,51 @@ class CityHallTileTest < ActiveSupport::TestCase
     assert_not_includes scenario.usable_tiles(0), "CityHallTile"
     assert_equal Game::MANDATORY_COUNT, scenario.mandatory_remaining
   end
+
+  test "placing the City Hall round-trips through undo" do
+    scenario = GameScenario.new
+    scenario.place_settlement(0, at: OTHER_SETTLEMENT)
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+    scenario.activate_tile(:cityhall)
+
+    assert_undo_round_trip(scenario) { scenario.place_city_hall(at: CENTER) }
+  end
+
+  test "the tile is spent permanently: it cannot be used again on a later turn" do
+    scenario = GameScenario.new
+    scenario.place_settlement(0, at: OTHER_SETTLEMENT)
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: CENTER)
+
+    # End of turn resets ordinary used tiles to usable; a City Hall tile is
+    # permanently spent and stays unavailable when play returns to the player.
+    scenario.set_mandatory(0)
+    scenario.end_turn
+    scenario.set_mandatory(0)
+    scenario.end_turn
+
+    assert_not_includes scenario.usable_tiles(0), "CityHallTile"
+  end
+
+  test "an opponent's Sword cannot remove a City Hall hex" do
+    scenario = GameScenario.new
+    scenario.place_settlement(0, at: OTHER_SETTLEMENT)
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: CENTER)
+
+    scenario.make_current(1)
+    scenario.give_tile(1, "SwordTile", from: [ 0, 0 ])
+    scenario.activate_tile(:sword)
+
+    assert_includes scenario.buildable_cells, OTHER_SETTLEMENT # the plain settlement is a target
+    assert_not_includes scenario.buildable_cells, CENTER       # a City Hall hex is not
+    assert_raises(GameScenario::IllegalMove) { scenario.remove_settlement(at: CENTER) }
+    assert scenario.city_hall_at?(CENTER)
+  end
 end
