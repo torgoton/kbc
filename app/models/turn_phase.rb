@@ -838,8 +838,37 @@ class TurnPhase::CityHallPhase < TurnPhase
     )
   end
 
+  # Place the City Hall's 7-hex cluster (State pattern: this phase owns the
+  # action's orchestration; the engine supplies the shared primitives it calls
+  # — capture_undo_snapshot / legal_targets / record_move / reset_to_mandatory).
   def click(coordinate, engine)
-    engine.place_city_hall(coordinate.row, coordinate.col)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "No City Hall tile" unless game_player.find_unused_tile("CityHallTile")
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    tile_obj = Tiles::Location::CityHallTile.new(0)
+    cluster = tile_obj.cluster_hexes(row, col, game.board_contents)
+
+    engine.record_move(
+      action: "place_city_hall",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      message: "#{game_player.player.handle} placed their City Hall at [#{row}, #{col}]"
+    )
+
+    game.board_contents_will_change!
+    cluster.each { |r, c| game.board_contents.place_city_hall_hex(r, c, game_player.order) }
+    game_player.decrement_city_hall_supply!
+    game_player.mark_tile_permanently_used!("CityHallTile")
+    engine.reset_to_mandatory
+    game_player.save
+    game.save
   end
 
   def serialize

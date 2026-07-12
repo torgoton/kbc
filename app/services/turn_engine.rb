@@ -1,4 +1,8 @@
 class TurnEngine
+  # Exposed so a Sub-phase's #click can reach the game to orchestrate its own
+  # action (State pattern: phase = State, engine = Context).
+  attr_reader :game
+
   def initialize(game)
     @game = game
   end
@@ -280,35 +284,6 @@ class TurnEngine
       nil
     )
     @game.turn_phase = phase_result.next_phase
-    @game.save
-  end
-
-  def place_city_hall(row, col)
-    capture_undo_snapshot
-    @game.instantiate
-    game_player = @game.current_player
-    tile = game_player.find_unused_tile("CityHallTile")
-    return "No City Hall tile" unless tile
-    tile_obj = Tiles::Location::CityHallTile.new(0)
-    return "Not available" unless legal_targets.include?([ row, col ])
-
-    cluster = tile_obj.cluster_hexes(row, col, @game.board_contents)
-
-    record_move(
-      action: "place_city_hall",
-      deliberate: true,
-      reversible: true,
-      game_player: game_player,
-      to: "[#{row}, #{col}]",
-      message: "#{game_player.player.handle} placed their City Hall at [#{row}, #{col}]"
-    )
-
-    @game.board_contents_will_change!
-    cluster.each { |r, c| @game.board_contents.place_city_hall_hex(r, c, game_player.order) }
-    game_player.decrement_city_hall_supply!
-    game_player.mark_tile_permanently_used!("CityHallTile")
-    reset_to_mandatory
-    game_player.save
     @game.save
   end
 
@@ -1272,4 +1247,10 @@ class TurnEngine
       )
     end
   end
+
+  # The shared mutation primitives a Sub-phase's #click calls to carry out its
+  # action (State pattern: the phase orchestrates, the engine owns these shared
+  # steps). Defined among the privates above; re-exposed here as the phase-
+  # facing interface. Still called internally by the not-yet-migrated mutators.
+  public :capture_undo_snapshot, :record_move, :reset_to_mandatory
 end

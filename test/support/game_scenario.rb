@@ -99,7 +99,7 @@ class GameScenario
 
   # Place a City Hall cluster centered on `at:` (CityHallTile).
   def place_city_hall(at:)
-    perform { |engine| engine.place_city_hall(*at) }
+    perform { |engine| engine.click(Coordinate.new(*at)) }
   end
 
   # --- setup (direct state construction; no rules applied) ---
