@@ -833,7 +833,294 @@ class TurnPhase::ResettlementPhase < TurnPhase
   end
 end
 
+# Shared click orchestration for the meeple placers/movers (MeepleActionPhase
+# for warriors, MeepleMovementPhase for ships/wagons): generic on
+# tile.meeple_kind, mirroring the engine's former dispatch. click places a
+# piece or advances a movement step; select_meeple/remove_meeple are the
+# "popup" gestures on the player's own piece (opening the move/remove choice),
+# routed here from the controller rather than through a board click.
+module TurnPhase::MeepleOrchestration
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    tile_klass = tile_klass_name
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+
+    tile_obj = Tiles::Tile.from_hash(tile)
+
+    movement_step = false
+    if from
+      # complete a ship or wagon move to destination
+      return "Not available" unless engine.legal_targets.include?([ row, col ])
+      movement_result = case tile_obj.meeple_kind
+      when "ship"  then move_ship(row, col, game_player, tile_klass:, engine:)
+      when "wagon" then move_wagon(row, col, game_player, tile_klass:, engine:)
+      end
+      return movement_result if movement_result.is_a?(String)
+      movement_step = true
+    elsif game.board_contents.wagon_at?(row, col) &&
+          game.board_contents.player_at(row, col) == game_player.order
+      return "Not available"  # handled by popup: remove_meeple or select_meeple
+    elsif game.board_contents.ship_at?(row, col) &&
+          game.board_contents.player_at(row, col) == game_player.order
+      return "Not available"  # handled by popup: remove_meeple or select_meeple
+    elsif game.board_contents.warrior_at?(row, col) &&
+          game.board_contents.player_at(row, col) == game_player.order
+      return "Not available"  # handled by popup: remove_meeple
+    else
+      return "Not available" unless engine.legal_targets.include?([ row, col ])
+      case tile_obj.meeple_kind
+      when "ship"    then place_ship(row, col, game_player, tile_klass:, engine:)
+      when "wagon"   then place_wagon(row, col, game_player, tile_klass:, engine:)
+      when "warrior" then place_warrior(row, col, game_player, tile_klass:, engine:)
+      end
+    end
+
+    unless movement_step && game.turn_phase.meeple_movement?
+      game_player.mark_tile_used!(tile_klass)
+      engine.reset_to_mandatory
+    end
+    game_player.save
+    game.save
+  end
+
+  # Remove the player's own placed meeple (warrior/ship/wagon), returning it to
+  # supply.
+  def remove_meeple(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    tile_klass = tile_klass_name
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+
+    if game.board_contents.warrior_at?(row, col) &&
+       game.board_contents.player_at(row, col) == game_player.order
+      remove_warrior(row, col, game_player, tile_klass:, engine:)
+    elsif game.board_contents.ship_at?(row, col) &&
+          game.board_contents.player_at(row, col) == game_player.order
+      remove_ship(row, col, game_player, tile_klass:, engine:)
+    elsif game.board_contents.wagon_at?(row, col) &&
+          game.board_contents.player_at(row, col) == game_player.order
+      remove_wagon(row, col, game_player, tile_klass:, engine:)
+    else
+      return "Not available"
+    end
+
+    game_player.mark_tile_used!(tile_klass)
+    engine.reset_to_mandatory
+    game_player.save
+    game.save
+  end
+
+  # Select the player's own ship/wagon as the source of a move (a warrior has
+  # no meeple_kind match here, so this is always "Not available" for
+  # MeepleActionPhase).
+  def select_meeple(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    tile_klass = tile_klass_name
+    tile = game_player.find_unused_tile(tile_klass)
+    return "Not available" unless tile
+
+    tile_obj = Tiles::Tile.from_hash(tile)
+    moveable = case tile_obj.meeple_kind
+    when "ship"  then game.board_contents.ship_at?(row, col)
+    when "wagon" then game.board_contents.wagon_at?(row, col)
+    else false
+    end
+    return "Not available" unless moveable
+    return "Not available" unless game.board_contents.player_at(row, col) == game_player.order
+
+    destinations = tile_obj.valid_destinations(
+      from_row: row, from_col: col,
+      board_contents: game.board_contents,
+      player_order: game_player.order
+    )
+    return "Not available" unless destinations.any?
+
+    action_word = tile_obj.meeple_kind
+    engine.record_move(
+      action: "select_#{action_word}",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      message: "#{game_player.player.handle} selected their #{action_word} at [#{row}, #{col}]"
+    )
+    phase_result = transition(
+      TurnPhase::Events::SourceSelected.new(coordinate_key: "[#{row}, #{col}]"),
+      nil
+    )
+    game.turn_phase = phase_result.next_phase
+    game.save
+  end
+
+  private
+
+  def place_warrior(row, col, game_player, tile_klass:, engine:)
+    engine.record_move(
+      action: "place_warrior",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} placed a warrior at [#{row}, #{col}]"
+    )
+    game = engine.game
+    game.board_contents_will_change!
+    game.board_contents.place_warrior(row, col, game_player.order)
+    game_player.decrement_warrior_supply!
+    engine.apply_tile_pickup(game_player, row, col)
+  end
+
+  def remove_warrior(row, col, game_player, tile_klass:, engine:)
+    engine.record_move(
+      action: "remove_warrior",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} removed a warrior from [#{row}, #{col}]"
+    )
+    game = engine.game
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    game_player.increment_warrior_supply!
+    engine.apply_tile_forfeit(game_player)
+  end
+
+  def place_ship(row, col, game_player, tile_klass:, engine:)
+    engine.record_move(
+      action: "place_ship",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} placed their ship at [#{row}, #{col}]"
+    )
+    game = engine.game
+    game.board_contents_will_change!
+    game.board_contents.place_ship(row, col, game_player.order)
+    game_player.decrement_ship_supply!
+    engine.apply_tile_pickup(game_player, row, col)
+  end
+
+  def remove_ship(row, col, game_player, tile_klass:, engine:)
+    engine.record_move(
+      action: "remove_ship",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} removed their ship from [#{row}, #{col}]"
+    )
+    game = engine.game
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    game_player.increment_ship_supply!
+    engine.apply_tile_forfeit(game_player)
+  end
+
+  def move_ship(row, col, game_player, tile_klass:, engine:)
+    from_coord = Coordinate.from_key(from)
+    meeple_phase_after_step(row, col, tile_klass, engine:)
+
+    engine.log_piece_movement_steps(
+      action: "move_ship",
+      game_player: game_player,
+      from_row: from_coord.row, from_col: from_coord.col,
+      path: [ [ row, col ] ],
+      payload: { "klass" => tile_klass },
+      message_piece: "ship"
+    )
+  end
+
+  def place_wagon(row, col, game_player, tile_klass:, engine:)
+    engine.record_move(
+      action: "place_wagon",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} placed their wagon at [#{row}, #{col}]"
+    )
+    game = engine.game
+    game.board_contents_will_change!
+    game.board_contents.place_wagon(row, col, game_player.order)
+    game_player.decrement_wagon_supply!
+    engine.apply_tile_pickup(game_player, row, col)
+  end
+
+  def remove_wagon(row, col, game_player, tile_klass:, engine:)
+    engine.record_move(
+      action: "remove_wagon",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      payload: { "klass" => tile_klass },
+      message: "#{game_player.player.handle} removed their wagon from [#{row}, #{col}]"
+    )
+    game = engine.game
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    game_player.increment_wagon_supply!
+    engine.apply_tile_forfeit(game_player)
+  end
+
+  def move_wagon(row, col, game_player, tile_klass:, engine:)
+    from_coord = Coordinate.from_key(from)
+    meeple_phase_after_step(row, col, tile_klass, engine:)
+
+    engine.log_piece_movement_steps(
+      action: "move_wagon",
+      game_player: game_player,
+      from_row: from_coord.row, from_col: from_coord.col,
+      path: [ [ row, col ] ],
+      payload: { "klass" => tile_klass },
+      message_piece: "wagon"
+    )
+  end
+
+  # A ship/wagon move step never swaps the phase before this runs, so
+  # budget/type/klass_name read from self (the phase currently dispatching the
+  # click), not from a fresh game.turn_phase lookup.
+  def meeple_phase_after_step(row, col, tile_klass, engine:)
+    game = engine.game
+    new_budget = budget.to_i - 1
+    new_moves = moves.to_i + 1
+    if new_budget <= 0
+      game.current_player.mark_tile_used!(tile_klass)
+      game.turn_phase = TurnPhase::MandatoryBuildPhase.new
+    else
+      game.turn_phase = TurnPhase::MeepleMovementPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        from: Coordinate.new(row, col).to_key,
+        budget: new_budget,
+        moves: new_moves
+      )
+    end
+  end
+end
+
 class TurnPhase::MeepleMovementPhase < TurnPhase
+  include TurnPhase::MeepleOrchestration
   attr_reader :action_type, :klass_value, :from_value, :budget_value, :moves_value
 
   def self.from_hash(hash)
@@ -890,10 +1177,6 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
         board_contents: board_contents, player_order: player.order, supply: player.supply_hash
       )
     end
-  end
-
-  def click(coordinate, engine)
-    engine.execute_meeple_action(coordinate.row, coordinate.col)
   end
 
   def transition(event, facts)
@@ -1023,6 +1306,7 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
 end
 
 class TurnPhase::MeepleActionPhase < TurnPhase
+  include TurnPhase::MeepleOrchestration
   attr_reader :action_type, :klass_value
 
   def self.from_hash(hash)
@@ -1049,10 +1333,6 @@ class TurnPhase::MeepleActionPhase < TurnPhase
     tile.valid_destinations(
       board_contents: board_contents, player_order: player.order, supply: player.supply_hash
     )
-  end
-
-  def click(coordinate, engine)
-    engine.execute_meeple_action(coordinate.row, coordinate.col)
   end
 
   def serialize

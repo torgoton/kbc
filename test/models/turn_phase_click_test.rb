@@ -19,20 +19,6 @@ class TurnPhaseClickTest < ActiveSupport::TestCase
     assert_equal [ [ :build_settlement, 3, 6 ] ], engine.sent
   end
 
-  test "MeepleActionPhase#click tells the engine to execute_meeple_action" do
-    engine = RecordingEngine.new
-    phase = TurnPhase::MeepleActionPhase.new(action_type: "barracks", klass_name: "BarracksTile")
-    phase.click(coord(2, 3), engine)
-    assert_equal [ [ :execute_meeple_action, 2, 3 ] ], engine.sent
-  end
-
-  test "MeepleMovementPhase#click tells the engine to execute_meeple_action" do
-    engine = RecordingEngine.new
-    phase = TurnPhase::MeepleMovementPhase.new(action_type: "wagon", klass_name: "WagonTile")
-    phase.click(coord(2, 3), engine)
-    assert_equal [ [ :execute_meeple_action, 2, 3 ] ], engine.sent
-  end
-
   test "base TurnPhase#click rejects clicks (every concrete phase overrides it)" do
     base = TurnPhase.allocate # bare base instance, no subclass behavior
     assert_raises(TurnPhase::InvalidTransition) do

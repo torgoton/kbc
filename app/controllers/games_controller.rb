@@ -119,7 +119,8 @@ class GamesController < ApplicationController
 
   def remove_meeple
     coord = Coordinate.new(params[:row], params[:col])
-    TurnEngine.new(@game).remove_meeple_action(coord.row, coord.col)
+    engine = TurnEngine.new(@game)
+    @game.turn_phase.remove_meeple(coord, engine)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -128,7 +129,8 @@ class GamesController < ApplicationController
 
   def select_meeple
     coord = Coordinate.new(params[:row], params[:col])
-    TurnEngine.new(@game).select_meeple_for_move(coord.row, coord.col)
+    engine = TurnEngine.new(@game)
+    @game.turn_phase.select_meeple(coord, engine)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }

@@ -239,8 +239,8 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(current_action: { "type" => "lighthouse", "klass" => "LighthouseTile", "budget" => 3, "moves" => 0, "from" => "[0, 3]" })
 
     engine = TurnEngine.new(@game.reload)
-    engine.execute_meeple_action(1, 3)
-    engine.execute_meeple_action(0, 4)
+    engine.click(Coordinate.new(1, 3))
+    engine.click(Coordinate.new(0, 4))
     engine.end_tile_action
     @game.reload
 
@@ -265,9 +265,9 @@ class TurnEngineTest < ActiveSupport::TestCase
     @game.update!(current_action: { "type" => "wagon", "klass" => "WagonTile", "budget" => 3, "moves" => 0, "from" => "[4, 3]" })
 
     engine = TurnEngine.new(@game.reload)
-    engine.execute_meeple_action(3, 3)
-    engine.execute_meeple_action(2, 3)
-    engine.execute_meeple_action(1, 2)
+    engine.click(Coordinate.new(3, 3))
+    engine.click(Coordinate.new(2, 3))
+    engine.click(Coordinate.new(1, 2))
     @game.reload
 
     assert @game.board_contents.wagon_at?(1, 2)

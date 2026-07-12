@@ -78,12 +78,12 @@ class GameScenario
 
   # Select an on-board wagon/ship before moving it step by step.
   def select_meeple(at:)
-    perform { |engine| engine.select_meeple_for_move(*at) }
+    perform { |engine| engine.game.turn_phase.select_meeple(Coordinate.new(*at), engine) }
   end
 
   # One step of a stepped wagon/ship move (or the initial placement).
   def move_meeple_step(to:)
-    perform { |engine| engine.execute_meeple_action(*to) }
+    perform { |engine| engine.click(Coordinate.new(*to)) }
   end
 
   # Place a stone wall (QuarryTile).
@@ -164,7 +164,7 @@ class GameScenario
   # Remove a warrior/wagon/ship meeple the current player owns (e.g. via
   # BarracksTile). Counterpart to move_meeple_step's placement path.
   def remove_meeple(at:)
-    perform { |engine| engine.remove_meeple_action(*at) }
+    perform { |engine| engine.game.turn_phase.remove_meeple(Coordinate.new(*at), engine) }
   end
 
   # Remove an opponent's settlement (e.g. via Nomad::SwordTile's targeted
