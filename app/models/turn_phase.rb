@@ -113,6 +113,13 @@ class TurnPhase
     []
   end
 
+  # The terrain this phase's build is locked to: the chosen terrain if the hand
+  # was already committed, otherwise the sole hand card (a two-card hand stays
+  # unlocked → nil). Shared by the build and settlement-move phases.
+  def effective_terrain(player)
+    chosen_terrain || (player.hand.size == 1 ? player.hand.first : nil)
+  end
+
   # Return a copy of this phase with the outpost power active. Non-build phases
   # fall back to a fresh mandatory build (the engine only activates the outpost
   # during a build action).
@@ -158,6 +165,41 @@ class TurnPhase
 
   def transition(_event, _facts)
     raise InvalidTransition, "#{self.class.name} does not accept that event"
+  end
+end
+
+# Shared legal-targets rule for the settlement movers (paddock/barn via
+# SettlementMovePhase, resettlement via ResettlementPhase): before a source is
+# picked, the selectable settlements; after, that settlement's valid
+# destinations. Both thread the played terrain (a two-card hand widens the set)
+# and the step budget (only ResettlementTile consumes it; other movers ignore
+# it). The including phase supplies tile/from/budget/effective_terrain.
+module TurnPhase::SettlementMoveTargets
+  def legal_targets(board_contents:, player:)
+    terrains =
+      if tile.uses_played_terrain? && effective_terrain(player).nil?
+        player.hand
+      else
+        [ effective_terrain(player) || player.hand.first ]
+      end
+    step_budget = budget.to_i
+
+    if from
+      src = Coordinate.from_key(from)
+      terrains.flat_map do |terrain|
+        tile.valid_destinations(
+          from_row: src.row, from_col: src.col, board_contents: board_contents,
+          player_order: player.order, hand: terrain, budget: step_budget
+        )
+      end.uniq
+    else
+      terrains.flat_map do |terrain|
+        tile.selectable_settlements(
+          player_order: player.order, board_contents: board_contents,
+          hand: terrain, budget: step_budget
+        )
+      end.uniq
+    end
   end
 end
 
@@ -384,6 +426,7 @@ class TurnPhase::FortPhase < TurnPhase
 end
 
 class TurnPhase::SettlementMovePhase < TurnPhase
+  include TurnPhase::SettlementMoveTargets
   attr_reader :action_type, :klass_value, :from_value
 
   def self.from_hash(hash)
@@ -453,6 +496,7 @@ class TurnPhase::SettlementMovePhase < TurnPhase
 end
 
 class TurnPhase::ResettlementPhase < TurnPhase
+  include TurnPhase::SettlementMoveTargets
   attr_reader :budget_value, :moves_value, :from_value
 
   def self.from_hash(hash)
@@ -579,6 +623,22 @@ class TurnPhase::MeepleMovementPhase < TurnPhase
   def tile_action_endable? = moves.to_i >= 1
   def accepts_source_selection? = true
 
+  def legal_targets(board_contents:, player:)
+    if from
+      return [] if budget.to_i <= 0
+      src = Coordinate.from_key(from)
+      destinations = tile.valid_destinations(
+        from_row: src.row, from_col: src.col,
+        board_contents: board_contents, player_order: player.order
+      )
+      board_contents.neighbors(src.row, src.col).select { |cell| destinations.include?(cell) }
+    else
+      tile.valid_destinations(
+        board_contents: board_contents, player_order: player.order, supply: player.supply_hash
+      )
+    end
+  end
+
   def click(coordinate, engine)
     engine.execute_meeple_action(coordinate.row, coordinate.col)
   end
@@ -688,6 +748,12 @@ class TurnPhase::MeepleActionPhase < TurnPhase
 
   def klass_name
     klass_value
+  end
+
+  def legal_targets(board_contents:, player:)
+    tile.valid_destinations(
+      board_contents: board_contents, player_order: player.order, supply: player.supply_hash
+    )
   end
 
   def click(coordinate, engine)

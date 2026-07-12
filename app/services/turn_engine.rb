@@ -786,22 +786,7 @@ class TurnEngine
           if tile_obj.sword_tile?
             current_phase.legal_targets(board_contents: @game.board_contents, player: player)
           elsif tile_obj.places_meeple?
-            if current_phase.from
-              from = Coordinate.from_key(current_phase.from)
-              if current_phase.budget.to_i <= 0
-                []
-              else
-                @game.board_contents.neighbors(from.row, from.col).select do |row, col|
-                  meeple_step_available?(from, row, col, tile_obj)
-                end
-              end
-            else
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents,
-                player_order: player.order,
-                supply: player.supply_hash
-              )
-            end
+            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
           elsif tile_obj.places_wall?
             if @game.stone_walls <= 0
               []
@@ -816,33 +801,7 @@ class TurnEngine
               )
             end
           elsif tile_obj.moves_settlement?
-            # budget only gates ResettlementTile; every other mover accepts and
-            # ignores it, so it can be passed uniformly without special-casing.
-            hand_arg = effective_terrain(player) || player.hand.first
-            budget = current_phase.budget.to_i
-            if current_phase.from
-              from = Coordinate.from_key(current_phase.from)
-              if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-                player.hand.flat_map { |t|
-                  tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, player_order: player.order, hand: t, budget:)
-                }.uniq
-              else
-                tile_obj.valid_destinations(
-                  from_row: from.row, from_col: from.col,
-                  board_contents: @game.board_contents, player_order: player.order, hand: hand_arg, budget:
-                )
-              end
-            else
-              if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-                player.hand.flat_map { |t|
-                  tile_obj.selectable_settlements(player_order: player.order, board_contents: @game.board_contents, hand: t, budget:)
-                }.uniq
-              else
-                tile_obj.selectable_settlements(
-                  player_order: player.order, board_contents: @game.board_contents, hand: hand_arg, budget:
-                )
-              end
-            end
+            current_phase.legal_targets(board_contents: @game.board_contents, player: player)
           elsif tile_obj.places_city_hall?
             current_phase.legal_targets(board_contents: @game.board_contents, player: player)
           else
@@ -1282,14 +1241,6 @@ class TurnEngine
   # One move step is legal when a hop remains this turn and the destination is
   # among the piece's adjacent single-step destinations (the tile owns the
   # terrain rule via valid_destinations).
-  def meeple_step_available?(from_coord, row, col, tile_obj)
-    @game.turn_phase.budget.to_i > 0 &&
-      tile_obj.valid_destinations(
-        from_row: from_coord.row, from_col: from_coord.col,
-        board_contents: @game.board_contents,
-        player_order: @game.current_player.order
-      ).include?([ row, col ])
-  end
 
   def place_warrior(row, col, game_player, tile_klass:)
     record_move(

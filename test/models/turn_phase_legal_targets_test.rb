@@ -53,6 +53,62 @@ class TurnPhaseLegalTargetsTest < ActiveSupport::TestCase
     targets.each { |r, c| assert_equal "D", board.terrain_at(r, c) }
   end
 
+  test "SettlementMovePhase without a source lists the movable settlements; with one, its destinations" do
+    game, player = playing_game(hand: [ "G" ])
+    board = with_terrain(game.board_contents, game.instantiate)
+    board.place_settlement(5, 6, player.order)
+    tile = Tiles::Location::PaddockTile.new(0)
+
+    unsourced = TurnPhase::SettlementMovePhase.new(action_type: "paddock", klass_name: "PaddockTile")
+    assert_equal tile.selectable_settlements(player_order: player.order, board_contents: board, hand: "G", budget: 0),
+      unsourced.legal_targets(board_contents: board, player: player)
+    assert_includes unsourced.legal_targets(board_contents: board, player: player), [ 5, 6 ]
+
+    sourced = TurnPhase::SettlementMovePhase.new(action_type: "paddock", klass_name: "PaddockTile", from: "[5, 6]")
+    assert_equal tile.valid_destinations(from_row: 5, from_col: 6, board_contents: board, player_order: player.order, hand: "G", budget: 0),
+      sourced.legal_targets(board_contents: board, player: player)
+  end
+
+  test "ResettlementPhase gates its destinations by the remaining step budget" do
+    game, player = playing_game(hand: [ "G" ])
+    board = with_terrain(game.board_contents, game.instantiate)
+    board.place_settlement(5, 6, player.order)
+    tile = Tiles::Nomad::ResettlementTile.new(0)
+
+    phase = TurnPhase::ResettlementPhase.new(budget: 4, moves: 0, from: "[5, 6]")
+    assert_equal tile.valid_destinations(from_row: 5, from_col: 6, board_contents: board, player_order: player.order, hand: "G", budget: 4),
+      phase.legal_targets(board_contents: board, player: player)
+  end
+
+  test "MeepleActionPhase delegates to the tile's valid destinations (barracks placement)" do
+    game, player = playing_game(hand: [ "G" ])
+    player.add_warriors!(2)
+    player.save!
+    board = with_terrain(game.board_contents, game.instantiate)
+    board.place_settlement(1, 1, player.order)
+    tile = Tiles::Tile.for_klass("BarracksTile").new(0)
+    phase = TurnPhase::MeepleActionPhase.new(action_type: "barracks", klass_name: "BarracksTile")
+
+    expected = tile.valid_destinations(board_contents: board, player_order: player.order, supply: player.supply_hash)
+    assert_equal expected, phase.legal_targets(board_contents: board, player: player)
+    assert expected.any?
+  end
+
+  test "MeepleMovementPhase offers placement before a source and nothing once the budget is spent" do
+    game, player = playing_game(hand: [ "G" ])
+    player.add_wagons!(1)
+    player.save!
+    board = with_terrain(game.board_contents, game.instantiate)
+    tile = Tiles::Tile.for_klass("WagonTile").new(0)
+
+    unsourced = TurnPhase::MeepleMovementPhase.new(action_type: "wagon", klass_name: "WagonTile")
+    assert_equal tile.valid_destinations(board_contents: board, player_order: player.order, supply: player.supply_hash),
+      unsourced.legal_targets(board_contents: board, player: player)
+
+    spent = TurnPhase::MeepleMovementPhase.new(action_type: "wagon", klass_name: "WagonTile", from: "[3, 3]", budget: 0, moves: 3)
+    assert_empty spent.legal_targets(board_contents: board, player: player)
+  end
+
   private
 
   # A minimal playing game on the scenario's fixed board, with a clean board.
