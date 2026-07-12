@@ -7,33 +7,15 @@ class TurnEngine
     @game.turn_phase.click(coordinate, self)
   end
 
+  # A 20x20 boolean grid of the cells legal for a mandatory-style build of
+  # `terrain` (used for 2-card terrain disambiguation and view highlighting).
+  # A grid view of BoardState#buildable_cells_for — the adjacent-if-possible
+  # rule lives there, not here.
   def available_list(active_player, terrain)
     return nil unless @game.playing?
-    available = Array.new(20) { Array.new(20, false) }
-
-    any = false
-    20.times do |row|
-      20.times do |col|
-        if @game.board_contents.player_at(row, col) == active_player
-          @game.board_contents.neighbors(row, col).each do |nr, nc|
-            if @game.board_contents.empty?(nr, nc) && @game.board_contents.terrain_at(nr, nc) == terrain &&
-               !@game.board_contents.warrior_blocked?(nr, nc)
-              any = available[nr][nc] = true
-            end
-          end
-        end
-      end
-    end
-    return available if any
-
-    20.times do |row|
-      20.times do |col|
-        if @game.board_contents.terrain_at(row, col) == terrain && !@game.board_contents.warrior_blocked?(row, col)
-          available[row][col] = true if @game.board_contents.empty?(row, col)
-        end
-      end
-    end
-    available
+    grid = Array.new(20) { Array.new(20, false) }
+    @game.board_contents.buildable_cells_for(active_player, terrain).each { |row, col| grid[row][col] = true }
+    grid
   end
 
   def build_settlement(row, col)
@@ -748,140 +730,16 @@ class TurnEngine
     end
   end
 
+  # The cells the current player may legally target right now, owned by the
+  # active sub-phase (State pattern). Recomputed each call (no memo): a derived
+  # view of mutable game state that the guards read mid-action, so caching
+  # across a mutation would be unsafe.
   def buildable_cells
     return [] unless @game.playing?
-    # Recomputed each call (no memo): it is a derived view of mutable game state,
-    # and the guards now read it mid-action, so caching across a mutation is unsafe.
-    begin
-      @game.instantiate
-      player = @game.current_player
-      current_phase = @game.turn_phase
-      action = current_phase.type
-
-      if action == "mandatory"
-        if player.settlements_remaining? && @game.mandatory_count > 0
-          if current_phase.outpost_active?
-            terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
-            (0..19).flat_map do |r|
-              (0..19).filter_map do |c|
-                [ r, c ] if @game.board_contents.available_for_building?(r, c) &&
-                  terrains.include?(@game.board_contents.terrain_at(r, c))
-              end
-            end
-          else
-            terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
-            terrains.flat_map { |t|
-              list = available_list(player.order, t)
-              (0..19).flat_map { |r| (0..19).filter_map { |c| [ r, c ] if list[r][c] } }
-            }.uniq
-          end
-        else
-          []
-        end
-      else
-        klass = current_action_tile_klass
-        tile = player.find_unused_tile(klass)
-        if tile
-          tile_obj = Tiles::Tile.from_hash(tile)
-          if tile_obj.sword_tile?
-            pending_orders = current_phase.pending_orders
-            pending_orders.flat_map { |order|
-              @game.board_contents.settlements_for(order).reject { |r, c| @game.board_contents.city_hall_at?(r, c) }
-            }
-          elsif tile_obj.places_meeple?
-            if current_phase.from
-              from = Coordinate.from_key(current_phase.from)
-              if current_phase.budget.to_i <= 0
-                []
-              else
-                @game.board_contents.neighbors(from.row, from.col).select do |row, col|
-                  meeple_step_available?(from, row, col, tile_obj)
-                end
-              end
-            else
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents,
-                player_order: player.order,
-                supply: player.supply_hash
-              )
-            end
-          elsif tile_obj.places_wall?
-            if @game.stone_walls <= 0
-              []
-            elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-              player.hand.flat_map { |t|
-                tile_obj.valid_destinations(board_contents: @game.board_contents, player_order: player.order, hand: t)
-              }.uniq
-            else
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents,
-                player_order: player.order, hand: effective_terrain(player) || player.hand.first
-              )
-            end
-          elsif tile_obj.moves_settlement?
-            # budget only gates ResettlementTile; every other mover accepts and
-            # ignores it, so it can be passed uniformly without special-casing.
-            hand_arg = effective_terrain(player) || player.hand.first
-            budget = current_phase.budget.to_i
-            if current_phase.from
-              from = Coordinate.from_key(current_phase.from)
-              if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-                player.hand.flat_map { |t|
-                  tile_obj.valid_destinations(from_row: from.row, from_col: from.col, board_contents: @game.board_contents, player_order: player.order, hand: t, budget:)
-                }.uniq
-              else
-                tile_obj.valid_destinations(
-                  from_row: from.row, from_col: from.col,
-                  board_contents: @game.board_contents, player_order: player.order, hand: hand_arg, budget:
-                )
-              end
-            else
-              if tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-                player.hand.flat_map { |t|
-                  tile_obj.selectable_settlements(player_order: player.order, board_contents: @game.board_contents, hand: t, budget:)
-                }.uniq
-              else
-                tile_obj.selectable_settlements(
-                  player_order: player.order, board_contents: @game.board_contents, hand: hand_arg, budget:
-                )
-              end
-            end
-          elsif tile_obj.places_city_hall?
-            tile_obj.valid_destinations(
-              board_contents: @game.board_contents, player_order: player.order, supply: player.supply_hash
-            )
-          else
-            if tile_obj.builds_settlement? && current_phase.outpost_active?
-              terrains = outpost_build_terrains(tile_obj, current_phase, player)
-              (0..19).flat_map do |r|
-                (0..19).filter_map do |c|
-                  [ r, c ] if @game.board_contents.available_for_building?(r, c) &&
-                    terrains.include?(@game.board_contents.terrain_at(r, c))
-                end
-              end
-            elsif tile_obj.fort_tile?
-              hand = current_phase.fort_terrain
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents, player_order: player.order, hand: hand
-              )
-            elsif tile_obj.uses_played_terrain? && effective_terrain(player).nil?
-              player.hand.flat_map { |t|
-                tile_obj.valid_destinations(
-                  board_contents: @game.board_contents, player_order: player.order, hand: t
-                )
-              }.uniq
-            else
-              hand = effective_terrain(player) || player.hand.first
-              tile_obj.valid_destinations(
-                board_contents: @game.board_contents, player_order: player.order, hand: hand
-              )
-            end
-          end
-        else
-          []
-        end
-      end
-    end
+    @game.instantiate
+    @game.turn_phase.legal_targets(
+      board_contents: @game.board_contents, player: @game.current_player, game: @game
+    )
   end
 
   # Canonical set of hexes the current player may legally click right now, for
@@ -981,15 +839,6 @@ class TurnEngine
     klass&.new(0)&.builds_settlement? || false
   end
 
-  def outpost_build_terrains(tile_obj, current_phase, game_player)
-    if tile_obj.fort_tile?
-      [ current_phase.fort_terrain ].compact
-    elsif tile_obj.uses_played_terrain? && effective_terrain(game_player).nil?
-      game_player.hand
-    else
-      [ tile_obj.build_terrain || effective_terrain(game_player) || game_player.hand.first ].compact
-    end
-  end
 
   # Returns the tile klass name (without "Tiles::" prefix) for the current action.
   def current_action_tile_klass
@@ -1290,14 +1139,6 @@ class TurnEngine
   # One move step is legal when a hop remains this turn and the destination is
   # among the piece's adjacent single-step destinations (the tile owns the
   # terrain rule via valid_destinations).
-  def meeple_step_available?(from_coord, row, col, tile_obj)
-    @game.turn_phase.budget.to_i > 0 &&
-      tile_obj.valid_destinations(
-        from_row: from_coord.row, from_col: from_coord.col,
-        board_contents: @game.board_contents,
-        player_order: @game.current_player.order
-      ).include?([ row, col ])
-  end
 
   def place_warrior(row, col, game_player, tile_klass:)
     record_move(
