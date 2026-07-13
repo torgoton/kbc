@@ -15,4 +15,9 @@
     <% end %>
     <%= link_to "Manage announcements", admin_announcements_path %>
   </div>
+
+  <div class="dashboard-section">
+    <h2>Users</h2>
+    <%= render partial: "admin/users/user", collection: @users, as: :user %>
+  </div>
 </div>
