@@ -1,0 +1,18 @@
+<div class="dashboard-box">
+  <h1>Admin</h1>
+  <%= link_to "Dashboard", dashboard_path %>
+
+  <div class="dashboard-section">
+    <h2>Latest announcements</h2>
+    <% if @announcements.any? %>
+      <ul>
+        <% @announcements.each do |announcement| %>
+          <li><%= link_to announcement.title, edit_admin_announcement_path(announcement) %></li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>No announcements yet.</p>
+    <% end %>
+    <%= link_to "Manage announcements", admin_announcements_path %>
+  </div>
+</div>

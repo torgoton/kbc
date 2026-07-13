@@ -32,6 +32,9 @@
           </button>
           <ul class="hamburger-menu hidden" data-menu-target="menu">
             <li><%= link_to "Dashboard", dashboard_path, data: { action: "click->menu#close" } %></li>
+            <% if Current.user.admin? %>
+              <li><%= link_to "Admin", admin_path, data: { action: "click->menu#close" } %></li>
+            <% end %>
             <%= yield :menu_items %>
             <hr>
             <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete, data: { turbo: false } %></div>
