@@ -438,3 +438,8 @@ trix-editor .attachment__metadata {
   padding: 0 !important;
   max-width: 100% !important;
 }
+
+/* Uploads are disabled (no Active Storage service in production); hide Trix's file-attach control. */
+trix-toolbar .trix-button-group--file-tools {
+  display: none;
+}
