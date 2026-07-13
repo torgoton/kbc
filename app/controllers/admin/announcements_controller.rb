@@ -1,7 +1,5 @@
 class Admin::AnnouncementsController < Admin::BaseController
-  # ponytail: toggle_pin omitted here (Task 5 owns the action); raise_on_missing_callback_actions
-  # errors if it's listed in :only before the action method exists.
-  before_action :set_announcement, only: %i[ edit update destroy ]
+  before_action :set_announcement, only: %i[ edit update destroy toggle_pin ]
 
   def index
     @announcements = Announcement.order(pinned: :desc, created_at: :desc)
@@ -33,6 +31,11 @@ class Admin::AnnouncementsController < Admin::BaseController
   def destroy
     @announcement.destroy!
     redirect_to admin_announcements_path, notice: "Announcement deleted.", status: :see_other
+  end
+
+  def toggle_pin
+    @announcement.update!(pinned: !@announcement.pinned?)
+    redirect_to admin_announcements_path
   end
 
   private

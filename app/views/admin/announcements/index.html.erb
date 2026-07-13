@@ -9,7 +9,12 @@
         <strong><%= announcement.title %></strong>
         <%= "(pinned)" if announcement.pinned? %>
         <%= link_to "Edit", edit_admin_announcement_path(announcement) %>
-        <%= button_to "Delete", admin_announcement_path(announcement), method: :delete, data: { turbo_confirm: "Delete this announcement?" } %>
+        <span class="pin-toggle">
+          <%= button_to (announcement.pinned? ? "unpin" : "pin"), toggle_pin_admin_announcement_path(announcement), method: :patch %>
+        </span>
+        <span class="delete-toggle">
+          <%= button_to "Delete", admin_announcement_path(announcement), method: :delete, data: { turbo_confirm: "Delete this announcement?" } %>
+        </span>
       </div>
     <% end %>
   </div>

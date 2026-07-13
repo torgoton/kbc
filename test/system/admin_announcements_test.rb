@@ -30,8 +30,17 @@ class AdminAnnouncementsTest < ApplicationSystemTestCase
     assert_text "Server maintenance (updated)"
 
     assert_difference -> { Announcement.count }, -1 do
-      accept_confirm { page.execute_script("document.querySelector('##{ActionView::RecordIdentifier.dom_id(a)} form button').click()") }
+      accept_confirm { page.execute_script("document.querySelector('##{ActionView::RecordIdentifier.dom_id(a)} .delete-toggle button').click()") }
       assert_no_text "Server maintenance (updated)"
     end
+  end
+
+  test "admin pins and unpins from the index" do
+    a = Announcement.create!(title: "Pin me", body: "x", pinned: false)
+    sign_in(email_address: "chris@example.com")
+    visit admin_announcements_url
+    page.execute_script("document.querySelector('##{ActionView::RecordIdentifier.dom_id(a)} .pin-toggle button').click()")
+    assert_text "unpin", wait: 5
+    assert a.reload.pinned?
   end
 end
