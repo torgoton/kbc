@@ -16,4 +16,12 @@ class AdminAuthorizationTest < ActionDispatch::IntegrationTest
     get admin_url
     assert_response :success
   end
+
+  test "non-admin cannot create an announcement" do
+    sign_in_as(users(:paula))
+    assert_no_difference -> { Announcement.count } do
+      post admin_announcements_url, params: { announcement: { title: "x", body: "y" } }
+    end
+    assert_response :forbidden
+  end
 end

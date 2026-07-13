@@ -1,0 +1,37 @@
+require "application_system_test_case"
+
+class AdminAnnouncementsTest < ApplicationSystemTestCase
+  def sign_in(email_address:, password: "password")
+    visit root_url
+    panel = find("#sign-in-panel")
+    set_field(panel.find("input[name='email_address']"), email_address)
+    set_field(panel.find("input[name='password']"), password)
+    submit_form panel.find("form")
+    assert_selector "h1", text: "KBC Dashboard"
+  end
+
+  def fill_rich_text(html)
+    editor = find("trix-editor")
+    page.execute_script("arguments[0].editor.loadHTML(arguments[1])", editor, html)
+  end
+
+  test "admin creates, edits, and deletes an announcement" do
+    sign_in(email_address: "chris@example.com")
+    visit new_admin_announcement_url
+    set_field(find("input[name='announcement[title]']"), "Server maintenance")
+    fill_rich_text("<div>Down at 2am</div>")
+    submit_form find("form")
+    assert_text "Server maintenance"
+
+    a = Announcement.find_by!(title: "Server maintenance")
+    visit edit_admin_announcement_url(a)
+    set_field(find("input[name='announcement[title]']"), "Server maintenance (updated)")
+    submit_form find("form")
+    assert_text "Server maintenance (updated)"
+
+    assert_difference -> { Announcement.count }, -1 do
+      accept_confirm { page.execute_script("document.querySelector('##{ActionView::RecordIdentifier.dom_id(a)} form button').click()") }
+      assert_no_text "Server maintenance (updated)"
+    end
+  end
+end

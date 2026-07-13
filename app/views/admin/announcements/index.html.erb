@@ -1,0 +1,16 @@
+<div class="dashboard-box">
+  <h1>Announcements</h1>
+  <%= link_to "New announcement", new_admin_announcement_path %>
+  <%= link_to "Admin", admin_path %>
+
+  <div class="dashboard-section">
+    <% @announcements.each do |announcement| %>
+      <div id="<%= dom_id(announcement) %>">
+        <strong><%= announcement.title %></strong>
+        <%= "(pinned)" if announcement.pinned? %>
+        <%= link_to "Edit", edit_admin_announcement_path(announcement) %>
+        <%= button_to "Delete", admin_announcement_path(announcement), method: :delete, data: { turbo_confirm: "Delete this announcement?" } %>
+      </div>
+    <% end %>
+  </div>
+</div>
