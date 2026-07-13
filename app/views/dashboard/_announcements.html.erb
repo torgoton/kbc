@@ -1,0 +1,8 @@
+<div id="dashboard-announcements" class="dashboard-section">
+  <h2>Announcements</h2>
+  <%= render partial: "announcements/announcement", collection: pinned, as: :announcement %>
+  <% if latest_unpinned %>
+    <%= render "announcements/announcement", announcement: latest_unpinned %>
+  <% end %>
+  <%= link_to "All announcements", announcements_path %>
+</div>
