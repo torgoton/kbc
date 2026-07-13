@@ -14,7 +14,7 @@ require "rails/test_unit/railtie"
 # unused:
 # require "active_storage/engine"
 # require "action_mailbox/engine"
-# require "action_text/engine"
+require "action_text/engine"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
