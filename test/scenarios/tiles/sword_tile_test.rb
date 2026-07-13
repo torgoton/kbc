@@ -88,4 +88,19 @@ class SwordTileTest < ActiveSupport::TestCase
     # is restored: a settlement would make the pre/post snapshots differ.
     assert_undo_round_trip(scenario) { scenario.remove_settlement(at: warrior_hex) }
   end
+
+  test "removal move message names the owner and location" do
+    scenario = GameScenario.new
+    scenario.place_settlement(1, at: OPPONENT_SETTLEMENT)
+    scenario.give_tile(0, "SwordTile", from: [ 0, 0 ])
+    scenario.activate_tile(:sword)
+
+    scenario.remove_settlement(at: OPPONENT_SETTLEMENT)
+
+    last_move = scenario.game.moves.last
+    player_0_handle = scenario.game_player(0).player.handle
+    player_1_handle = scenario.game_player(1).player.handle
+    expected_message = "#{player_0_handle} removed a settlement of #{player_1_handle} from [10, 10]"
+    assert_equal expected_message, last_move.message
+  end
 end

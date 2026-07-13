@@ -1331,7 +1331,7 @@ class TurnPhase::TargetedRemovalPhase < TurnPhase
       from: "[#{row}, #{col}]",
       to: "player_#{owner_order}_supply",
       payload: { "owner_order" => owner_order, "tile_used" => tile_used, "meeple" => meeple },
-      message: "#{game_player.player.handle} removed #{owner.player.handle}'s #{meeple || 'settlement'}"
+      message: "#{game_player.player.handle} removed a #{meeple || 'settlement'} of #{owner.player.handle} from [#{row}, #{col}]"
     )
 
     game.board_contents_will_change!
