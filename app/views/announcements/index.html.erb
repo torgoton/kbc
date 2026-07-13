@@ -1,0 +1,7 @@
+<div class="dashboard-box">
+  <h1>Announcements</h1>
+  <%= link_to "Dashboard", dashboard_path %>
+
+  <%= render partial: "announcement", collection: @pinned, as: :announcement %>
+  <%= render "page", announcements: @unpinned, offset: 0, more: @more %>
+</div>

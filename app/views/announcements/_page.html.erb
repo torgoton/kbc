@@ -1,0 +1,8 @@
+<%= turbo_frame_tag "announcements_page_#{offset}" do %>
+  <%= render partial: "announcement", collection: announcements, as: :announcement %>
+  <% if more %>
+    <%= turbo_frame_tag "announcements_page_#{offset + Announcement::PAGE_SIZE}",
+          src: announcements_path(offset: offset + Announcement::PAGE_SIZE),
+          loading: :lazy %>
+  <% end %>
+<% end %>
