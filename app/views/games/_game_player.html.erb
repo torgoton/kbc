@@ -39,7 +39,20 @@
       </div>
     <% end %>
     <% if is_me && game.id %>
-      <%= button_to("Undo", undo_move_game_path(game), class: "undo-btn", disabled: !(my_turn && engine.undo_allowed?)) %>
+      <div class="undo-button-wrapper" data-controller="undo-dropdown">
+        <% undo_enabled = my_turn && engine.undo_allowed? %>
+        <%= form_with url: undo_move_game_path(game), method: :post, local: true, class: "undo-form" do |f| %>
+          <button type="submit" class="undo-btn undo-main" <%= "disabled" unless undo_enabled %>>
+            Undo
+          </button>
+        <% end %>
+        <button type="button" class="undo-dropdown-btn" data-action="click->undo-dropdown#toggle" <%= "disabled" unless undo_enabled %>>
+          ▼
+        </button>
+        <div class="undo-dropdown-menu" data-undo-dropdown-target="menu" style="display: none;">
+          <%= button_to("Undo Max", undo_max_moves_game_path(game), class: "undo-max-btn", disabled: !undo_enabled) %>
+        </div>
+      </div>
     <% end %>
   </div>
   <div class="player-stats">

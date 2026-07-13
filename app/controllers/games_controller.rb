@@ -1,7 +1,7 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
     @game = Game.new
@@ -86,6 +86,17 @@ class GamesController < ApplicationController
     Rails.logger.debug("UNDO MOVE action")
     engine = TurnEngine.new(@game)
     engine.undo_last_move if engine.undo_allowed?
+    respond_to do |format|
+      format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+    @game.broadcast_sound("undo")
+  end
+
+  def undo_max_moves
+    Rails.logger.debug("UNDO MAX MOVES action")
+    engine = TurnEngine.new(@game)
+    engine.undo_max if engine.undo_allowed?
     respond_to do |format|
       format.html { redirect_to @game }
       format.turbo_stream { head :no_content }

@@ -342,6 +342,10 @@ class TurnEngine
     @game.moves.where("id >= ?", last.id).destroy_all
   end
 
+  def undo_max
+    undo_last_move while undo_allowed?
+  end
+
   private
 
   # Snapshot of pre-action game state, attached to the deliberate Move an action

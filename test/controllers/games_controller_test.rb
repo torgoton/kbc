@@ -904,6 +904,70 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-clock", 0
   end
 
+  test "POST undo_max_moves does nothing when the requesting player is not the current player" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    snapshot = game.capture_snapshot
+
+    game.moves.create!(
+      order: (game.moves.maximum(:order) || 0) + 1,
+      game_player: chris,
+      action: "open_table",
+      deliberate: true,
+      reversible: false,
+      snapshot_before: snapshot
+    )
+
+    game.moves.create!(
+      order: (game.moves.maximum(:order) || 0) + 1,
+      game_player: chris,
+      action: "build_settlement",
+      deliberate: true,
+      reversible: true,
+      snapshot_before: snapshot
+    )
+
+    post session_url, params: { email_address: "paula@example.com", password: "password" }
+
+    assert_no_difference -> { game.reload.moves.count } do
+      post undo_max_moves_game_url(game)
+    end
+  end
+
+  test "POST undo_max_moves undoes all reversible moves until reaching a non-reversible move" do
+    game = games(:game2player)
+    chris = game_players(:chris)
+    snapshot = game.capture_snapshot
+
+    # Add an irreversible move
+    game.moves.create!(
+      order: (game.moves.maximum(:order) || 0) + 1,
+      game_player: chris,
+      action: "open_table",
+      deliberate: true,
+      reversible: false,
+      snapshot_before: snapshot
+    )
+
+    # Add several reversible moves after the irreversible one
+    3.times do |i|
+      game.moves.create!(
+        order: (game.moves.maximum(:order) || 0) + 1,
+        game_player: chris,
+        action: "build_settlement",
+        deliberate: true,
+        reversible: true,
+        snapshot_before: snapshot
+      )
+    end
+
+    initial_move_count = game.moves.count
+    post undo_max_moves_game_url(game)
+    final_move_count = game.reload.moves.count
+
+    assert_equal 3, initial_move_count - final_move_count, "expected 3 reversible moves to be undone"
+  end
+
   def new_timed_game(speed:)
     game = Game.create!(state: "waiting", speed: speed)
     game.add_player(users(:chris))
