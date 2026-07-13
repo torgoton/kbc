@@ -23,4 +23,14 @@ class AdminUsersTest < ApplicationSystemTestCase
     assert_selector "##{checkbox_id}[checked]", wait: 5
     assert pending.reload.approved?, "expected user to become approved"
   end
+
+  test "admin unapproves a user by unchecking the box" do
+    approved_user = User.create!(handle: "Approved", email_address: "approved@example.com", password: "password", approved: true)
+    sign_in(email_address: "chris@example.com")
+    visit admin_url
+    checkbox_id = "approved_#{approved_user.id}"
+    page.execute_script("document.getElementById('#{checkbox_id}').click()")
+    assert_no_selector "##{checkbox_id}[checked]", wait: 5
+    assert_not approved_user.reload.approved?, "expected user to become unapproved"
+  end
 end
