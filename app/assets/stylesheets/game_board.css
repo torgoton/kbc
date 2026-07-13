@@ -1050,17 +1050,30 @@ ul li .hex:hover .hex-bg {
     margin-top: 2px;
 }
 
+.undo-button-wrapper {
+    display: inline-flex;
+    position: relative;
+}
+
+.undo-button-wrapper .undo-form {
+    display: contents;
+}
+
 .undo-btn {
     font-size: 1rem;
     padding: 3px 9px;
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(0, 0, 0, 0.6);
-    border-radius: 4px;
+    border-radius: 4px 0 0 4px;
     color: #ddd;
     cursor: pointer;
     font-family: inherit;
     font-weight: 600;
     transition: background 0.15s, color 0.15s;
+}
+
+.undo-btn.undo-main {
+    flex: 1;
 }
 
 .undo-btn:not([disabled]):hover {
@@ -1069,6 +1082,73 @@ ul li .hex:hover .hex-bg {
 }
 
 .undo-btn[disabled] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.undo-dropdown-btn {
+    font-size: 1rem;
+    padding: 3px 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.6);
+    border-left: 1px solid rgba(0, 0, 0, 0.8);
+    border-radius: 0 4px 4px 0;
+    color: #ddd;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s;
+    min-width: 24px;
+    text-align: center;
+}
+
+.undo-dropdown-btn:not([disabled]):hover {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+}
+
+.undo-dropdown-btn[disabled] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.undo-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 0;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    min-width: 120px;
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+}
+
+.undo-dropdown-menu form {
+    display: contents;
+}
+
+.undo-max-btn {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    background: transparent;
+    border: none;
+    color: #ddd;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    text-align: left;
+    font-size: 0.95rem;
+    transition: background 0.15s, color 0.15s;
+}
+
+.undo-max-btn:not([disabled]):hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.undo-max-btn[disabled] {
     opacity: 0.4;
     cursor: default;
 }

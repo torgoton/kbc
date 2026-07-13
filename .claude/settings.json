@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bin/rails test*)",
+      "Bash(bin/test-all*)",
+      "Bash(bin/rails zeitwerk:check*)",
+      "Bash(bin/brakeman*)",
+      "Bash(source /home/chris/dev/kbc/.env.dev.local*)",
+      "mcp__claude-in-chrome__tabs_context_mcp"
+    ]
+  }
+}

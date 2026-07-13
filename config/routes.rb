@@ -76,6 +76,7 @@ Rails.application.routes.draw do
       post :action
       post :end_turn
       post :undo_move
+      post :undo_max_moves
       post :select_action
       post :end_tile_action
       post :activate_outpost
