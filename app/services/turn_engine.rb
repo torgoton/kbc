@@ -343,15 +343,7 @@ class TurnEngine
   end
 
   def undo_max
-    deliberate_moves = @game.moves.where(deliberate: true).order(:id)
-    last_irreversible = deliberate_moves.where(reversible: false).order(id: :desc).first
-    return if last_irreversible.nil?
-
-    first_reversible_after = deliberate_moves.where("id > ?", last_irreversible.id).where(reversible: true).first
-    return unless first_reversible_after
-
-    @game.restore_snapshot!(first_reversible_after.snapshot_before)
-    @game.moves.where("id >= ?", first_reversible_after.id).destroy_all
+    undo_last_move while undo_allowed?
   end
 
   private
