@@ -52,4 +52,22 @@ class BarnTileTest < ActiveSupport::TestCase
     assert_equal 0, scenario.owner_at(destination)
     assert_nil scenario.owner_at(moving_spot)
   end
+
+  test "limits moves to the already-locked played terrain when the hand still holds two cards" do
+    scenario = GameScenario.new(hands: { 0 => %w[G T] })
+    moving_spot = [ 10, 10 ]
+    scenario.place_settlement(0, at: moving_spot)
+    scenario.give_tile(0, "BarnTile", from: [ 0, 0 ])
+    scenario.set_mandatory(1)
+
+    build_spot = scenario.buildable_cells.find { |spot| scenario.terrain_at(spot) == "G" }
+    scenario.build_settlement(at: build_spot)
+
+    scenario.activate_tile(:barn)
+    scenario.select_settlement(at: moving_spot)
+    destinations = scenario.buildable_cells
+
+    assert destinations.any?
+    destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
+  end
 end

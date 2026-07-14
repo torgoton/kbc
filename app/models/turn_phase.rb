@@ -668,20 +668,22 @@ end
 class TurnPhase::SettlementMovePhase < TurnPhase
   include TurnPhase::SettlementMoveTargets
   include TurnPhase::SettlementMoveOrchestration
-  attr_reader :action_type, :klass_value, :from_value
+  attr_reader :action_type, :klass_value, :from_value, :chosen_terrain
 
   def self.from_hash(hash)
     new(
       action_type: hash.fetch("type"),
       klass_name: hash["klass"],
-      from: hash["from"]
+      from: hash["from"],
+      chosen_terrain: hash["chosen_terrain"]
     )
   end
 
-  def initialize(action_type:, klass_name:, from: nil)
+  def initialize(action_type:, klass_name:, from: nil, chosen_terrain: nil)
     @action_type = action_type
     @klass_value = klass_name
     @from_value = from
+    @chosen_terrain = chosen_terrain
   end
 
   def type
@@ -694,6 +696,13 @@ class TurnPhase::SettlementMovePhase < TurnPhase
 
   def from
     from_value
+  end
+
+  # A terrain already locked for the turn (a mandatory build before this
+  # action started) stays locked; a fresh SettlementMovePhase built with the
+  # default (chosen_terrain: nil) never re-widens it back to the full hand.
+  def with_chosen_terrain(terrain)
+    self.class.new(action_type: action_type, klass_name: klass_name, from: from, chosen_terrain: terrain)
   end
 
   # A single settlement move (paddock/harbor/barn). Reads hand terrain back from
@@ -726,7 +735,9 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     game.board_contents.move_settlement(*from_coord, row, col)
     phase_result = transition(
       TurnPhase::Events::DestinationChosen.new,
-      TurnPhase::Facts::DestinationChoice.new(next_phase: TurnPhase::MandatoryBuildPhase.new)
+      TurnPhase::Facts::DestinationChoice.new(
+        next_phase: TurnPhase::MandatoryBuildPhase.new(chosen_terrain: game.turn_phase.chosen_terrain)
+      )
     )
     game.turn_phase = phase_result.next_phase
     game.current_player.mark_tile_used!(tile_klass)
@@ -743,7 +754,8 @@ class TurnPhase::SettlementMovePhase < TurnPhase
         next_phase: self.class.new(
           action_type: action_type,
           klass_name: klass_name,
-          from: event.coordinate_key
+          from: event.coordinate_key,
+          chosen_terrain: chosen_terrain
         ),
         source_cleared: false
       )
@@ -762,6 +774,7 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     hash = { "type" => action_type }
     hash["klass"] = klass_name if klass_name
     hash["from"] = from if from
+    hash["chosen_terrain"] = chosen_terrain if chosen_terrain
     hash
   end
 end

@@ -29,6 +29,26 @@ class QuarryTileTest < ActiveSupport::TestCase
     end
   end
 
+  test "with multiple hand terrains, limits wall placement to the already-locked played terrain" do
+    scenario = GameScenario.new(hands: { 0 => %w[G T] })
+    # [0, 6] is adjacent to both an empty G hex ([0, 7]) and an empty T hex
+    # ([0, 5]), so an unlocked two-card hand would offer both as wall spots.
+    settlement = [ 0, 6 ]
+    scenario.place_settlement(0, at: settlement)
+    scenario.give_tile(0, "QuarryTile", from: [ 0, 0 ])
+    scenario.set_mandatory(1)
+
+    build_spot = scenario.buildable_cells.find { |spot| scenario.terrain_at(spot) == "G" }
+    scenario.build_settlement(at: build_spot)
+
+    scenario.activate_tile(:quarry)
+    destinations = scenario.buildable_cells
+
+    assert destinations.any?
+    assert_not_includes destinations, [ 0, 5 ]
+    destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
+  end
+
   test "places up to 2 stone walls, consuming the supply and the tile" do
     scenario = GameScenario.new(hands: { 0 => "G" })
     scenario.place_settlement(0, at: SETTLEMENT)

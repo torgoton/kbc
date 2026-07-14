@@ -85,6 +85,21 @@ class OracleTileTest < ActiveSupport::TestCase
     assert_includes destinations, g_target
   end
 
+  test "with multiple hand terrains, limits destinations to the already-locked played terrain" do
+    scenario = GameScenario.new(hands: { 0 => %w[D G] })
+    scenario.give_tile(0, "OracleTile", from: [ 0, 0 ])
+    scenario.set_mandatory(1)
+
+    build_spot = scenario.buildable_cells.find { |spot| scenario.terrain_at(spot) == "D" }
+    scenario.build_settlement(at: build_spot)
+
+    scenario.activate_tile(:oracle)
+    destinations = scenario.buildable_cells
+
+    assert destinations.any?
+    destinations.each { |dest| assert_equal "D", scenario.terrain_at(dest) }
+  end
+
   test "with multiple hand terrains, builds on whichever terrain the player chooses" do
     scenario = GameScenario.new(hands: { 0 => %w[D G] })
     scenario.give_tile(0, "OracleTile", from: [ 0, 0 ])
