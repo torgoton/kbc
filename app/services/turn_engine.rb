@@ -87,13 +87,15 @@ class TurnEngine
         TurnPhase::TileBuildPhase.new(
           action_type: type,
           klass_name: klass_name,
+          chosen_terrain: @game.turn_phase.chosen_terrain,
           remaining: (tile_obj.build_quota if tile_obj.repeats_build?),
           walls_placed: (0 if tile_obj.places_wall?)
         )
       elsif tile_obj&.moves_settlement? && !tile_obj.resettles?
         TurnPhase::SettlementMovePhase.new(
           action_type: type,
-          klass_name: klass_name
+          klass_name: klass_name,
+          chosen_terrain: @game.turn_phase.chosen_terrain
         )
       elsif tile_obj&.resettles?
         TurnPhase::ResettlementPhase.new(
