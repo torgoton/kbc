@@ -49,6 +49,20 @@ class QuarryTileTest < ActiveSupport::TestCase
     destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
   end
 
+  test "activating before the mandatory build locks the terrain for the rest of the turn" do
+    scenario = GameScenario.new(hands: { 0 => %w[G T] })
+    scenario.place_settlement(0, at: SETTLEMENT)
+    scenario.give_tile(0, "QuarryTile", from: [ 0, 0 ])
+
+    scenario.activate_tile(:quarry)
+    scenario.place_wall(at: WALL_SPOTS[0])
+    scenario.place_wall(at: WALL_SPOTS[1])
+
+    mandatory_destinations = scenario.buildable_cells
+    assert mandatory_destinations.any?
+    mandatory_destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
+  end
+
   test "places up to 2 stone walls, consuming the supply and the tile" do
     scenario = GameScenario.new(hands: { 0 => "G" })
     scenario.place_settlement(0, at: SETTLEMENT)
