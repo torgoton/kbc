@@ -100,6 +100,19 @@ class OracleTileTest < ActiveSupport::TestCase
     destinations.each { |dest| assert_equal "D", scenario.terrain_at(dest) }
   end
 
+  test "activating before the mandatory build locks the terrain for the rest of the turn" do
+    scenario = GameScenario.new(hands: { 0 => %w[D G] })
+    scenario.give_tile(0, "OracleTile", from: [ 0, 0 ])
+
+    scenario.activate_tile(:oracle)
+    target = scenario.buildable_cells.find { |spot| scenario.terrain_at(spot) == "D" }
+    scenario.build_settlement(at: target)
+
+    mandatory_destinations = scenario.buildable_cells
+    assert mandatory_destinations.any?
+    mandatory_destinations.each { |dest| assert_equal "D", scenario.terrain_at(dest) }
+  end
+
   test "with multiple hand terrains, builds on whichever terrain the player chooses" do
     scenario = GameScenario.new(hands: { 0 => %w[D G] })
     scenario.give_tile(0, "OracleTile", from: [ 0, 0 ])

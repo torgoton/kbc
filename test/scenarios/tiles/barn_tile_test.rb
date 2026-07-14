@@ -70,4 +70,20 @@ class BarnTileTest < ActiveSupport::TestCase
     assert destinations.any?
     destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
   end
+
+  test "activating before the mandatory build locks the terrain for the rest of the turn" do
+    scenario = GameScenario.new(hands: { 0 => %w[G T] })
+    moving_spot = [ 10, 10 ]
+    scenario.place_settlement(0, at: moving_spot)
+    scenario.give_tile(0, "BarnTile", from: [ 0, 0 ])
+
+    scenario.activate_tile(:barn)
+    scenario.select_settlement(at: moving_spot)
+    destination = scenario.buildable_cells.find { |spot| scenario.terrain_at(spot) == "G" }
+    scenario.move_step(to: destination)
+
+    mandatory_destinations = scenario.buildable_cells
+    assert mandatory_destinations.any?
+    mandatory_destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
+  end
 end
