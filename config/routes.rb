@@ -94,6 +94,17 @@ Rails.application.routes.draw do
   get "dashboard", to: "dashboard#index"
   get "credits", to: "credits#index"
 
+  get "admin", to: "admin/dashboard#index"
+
+  namespace :admin do
+    resources :announcements do
+      member { patch :toggle_pin }
+    end
+    resources :users, only: [ :update ]
+  end
+
+  resources :announcements, only: [ :index ]
+
   get "hidden/icons", to: "hidden#icons"
 
   resource :session

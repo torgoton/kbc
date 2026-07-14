@@ -1,0 +1,9 @@
+<%= form_with model: [ :admin, announcement ] do |form| %>
+  <% if announcement.errors.any? %>
+    <div class="flash-alert"><%= announcement.errors.full_messages.to_sentence %></div>
+  <% end %>
+  <div><%= form.label :title %><%= form.text_field :title %></div>
+  <div><%= form.label :body %><%= form.rich_text_area :body %></div>
+  <div><%= form.label :pinned %><%= form.check_box :pinned %></div>
+  <div><%= form.submit %></div>
+<% end %>

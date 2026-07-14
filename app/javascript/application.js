@@ -38,3 +38,6 @@ function fancy_dance() {
 
 document.addEventListener('turbo:before-render', stop_fancy_dance);
 document.addEventListener('turbo:load', fancy_dance);
+
+import "trix"
+import "@rails/actiontext"

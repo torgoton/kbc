@@ -3,6 +3,7 @@
 # Table name: users
 #
 #  id              :bigint           not null, primary key
+#  admin           :boolean          default(FALSE), not null
 #  approved        :boolean          default(FALSE)
 #  email_address   :string           not null
 #  handle          :string           not null
@@ -108,5 +109,12 @@ class UserTest < ActiveSupport::TestCase
   test "online? is false once the one minute window has elapsed" do
     users(:chris).update!(last_seen_at: 61.seconds.ago)
     assert_not users(:chris).online?
+  end
+
+  # --- admin? ---
+
+  test "admin? reflects the admin column" do
+    assert users(:chris).admin?
+    assert_not users(:paula).admin?
   end
 end

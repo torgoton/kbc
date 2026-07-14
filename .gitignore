@@ -36,6 +36,7 @@
 /coverage
 
 # AI config and notes
+/.claude/*
 .codex
 AGENTS.md
 CLAUDE.md

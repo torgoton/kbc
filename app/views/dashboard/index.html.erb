@@ -9,6 +9,8 @@
   <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete, data: { turbo: false } %></div>
   <%= link_to "Credits", credits_path %>
 
+  <%= render "announcements", pinned: @pinned_announcements, latest_unpinned: @latest_unpinned %>
+
   <div id="dashboard-my-games" class="dashboard-section">
     <%= render "dashboard/my_games", games: @my_games %>
   </div>
