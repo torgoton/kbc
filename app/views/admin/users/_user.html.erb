@@ -1,15 +1,13 @@
-<div id="<%= dom_id(user) %>" class="admin-user-row">
-  <tr>
-    <td>
-      <%= form_with model: user, url: admin_user_path(user), method: :patch,
-            data: { controller: "auto-submit" } do |form| %>
-        <%= form.check_box :approved,
-              id: "approved_#{user.id}",
-              data: { action: "change->auto-submit#submit" } %>
-      <% end %>
-    </td>
-    <td><%= user.created_at.strftime("%Y-%m-%d") %></td>
-    <td><%= user.email_address %></td>
-    <td><%= user.handle %></td>
-  </tr>
-</div>
+<tr id="<%= dom_id(user) %>" class="admin-user-row">
+  <td>
+    <%= form_with model: user, url: admin_user_path(user), method: :patch,
+          data: { controller: "auto-submit" } do |form| %>
+      <%= form.check_box :approved,
+            id: "approved_#{user.id}",
+            data: { action: "change->auto-submit#submit" } %>
+    <% end %>
+  </td>
+  <td><%= user.created_at.strftime("%Y-%m-%d") %></td>
+  <td><%= user.email_address %></td>
+  <td><%= user.handle %></td>
+</tr>
