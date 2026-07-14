@@ -18,6 +18,18 @@
 
   <div class="dashboard-section">
     <h2>Users</h2>
-    <%= render partial: "admin/users/user", collection: @users, as: :user %>
+    <table>
+      <thead>
+        <tr>
+          <th>Approved</th>
+          <th>Created At</th>
+          <th>Email Address</th>
+          <th>Handle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%= render partial: "admin/users/user", collection: @users, as: :user %>
+      </tbody>
+    </table>
   </div>
 </div>
