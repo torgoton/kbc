@@ -16,7 +16,7 @@
       required: true,
       autocomplete: "current-password",
       placeholder: "Enter your password",
-      maxlength: 24
+      maxlength: ActiveModel::SecurePassword::MAX_PASSWORD_LENGTH_ALLOWED
     %><br>
     <%= form.submit "Sign In" %>
   <% end %>
