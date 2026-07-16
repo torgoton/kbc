@@ -717,5 +717,5 @@ class TurnEngine
   # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
   public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
          :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
-         :check_families_goal
+         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal
 end

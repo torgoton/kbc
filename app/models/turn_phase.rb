@@ -1470,6 +1470,11 @@ class TurnPhase::CityHallPhase < TurnPhase
     cluster.each { |r, c| game.board_contents.place_city_hall_hex(r, c, game_player.order) }
     game_player.decrement_city_hall_supply!
     game_player.mark_tile_permanently_used!("CityHallTile")
+    cluster.each do |r, c|
+      engine.check_ambassadors_goal(game_player, r, c)
+      engine.check_shepherds_goal(game_player, r, c, game.board_contents.terrain_at(r, c))
+      engine.apply_tile_pickup(game_player, r, c)
+    end
     engine.reset_to_mandatory
     game_player.save
     game.save

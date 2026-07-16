@@ -81,6 +81,99 @@ class CityHallTileTest < ActiveSupport::TestCase
     assert_not_includes scenario.usable_tiles(0), "CityHallTile"
   end
 
+  test "placing the City Hall collects a tile it lands adjacent to" do
+    scenario = GameScenario.new
+    scenario.place_settlement(0, at: OTHER_SETTLEMENT)
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+    tile_spot = [ 1, 7 ] # sole outside neighbor of cluster hex [1, 6]
+    scenario.place_tile("OasisTile", at: tile_spot, qty: 2)
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: CENTER)
+
+    assert scenario.holds_tile?(0, klass: "OasisTile", from: tile_spot)
+    assert_equal 1, scenario.tile_qty(tile_spot)
+  end
+
+  test "placing the City Hall adjacent to 2 opponent settlements scores 2 Ambassadors points" do
+    scenario = GameScenario.new(goals: [ "ambassadors" ])
+    scenario.place_settlement(0, at: OTHER_SETTLEMENT)
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+    # [1, 7] and [3, 4] are each the sole outside neighbor of a distinct
+    # cluster hex ([1, 6] and [2, 5]), so each scores independently.
+    scenario.place_settlement(1, at: [ 1, 7 ])
+    scenario.place_settlement(1, at: [ 3, 4 ])
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: CENTER)
+
+    assert_equal 2, scenario.score_for("ambassadors", 0)
+  end
+
+  test "placing the City Hall away from opponent settlements scores no Ambassadors points" do
+    scenario = GameScenario.new(goals: [ "ambassadors" ])
+    scenario.place_settlement(0, at: OTHER_SETTLEMENT)
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: CENTER)
+
+    assert_equal 0, scenario.score_for("ambassadors", 0)
+  end
+
+  test "placing the City Hall scores the minimum 2 Shepherds points (only the center hex)" do
+    scenario = GameScenario.new(goals: [ "shepherds" ])
+    center = [ 3, 4 ]
+    # Own settlement adjacent to ring hex [3, 3], on non-matching terrain (W)
+    # so it satisfies the placement's adjacency rule without blocking any
+    # ring hex's same-terrain emptiness check.
+    scenario.place_settlement(0, at: [ 4, 3 ])
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: center)
+
+    assert_equal 2, scenario.score_for("shepherds", 0)
+  end
+
+  test "placing the City Hall scores 8 Shepherds points (center plus 3 blocked ring hexes)" do
+    scenario = GameScenario.new(goals: [ "shepherds" ])
+    center = [ 3, 4 ]
+    scenario.place_settlement(0, at: [ 4, 3 ])
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+    # Each fill removes the last empty same-terrain neighbor for one ring
+    # hex: [2, 3] -> [3, 3] (Farm), [2, 6] -> [3, 5] (Terrain), [5, 4] -> [4, 4] (Grass).
+    [ [ 2, 3 ], [ 2, 6 ], [ 5, 4 ] ].each { |hex| scenario.place_settlement(1, at: hex) }
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: center)
+
+    assert_equal 8, scenario.score_for("shepherds", 0)
+  end
+
+  test "placing the City Hall scores the maximum 14 Shepherds points (all 7 hexes)" do
+    scenario = GameScenario.new(goals: [ "shepherds" ])
+    center = [ 3, 4 ]
+    scenario.place_settlement(0, at: [ 4, 3 ])
+    scenario.give_tile(0, "CityHallTile", from: [ 0, 0 ])
+    scenario.give_city_halls(0, 1)
+    # Every same-terrain outside neighbor of every ring hex is filled, so
+    # none has an empty same-terrain neighbor left.
+    [ [ 2, 3 ], [ 1, 3 ], [ 1, 4 ], [ 2, 6 ], [ 1, 5 ], [ 5, 4 ], [ 4, 6 ], [ 5, 5 ] ].each do |hex|
+      scenario.place_settlement(1, at: hex)
+    end
+
+    scenario.activate_tile(:cityhall)
+    scenario.place_city_hall(at: center)
+
+    assert_equal 14, scenario.score_for("shepherds", 0)
+  end
+
   test "an opponent's Sword cannot remove a City Hall hex" do
     scenario = GameScenario.new
     scenario.place_settlement(0, at: OTHER_SETTLEMENT)
