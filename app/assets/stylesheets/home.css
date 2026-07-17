@@ -53,11 +53,16 @@
     text-align: center;
 }
 
-#sign-in-panel input#email_address,
-#sign-in-panel input#password {
+#sign-in-panel input {
     box-sizing: border-box;
     width: 100%;
-    max-width: 18rem;
+    max-width: 20rem;
+}
+
+#sign-up-panel input {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 20rem;
 }
 
 .home-about-link {

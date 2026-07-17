@@ -31,7 +31,7 @@ o DXV calls the Warrior, Ship, and Wagon tokens "Meeples"
 - Meeples do not change end of game
 - Placing a Meeple counts as building; moving one does not
 - Fort draws a card, then builds on that terrain; that build CAN be modified by Outpost from Nomads
-- City Hall counts EACH settlement for Shepherd
+- City Hall counts EACH settlement for Shepherds and Ambassadors
 - If you lose the Crossroads tile, you do not immediately discard a Terrain card
 - You choose which terrain card to use when you do an action that requires a terrain card
 - DXV HOUSE RULE: If you draw identical terrain cards with Crossroads, you may choose any terrain
