@@ -34,4 +34,18 @@ class Scoring::Goals::MerchantsTest < Scoring::Goals::GoalTestCase
     result = Scoring::Goals::Merchants.new(ctx[:game]).score_for(ctx[:chris])
     assert_equal 8, result[:score]
   end
+
+  test "A=>B, B=>C, A!=>C scores 12, not 16" do
+    # Quarry board has close spaces.
+    ctx = build_game(
+      boards: [ [ 10, 1 ], [ 8, 1 ], [ 11, 1 ], [ 2, 0 ] ],
+      chris_settlements: [
+        [ 3, 2 ], [ 2, 3 ], # A=>B
+        [ 2, 5 ], [ 2, 6 ], [ 3, 6 ] # B=>C
+     ]
+    )
+
+    result = Scoring::Goals::Merchants.new(ctx[:game]).score_for(ctx[:chris])
+    assert_equal 12, result[:score]
+  end
 end

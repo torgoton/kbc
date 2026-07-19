@@ -5,13 +5,13 @@ class Scoring
       def score_for(game_player)
         specials = special_hexes
         components = connected_components(game_player.order)
-        total = components.sum do |component|
+        scoring_specials = components.flat_map do |component|
           adjacent_specials = component.flat_map { |r, c| neighbors(r, c) }
                                        .select { |pos| specials.include?(pos) }
                                        .uniq
-          adjacent_specials.length >= 2 ? adjacent_specials.length * 4 : 0
-        end
-        { score: total }
+          adjacent_specials.length >= 2 ? adjacent_specials : []
+        end.uniq
+        { score: scoring_specials.length * 4 }
       end
 
       private
