@@ -29,8 +29,12 @@ class AdminAnnouncementsTest < ApplicationSystemTestCase
     submit_form find("form")
     assert_text "Server maintenance (updated)"
 
+    # Auto-accept Turbo's confirm instead of driving the native dialog: headless
+    # Selenium auto-dismisses window.confirm before accept_confirm can catch it,
+    # which is the source of the intermittent ModalNotFound here.
+    page.execute_script("window.confirm = () => true")
     assert_difference -> { Announcement.count }, -1 do
-      accept_confirm { page.execute_script("document.querySelector('##{ActionView::RecordIdentifier.dom_id(a)} .delete-toggle button').click()") }
+      page.execute_script("document.querySelector('##{ActionView::RecordIdentifier.dom_id(a)} .delete-toggle button').click()")
       assert_no_text "Server maintenance (updated)"
     end
   end

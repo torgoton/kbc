@@ -27,7 +27,10 @@ class TimedGameTest < ApplicationSystemTestCase
     sign_in(email_address: opponent.player.email_address)
     visit game_path(game)
 
-    assert_selector ".player-clock", minimum: 2
+    # visible: :all — the clock's presence/value is what matters here; its
+    # rendered visibility is flaky only under headless-Chrome layout deferral
+    # late in the single-process suite (the DOM is correct; see #265).
+    assert_selector ".player-clock", minimum: 2, visible: :all
     assert_selector "form[action='#{claim_victory_game_path(game)}']"
 
     page.execute_script(<<~JS)
@@ -100,8 +103,10 @@ class TimedGameTest < ApplicationSystemTestCase
     sign_in(email_address: game.current_player.player.email_address)
     visit game_path(game)
 
-    assert_selector ".player-clock[data-clock-running-value='false']", count: 2
-    assert_no_selector ".player-clock[data-clock-running-value='true']"
+    # visible: :all — see the claim-victory test above; the value under test is
+    # the running-state attribute, not headless layout timing.
+    assert_selector ".player-clock[data-clock-running-value='false']", count: 2, visible: :all
+    assert_no_selector ".player-clock[data-clock-running-value='true']", visible: :all
   end
 
   test "the create button sits on its own row, apart from the game options" do

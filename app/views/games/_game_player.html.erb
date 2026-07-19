@@ -15,9 +15,10 @@
         <% end %>
       <% end %>
       <% if game.timed? %>
+        <% clock_ms = game.time_remaining_for(player) %>
         <span class="player-clock" data-controller="clock"
-              data-clock-remaining-ms-value="<%= game.time_remaining_for(player) %>"
-              data-clock-running-value="<%= game.clock_running_for?(player) %>"></span>
+              data-clock-remaining-ms-value="<%= clock_ms %>"
+              data-clock-running-value="<%= game.clock_running_for?(player) %>"><%= clock_display(clock_ms) %></span>
       <% end %>
     <% end %>
     <% score_data = local_assigns.fetch(:scores, nil)&.dig(player.order.to_s) %>
