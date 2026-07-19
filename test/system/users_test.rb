@@ -1,30 +1,13 @@
 require "application_system_test_case"
 
 class UsersTest < ApplicationSystemTestCase
-  def sign_in(email_address:, password:)
-    visit root_url
-    sign_in_panel = find("#sign-in-panel")
-    email_field = sign_in_panel.find("input[name='email_address']")
-    password_field = sign_in_panel.find("input[name='password']")
-    set_field(email_field, email_address)
-    set_field(password_field, password)
-    assert_equal email_address, email_field.value
-    assert_equal password, password_field.value
-    submit_form sign_in_panel.find("form")
-  end
-
   test "user can sign in and reach the dashboard" do
     sign_in(email_address: "chris@example.com", password: "password")
     assert_selector "h1", text: "KBC Dashboard"
   end
 
   test "invalid credentials show an alert" do
-    visit root_url
-    within "#sign-in-panel" do
-      fill_in "Enter your email address", with: "nobody@example.com"
-      fill_in "Enter your password", with: "wrong"
-      click_on "Sign In"
-    end
+    sign_in(email_address: "nobody@example.com", password: "wrong")
     assert_selector ".flash-alert"
   end
 
