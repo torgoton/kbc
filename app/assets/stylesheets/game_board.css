@@ -63,6 +63,7 @@ section#log-chat {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    min-width: 0;
 }
 
 #log-chat #log {
@@ -144,6 +145,7 @@ section#log-chat {
 .chat-message {
     margin: 1px;
     padding: 1px;
+    overflow-wrap: anywhere;
     &.a { background-color: oklch(from var(--clr-p-a) l c h / 30%); }
     &.b { background-color: oklch(from var(--clr-p-b) l c h / 30%); }
     &.c { background-color: oklch(from var(--clr-p-c) l c h / 30%); }
