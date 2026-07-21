@@ -197,8 +197,11 @@ section#log-chat {
 }
 
 .quadrant.right {
-    margin-left: -20px;
-    margin-right: 20px;
+    /* Overlap the left quadrant so hexes interlock at the seam. In cqw (same
+       container unit the hexes use) so the gap scales with hex size instead of
+       staying a fixed 20px — a fixed px overlaps by ~2 hexes on a narrow board. */
+    margin-left: -1.74cqw;
+    margin-right: 1.74cqw;
 }
 
 .quadrant.bottom {
