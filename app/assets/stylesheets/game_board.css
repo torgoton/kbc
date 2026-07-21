@@ -505,7 +505,7 @@ ul li .hex:hover .hex-bg {
 
 /* water */
 .hex.terrain-w {
-    --hex-bg: color-mix(in srgb, royalblue, transparent var(--fx-hex-transparency));
+    --hex-bg: color-mix(in srgb, #8cf, transparent var(--fx-hex-transparency));
 }
 
 /* Terrain icons */
