@@ -82,7 +82,7 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | CityHallTile | ✅ | `tiles/city_hall_tile_test.rb` | `on_pickup` grants supply, `valid_destinations`/`activatable?` find a 7-hex cluster adjacent to another settlement, `place_city_hall` |
 | CrossroadsTile | ✅ | `tiles/crossroads_tile_test.rb` | extra card draw on `end_turn`, always-false `activatable?` |
 | QuarryTile | ✅ | `tiles/quarry_tile_test.rb` | wall placement on played-terrain hexes adjacent to a settlement, up to 2 walls, `activatable?` |
-| Nomad::SwordTile | ✅ | `tiles/sword_tile_test.rb` | targeted removal of an opponent's settlement, returned to supply; documents 2 known bugs (see test comments) |
+| Nomad::SwordTile | ✅ | `tiles/sword_tile_test.rb` | targeted removal of an opponent's settlement or meeple, returned to the matching supply; location-tile forfeit, undo round trip |
 | Nomad::TreasureTile | ✅ | `tiles/treasure_tile_test.rb` | pickup immediately scores 3 points and is not held |
 | CastleTile | ✅ | `goals/castles_test.rb` | pure-data location tile; scoring covered by the Castles goal, no custom tile logic |
 
