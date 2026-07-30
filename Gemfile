@@ -45,6 +45,9 @@ group :development, :test do
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
   gem "minitest", "~> 6.0"
 
+  # Load .env files (.env.test, .env.development, etc.) [https://github.com/bkeepers/dotenv]
+  gem "dotenv-rails"
+
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
 
