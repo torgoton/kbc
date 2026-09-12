@@ -582,6 +582,19 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to game_path(game)
   end
 
+  test "POST undo_move logs a tagged game action timing" do
+    game = games(:game2player)
+    log = StringIO.new
+    original_logger = Rails.logger
+    Rails.logger = ActiveSupport::Logger.new(log)
+
+    post undo_move_game_url(game)
+
+    assert_match(/\[PERF-game\] game_id=#{game.id} action=undo_move stage=request/, log.string)
+  ensure
+    Rails.logger = original_logger
+  end
+
   test "POST action does nothing when game is completed" do
     game = games(:game2player)
     game.update!(state: "completed")

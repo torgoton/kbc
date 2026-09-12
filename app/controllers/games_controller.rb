@@ -2,6 +2,7 @@ class GamesController < ApplicationController
   before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
   before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
   after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  around_action :log_game_action_timing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
 
   def new
     @game = Game.new
@@ -224,7 +225,25 @@ class GamesController < ApplicationController
   end
 
   def broadcast_game_update
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     @game.broadcast_game_update
+  ensure
+    log_game_timing("broadcast", started_at)
+  end
+
+  def log_game_action_timing
+    @game_action_name = action_name
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield
+  ensure
+    log_game_timing("request", started_at)
+  end
+
+  def log_game_timing(stage, started_at)
+    return unless started_at
+
+    duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+    Rails.logger.info("[PERF-game] game_id=#{@game&.id} action=#{@game_action_name} stage=#{stage} duration_ms=#{duration_ms}")
   end
 
   def action_params
