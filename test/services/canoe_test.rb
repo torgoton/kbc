@@ -139,6 +139,23 @@ class CanoeTest < ActiveSupport::TestCase
     assert_equal [ @paula.order, @paula.order, @chris.order ], @game.turn_phase.holders
   end
 
+  test "adjacency is applied to Water and Swamp separately, as for a two-card hand" do
+    # Board 17: (3,1) Timberland touches Water at (3,2) but no Swamp.
+    @game.boards = [ [ 17, 0 ], [ 5, 0 ], [ 0, 0 ], [ 4, 0 ] ]
+    @game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(1, 1, "RefugeTile", 1)
+      s.place_settlement(3, 1, @paula.order)
+    end
+    @game.save!
+    @game.update!(current_action: TurnPhase::CanoePhase.new.serialize, current_player: @paula)
+    @game.instantiate
+
+    targets = engine.legal_targets
+    assert_includes targets, [ 3, 2 ], "adjacent Water"
+    assert_includes targets, [ 3, 6 ], "Swamp is not adjacent, so every Swamp hex is offered"
+    assert_not_includes targets, [ 3, 4 ], "other Water is not adjacent"
+  end
+
   test "a Canoe build that empties another location is resolved before the outer reactions continue" do
     # Paula's water settlement at (7,4); (8,5) is Water next to both (7,4) and the second location (7,5).
     @game.board_contents = BoardState.new.tap do |s|

@@ -246,7 +246,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     if outpost_active?
       board_contents.available_cells_of(terrains)
     else
-      terrains.flat_map { |terrain| board_contents.buildable_cells_for(player.order, terrain) }.uniq
+      board_contents.buildable_cells_for_any(player.order, terrains)
     end
   end
 
@@ -1574,7 +1574,7 @@ class TurnPhase::CanoePhase < TurnPhase
 
   def legal_targets(board_contents:, player:, game: nil)
     return [] unless player.settlements_remaining?
-    board_contents.buildable_cells_for(player.order, TERRAINS)
+    board_contents.buildable_cells_for_any(player.order, TERRAINS)
   end
 
   def click(coordinate, engine)
