@@ -5,6 +5,7 @@ module Tiles
       DESCRIPTION = "Move one of your existing settlements to an adjacent unoccupied hex of a suitable terrain.".freeze
 
       def moves_settlement? = true
+      def bonus_tile_klass = "RefugeBonusTile"
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order: nil, hand: nil, budget: nil)
         return [] if from_row.nil? || from_col.nil?

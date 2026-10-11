@@ -1670,3 +1670,9 @@ ul li .hex:hover .hex-bg {
 .player-card.card-dual .card-D { background-image: url("cards/desert-card.svg"); }
 .player-card.card-dual .card-F { background-image: url("cards/flowers-card.svg"); }
 .player-card.card-dual .card-T { background-image: url("cards/timberland-card.svg"); }
+
+.tile-container.refugebonus {
+    background-image: url("gold/refugebonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}

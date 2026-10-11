@@ -97,6 +97,7 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | CanoeTile | ✅ | `services/canoe_test.rb` | reaction when a location empties: reactor order, terrain choice, nested emptying, skip, undo guard |
 | Bonus::FountainBonusTile | ✅ | `tiles/fountain_bonus_tile_test.rb` | awarded with the 2nd Fountain, never forfeited, Mountain buildable for Fountain from the next turn |
 | Bonus::TempleBonusTile | ✅ | `tiles/temple_bonus_tile_test.rb` | awarded with the 2nd Temple; first mandatory settlement ignores adjacency |
+| Bonus::RefugeBonusTile | ✅ | `tiles/refuge_bonus_tile_test.rb` | selectable straight-line mover, awarded with the 2nd Refuge |
 | CastleTile | ✅ | `goals/castles_test.rb` | pure-data location tile; scoring covered by the Castles goal, no custom tile logic |
 
 ## Rules / cross-cutting mechanics
