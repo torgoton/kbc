@@ -505,11 +505,14 @@ class Game < ApplicationRecord
   end
 
   def select_boards(options = {})
-    min = options[:min_board] || 0
-    max = options[:max_board] || Boards::BoardSection::SECTIONS.size - 5 # last 4 are for testing UI
-    self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
+    pool = if options[:min_board] || options[:max_board]
+      ((options[:min_board] || 0)..(options[:max_board] || Boards::BoardSection::SECTIONS.size - 5)).to_a
+    else
+      board_pool
+    end
+    self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
     while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
-      self.boards = (min..max).to_a.sample(4).map { |id| [ id, rand(2) ] }
+      self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
     end
     self.move_count += 1
     moves.build(
@@ -537,7 +540,7 @@ class Game < ApplicationRecord
       end
     end
     nomad_pool = Boards::Board::NOMAD_TILE_POOL.shuffle
-    if options[:no_swords]
+    if options[:no_swords] || self.options["nomads_sword"] == false
       nomad_pool.reject! { |t| t.include?("SwordTile") }
     end
     @board.map.each_with_index do |board_section, i|
@@ -569,14 +572,17 @@ class Game < ApplicationRecord
   end
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
-  # OPTIONAL_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
+  BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
+  NOMAD_GOALS = %w[ambassadors families shepherds].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
+  BASE_BOARD_IDS = (0..7).to_a.freeze
+  NOMAD_BOARD_IDS = (8..11).to_a.freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
 
   def select_goals
     instantiate
     castle_goal = board_has_castles? ? [ "castles" ] : []
-    self.goals = castle_goal + OPTIONAL_GOALS.sample(3)
+    self.goals = castle_goal + goal_pool.sample(3)
     @board = nil
     self.move_count = (move_count || 0) + 1
     moves.build(
@@ -605,6 +611,14 @@ class Game < ApplicationRecord
       )
     end
     save
+  end
+
+  def goal_pool
+    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : [])
+  end
+
+  def board_pool
+    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : [])
   end
 
   def board_has_castles?
