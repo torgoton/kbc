@@ -7,7 +7,7 @@ module Tiles
       self.class.const_defined?(:DESCRIPTION) ? self.class::DESCRIPTION : "should be overridden"
     end
 
-    BUILDABLE_TERRAIN = %w[C D F G T].freeze
+    BUILDABLE_TERRAIN = %w[C D F G T B].freeze
     CATEGORIES = %w[permanent location nomad bonus].freeze
 
     attr_accessor :qty

@@ -602,10 +602,8 @@ class Game < ApplicationRecord
   def select_goals
     instantiate
     castle_goal = board_has_castles? ? [ "castles" ] : []
-    picked = goal_pool.sample(3)
-    # Noblewomen already scores Palaces (all special hexes), so the Palaces goal would double count.
-    palace_goal = board_has_palaces? && !picked.include?("noblewomen") ? [ "palaces" ] : []
-    self.goals = castle_goal + palace_goal + picked
+    palace_goal = board_has_palaces? ? [ "palaces" ] : []
+    self.goals = castle_goal + palace_goal + goal_pool.sample(3)
     @board = nil
     self.move_count = (move_count || 0) + 1
     moves.build(
