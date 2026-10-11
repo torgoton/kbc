@@ -28,6 +28,7 @@ time (accumulated in `game_player.bonus_scores`). Tier-1 goals are pure
 | geologists | 1 | ✅ | `goals/geologists_test.rb` |
 | knights | 1 | ✅ | `goals/knights_test.rb` |
 | merchants | 1 | ✅ | `goals/merchants_test.rb` |
+| messengers | 1 | ✅ | `goals/messengers_test.rb` |
 | miners | 1 | ✅ | `goals/miners_test.rb` |
 | workers | 1 | ✅ | `goals/workers_test.rb` |
 
