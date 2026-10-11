@@ -19,6 +19,12 @@ class Scoring::Goals::NoblewomenTest < Scoring::Goals::GoalTestCase
     assert_equal 5, score(ctx, :paula)
   end
 
+  test "Palaces are not included (the Palaces goal scores them)" do
+    # Board 16 first: its Palace is at (2,2), and (2,1) touches nothing else special.
+    ctx = build_game(boards: [ [ 16, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ], chris_settlements: [ [ 2, 1 ] ])
+    assert_equal 0, score(ctx)
+  end
+
   test "tie scores for both players" do
     ctx = build_game(chris_settlements: [ [ 7, 2 ] ], paula_settlements: [ [ 7, 0 ] ])
     assert_equal 5, score(ctx)

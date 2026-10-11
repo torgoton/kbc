@@ -16,10 +16,9 @@ class Scoring::Goals::PalacesTest < Scoring::Goals::GoalTestCase
     assert_equal 0, score(ctx, :paula)
   end
 
-  test "0 when Noblewomen is also a goal (it already scores palaces)" do
+  test "still scores when Noblewomen is also a goal" do
     ctx = build_game(boards: BOARDS, goals: [ "noblewomen" ], chris_settlements: [ [ 2, 1 ] ])
-    assert_equal 0, score(ctx)
-    assert_equal 5, Scoring::Goals::Noblewomen.new(ctx[:game]).score_for(ctx[:chris])[:score]
+    assert_equal 5, score(ctx)
   end
 
   test "ignores castles and other special hexes" do
