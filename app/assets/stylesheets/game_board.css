@@ -569,6 +569,15 @@ ul li .hex:hover .hex-bg {
     background-position: 5px 6px;
 }
 
+.hex .terrain-palacehex {
+    position: absolute;
+    inset: 0;
+    background-image: url("silver/palace.svg");
+    background-repeat: no-repeat;
+    background-size: 80%;
+    background-position: 5px 6px;
+}
+
 .hex .terrain-nomad {
     position: absolute;
     inset: 0;
@@ -677,6 +686,47 @@ ul li .hex:hover .hex-bg {
     background-image: url("gold/foresterslodge.svg");
     background-size: 70%;
     background-position: center 75%;
+}
+
+.tile-container.temple {
+    background-image: url("gold/temple.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.tile-container.refuge {
+    background-image: url("gold/refuge.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.tile-container.fountain {
+    background-image: url("gold/fountain.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.tile-container.canoe {
+    background-image: url("gold/canoe.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.tile-container.fountainbonus {
+    background-image: url("gold/fountainbonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.tile-container.templebonus {
+    background-image: url("gold/templebonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.set-aside {
+    font-size: 0.8em;
+    opacity: 0.8;
 }
 
 .tile-container.fort {
@@ -1587,4 +1637,48 @@ ul li .hex:hover .hex-bg {
 .hamburger-menu button:hover {
     background: #222;
     color: var(--clr-ds-text);
+}
+
+/* Marshlands dual cards: two terrains split along the diagonal */
+.player-card.card-B,
+.player-card.card-dual .card-B {
+    background-image: url("cards/swamp-card.svg");
+}
+
+.player-card.card-dual {
+    position: relative;
+    background: none;
+}
+
+.player-card.card-dual .card-half {
+    position: absolute;
+    inset: 0;
+    background-size: 100%;
+    border-radius: 6px;
+}
+
+.player-card.card-dual .card-half:first-child {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.player-card.card-dual .card-half:last-child {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.player-card.card-dual .card-G { background-image: url("cards/grass-card.svg"); background-position: 20%; }
+.player-card.card-dual .card-C { background-image: url("cards/canyon-card.svg"); }
+.player-card.card-dual .card-D { background-image: url("cards/desert-card.svg"); }
+.player-card.card-dual .card-F { background-image: url("cards/flowers-card.svg"); }
+.player-card.card-dual .card-T { background-image: url("cards/timberland-card.svg"); }
+
+.tile-container.refugebonus {
+    background-image: url("gold/refugebonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
+.tile-container.canoebonus {
+    background-image: url("gold/canoebonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
 }

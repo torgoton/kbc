@@ -6,10 +6,10 @@ class HiddenController < ApplicationController
     @game.move_count = 0
     @game.mandatory_count = 3
     @game.boards = [
-      [ 16, 0 ],
-      [ 17, 0 ],
-      [ 18, 0 ],
-      [ 19, 0 ]
+      [ 20, 0 ],
+      [ 21, 0 ],
+      [ 22, 0 ],
+      [ 23, 0 ]
     ]
     @game.goals = %w[castles fishermen knights merchants]
     @game.current_player_id = nil

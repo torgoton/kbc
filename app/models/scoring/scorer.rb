@@ -1,6 +1,6 @@
 class Scoring
   class Scorer
-    AREA_TERRAINS = %w[C D F G T W M].freeze
+    AREA_TERRAINS = %w[C D F G T W M B].freeze
 
     def initialize(game)
       @game = game
@@ -24,12 +24,25 @@ class Scoring
       end
     end
 
-    def castle_hexes
-      @castle_hexes ||= board.map.each_with_index.flat_map do |section, i|
+    def castle_hexes = silver_hexes_of("Castle")
+
+    def silver_hexes_of(kind)
+      @silver_hexes_of ||= {}
+      @silver_hexes_of[kind] ||= board.map.each_with_index.flat_map do |section, i|
         section.silver_hexes
-               .select { |h| h[:k] == "Castle" }
+               .select { |h| h[:k] == kind }
                .map { |h| [ i / 2 * 10 + h[:r], i % 2 * 10 + h[:c] ] }
       end
+    end
+
+    # 5 points for each of +hexes+ where the player has the most adjacent settlements (ties score for all tied).
+    def majority_hexes_score(game_player, hexes)
+      orders = @game.game_players.map(&:order)
+      scored = hexes.count do |r, c|
+        counts = orders.to_h { |o| [ o, neighbors(r, c).count { |n| board_contents.player_at(*n) == o } ] }
+        counts[game_player.order].positive? && counts[game_player.order] == counts.values.max
+      end
+      scored * 5
     end
 
     def connected_components(order)

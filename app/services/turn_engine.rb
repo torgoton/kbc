@@ -5,10 +5,41 @@ class TurnEngine
 
   def initialize(game)
     @game = game
+    @emptied = []
   end
 
   def click(coordinate)
-    @game.turn_phase.click(coordinate, self)
+    result = @game.turn_phase.click(coordinate, self)
+    open_reactions!
+    result
+  end
+
+  # --- Canoe reactions -------------------------------------------------------
+  # Taking the last tile from a location lets every Canoe tile react, in turn
+  # order starting after the active player (who is last, and may react to their
+  # own emptying). First the mover confirms or undoes (CanoeConfirmPhase); then
+  # current_player and phase are swapped to each reactor in turn, and the
+  # interrupted state waits on game.interrupts (a stack, since a Canoe build can
+  # itself empty a location). Each reactor's time counts against their own clock.
+  # The confirmation is only needed when control passes to another player.
+
+  def skip_canoe
+    return "Not allowed" unless @game.turn_phase.type == "canoe"
+    advance_reactions!
+    @game.save
+  end
+
+  def confirm_canoe
+    phase = @game.turn_phase
+    return "Not allowed" unless phase.type == "canoe_confirm"
+    @game.moves.where(deliberate: true).order(order: :desc).first&.update!(reversible: false)
+    @game.interrupts = reaction_frames(phase.resume, phase.holders)
+    advance_reactions!
+    @game.save
+  end
+
+  def finish_reaction!
+    @reaction_done = true
   end
 
   # A 20x20 boolean grid of the cells legal for a mandatory-style build of
@@ -69,7 +100,7 @@ class TurnEngine
       reversible: false,
       game_player: game_player,
       payload: { "card" => drawn_card },
-      message: "#{game_player.player.handle} drew a #{Boards::Board::TERRAIN_NAMES[drawn_card]} card"
+      message: "#{game_player.player.handle} drew a #{Boards::Board.card_name(drawn_card)} card"
     )
 
     @game.turn_phase = TurnPhase::FortPhase.new(fort_terrain: drawn_card)
@@ -119,6 +150,8 @@ class TurnEngine
           action_type: type,
           klass_name: klass_name
         )
+      elsif tile_obj&.sets_aside_settlement?
+        TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
       elsif tile_obj&.sword_tile?
         opponents = @game.game_players
           .reject { |gp| gp == @game.current_player }
@@ -170,19 +203,19 @@ class TurnEngine
     return false if tile["used"]
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
-      (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
+      (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand.first, supply: @game.current_player.supply_hash }
+    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand_terrains.first, supply: @game.current_player.supply_hash }
     tile_obj.activatable?(**ctx)
   end
 
   def turn_endable?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
-      (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
+      !@game.can_build_mandatory?(@game.current_player)
   end
 
   def outpost_activatable?(tile)
@@ -203,12 +236,26 @@ class TurnEngine
   def undo_allowed?
     last_move = @game.moves.where(deliberate: true).order(order: :desc).first
     return false unless last_move
-    last_move.reversible
+    last_move.reversible && (last_move.game_player_id.nil? || last_move.game_player_id == @game.current_player_id)
+  end
+
+  def canoe_reaction?
+    @game.playing? && @game.turn_phase.type == "canoe"
+  end
+
+  def canoe_confirmation?
+    @game.playing? && @game.turn_phase.type == "canoe_confirm"
   end
 
   def turn_state
     return "Game over" unless @game.current_player_id
     current_phase = @game.turn_phase
+    case current_phase.type
+    when "canoe_confirm"
+      return "#{@game.current_player.player.handle}: confirm or undo"
+    when "canoe"
+      return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
+    end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
     if tile_klass
@@ -216,7 +263,7 @@ class TurnEngine
       hand_for_msg = if tile_for_msg.fort_tile?
         current_phase.fort_terrain
       else
-        @game.current_player.hand.first
+        @game.current_player.hand_terrains.first
       end
       msg = tile_for_msg.action_message(
         player_handle: @game.current_player.player.handle,
@@ -227,14 +274,16 @@ class TurnEngine
       remaining ? "#{msg} (#{remaining} remaining)" : msg
     else
       has_activatable = (@game.current_player&.tiles || []).any? { |t| tile_activatable?(t) }
-      if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
+      if @game.can_build_mandatory?(@game.current_player)
         terrain_name = if (ct = effective_terrain(@game.current_player))
           Boards::Board::TERRAIN_NAMES[ct]
         else
-          @game.current_player.hand.map { |t| Boards::Board::TERRAIN_NAMES[t] }.join(" or ")
+          @game.current_player.hand_terrains.map { |t| Boards::Board::TERRAIN_NAMES[t] }.join(" or ")
         end
+        from_temple = [ @game.current_player.temple_due, @game.mandatory_count ].min
         "#{@game.current_player.player.handle} must build " \
-        "#{ActionController::Base.helpers.pluralize(@game.mandatory_count, "settlement")} on " \
+        "#{ActionController::Base.helpers.pluralize(@game.mandatory_count, "settlement")} " \
+        "#{"(#{from_temple} from Temple) " if from_temple.positive?}on " \
         "#{terrain_name}" \
         "#{" or select a tile" if has_activatable}"
       else
@@ -258,7 +307,7 @@ class TurnEngine
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
-    @game.mandatory_count = Game::MANDATORY_COUNT
+    game_player.end_temple_turn!
     @game.current_action = { "type" => "mandatory" }
     @game.turn_started_at = Time.current if @game.timed?
     next_order = (@game.current_player.order + 1) % @game.game_players.count
@@ -266,6 +315,8 @@ class TurnEngine
     @game.current_player = @game.game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{@game.current_player.inspect}")
     @game.current_player.reset_tiles!
+    @game.current_player.start_temple_turn!
+    @game.mandatory_count = Game::MANDATORY_COUNT + @game.current_player.temple_due
     # Forfeit expired nomad tiles
     game_player.tiles = (game_player.tiles || []).reject do |tile|
       tile["expires_on_turn"] && tile["expires_on_turn"] == @game.turn_number
@@ -368,9 +419,9 @@ class TurnEngine
   # mover hasn't made a deliberate move yet this game (clock_started_at nil);
   # the window otherwise starts at whichever is later, the turn's start or
   # the mover's clock_started_at (it can fall mid-turn on their first move).
-  def apply_clock!(game_player)
+  def apply_clock!(game_player, credit: true)
     bank_ms = Game::SPEEDS.fetch(@game.speed)[:bank_ms]
-    increment_ms = Game::SPEEDS.fetch(@game.speed)[:increment_ms]
+    increment_ms = credit ? Game::SPEEDS.fetch(@game.speed)[:increment_ms] : 0
     elapsed_ms =
       if game_player.clock_started_at.nil?
         0
@@ -431,7 +482,8 @@ class TurnEngine
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
     game_player.decrement_supply!
-    if game_player.settlements_remaining == 0
+    # A settlement set aside by Temple holds the ending off until it is built.
+    if game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
       @game.end_trigger_count += 1
       payload["triggered_ending"] = true
     end
@@ -451,6 +503,95 @@ class TurnEngine
     check_shepherds_goal(game_player, row, col, terrain)
     apply_tile_pickup(game_player, row, col)
   end
+
+  # Called after every board click: if it emptied a location Canoes can react to, or was a
+  # Canoe build, the reactions run, gated by a confirmation if another player is next.
+  def open_reactions!
+    reacting = @reaction_done
+    @reaction_done = false
+    holders = @emptied.any? ? canoe_holders : []
+    @emptied.clear
+    return unless holders.any? || reacting
+
+    resume = reacting ? { "type" => "reaction_done" } : @game.current_action
+    frames = reaction_frames(resume, holders)
+    if next_reaction(frames)[1] == @game.current_player.order
+      @game.interrupts = frames
+      advance_reactions!
+    else
+      @game.turn_phase = TurnPhase::CanoeConfirmPhase.new(resume: resume, holders: holders, reacting: reacting)
+    end
+    @game.save
+  end
+
+  # The interrupt stack with a frame for these holders pushed (none when there are none,
+  # e.g. after a Canoe build that emptied nothing).
+  def reaction_frames(resume, holders)
+    return @game.interrupts if holders.empty?
+    frame = { "return_order" => @game.current_player.order, "return_action" => resume, "queue" => holders }
+    @game.interrupts + [ frame ]
+  end
+
+  # Reactor orders, one per Canoe reaction, starting after the current player and ending with them.
+  def canoe_holders
+    count = @game.game_players.count
+    start = @game.current_player.order
+    (1..count).flat_map do |i|
+      order = (start + i) % count
+      [ order ] * canoe_reactions(reactor(order))
+    end
+  end
+
+  # One reaction per Canoe tile, if the player can build anywhere on Water or Swamp.
+  def canoe_reactions(game_player)
+    return 0 unless game_player.settlements_remaining?
+    @game.instantiate
+    return 0 if @game.board_contents.available_cells_of(Tiles::Location::CanoeTile::TERRAINS).empty?
+    (game_player.tiles || []).count { |t| t["klass"] == "CanoeTile" }
+  end
+
+  # Resolves +frames+ to the next player in control without changing the game: returns
+  # [frames, order, action], where action is nil when that player is a Canoe reactor and
+  # otherwise the interrupted action to resume. Order is nil when there are no frames.
+  def next_reaction(frames)
+    frames = frames.deep_dup
+    loop do
+      frame = frames.last
+      return [ frames, nil, nil ] unless frame
+      frame["queue"].shift until frame["queue"].empty? || canoe_reactions(reactor(frame["queue"].first)).positive?
+      return [ frames, frame["queue"].shift, nil ] if frame["queue"].any?
+      frames.pop
+      return [ frames, frame["return_order"], frame["return_action"] ] unless frame["return_action"]["type"] == "reaction_done"
+    end
+  end
+
+  # Moves on to the next reactor, or back to whoever was interrupted.
+  def advance_reactions!
+    frames, order, action = next_reaction(@game.interrupts)
+    return unless order
+    @game.interrupts = frames
+    hand_over_to(reactor(order))
+    if action
+      @game.current_action = action
+    else
+      @game.turn_phase = TurnPhase::CanoePhase.new
+    end
+  end
+
+  # Swaps the current player; in timed games the outgoing player's elapsed time is charged
+  # to their own clock, and the incoming player's clock starts now.
+  def hand_over_to(next_player)
+    outgoing = @game.current_player
+    return if outgoing == next_player
+    if @game.timed?
+      apply_clock!(outgoing, credit: false)
+      outgoing.save!
+      @game.turn_started_at = Time.current
+    end
+    @game.current_player = next_player
+  end
+
+  def reactor(order) = @game.game_players.find { |g| g.order == order }
 
   def apply_tile_forfeit(game_player)
     return if (game_player.tiles || []).empty?
@@ -567,9 +708,11 @@ class TurnEngine
     )
     @game.board_contents_will_change!
     @game.board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))
+    @emptied << tile[:key] if @game.board_contents.tile_qty(*Coordinate.from_key(tile[:key])).zero?
     game_player.receive_tile!(tile[:klass], from: tile[:key])
     game_player.taken_from = (game_player.taken_from || []) + [ tile[:key] ]
     tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)
+    award_bonus_tile(game_player, tile[:klass], tile_obj)
     supply_before = game_player.supply_hash.dup
     tile_obj&.on_pickup(game_player:)
     game_player.supply_hash.each do |kind, qty_after|
@@ -604,6 +747,24 @@ class TurnEngine
     end
   end
 
+  # Collecting the 2nd copy of a tile that has a Bonus tile awards it (once, with no source
+  # location, so it is never forfeited).
+  def award_bonus_tile(game_player, klass, tile_obj)
+    bonus = tile_obj&.bonus_tile_klass
+    return unless bonus
+    copies = (game_player.tiles || []).count { |t| t["klass"] == klass }
+    return unless copies >= 2 && (game_player.tiles || []).none? { |t| t["klass"] == bonus }
+    game_player.receive_tile!(bonus, from: nil)
+    record_move(
+      action: "grant_bonus_tile",
+      deliberate: false,
+      reversible: true,
+      game_player: game_player,
+      payload: { "klass" => bonus },
+      message: "#{game_player.player.handle} collected the #{bonus.delete_suffix("Tile").titleize} tile"
+    )
+  end
+
   def check_ambassadors_goal(game_player, row, col)
     return unless Array(@game.goals).include?("ambassadors")
     adjacent_opponent = @game.board_contents.neighbors(row, col).any? do |nr, nc|
@@ -628,11 +789,15 @@ class TurnEngine
   def check_families_goal(game_player)
     return unless Array(@game.goals).include?("families")
     builds = @game.turn_phase.builds
-    return unless builds.size == 3
-    return unless straight_line?(builds)
+    # Any 3 of the mandatory builds (more than 3 with Temple pieces), scored once: when
+    # this build completes the first line.
+    return if builds.size < 3 || line_among?(builds[0...-1])
+    return unless line_among?(builds)
     score_goal(game_player, "families", 2,
       "#{game_player.player.handle} scored 2 points (Families)")
   end
+
+  def line_among?(positions) = positions.combination(3).any? { |trio| straight_line?(trio) }
 
   def straight_line?(positions)
     a, b, c = positions
@@ -642,7 +807,7 @@ class TurnEngine
   end
 
   def in_same_direction?(p1, p2, p3)
-    Tiles::Location::PaddockTile::STRAIGHT_LINES.any? do |steps|
+    BoardState::STRAIGHT_LINES.any? do |steps|
       dr1, dc1 = steps[p1[0] % 2]
       mid = [ p1[0] + dr1, p1[1] + dc1 ]
       next false unless mid == p2
@@ -670,6 +835,8 @@ class TurnEngine
     phase = @game.turn_phase
     return if phase.chosen_terrain
     @game.turn_phase = phase.with_chosen_terrain(terrain)
+    # Choosing Swamp on a dual card costs one of the mandatory settlements.
+    @game.mandatory_count = [ @game.mandatory_count - 1, 0 ].max if terrain == "B"
   end
 
   def reset_to_mandatory
@@ -684,7 +851,7 @@ class TurnEngine
 
   def effective_terrain(player)
     current_phase = @game.turn_phase
-    current_phase.chosen_terrain || (player.hand.size == 1 ? player.hand.first : nil)
+    current_phase.chosen_terrain || (player.hand_terrains.size == 1 ? player.hand_terrains.first : nil)
   end
 
   def log_piece_movement_steps(action:, game_player:, from_row:, from_col:, path:, payload:, message_piece:)

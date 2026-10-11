@@ -11,9 +11,11 @@
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json
+#  interrupts        :json             not null
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
+#  removed_terrain   :string
 #  scores            :json
 #  speed             :string
 #  state             :string

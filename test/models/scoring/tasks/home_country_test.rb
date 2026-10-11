@@ -42,6 +42,17 @@ class Scoring::Tasks::HomeCountryTest < Scoring::Goals::GoalTestCase
     assert_equal 5, result[:score]
   end
 
+  test "Swamp terrain can form a qualifying area" do
+    # Hidden section 20 row 1 is a lone strip of 8 Swamp hexes.
+    ctx = build_game(
+      boards: [ [ 20, 0 ], [ 1, 0 ], [ 0, 0 ], [ 4, 0 ] ],
+      chris_settlements: (1..8).map { |c| [ 1, c ] },
+      goals: [ "home_country" ]
+    )
+    result = Scoring::Tasks::HomeCountry.new(ctx[:game]).score_for(ctx[:chris])
+    assert_equal 5, result[:score]
+  end
+
   test "W and M terrain can form qualifying areas" do
     # [18, 1] is a 1-hex M island; score 5 confirms M participates.
     ctx = build_game(chris_settlements: [ [ 18, 1 ] ], goals: [ "home_country" ])
