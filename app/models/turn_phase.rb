@@ -295,8 +295,8 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     end
 
     builds = game.turn_phase.builds || []
-    # Swamp (2 settlements) cannot score Families; a 3rd build there is a Temple piece.
-    engine.check_families_goal(game_player) if builds.size == 3 && game.turn_phase.chosen_terrain != "B"
+    # Swamp (2 settlements) cannot score Families, even with a Temple piece making a 3rd build.
+    engine.check_families_goal(game_player) if builds.size >= 3 && game.turn_phase.chosen_terrain != "B"
     game_player.save
     game.save
   end

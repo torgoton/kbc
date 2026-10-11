@@ -787,11 +787,15 @@ class TurnEngine
   def check_families_goal(game_player)
     return unless Array(@game.goals).include?("families")
     builds = @game.turn_phase.builds
-    return unless builds.size == 3
-    return unless straight_line?(builds)
+    # Any 3 of the mandatory builds (more than 3 with Temple pieces), scored once: when
+    # this build completes the first line.
+    return if builds.size < 3 || line_among?(builds[0...-1])
+    return unless line_among?(builds)
     score_goal(game_player, "families", 2,
       "#{game_player.player.handle} scored 2 points (Families)")
   end
+
+  def line_among?(positions) = positions.combination(3).any? { |trio| straight_line?(trio) }
 
   def straight_line?(positions)
     a, b, c = positions
