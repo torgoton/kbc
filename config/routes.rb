@@ -85,6 +85,7 @@ Rails.application.routes.draw do
       post :activate_fort
       post :choose_canoe_terrain
       post :skip_canoe
+      post :confirm_canoe
       post :resign
       post :claim_victory
     end

@@ -1,7 +1,8 @@
 require "test_helper"
 
 class CanoeTest < ActiveSupport::TestCase
-  CANOE = { "klass" => "CanoeTile", "used" => false, "from" => "[2, 8]" }.freeze
+  # tile "used" is irrelevant: a Canoe reacts every time a location is emptied
+  CANOE = { "klass" => "CanoeTile", "used" => true, "from" => "[2, 8]" }.freeze
 
   def setup
     @game = games(:game2player)
@@ -9,50 +10,101 @@ class CanoeTest < ActiveSupport::TestCase
     @game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", 1) }
     @game.mandatory_count = Game::MANDATORY_COUNT
     @game.save!
-    @chris = game_players(:chris)
-    @paula = game_players(:paula)
+    @chris = game_players(:chris) # order 0, the active player
+    @paula = game_players(:paula) # order 1
     @chris.update!(hand: [ "T" ], tiles: [ CANOE.dup ])
     @paula.update!(tiles: [ CANOE.dup ])
   end
 
   def engine = TurnEngine.new(@game)
 
+  def reload = @game.reload
+
   def empty_the_location
     engine.click(Coordinate.new(1, 7))
-    @game.reload
+    reload
   end
 
-  test "emptying a location hands the turn to each Canoe holder in turn" do
+  def skip
+    engine.skip_canoe
+    reload
+  end
+
+  test "emptying a location asks the mover to confirm, then reactions go next player first, mover last" do
     empty_the_location
 
+    assert_equal "canoe_confirm", @game.turn_phase.type
+    assert_equal @chris, @game.current_player
+    assert_equal [ @paula.order, @chris.order ], @game.turn_phase.holders
+  end
+
+  test "the mover can undo before confirming" do
+    empty_the_location
+    assert engine.undo_allowed?
+    engine.undo_max
+    reload
+
+    assert_equal 1, @game.board_contents.tile_qty(2, 7)
+    assert_equal "mandatory", @game.turn_phase.type
+  end
+
+  test "confirming makes the emptying move final and starts the reactions" do
+    empty_the_location
+    engine.confirm_canoe
+    reload
+
+    assert_equal @paula, @game.current_player
     assert_equal "canoe", @game.turn_phase.type
-    assert_equal @chris, @game.current_player, "the active player reacts first"
-    assert_equal [ @paula.order ], @game.interrupts.last["queue"]
+    assert_not engine.undo_allowed?, "the emptying move is final"
   end
 
-  test "a reactor chooses a terrain, builds, and the next reactor is up" do
+  test "a reactor builds on Water or Swamp, then confirms or undoes before anyone proceeds" do
     empty_the_location
-    engine.choose_canoe_terrain("G")
-    @game.reload
+    engine.confirm_canoe
+    reload
+    engine.choose_canoe_terrain("W")
+    reload
     target = engine.legal_targets.first
-    assert_equal "G", @game.board_contents.terrain_at(*target)
+    assert_equal "W", @game.board_contents.terrain_at(*target)
 
     engine.click(Coordinate.new(*target))
-    @game.reload
+    reload
+    assert_equal @paula.order, @game.board_contents.player_at(*target)
+    assert_equal "canoe_confirm", @game.turn_phase.type
+    assert_equal @paula, @game.current_player, "others cannot proceed yet"
+    assert engine.undo_allowed?
 
-    assert_equal @chris.order, @game.board_contents.player_at(*target)
-    assert @chris.reload.tiles.find { |t| t["klass"] == "CanoeTile" }["used"]
+    engine.undo_max
+    reload
+    assert_nil @game.board_contents.player_at(*target)
+    assert_equal "canoe", @game.turn_phase.type
     assert_equal @paula, @game.current_player
+
+    engine.click(Coordinate.new(*target))
+    reload
+    engine.confirm_canoe
+    reload
+    assert_equal @chris, @game.current_player, "the active player reacts last"
     assert_equal "canoe", @game.turn_phase.type
   end
 
-  test "skipping everyone returns to the interrupted action" do
+  test "only Water and Swamp can be chosen" do
     empty_the_location
-    engine.skip_canoe
-    @game.reload
-    assert_equal @paula, @game.current_player
-    engine.skip_canoe
-    @game.reload
+    engine.confirm_canoe
+    reload
+    engine.choose_canoe_terrain("G")
+    assert_nil reload && @game.turn_phase.chosen_terrain
+    engine.choose_canoe_terrain("B")
+    assert_equal "B", reload && @game.turn_phase.chosen_terrain
+  end
+
+  test "everyone skipping returns to the interrupted action" do
+    empty_the_location
+    engine.confirm_canoe
+    reload
+    skip
+    assert_equal @chris, @game.current_player
+    skip
 
     assert_equal @chris, @game.current_player
     assert_equal "mandatory", @game.turn_phase.type
@@ -60,13 +112,12 @@ class CanoeTest < ActiveSupport::TestCase
     assert_empty @game.interrupts
   end
 
-  test "no reaction when nobody holds an unused Canoe" do
+  test "no confirmation when nobody holds a Canoe" do
     @chris.update!(tiles: [])
-    @paula.update!(tiles: [ CANOE.merge("used" => true) ])
+    @paula.update!(tiles: [])
     empty_the_location
 
     assert_equal "mandatory", @game.turn_phase.type
-    assert_empty @game.interrupts
   end
 
   test "a location that still has tiles does not trigger Canoe" do
@@ -77,45 +128,66 @@ class CanoeTest < ActiveSupport::TestCase
     assert_equal "mandatory", @game.turn_phase.type
   end
 
-  test "a Canoe build that empties another location is resolved before the others continue" do
-    # (6,5) is Grass next to chris's (7,4) and to the second location at (7,5).
+  test "each Canoe tile reacts, so a player with two reacts twice" do
+    @paula.update!(tiles: [ CANOE.dup, CANOE.dup ])
+    empty_the_location
+
+    assert_equal [ @paula.order, @paula.order, @chris.order ], @game.turn_phase.holders
+  end
+
+  test "a Canoe build that empties another location is resolved before the outer reactions continue" do
+    # Paula's water settlement at (7,4); (8,5) is Water next to both (7,4) and the second location (7,5).
     @game.board_contents = BoardState.new.tap do |s|
       s.place_tile(2, 7, "OasisTile", 1)
       s.place_tile(7, 5, "OasisTile", 1)
-      s.place_settlement(7, 4, @chris.order)
+      s.place_settlement(7, 4, @paula.order)
     end
     @game.save!
     empty_the_location
-    engine.choose_canoe_terrain("G")
-    engine.click(Coordinate.new(6, 5))
-    @game.reload
+    engine.confirm_canoe
+    reload
+    engine.choose_canoe_terrain("W")
+    engine.click(Coordinate.new(8, 5))
+    reload
+    assert_equal "canoe_confirm", @game.turn_phase.type
+    assert_equal [ @chris.order, @paula.order ], @game.turn_phase.holders
 
-    assert_equal 2, @game.interrupts.size, "the nested emptying pushes a second frame"
+    engine.confirm_canoe
+    reload
+    assert_equal 2, @game.interrupts.size
+    assert_equal @chris, @game.current_player, "nested reactions start after paula"
+    skip # chris, nested
     assert_equal @paula, @game.current_player
-    engine.skip_canoe # nested frame finished; paula is still owed her turn at the outer frame
-    @game.reload
-    assert_equal @paula, @game.current_player
-    assert_equal 1, @game.interrupts.size
-    engine.skip_canoe
-    @game.reload
+    skip # paula, nested; the nested frame is done
+    assert_equal @chris, @game.current_player, "back to the outer queue: chris is still owed his reaction"
+    skip
 
     assert_equal @chris, @game.current_player
     assert_equal "mandatory", @game.turn_phase.type
     assert_empty @game.interrupts
   end
 
-  test "undo is refused to a player whose move is not the last one" do
-    empty_the_location
-    @paula_move = @game.moves.where(deliberate: true).order(order: :desc).first
-    assert_equal @chris.id, @paula_move.game_player_id
-    engine.skip_canoe
-    @game.reload
-    assert_not engine.undo_allowed?, "paula is up but the last deliberate move is chris's"
+  test "in timed games a reactor's time is charged to their own clock" do
+    t0 = Time.zone.local(2026, 10, 10, 12, 0, 0)
+    @game.update!(speed: "normal", turn_started_at: t0)
+    @chris.update!(time_remaining_ms: 100_000, clock_started_at: t0 - 60)
+    @paula.update!(time_remaining_ms: 100_000, clock_started_at: t0 - 60)
+
+    travel_to(t0 + 10) { empty_the_location }
+    travel_to(t0 + 10) { engine.confirm_canoe }
+    reload
+    assert_equal 90_000, @chris.reload.time_remaining_ms, "the mover is charged up to the handover"
+    assert_equal @paula, @game.current_player
+
+    travel_to(t0 + 15) { skip }
+    assert_equal 95_000, @paula.reload.time_remaining_ms, "the reactor is charged for their own 5s"
+    assert_equal 90_000, @chris.reload.time_remaining_ms
   end
 
-  test "choose_canoe_terrain rejects unbuildable terrain" do
+  test "undo is refused to a player whose move is not the last one" do
     empty_the_location
-    engine.choose_canoe_terrain("W")
-    assert_nil @game.reload.turn_phase.chosen_terrain
+    engine.confirm_canoe
+    reload
+    assert_not engine.undo_allowed?
   end
 end

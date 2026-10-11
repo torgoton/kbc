@@ -2,8 +2,8 @@ module Tiles
   class Location
     class CanoeTile < Tiles::Location
       CREATOR = "Claude (placeholder icon)".freeze
-      DESCRIPTION = "Whenever any location is emptied, you may choose a terrain and build 1 settlement on it " \
-                    "(adjacent if possible). Once per turn.".freeze
+      DESCRIPTION = "Whenever the last tile is taken from a location, you may build 1 settlement " \
+                    "on Water or Swamp (adjacent if possible).".freeze
 
       def builds_settlement? = true
       def canoe_tile? = true

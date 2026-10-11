@@ -26,6 +26,8 @@ class TurnPhase
     hash = (data || { "type" => "mandatory" }).deep_stringify_keys
     type = hash["type"] || "mandatory"
 
+    return CanoeConfirmPhase.from_hash(hash) if type == "canoe_confirm"
+
     return MandatoryBuildPhase.from_hash(hash) if type == "mandatory"
 
     klass_name = hash["klass"] || "#{type.capitalize}Tile"
@@ -1552,9 +1554,12 @@ class TurnPhase::SetAsidePhase < TurnPhase
   end
 end
 
-# Canoe: a reaction, taken by the holder when a location is emptied. First choose
-# a terrain (any buildable one), then build there (adjacent if possible).
+# Canoe: a reaction, taken by each holder when the last tile is taken from a
+# location. Build or skip; to build, choose Water or Swamp, then build there
+# (adjacent if possible).
 class TurnPhase::CanoePhase < TurnPhase
+  TERRAINS = %w[W B].freeze
+
   def self.from_hash(hash)
     new(chosen_terrain: hash["chosen_terrain"])
   end
@@ -1594,7 +1599,6 @@ class TurnPhase::CanoePhase < TurnPhase
     return "Not available" unless engine.legal_targets.include?([ row, col ])
 
     engine.build_on_terrain(chosen_terrain, row, col, game_player, tile_klass: "CanoeTile")
-    game_player.mark_tile_used!("CanoeTile")
     engine.finish_reaction!
     game_player.save
     game.save
@@ -1602,5 +1606,39 @@ class TurnPhase::CanoePhase < TurnPhase
 
   def serialize
     { "type" => "canoe", "klass" => "CanoeTile", "chosen_terrain" => chosen_terrain }.compact
+  end
+end
+
+# Gate after a move that empties a location Canoe holders can react to, and after
+# each Canoe build: the mover confirms (or undoes) before anyone else proceeds.
+# Confirming makes the move final. `resume` is the action to restore when the
+# reactions are over; `holders` the reactor order (one entry per Canoe tile).
+class TurnPhase::CanoeConfirmPhase < TurnPhase
+  attr_reader :resume, :holders, :reacting
+
+  def self.from_hash(hash)
+    new(resume: hash["resume"], holders: Array(hash["holders"]), reacting: hash["reacting"] == true)
+  end
+
+  def initialize(resume:, holders:, reacting:)
+    @resume = resume
+    @holders = holders
+    @reacting = reacting
+  end
+
+  def type
+    "canoe_confirm"
+  end
+
+  def klass_name
+    "CanoeTile"
+  end
+
+  def click(_coordinate, _engine)
+    "Confirm or undo first"
+  end
+
+  def serialize
+    { "type" => "canoe_confirm", "resume" => resume, "holders" => holders, "reacting" => reacting }
   end
 end

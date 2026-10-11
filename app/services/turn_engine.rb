@@ -15,20 +15,35 @@ class TurnEngine
   end
 
   # --- Canoe reactions -------------------------------------------------------
-  # Emptying a location lets each Canoe holder (starting with the active player,
-  # then in turn order) interrupt: current_player and phase are swapped to the
-  # reactor, and the interrupted state waits on game.interrupts (a stack, since a
-  # Canoe build can itself empty a location).
+  # Taking the last tile from a location lets every Canoe tile react, in turn
+  # order starting after the active player (who is last, and may react to their
+  # own emptying). First the mover confirms or undoes (CanoeConfirmPhase); then
+  # current_player and phase are swapped to each reactor in turn, and the
+  # interrupted state waits on game.interrupts (a stack, since a Canoe build can
+  # itself empty a location). Each reactor's time counts against their own clock.
 
   def choose_canoe_terrain(terrain)
     phase = @game.turn_phase
-    return "Not allowed" unless phase.type == "canoe" && Tiles::Tile::BUILDABLE_TERRAIN.include?(terrain)
+    return "Not allowed" unless phase.type == "canoe" && TurnPhase::CanoePhase::TERRAINS.include?(terrain)
     @game.turn_phase = phase.with_chosen_terrain(terrain)
     @game.save
   end
 
   def skip_canoe
     return "Not allowed" unless @game.turn_phase.type == "canoe"
+    advance_reactions!
+    @game.save
+  end
+
+  def confirm_canoe
+    phase = @game.turn_phase
+    return "Not allowed" unless phase.type == "canoe_confirm"
+    @game.moves.where(deliberate: true).order(order: :desc).first&.update!(reversible: false)
+    if phase.holders.any?
+      resume = phase.reacting ? { "type" => "reaction_done" } : phase.resume
+      frame = { "return_order" => @game.current_player.order, "return_action" => resume, "queue" => phase.holders }
+      @game.interrupts = @game.interrupts + [ frame ]
+    end
     advance_reactions!
     @game.save
   end
@@ -238,13 +253,20 @@ class TurnEngine
     @game.playing? && @game.turn_phase.type == "canoe"
   end
 
+  def canoe_confirmation?
+    @game.playing? && @game.turn_phase.type == "canoe_confirm"
+  end
+
   def turn_state
     return "Game over" unless @game.current_player_id
     current_phase = @game.turn_phase
-    if current_phase.type == "canoe"
-      handle = @game.current_player.player.handle
+    handle = @game.current_player.player.handle
+    case current_phase.type
+    when "canoe_confirm"
+      return "#{handle}: confirm or undo"
+    when "canoe"
       terrain = current_phase.chosen_terrain
-      return terrain ? "#{handle} must build on #{Boards::Board::TERRAIN_NAMES[terrain]} (Canoe)" : "#{handle} may use the Canoe: choose a terrain"
+      return terrain ? "#{handle} must build on #{Boards::Board::TERRAIN_NAMES[terrain]} (Canoe)" : "#{handle} may build on Water or Swamp (Canoe), or skip"
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -407,9 +429,9 @@ class TurnEngine
   # mover hasn't made a deliberate move yet this game (clock_started_at nil);
   # the window otherwise starts at whichever is later, the turn's start or
   # the mover's clock_started_at (it can fall mid-turn on their first move).
-  def apply_clock!(game_player)
+  def apply_clock!(game_player, credit: true)
     bank_ms = Game::SPEEDS.fetch(@game.speed)[:bank_ms]
-    increment_ms = Game::SPEEDS.fetch(@game.speed)[:increment_ms]
+    increment_ms = credit ? Game::SPEEDS.fetch(@game.speed)[:increment_ms] : 0
     elapsed_ms =
       if game_player.clock_started_at.nil?
         0
@@ -500,51 +522,67 @@ class TurnEngine
     game_player.set_aside_count.positive? || [ game_player.temple_due, remaining_after ].min.positive?
   end
 
+  # Called after every board click: if it emptied a location Canoes can react to, or was a
+  # Canoe build, the mover must confirm before the reactions run.
   def open_reactions!
     reacting = @reaction_done
     @reaction_done = false
     holders = @emptied.any? ? canoe_holders : []
     @emptied.clear
-    if holders.any?
-      resume = reacting ? { "type" => "reaction_done" } : @game.current_action
-      frame = { "return_order" => @game.current_player.order, "return_action" => resume, "queue" => holders }
-      @game.interrupts = @game.interrupts + [ frame ]
-    end
-    advance_reactions! if holders.any? || reacting
-    @game.save if holders.any? || reacting
+    return unless holders.any? || reacting
+
+    resume = reacting ? { "type" => "reaction_done" } : @game.current_action
+    @game.turn_phase = TurnPhase::CanoeConfirmPhase.new(resume: resume, holders: holders, reacting: reacting)
+    @game.save
   end
 
-  # Orders of players holding an unused Canoe and a settlement to build, starting with the current player.
+  # Reactor orders, one per Canoe tile, starting after the current player and ending with them.
   def canoe_holders
     count = @game.game_players.count
     start = @game.current_player.order
-    (0...count).map { |i| (start + i) % count }.select do |order|
-      can_canoe?(reactor(order))
+    (1..count).flat_map do |i|
+      order = (start + i) % count
+      [ order ] * canoe_tiles(reactor(order))
     end
   end
 
-  def can_canoe?(game_player)
-    game_player.settlements_remaining? && game_player.find_unused_tile("CanoeTile")
+  def canoe_tiles(game_player)
+    return 0 unless game_player.settlements_remaining?
+    (game_player.tiles || []).count { |t| t["klass"] == "CanoeTile" }
   end
 
+  # Moves on to the next reactor, or back to whoever was interrupted.
   def advance_reactions!
     loop do
       frames = @game.interrupts.deep_dup
       frame = frames.last
       return unless frame
-      frame["queue"].shift until frame["queue"].empty? || can_canoe?(reactor(frame["queue"].first))
+      frame["queue"].shift until frame["queue"].empty? || canoe_tiles(reactor(frame["queue"].first)).positive?
       if frame["queue"].any?
-        @game.current_player = reactor(frame["queue"].shift)
         @game.interrupts = frames
+        hand_over_to(reactor(frame["queue"].shift))
         @game.turn_phase = TurnPhase::CanoePhase.new
         return
       end
       frames.pop
       @game.interrupts = frames
-      @game.current_player = reactor(frame["return_order"])
+      hand_over_to(reactor(frame["return_order"]))
       @game.current_action = frame["return_action"]
       return unless frame["return_action"]["type"] == "reaction_done"
     end
+  end
+
+  # Swaps the current player; in timed games the outgoing player's elapsed time is charged
+  # to their own clock, and the incoming player's clock starts now.
+  def hand_over_to(next_player)
+    outgoing = @game.current_player
+    return if outgoing == next_player
+    if @game.timed?
+      apply_clock!(outgoing, credit: false)
+      outgoing.save!
+      @game.turn_started_at = Time.current
+    end
+    @game.current_player = next_player
   end
 
   def reactor(order) = @game.game_players.find { |g| g.order == order }
