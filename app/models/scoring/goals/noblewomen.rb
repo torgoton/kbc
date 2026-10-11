@@ -2,14 +2,9 @@ class Scoring
   module Goals
     class Noblewomen < Goal
       DESCRIPTION = "5 points for each silver or gold hex you have the most settlements adjacent to."
+      # ponytail: ties count for every tied player (see majority_hexes_score)
       def score_for(game_player)
-        orders = @game.game_players.map(&:order)
-        scored = special_hexes.count do |r, c|
-          counts = orders.to_h { |o| [ o, neighbors(r, c).count { |n| board_contents.player_at(*n) == o } ] }
-          # ponytail: ties count for every tied player
-          counts[game_player.order].positive? && counts[game_player.order] == counts.values.max
-        end
-        { score: scored * 5 }
+        { score: majority_hexes_score(game_player, special_hexes) }
       end
 
       private

@@ -569,6 +569,15 @@ ul li .hex:hover .hex-bg {
     background-position: 5px 6px;
 }
 
+.hex .terrain-palacehex {
+    position: absolute;
+    inset: 0;
+    background-image: url("silver/palace.svg");
+    background-repeat: no-repeat;
+    background-size: 80%;
+    background-position: 5px 6px;
+}
+
 .hex .terrain-nomad {
     position: absolute;
     inset: 0;

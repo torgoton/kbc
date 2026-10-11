@@ -11,6 +11,7 @@ module Boards
       "T" => "Timberland",
       "W" => "Water",
       "M" => "Mountain",
+      "B" => "Marshland",
       "S" => "Silver",
       "L" => "Location",
       "Z" => ""

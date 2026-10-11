@@ -354,6 +354,94 @@ module Boards
           { r: 8, c: 8, k: "Wagon" }
         ]
       },
+      # 16: Temple
+      {
+        map: [
+          "WWWCCCGGGD",
+          "WWTTCCGGDD",
+          "WFSTTTCCMD",
+          "DFMTTTCCGG",
+          "DDFFTTLGGG",
+          "DDDFFBBBGG",
+          "DFFFBFBMBG",
+          "WFFLBBBBWW",
+          "WWWBBWBBWW",
+          "WWWWWWWWWW"
+        ],
+        silver_hexes: [
+          { r: 2, c: 2, k: "Palace" }
+        ],
+        location_hexes: [
+          { r: 4, c: 6, k: "Temple" },
+          { r: 7, c: 3, k: "Temple" }
+        ]
+      },
+      # 17: Refuge
+      {
+        map: [
+          "MMMDDMMMDD",
+          "MLFWDDDDDD",
+          "CTTFFWWWDD",
+          "CTWFWFBWDM",
+          "CCTBFFSBWF",
+          "CTTBBGBWFF",
+          "CMTBBGGWFF",
+          "GTTTBWGFCC",
+          "GGGFLBGMCC",
+          "GGGBBGGGCC"
+        ],
+        silver_hexes: [
+          { r: 4, c: 6, k: "Palace" }
+        ],
+        location_hexes: [
+          { r: 1, c: 1, k: "Refuge" },
+          { r: 8, c: 4, k: "Refuge" }
+        ]
+      },
+      # 18: Canoe
+      {
+        map: [
+          "DDDDFFFGGG",
+          "DMFFWBFGTG",
+          "DMLFFBBMTT",
+          "DMDWWWBTTW",
+          "WDDWMBWWWW",
+          "WWWBBBTTTT",
+          "MCGGBWBTLM",
+          "MCGSBBBGGC",
+          "MCCFFFWBGC",
+          "MMCFFGGGCC"
+        ],
+        silver_hexes: [
+          { r: 7, c: 3, k: "Palace" }
+        ],
+        location_hexes: [
+          { r: 2, c: 2, k: "Canoe" },
+          { r: 6, c: 8, k: "Canoe" }
+        ]
+      },
+      # 19: Fountain
+      {
+        map: [
+          "CCCCDDDDMM",
+          "CCCDDDWDMM",
+          "CTWCDDGGLM",
+          "TTTSGDGMCM",
+          "TBTFBGGMMC",
+          "BTFFBGMCMC",
+          "TTBFFMMCCM",
+          "TBFFFFLGLC",
+          "TTTBWBFFGG",
+          "TTTBFFFFGG"
+        ],
+        silver_hexes: [
+          { r: 3, c: 3, k: "Palace" }
+        ],
+        location_hexes: [
+          { r: 2, c: 8, k: "Fountain" },
+          { r: 7, c: 6, k: "Fountain" }
+        ]
+      },
       # HIDDEN SECTION - used for testing, not actually in the game
       {
         map: [
@@ -472,11 +560,12 @@ module Boards
         ]
       }
     ].freeze
-    LAST_SECTION = 15
+    LAST_SECTION = 19
 
     SILVER_HEX_KINDS = {
       "Castle" => { css_class: "terrain-castlehex", description: "Castle - 3 points if you have an adjacent settlement" },
-      "Nomad"  => { css_class: "terrain-nomad", description: nil }
+      "Nomad"  => { css_class: "terrain-nomad", description: nil },
+      "Palace" => { css_class: "terrain-palacehex", description: "Palace - 5 points for the most adjacent settlements" }
     }.freeze
 
     attr_accessor :terrain
