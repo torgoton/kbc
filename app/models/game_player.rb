@@ -38,6 +38,12 @@ class GamePlayer < ApplicationRecord
 
   scope :in_player_order, -> { order(order: :asc) }
 
+  # Terrains the hand offers. A card is one terrain letter, or two for a Marshlands
+  # dual card ("GB" = Grass or Swamp). Tolerates legacy hands stored as a bare string.
+  def hand_terrains
+    Array(hand).compact.flat_map(&:chars).uniq
+  end
+
   def settlements_remaining
     supply["settlements"].to_i
   end

@@ -60,14 +60,14 @@
     <% display_cards = (is_me || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "Z" } %>
     <% chosen = (game.current_player_id == player.id) ? game.current_action["chosen_terrain"] : nil %>
     <% display_cards.each do |card| %>
-      <% shunned = chosen && card != chosen %>
-      <%= content_tag :span, card, title: Boards::Board::TERRAIN_NAMES[card], class: "player-card card-#{card}#{" card-shunned" if shunned}" %>
+      <% shunned = chosen && !card.include?(chosen) %>
+      <%= render "games/card", card: card, shunned: shunned %>
     <% end %>
     <% fort_terrain = (game.current_player_id == player.id) ? game.current_action["fort_terrain"] : nil %>
     <% if fort_terrain %>
-      <span class="fort-drawn" title="Fort drew <%= Boards::Board::TERRAIN_NAMES[fort_terrain] %>">
+      <span class="fort-drawn" title="Fort drew <%= Boards::Board.card_name(fort_terrain) %>">
         <span class="fort-drawn-label">Fort drew</span>
-        <%= content_tag :span, fort_terrain, class: "player-card card-#{fort_terrain}" %>
+        <%= render "games/card", card: fort_terrain %>
       </span>
     <% end %>
     <div class="supply-display">

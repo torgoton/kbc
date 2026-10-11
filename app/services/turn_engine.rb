@@ -69,7 +69,7 @@ class TurnEngine
       reversible: false,
       game_player: game_player,
       payload: { "card" => drawn_card },
-      message: "#{game_player.player.handle} drew a #{Boards::Board::TERRAIN_NAMES[drawn_card]} card"
+      message: "#{game_player.player.handle} drew a #{Boards::Board.card_name(drawn_card)} card"
     )
 
     @game.turn_phase = TurnPhase::FortPhase.new(fort_terrain: drawn_card)
@@ -175,7 +175,7 @@ class TurnEngine
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand.first, supply: @game.current_player.supply_hash }
+    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand_terrains.first, supply: @game.current_player.supply_hash }
     tile_obj.activatable?(**ctx)
   end
 
@@ -216,7 +216,7 @@ class TurnEngine
       hand_for_msg = if tile_for_msg.fort_tile?
         current_phase.fort_terrain
       else
-        @game.current_player.hand.first
+        @game.current_player.hand_terrains.first
       end
       msg = tile_for_msg.action_message(
         player_handle: @game.current_player.player.handle,
@@ -231,7 +231,7 @@ class TurnEngine
         terrain_name = if (ct = effective_terrain(@game.current_player))
           Boards::Board::TERRAIN_NAMES[ct]
         else
-          @game.current_player.hand.map { |t| Boards::Board::TERRAIN_NAMES[t] }.join(" or ")
+          @game.current_player.hand_terrains.map { |t| Boards::Board::TERRAIN_NAMES[t] }.join(" or ")
         end
         "#{@game.current_player.player.handle} must build " \
         "#{ActionController::Base.helpers.pluralize(@game.mandatory_count, "settlement")} on " \
@@ -670,6 +670,8 @@ class TurnEngine
     phase = @game.turn_phase
     return if phase.chosen_terrain
     @game.turn_phase = phase.with_chosen_terrain(terrain)
+    # Choosing Swamp on a dual card costs one of the mandatory settlements.
+    @game.mandatory_count = [ @game.mandatory_count - 1, 0 ].max if terrain == "B"
   end
 
   def reset_to_mandatory
@@ -684,7 +686,7 @@ class TurnEngine
 
   def effective_terrain(player)
     current_phase = @game.turn_phase
-    current_phase.chosen_terrain || (player.hand.size == 1 ? player.hand.first : nil)
+    current_phase.chosen_terrain || (player.hand_terrains.size == 1 ? player.hand_terrains.first : nil)
   end
 
   def log_piece_movement_steps(action:, game_player:, from_row:, from_col:, path:, payload:, message_piece:)

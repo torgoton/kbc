@@ -33,6 +33,8 @@
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
+  # Marshlands dual cards: Swamp (B) or the other terrain. Choosing Swamp makes the mandatory action 2 settlements.
+  MARSHLANDS_CARDS = %w[CB DB FB GB TB].freeze
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
   SPEEDS = {
@@ -147,7 +149,7 @@ class Game < ApplicationRecord
       return false
     end
     self.moves.destroy_all
-    self.discard ? self.discard.clear : self.discard = DECK.chars
+    self.discard ? self.discard.clear : self.discard = terrain_cards
     self.removed_terrain = nil
     self.scores ? self.scores.clear : self.scores = {}
     @board = nil
@@ -240,7 +242,7 @@ class Game < ApplicationRecord
   # Stable domain query: the hexes where game_player may legally build right
   # now. Delegates to the engine's availability rule; returns coordinate pairs.
   def legal_builds(game_player, terrain: nil)
-    terrain ||= Array(game_player.hand).first
+    terrain ||= game_player.hand_terrains.first
     instantiate
     list = TurnEngine.new(self).available_list(game_player.order, terrain)
     return [] unless list
@@ -569,16 +571,20 @@ class Game < ApplicationRecord
   end
 
   def initialize_terrain_deck
-    self.discard = DECK.chars
+    self.discard = terrain_cards
     self.removed_terrain = nil
     remove_scouts_terrain if Array(goals).include?("scouts")
     shuffle_terrain_deck
   end
 
-  # Scouts: draw a terrain at random and take all its cards out of the deck.
+  def terrain_cards
+    DECK.chars + (expansion?("marshlands") ? MARSHLANDS_CARDS : [])
+  end
+
+  # Scouts: draw a terrain at random and take every card offering it (dual cards too) out of the deck.
   def remove_scouts_terrain
-    self.removed_terrain = discard.sample
-    discard.delete(removed_terrain)
+    self.removed_terrain = DECK.chars.uniq.sample
+    discard.reject! { |card| card.include?(removed_terrain) }
     self.move_count = (move_count || 0) + 1
     moves.build(
       order: move_count,
@@ -667,7 +673,7 @@ class Game < ApplicationRecord
 
   def deal_terrain_cards
     game_players.each do |p|
-      p.update(hand: next_card)
+      p.update(hand: [ next_card ])
     end
     save # update the deck
   end

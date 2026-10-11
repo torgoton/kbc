@@ -17,6 +17,11 @@ module Boards
       "Z" => ""
     }
 
+    # "GB" => "Grass / Swamp"
+    def self.card_name(card)
+      card.to_s.chars.map { |t| TERRAIN_NAMES[t] }.join(" / ")
+    end
+
     TILE_CLASSES = {
       "BarnTile"             => Tiles::Location::BarnTile,
       "FarmTile"             => Tiles::Location::FarmTile,

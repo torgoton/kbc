@@ -1597,3 +1597,35 @@ ul li .hex:hover .hex-bg {
     background: #222;
     color: var(--clr-ds-text);
 }
+
+/* Marshlands dual cards: two terrains split along the diagonal */
+.player-card.card-B,
+.player-card.card-dual .card-B {
+    background-image: url("cards/swamp-card.svg");
+}
+
+.player-card.card-dual {
+    position: relative;
+    background: none;
+}
+
+.player-card.card-dual .card-half {
+    position: absolute;
+    inset: 0;
+    background-size: 100%;
+    border-radius: 6px;
+}
+
+.player-card.card-dual .card-half:first-child {
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.player-card.card-dual .card-half:last-child {
+    clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+.player-card.card-dual .card-G { background-image: url("cards/grass-card.svg"); background-position: 20%; }
+.player-card.card-dual .card-C { background-image: url("cards/canyon-card.svg"); }
+.player-card.card-dual .card-D { background-image: url("cards/desert-card.svg"); }
+.player-card.card-dual .card-F { background-image: url("cards/flowers-card.svg"); }
+.player-card.card-dual .card-T { background-image: url("cards/timberland-card.svg"); }

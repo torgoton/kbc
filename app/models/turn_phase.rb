@@ -114,7 +114,7 @@ class TurnPhase
   # was already committed, otherwise the sole hand card (a two-card hand stays
   # unlocked → nil). Shared by the build and settlement-move phases.
   def effective_terrain(player)
-    chosen_terrain || (player.hand.size == 1 ? player.hand.first : nil)
+    chosen_terrain || (player.hand_terrains.size == 1 ? player.hand_terrains.first : nil)
   end
 
   # Return a copy of this phase with the outpost power active. Non-build phases
@@ -182,9 +182,9 @@ module TurnPhase::SettlementMoveTargets
   def legal_targets(board_contents:, player:, game: nil)
     terrains =
       if tile.uses_played_terrain? && effective_terrain(player).nil?
-        player.hand
+        player.hand_terrains
       else
-        [ effective_terrain(player) || player.hand.first ]
+        [ effective_terrain(player) || player.hand_terrains.first ]
       end
     step_budget = budget.to_i
 
@@ -236,7 +236,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
 
   def legal_targets(board_contents:, player:, game: nil)
     return [] unless player.settlements_remaining? && game.mandatory_count > 0
-    terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
+    terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand_terrains
     if outpost_active?
       board_contents.available_cells_of(terrains)
     else
@@ -260,7 +260,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
 
     if outpost_active?
       return "Not available" unless engine.legal_targets.include?([ row, col ])
-      card_terrain ||= game_player.hand.find { |t| game.board_contents.terrain_at(row, col) == t }
+      card_terrain ||= game_player.hand_terrains.find { |t| game.board_contents.terrain_at(row, col) == t }
       engine.lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
       engine.build_on_terrain(card_terrain, row, col, game_player)
       game.mandatory_count -= 1
@@ -275,7 +275,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     else
       return "Not available" unless engine.legal_targets.include?([ row, col ])
       if card_terrain.nil?
-        card_terrain = game_player.hand.find { |t|
+        card_terrain = game_player.hand_terrains.find { |t|
           list = engine.available_list(game_player.order, t)
           list.any? ? list[row][col] : true
         }
@@ -355,7 +355,7 @@ module TurnPhase::TileBuildOrchestration
     return "Not available" unless tile
     tile_obj = Tiles::Tile.from_hash(tile)
     return "Not available" unless engine.legal_targets.include?([ row, col ])
-    if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand.size > 1
+    if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
     end
     engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
@@ -514,7 +514,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
     return "Not available" unless engine.legal_targets.include?([ row, col ])
 
     current_phase = self
-    if chosen_terrain.nil? && game_player.hand.size > 1
+    if chosen_terrain.nil? && game_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
       current_phase = game.turn_phase
     end
@@ -555,13 +555,13 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # terrain, or spans both cards of an as-yet-unlocked two-card hand.
   def played_terrain_targets(board_contents, player)
     if tile.uses_played_terrain? && effective_terrain(player).nil?
-      player.hand.flat_map do |terrain|
+      player.hand_terrains.flat_map do |terrain|
         tile.valid_destinations(board_contents: board_contents, player_order: player.order, hand: terrain)
       end.uniq
     else
       tile.valid_destinations(
         board_contents: board_contents, player_order: player.order,
-        hand: effective_terrain(player) || player.hand.first
+        hand: effective_terrain(player) || player.hand_terrains.first
       )
     end
   end
@@ -571,9 +571,9 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # fixed build terrain (or the locked/sole hand card).
   def outpost_terrains(player)
     if tile.uses_played_terrain? && effective_terrain(player).nil?
-      player.hand
+      player.hand_terrains
     else
-      [ tile.build_terrain || effective_terrain(player) || player.hand.first ].compact
+      [ tile.build_terrain || effective_terrain(player) || player.hand_terrains.first ].compact
     end
   end
 end
@@ -603,9 +603,9 @@ class TurnPhase::FortPhase < TurnPhase
   end
 
   def legal_targets(board_contents:, player:, game: nil)
-    tile.valid_destinations(
-      board_contents: board_contents, player_order: player.order, hand: fort_terrain
-    )
+    fort_terrain.chars.flat_map do |terrain|
+      tile.valid_destinations(board_contents: board_contents, player_order: player.order, hand: terrain)
+    end.uniq
   end
 
   def click(coordinate, engine)
@@ -659,7 +659,7 @@ module TurnPhase::SettlementMoveOrchestration
   # terrain back from game.turn_phase (not self, which stays pre-lock).
   def lock_move_terrain(row, col, engine)
     game = engine.game
-    if tile&.uses_played_terrain? && chosen_terrain.nil? && game.current_player.hand.size > 1
+    if tile&.uses_played_terrain? && chosen_terrain.nil? && game.current_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
     end
   end
@@ -717,7 +717,7 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     tile_klass = tile_klass_name
     tile_obj = tile
     lock_move_terrain(row, col, engine)
-    hand_arg = game.turn_phase.effective_terrain(game.current_player) || game.current_player.hand.first
+    hand_arg = game.turn_phase.effective_terrain(game.current_player) || game.current_player.hand_terrains.first
     return "Not available" unless tile_obj.valid_destinations(
       from_row: from_coord.row, from_col: from_coord.col,
       board_contents: game.board_contents, player_order: game.current_player.order, hand: hand_arg
