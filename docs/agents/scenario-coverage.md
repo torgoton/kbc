@@ -18,6 +18,7 @@ time (accumulated in `game_player.bonus_scores`). Tier-1 goals are pure
 | --- | --- | --- | --- |
 | ambassadors | 2 | ✅ | `goals/ambassadors_test.rb` |
 | families | 2 | ✅ | `goals/families_test.rb` |
+| scouts | 1 | ✅ | `goals/scouts_test.rb` |
 | shepherds | 2 | ✅ | `goals/shepherds_test.rb` |
 | vassals | 1 | ✅ | `goals/vassals_test.rb` |
 | hermits | 1 | ✅ | `goals/hermits_test.rb` |

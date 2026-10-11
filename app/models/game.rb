@@ -14,6 +14,7 @@
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
+#  removed_terrain   :string
 #  scores            :json
 #  speed             :string
 #  state             :string
@@ -147,6 +148,7 @@ class Game < ApplicationRecord
     end
     self.moves.destroy_all
     self.discard ? self.discard.clear : self.discard = DECK.chars
+    self.removed_terrain = nil
     self.scores ? self.scores.clear : self.scores = {}
     @board = nil
     start(false, options)
@@ -568,7 +570,24 @@ class Game < ApplicationRecord
 
   def initialize_terrain_deck
     self.discard = DECK.chars
+    self.removed_terrain = nil
+    remove_scouts_terrain if Array(goals).include?("scouts")
     shuffle_terrain_deck
+  end
+
+  # Scouts: draw a terrain at random and take all its cards out of the deck.
+  def remove_scouts_terrain
+    self.removed_terrain = discard.sample
+    discard.delete(removed_terrain)
+    self.move_count = (move_count || 0) + 1
+    moves.build(
+      order: move_count,
+      action: "scouts_terrain",
+      message: "Scouts: #{Boards::Board::TERRAIN_NAMES[removed_terrain]} cards removed from the deck",
+      payload: { "terrain" => removed_terrain },
+      deliberate: false,
+      reversible: false
+    )
   end
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze

@@ -14,6 +14,7 @@
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
+#  removed_terrain   :string
 #  scores            :json
 #  speed             :string
 #  state             :string

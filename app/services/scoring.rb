@@ -15,6 +15,7 @@ class Scoring
     "messengers"  => Scoring::Goals::Messengers,
     "miners"      => Scoring::Goals::Miners,
     "noblewomen"  => Scoring::Goals::Noblewomen,
+    "scouts"      => Scoring::Goals::Scouts,
     "shepherds"   => Scoring::Goals::Shepherds,
     "vassals"     => Scoring::Goals::Vassals,
     "workers"     => Scoring::Goals::Workers
