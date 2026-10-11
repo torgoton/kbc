@@ -119,6 +119,19 @@ class TempleTest < ActiveSupport::TestCase
     assert_equal 2, @chris.bonus_scores["families"]
   end
 
+  test "the build message says how many of the mandatory settlements come from Temple" do
+    @chris.update!(supply: { "settlements" => 10, "temple_due" => 2 })
+    @game.update!(mandatory_count: Game::MANDATORY_COUNT + 2)
+    assert_match(/must build 5 settlements \(2 from Temple\) on Grass/, engine.turn_state)
+
+    @game.update!(mandatory_count: 1)
+    assert_match(/must build 1 settlement \(1 from Temple\) on Grass/, engine.turn_state)
+
+    @chris.update!(supply: { "settlements" => 10 })
+    @game.reload.update!(mandatory_count: Game::MANDATORY_COUNT)
+    assert_match(/must build 3 settlements on Grass/, engine.turn_state)
+  end
+
   test "Temple needs a settlement that is not part of a City Hall" do
     tile = Tiles::Location::TempleTile.new(0)
     assert_not tile.activatable?(player_order: @chris.order, board_contents: BoardState.new)

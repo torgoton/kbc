@@ -280,8 +280,10 @@ class TurnEngine
         else
           @game.current_player.hand_terrains.map { |t| Boards::Board::TERRAIN_NAMES[t] }.join(" or ")
         end
+        from_temple = [ @game.current_player.temple_due, @game.mandatory_count ].min
         "#{@game.current_player.player.handle} must build " \
-        "#{ActionController::Base.helpers.pluralize(@game.mandatory_count, "settlement")} on " \
+        "#{ActionController::Base.helpers.pluralize(@game.mandatory_count, "settlement")} " \
+        "#{"(#{from_temple} from Temple) " if from_temple.positive?}on " \
         "#{terrain_name}" \
         "#{" or select a tile" if has_activatable}"
       else
