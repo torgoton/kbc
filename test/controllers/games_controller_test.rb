@@ -425,6 +425,25 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "GET new renders expansion options with only Nomads and Crossroads enabled" do
+    get new_game_url
+    assert_select "input[name='game[options][expansions][]'][value=nomads][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=crossroads][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=harvest][disabled]"
+    assert_select "input[name='game[options][queenies][]'][disabled]", 4
+    assert_select "input#game_options_nomads_sword[checked]"
+  end
+
+  test "POST create stores chosen options and ignores disabled expansions" do
+    post games_url, params: { game: { options: { expansions: %w[nomads harvest], nomads_sword: "0" } } }
+    assert_equal({ "expansions" => %w[nomads], "nomads_sword" => false }, Game.last.options)
+  end
+
+  test "POST create without nomads omits sword option" do
+    post games_url, params: { game: { options: { expansions: %w[crossroads], nomads_sword: "1" } } }
+    assert_equal({ "expansions" => %w[crossroads] }, Game.last.options)
+  end
+
   test "GET new renders a help dialog explaining timed games" do
     get new_game_url
     assert_select "dialog"

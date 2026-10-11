@@ -13,6 +13,7 @@
 #  goals             :json
 #  mandatory_count   :integer
 #  move_count        :integer
+#  options           :json             not null
 #  scores            :json
 #  speed             :string
 #  state             :string

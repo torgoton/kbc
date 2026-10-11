@@ -34,6 +34,33 @@
     </dialog>
   </div>
 
+  <fieldset>
+    <legend>Expansions</legend>
+    <label><input type="checkbox" checked disabled> Base game</label><br>
+      <% Game::EXPANSIONS.each do |key, exp| %>
+        <label>
+          <%= check_box_tag "game[options][expansions][]", key, exp[:enabled] && Game::DEFAULT_OPTIONS["expansions"].include?(key),
+                disabled: !exp[:enabled], id: "game_options_expansions_#{key}",
+                onchange: (key == "nomads" ? "document.getElementById('game_options_nomads_sword').disabled = !this.checked" : nil) %>
+          <%= exp[:label] %>
+        </label><br>
+        <% if key == "nomads" %>
+          <label style="margin-left: 1.5em">
+            <%= hidden_field_tag "game[options][nomads_sword]", "0", id: nil %>
+            <%= check_box_tag "game[options][nomads_sword]", "1", true, id: "game_options_nomads_sword" %>
+            Include Sword
+          </label><br>
+        <% end %>
+      <% end %>
+  </fieldset>
+
+  <fieldset>
+    <legend>Queenies</legend>
+    <% Game::QUEENIES.each do |key, label| %>
+      <label><%= check_box_tag "game[options][queenies][]", key, false, disabled: true, id: "game_options_queenies_#{key}" %> <%= label %></label><br>
+    <% end %>
+  </fieldset>
+
   <div>
     <%= form.submit %>
   </div>
