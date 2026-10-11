@@ -309,7 +309,7 @@ class TurnEngine
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
-    game_player.end_temple_turn!([ game_player.temple_due, [ @game.mandatory_count, 0 ].max ].min)
+    game_player.end_temple_turn!
     @game.current_action = { "type" => "mandatory" }
     @game.turn_started_at = Time.current if @game.timed?
     next_order = (@game.current_player.order + 1) % @game.game_players.count
@@ -483,10 +483,9 @@ class TurnEngine
   def build_on_terrain(terrain, row, col, game_player, tile_klass: nil)
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
-    temple_piece = tile_klass.nil? && @game.temple_build_next?(game_player)
-    payload["temple"] = true if temple_piece
-    game_player.decrement_supply! unless temple_piece
-    if game_player.settlements_remaining == 0 && !temple_pieces_pending?(game_player, mandatory: tile_klass.nil?)
+    game_player.decrement_supply!
+    # A settlement set aside by Temple holds the ending off until it is built.
+    if game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
       @game.end_trigger_count += 1
       payload["triggered_ending"] = true
     end
@@ -505,13 +504,6 @@ class TurnEngine
     check_ambassadors_goal(game_player, row, col)
     check_shepherds_goal(game_player, row, col, terrain)
     apply_tile_pickup(game_player, row, col)
-  end
-
-  # The game ending waits while this player still holds Temple pieces: set aside for next
-  # turn, or due this turn and not yet built (this build, if mandatory, is already counted).
-  def temple_pieces_pending?(game_player, mandatory:)
-    remaining_after = @game.mandatory_count - (mandatory ? 1 : 0)
-    game_player.set_aside_count.positive? || [ game_player.temple_due, remaining_after ].min.positive?
   end
 
   # Called after every board click: if it emptied a location Canoes can react to, or was a

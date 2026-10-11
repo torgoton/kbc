@@ -45,7 +45,7 @@ class GamePlayer < ApplicationRecord
   end
 
   # Temple: settlements taken off the board wait here (outside the supply) until next turn,
-  # when they become "due" extra mandatory builds.
+  # when they return to the supply as "due" extra mandatory builds.
   def set_aside_count = supply["set_aside"].to_i
   def temple_due = supply["temple_due"].to_i
 
@@ -54,13 +54,12 @@ class GamePlayer < ApplicationRecord
   end
 
   def start_temple_turn!
+    supply["settlements"] = settlements_remaining + set_aside_count
     supply["temple_due"] = set_aside_count
     supply["set_aside"] = 0
   end
 
-  # Due pieces that were not built return to the supply.
-  def end_temple_turn!(unbuilt)
-    supply["settlements"] = settlements_remaining + unbuilt
+  def end_temple_turn!
     supply["temple_due"] = 0
   end
 

@@ -490,11 +490,6 @@ class Game < ApplicationRecord
     save
   end
 
-  # Temple pieces due this turn are built after the nominal mandatory builds.
-  def temple_build_next?(game_player)
-    game_player.temple_due.positive? && mandatory_count.positive? && mandatory_count <= game_player.temple_due
-  end
-
   # No mandatory settlement has been built yet this turn. Locking Swamp (possibly via a
   # tile, before the mandatory action) lowers the full count by one without building.
   def mandatory_untouched?(game_player)
@@ -503,7 +498,7 @@ class Game < ApplicationRecord
   end
 
   def can_build_mandatory?(game_player)
-    mandatory_count.positive? && (game_player.settlements_remaining? || temple_build_next?(game_player))
+    mandatory_count.positive? && game_player.settlements_remaining?
   end
 
   private

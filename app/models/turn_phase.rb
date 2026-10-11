@@ -1545,6 +1545,11 @@ class TurnPhase::SetAsidePhase < TurnPhase
     )
     game.board_contents_will_change!
     game.board_contents.remove(row, col)
+    # An empty supply with nothing set aside means this player triggered the ending; the
+    # set-aside piece withdraws that trigger until it is built.
+    if game_player.settlements_remaining.zero? && game_player.set_aside_count.zero? && game.end_trigger_count.positive?
+      game.end_trigger_count -= 1
+    end
     game_player.set_aside_settlement!
     engine.apply_tile_forfeit(game_player)
     game_player.mark_tile_used!(tile_klass_name)

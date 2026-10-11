@@ -33,22 +33,14 @@ class TempleTest < ActiveSupport::TestCase
     assert_equal "mandatory", @game.turn_phase.type
   end
 
-  test "the next turn has an extra mandatory build that does not use supply" do
-    @chris.update!(supply: { "settlements" => 10, "temple_due" => 1 })
-    @game.update!(mandatory_count: 4)
-
-    build(0, 8)
-    build(0, 9)
-    build(1, 8)
-    assert_equal 7, @chris.settlements_remaining
-    assert @game.temple_build_next?(@chris)
-
-    build(1, 9)
-    assert_equal 7, @chris.settlements_remaining, "temple piece is not taken from supply"
-    assert_equal 0, @game.mandatory_count
+  def set_aside
+    engine.select_action("temple")
+    engine.click(Coordinate.new(0, 7))
+    @game.reload
+    @chris.reload
   end
 
-  test "end_turn turns the next player's set-aside pieces into extra mandatory builds" do
+  test "end_turn puts the next player's set-aside pieces into their supply as extra mandatory builds" do
     paula = game_players(:paula)
     paula.update!(supply: { "settlements" => 10, "set_aside" => 2 })
     @game.update!(current_player: @chris)
@@ -59,19 +51,20 @@ class TempleTest < ActiveSupport::TestCase
 
     assert_equal paula, @game.current_player
     assert_equal Game::MANDATORY_COUNT + 2, @game.mandatory_count
+    assert_equal 12, paula.settlements_remaining
     assert_equal 2, paula.temple_due
     assert_equal 0, paula.set_aside_count
   end
 
-  test "the game end waits for Temple pieces that are still due" do
+  test "a Temple piece returned to an empty supply can be built, and building it triggers the ending" do
     @chris.update!(supply: { "settlements" => 1, "temple_due" => 1 })
-    @game.update!(mandatory_count: 2)
+    @game.update!(mandatory_count: Game::MANDATORY_COUNT + 1)
 
+    assert @game.can_build_mandatory?(@chris)
     build(0, 8)
-    assert_equal 0, @game.end_trigger_count, "a piece is still due"
-
-    build(0, 9)
-    assert_equal 1, @game.end_trigger_count, "ending triggers once nothing is pending"
+    assert_equal 0, @chris.settlements_remaining
+    assert_equal 1, @game.end_trigger_count
+    assert TurnEngine.new(@game).turn_endable?
   end
 
   test "the game end waits while a piece is set aside" do
@@ -80,6 +73,22 @@ class TempleTest < ActiveSupport::TestCase
 
     build(0, 8)
     assert_equal 0, @game.end_trigger_count
+  end
+
+  test "Temple after building the last settlement withdraws that player's ending trigger" do
+    @chris.update!(supply: { "settlements" => 0 })
+    @game.update!(end_trigger_count: 1, mandatory_count: 0)
+
+    set_aside
+    assert_equal 1, @chris.set_aside_count
+    assert_equal 0, @game.end_trigger_count
+  end
+
+  test "Temple does not withdraw another player's ending trigger" do
+    @game.update!(end_trigger_count: 1)
+
+    set_aside
+    assert_equal 1, @game.end_trigger_count
   end
 
   test "Temple needs a settlement that is not part of a City Hall" do
