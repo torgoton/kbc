@@ -45,6 +45,7 @@ module Boards
       "WagonTile"            => Tiles::Location::WagonTile,
       "TempleTile"           => Tiles::Location::TempleTile,
       "RefugeTile"           => Tiles::Location::RefugeTile,
+      "FountainTile"         => Tiles::Location::FountainTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
