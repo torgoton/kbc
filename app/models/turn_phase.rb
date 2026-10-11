@@ -430,7 +430,11 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
   def tile_action_endable? = walls_placed.to_i >= 1
 
+  # The tile as held by the acting player, so Bonus tiles can modify it.
+  def tile = super&.with_player(@tile_owner)
+
   def legal_targets(board_contents:, player:, game: nil)
+    @tile_owner = player
     return [] if tile.places_wall? && game.stone_walls <= 0
     if tile.builds_settlement? && outpost_active?
       board_contents.available_cells_of(outpost_terrains(player))

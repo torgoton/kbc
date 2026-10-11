@@ -35,6 +35,20 @@ module Tiles
 
     def build_terrain = nil
 
+    # The holder's tiles, so a tile can check for the Bonus tile that modifies it.
+    def with_player(game_player)
+      @player_tiles = game_player&.tiles
+      self
+    end
+
+    # An unused (i.e. not acquired this turn) Bonus tile of this klass in the holder's tiles.
+    def bonus_active?(klass)
+      (@player_tiles || []).any? { |t| t["klass"] == klass && !t["used"] }
+    end
+
+    # Klass of the Bonus tile awarded with the 2nd copy of this tile, if it has one.
+    def bonus_tile_klass = nil
+
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0), budget: nil)
       terrain = build_terrain || hand
       return [] unless terrain

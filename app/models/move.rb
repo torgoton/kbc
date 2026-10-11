@@ -60,6 +60,7 @@ class Move < ApplicationRecord
     klass_name = payload["klass"]
     tile_class = Tiles::Tile.for_klass(klass_name)
     return "donation" if tile_class && tile_class < Tiles::Nomad::DonationTile
+    return "bonus" if tile_class && tile_class < Tiles::Bonus
 
     klass_name.delete_suffix("Tile").downcase
   end

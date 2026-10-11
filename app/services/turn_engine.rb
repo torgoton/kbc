@@ -208,7 +208,7 @@ class TurnEngine
     return false unless @game.turn_phase.mandatory_build? &&
       (@game.mandatory_count == Game::MANDATORY_COUNT + @game.current_player.temple_due || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand_terrains.first, supply: @game.current_player.supply_hash }
@@ -698,6 +698,7 @@ class TurnEngine
     game_player.receive_tile!(tile[:klass], from: tile[:key])
     game_player.taken_from = (game_player.taken_from || []) + [ tile[:key] ]
     tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)
+    award_bonus_tile(game_player, tile[:klass], tile_obj)
     supply_before = game_player.supply_hash.dup
     tile_obj&.on_pickup(game_player:)
     game_player.supply_hash.each do |kind, qty_after|
@@ -730,6 +731,24 @@ class TurnEngine
         end
       end
     end
+  end
+
+  # Collecting the 2nd copy of a tile that has a Bonus tile awards it (once, with no source
+  # location, so it is never forfeited).
+  def award_bonus_tile(game_player, klass, tile_obj)
+    bonus = tile_obj&.bonus_tile_klass
+    return unless bonus
+    copies = (game_player.tiles || []).count { |t| t["klass"] == klass }
+    return unless copies >= 2 && (game_player.tiles || []).none? { |t| t["klass"] == bonus }
+    game_player.receive_tile!(bonus, from: nil)
+    record_move(
+      action: "grant_bonus_tile",
+      deliberate: false,
+      reversible: true,
+      game_player: game_player,
+      payload: { "klass" => bonus },
+      message: "#{game_player.player.handle} collected the #{bonus.delete_suffix("Tile").sub("Bonus", " Bonus")} tile"
+    )
   end
 
   def check_ambassadors_goal(game_player, row, col)

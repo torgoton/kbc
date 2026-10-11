@@ -712,6 +712,12 @@ ul li .hex:hover .hex-bg {
     background-position: center 75%;
 }
 
+.tile-container.fountainbonus {
+    background-image: url("gold/fountainbonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}
+
 .set-aside {
     font-size: 0.8em;
     opacity: 0.8;
