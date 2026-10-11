@@ -1,6 +1,7 @@
 class Scoring
   GOAL_CLASSES = {
     "ambassadors" => Scoring::Goals::Ambassadors,
+    "captains"    => Scoring::Goals::Captains,
     "castles"     => Scoring::Goals::Castles,
     "citizens"    => Scoring::Goals::Citizens,
     "discoverers" => Scoring::Goals::Discoverers,

@@ -21,6 +21,7 @@ time (accumulated in `game_player.bonus_scores`). Tier-1 goals are pure
 | shepherds | 2 | ✅ | `goals/shepherds_test.rb` |
 | vassals | 1 | ✅ | `goals/vassals_test.rb` |
 | hermits | 1 | ✅ | `goals/hermits_test.rb` |
+| captains | 1 | ✅ | `goals/captains_test.rb` |
 | castles | 1 | ✅ | `goals/castles_test.rb` |
 | citizens | 1 | ✅ | `goals/citizens_test.rb` |
 | discoverers | 1 | ✅ | `goals/discoverers_test.rb` |
