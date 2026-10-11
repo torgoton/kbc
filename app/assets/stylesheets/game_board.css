@@ -1676,3 +1676,9 @@ ul li .hex:hover .hex-bg {
     background-size: 70%;
     background-position: center 75%;
 }
+
+.tile-container.canoebonus {
+    background-image: url("gold/canoebonus.svg");
+    background-size: 70%;
+    background-position: center 75%;
+}

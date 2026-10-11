@@ -49,6 +49,7 @@ module Boards
       "CanoeTile"            => Tiles::Location::CanoeTile,
       "FountainBonusTile"    => Tiles::Bonus::FountainBonusTile,
       "TempleBonusTile"      => Tiles::Bonus::TempleBonusTile,
+      "CanoeBonusTile"       => Tiles::Bonus::CanoeBonusTile,
       "RefugeBonusTile"      => Tiles::Bonus::RefugeBonusTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,

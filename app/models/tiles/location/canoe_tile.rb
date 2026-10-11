@@ -7,6 +7,7 @@ module Tiles
 
       def builds_settlement? = true
       def canoe_tile? = true
+      def bonus_tile_klass = "CanoeBonusTile"
 
       # A reaction to a location emptying, never a normal tile action.
       def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
