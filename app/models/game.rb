@@ -44,7 +44,7 @@ class Game < ApplicationRecord
   EXPANSIONS = {
     "nomads" => { label: "Nomads", enabled: true },
     "crossroads" => { label: "Crossroads", enabled: true },
-    "marshlands" => { label: "Marshlands", enabled: false },
+    "marshlands" => { label: "Marshlands", enabled: true },
     "harvest" => { label: "Harvest", enabled: false }
   }.freeze
   QUEENIES = {
@@ -593,6 +593,7 @@ class Game < ApplicationRecord
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
   BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   NOMAD_GOALS = %w[ambassadors families shepherds].freeze
+  MARSHLANDS_GOALS = %w[captains geologists messengers noblewomen scouts vassals].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
   BASE_BOARD_IDS = (0..7).to_a.freeze
   NOMAD_BOARD_IDS = (8..11).to_a.freeze
@@ -633,7 +634,7 @@ class Game < ApplicationRecord
   end
 
   def goal_pool
-    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : [])
+    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : []) + (expansion?("marshlands") ? MARSHLANDS_GOALS : [])
   end
 
   def board_pool

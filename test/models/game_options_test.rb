@@ -58,6 +58,13 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_empty goals_over_runs({ "expansions" => %w[crossroads] }) - BASE_GOALS
   end
 
+  test "marshlands adds its six goals to the goal pool" do
+    marshlands = Game::MARSHLANDS_GOALS
+    goals = goals_over_runs({ "expansions" => %w[marshlands] })
+    assert_empty goals - BASE_GOALS - marshlands
+    assert_equal marshlands.sort, (goals & marshlands).sort
+  end
+
   def nomad_tiles_over_runs(options)
     Array.new(RUNS) do
       game = started_game(options, include_boards: NOMAD_BOARDS)
