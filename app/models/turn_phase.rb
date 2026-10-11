@@ -579,7 +579,9 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # terrain tile with an unlocked two-card hand spans both, otherwise the tile's
   # fixed build terrain (or the locked/sole hand card).
   def outpost_terrains(player)
-    if tile.uses_played_terrain? && effective_terrain(player).nil?
+    if tile.build_terrains
+      tile.build_terrains
+    elsif tile.uses_played_terrain? && effective_terrain(player).nil?
       player.hand_terrains
     else
       [ tile.build_terrain || effective_terrain(player) || player.hand_terrains.first ].compact

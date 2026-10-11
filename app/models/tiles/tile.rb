@@ -35,6 +35,9 @@ module Tiles
 
     def build_terrain = nil
 
+    # Fixed set of terrains a tile may build on (Canoe Bonus), else nil.
+    def build_terrains = nil
+
     # The holder's tiles, so a tile can check for the Bonus tile that modifies it.
     def with_player(game_player)
       @player_tiles = game_player&.tiles

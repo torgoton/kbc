@@ -26,4 +26,16 @@ class Tiles::CanoeBonusTileTest < ActiveSupport::TestCase
   test "2nd Canoe awards the bonus tile" do
     assert_equal "CanoeBonusTile", Tiles::Location::CanoeTile.new(0).bonus_tile_klass
   end
+
+  test "Outpost waives adjacency for both Water and Swamp" do
+    @chris.update!(tiles: @chris.tiles + [ { "klass" => "OutpostTile", "used" => false, "from" => "[9, 9]" } ])
+    engine = TurnEngine.new(@game)
+    engine.select_action("canoebonus")
+    far = engine.legal_targets
+    engine.activate_outpost
+    @game.reload
+    targets = engine.legal_targets
+    assert_operator targets.size, :>, far.size
+    assert targets.all? { |r, c| %w[W B].include?(@game.board_contents.terrain_at(r, c)) }
+  end
 end
