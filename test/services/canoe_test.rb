@@ -124,6 +124,31 @@ class CanoeTest < ActiveSupport::TestCase
     assert_equal "mandatory", @game.turn_phase.type
   end
 
+  test "a holder with nowhere to build is not asked to react" do
+    @game.instantiate
+    @game.board_contents.available_cells_of(%w[W B]).each { |r, c| @game.board_contents.place_settlement(r, c, @paula.order) }
+    @game.board_contents_will_change!
+    @game.save!
+    empty_the_location
+
+    assert_equal "mandatory", @game.turn_phase.type
+  end
+
+  test "when only the mover reacts there is no confirmation, and the mover can still undo" do
+    @paula.update!(tiles: [])
+    empty_the_location
+
+    assert_equal "canoe", @game.turn_phase.type
+    assert_equal @chris, @game.current_player
+    assert engine.undo_allowed?
+
+    target = engine.legal_targets.first
+    engine.click(Coordinate.new(*target))
+    reload
+    assert_equal "mandatory", @game.turn_phase.type, "back to the interrupted action without a confirmation"
+    assert_empty @game.interrupts
+  end
+
   test "a location that still has tiles does not trigger Canoe" do
     @game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", 2) }
     @game.save!

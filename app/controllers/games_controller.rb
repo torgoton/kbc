@@ -1,8 +1,13 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :skip_canoe, :confirm_canoe ]
-  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :skip_canoe, :confirm_canoe ]
-  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :skip_canoe, :confirm_canoe ]
-  around_action :log_game_action_timing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :skip_canoe, :confirm_canoe ]
+  GAME_ACTIONS = %i[
+    action select_action end_turn undo_move undo_max_moves end_tile_action activate_outpost
+    remove_meeple select_meeple activate_fort skip_canoe confirm_canoe
+  ].freeze
+
+  before_action :require_game_playing, only: GAME_ACTIONS
+  before_action :require_current_player, only: GAME_ACTIONS
+  after_action :broadcast_game_update, only: GAME_ACTIONS
+  around_action :log_game_action_timing, only: GAME_ACTIONS
 
   def new
     @game = Game.new

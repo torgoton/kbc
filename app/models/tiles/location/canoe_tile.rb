@@ -4,6 +4,7 @@ module Tiles
       CREATOR = "Claude (placeholder icon)".freeze
       DESCRIPTION = "Whenever the last tile is taken from a location, you may build 1 settlement " \
                     "on Water or Swamp (adjacent if possible).".freeze
+      TERRAINS = %w[W B].freeze
 
       def builds_settlement? = true
       def canoe_tile? = true

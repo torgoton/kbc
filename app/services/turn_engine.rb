@@ -21,6 +21,7 @@ class TurnEngine
   # current_player and phase are swapped to each reactor in turn, and the
   # interrupted state waits on game.interrupts (a stack, since a Canoe build can
   # itself empty a location). Each reactor's time counts against their own clock.
+  # The confirmation is only needed when control passes to another player.
 
   def skip_canoe
     return "Not allowed" unless @game.turn_phase.type == "canoe"
@@ -32,11 +33,7 @@ class TurnEngine
     phase = @game.turn_phase
     return "Not allowed" unless phase.type == "canoe_confirm"
     @game.moves.where(deliberate: true).order(order: :desc).first&.update!(reversible: false)
-    if phase.holders.any?
-      resume = phase.reacting ? { "type" => "reaction_done" } : phase.resume
-      frame = { "return_order" => @game.current_player.order, "return_action" => resume, "queue" => phase.holders }
-      @game.interrupts = @game.interrupts + [ frame ]
-    end
+    @game.interrupts = reaction_frames(phase.resume, phase.holders)
     advance_reactions!
     @game.save
   end
@@ -253,12 +250,11 @@ class TurnEngine
   def turn_state
     return "Game over" unless @game.current_player_id
     current_phase = @game.turn_phase
-    handle = @game.current_player.player.handle
     case current_phase.type
     when "canoe_confirm"
-      return "#{handle}: confirm or undo"
+      return "#{@game.current_player.player.handle}: confirm or undo"
     when "canoe"
-      return "#{handle} may build on Water or Swamp (Canoe), or skip"
+      return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -507,7 +503,7 @@ class TurnEngine
   end
 
   # Called after every board click: if it emptied a location Canoes can react to, or was a
-  # Canoe build, the mover must confirm before the reactions run.
+  # Canoe build, the reactions run, gated by a confirmation if another player is next.
   def open_reactions!
     reacting = @reaction_done
     @reaction_done = false
@@ -516,43 +512,67 @@ class TurnEngine
     return unless holders.any? || reacting
 
     resume = reacting ? { "type" => "reaction_done" } : @game.current_action
-    @game.turn_phase = TurnPhase::CanoeConfirmPhase.new(resume: resume, holders: holders, reacting: reacting)
+    frames = reaction_frames(resume, holders)
+    if next_reaction(frames)[1] == @game.current_player.order
+      @game.interrupts = frames
+      advance_reactions!
+    else
+      @game.turn_phase = TurnPhase::CanoeConfirmPhase.new(resume: resume, holders: holders, reacting: reacting)
+    end
     @game.save
   end
 
-  # Reactor orders, one per Canoe tile, starting after the current player and ending with them.
+  # The interrupt stack with a frame for these holders pushed (none when there are none,
+  # e.g. after a Canoe build that emptied nothing).
+  def reaction_frames(resume, holders)
+    return @game.interrupts if holders.empty?
+    frame = { "return_order" => @game.current_player.order, "return_action" => resume, "queue" => holders }
+    @game.interrupts + [ frame ]
+  end
+
+  # Reactor orders, one per Canoe reaction, starting after the current player and ending with them.
   def canoe_holders
     count = @game.game_players.count
     start = @game.current_player.order
     (1..count).flat_map do |i|
       order = (start + i) % count
-      [ order ] * canoe_tiles(reactor(order))
+      [ order ] * canoe_reactions(reactor(order))
     end
   end
 
-  def canoe_tiles(game_player)
+  # One reaction per Canoe tile, if the player can build anywhere on Water or Swamp.
+  def canoe_reactions(game_player)
     return 0 unless game_player.settlements_remaining?
+    @game.instantiate
+    return 0 if @game.board_contents.available_cells_of(Tiles::Location::CanoeTile::TERRAINS).empty?
     (game_player.tiles || []).count { |t| t["klass"] == "CanoeTile" }
+  end
+
+  # Resolves +frames+ to the next player in control without changing the game: returns
+  # [frames, order, action], where action is nil when that player is a Canoe reactor and
+  # otherwise the interrupted action to resume. Order is nil when there are no frames.
+  def next_reaction(frames)
+    frames = frames.deep_dup
+    loop do
+      frame = frames.last
+      return [ frames, nil, nil ] unless frame
+      frame["queue"].shift until frame["queue"].empty? || canoe_reactions(reactor(frame["queue"].first)).positive?
+      return [ frames, frame["queue"].shift, nil ] if frame["queue"].any?
+      frames.pop
+      return [ frames, frame["return_order"], frame["return_action"] ] unless frame["return_action"]["type"] == "reaction_done"
+    end
   end
 
   # Moves on to the next reactor, or back to whoever was interrupted.
   def advance_reactions!
-    loop do
-      frames = @game.interrupts.deep_dup
-      frame = frames.last
-      return unless frame
-      frame["queue"].shift until frame["queue"].empty? || canoe_tiles(reactor(frame["queue"].first)).positive?
-      if frame["queue"].any?
-        @game.interrupts = frames
-        hand_over_to(reactor(frame["queue"].shift))
-        @game.turn_phase = TurnPhase::CanoePhase.new
-        return
-      end
-      frames.pop
-      @game.interrupts = frames
-      hand_over_to(reactor(frame["return_order"]))
-      @game.current_action = frame["return_action"]
-      return unless frame["return_action"]["type"] == "reaction_done"
+    frames, order, action = next_reaction(@game.interrupts)
+    return unless order
+    @game.interrupts = frames
+    hand_over_to(reactor(order))
+    if action
+      @game.current_action = action
+    else
+      @game.turn_phase = TurnPhase::CanoePhase.new
     end
   end
 
@@ -739,7 +759,7 @@ class TurnEngine
       reversible: true,
       game_player: game_player,
       payload: { "klass" => bonus },
-      message: "#{game_player.player.handle} collected the #{bonus.delete_suffix("Tile").sub("Bonus", " Bonus")} tile"
+      message: "#{game_player.player.handle} collected the #{bonus.delete_suffix("Tile").titleize} tile"
     )
   end
 
@@ -781,7 +801,7 @@ class TurnEngine
   end
 
   def in_same_direction?(p1, p2, p3)
-    Tiles::Location::PaddockTile::STRAIGHT_LINES.any? do |steps|
+    BoardState::STRAIGHT_LINES.any? do |steps|
       dr1, dc1 = steps[p1[0] % 2]
       mid = [ p1[0] + dr1, p1[1] + dc1 ]
       next false unless mid == p2

@@ -1,4 +1,14 @@
 class BoardState
+  # Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
+  STRAIGHT_LINES = [
+    [ [ 0, -1 ], [ 0, -1 ] ],   # W
+    [ [ 0,  1 ], [ 0,  1 ] ],   # E
+    [ [ -1, -1 ], [ -1, 0 ] ],  # NW
+    [ [ -1,  0 ], [ -1, 1 ] ],  # NE
+    [ [ 1, -1 ],  [ 1, 0 ] ],   # SW
+    [ [ 1,  0 ],  [ 1, 1 ] ]    # SE
+  ].freeze
+
   # Terrain is static board config (from game.boards), not occupancy, so it is
   # never serialized. A terrain source (anything answering terrain_at(row, col)
   # — the Boards::Board in production, a stub in tests) is attached at

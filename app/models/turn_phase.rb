@@ -1567,8 +1567,6 @@ end
 # location. Build on any Water or Swamp hex (adjacent to your settlements if
 # possible) or skip.
 class TurnPhase::CanoePhase < TurnPhase
-  TERRAINS = %w[W B].freeze
-
   def self.from_hash(_hash)
     new
   end
@@ -1583,7 +1581,7 @@ class TurnPhase::CanoePhase < TurnPhase
 
   def legal_targets(board_contents:, player:, game: nil)
     return [] unless player.settlements_remaining?
-    board_contents.buildable_cells_for_any(player.order, TERRAINS)
+    board_contents.buildable_cells_for_any(player.order, Tiles::Location::CanoeTile::TERRAINS)
   end
 
   def click(coordinate, engine)

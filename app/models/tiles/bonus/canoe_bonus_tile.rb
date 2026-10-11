@@ -4,7 +4,7 @@ module Tiles
       CREATOR = "Claude (placeholder icon)".freeze
       DESCRIPTION = "Build 1 settlement on Water or Swamp (adjacent if possible).".freeze
       CLASS_DESCRIPTION = "Bonus Tile - Awarded with the 2nd Canoe. Selectable from the turn after you acquire it.".freeze
-      TERRAINS = %w[W B].freeze
+      TERRAINS = Tiles::Location::CanoeTile::TERRAINS
 
       def class_description = CLASS_DESCRIPTION
       def builds_settlement? = true

@@ -4,13 +4,11 @@ module Tiles
       CREATOR = "Icon by Smalllike".freeze
       DESCRIPTION = "Move one of your own settlements in a straight line until it is blocked by an obstacle.".freeze
 
-      STRAIGHT_LINES = Tiles::Location::PaddockTile::STRAIGHT_LINES
-
-      def moves_settlement? = true
+      include Tiles::MovesFromSource
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order: nil, hand: nil, budget: nil)
         return [] if from_row.nil? || from_col.nil?
-        STRAIGHT_LINES.filter_map do |steps|
+        BoardState::STRAIGHT_LINES.filter_map do |steps|
           last = nil
           r, c = from_row, from_col
           loop do
@@ -24,17 +22,6 @@ module Tiles
           end
           last
         end
-      end
-
-      def selectable_settlements(player_order:, board_contents:, hand: nil, budget: nil)
-        board_contents.settlements_for(player_order).filter_map do |r, c|
-          next if board_contents.city_hall_at?(r, c)
-          [ r, c ] if valid_destinations(from_row: r, from_col: c, board_contents:).any?
-        end
-      end
-
-      def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
-        selectable_settlements(player_order:, board_contents:, hand:).any?
       end
     end
   end
