@@ -15,6 +15,7 @@ class Scoring
     "miners"      => Scoring::Goals::Miners,
     "noblewomen"  => Scoring::Goals::Noblewomen,
     "shepherds"   => Scoring::Goals::Shepherds,
+    "vassals"     => Scoring::Goals::Vassals,
     "workers"     => Scoring::Goals::Workers
   }.freeze
 
