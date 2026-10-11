@@ -206,7 +206,7 @@ class TurnEngine
     return false if tile["used"]
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
-      (@game.mandatory_count == Game::MANDATORY_COUNT + @game.current_player.temple_due || !@game.can_build_mandatory?(@game.current_player))
+      (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0

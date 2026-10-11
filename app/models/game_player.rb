@@ -64,6 +64,11 @@ class GamePlayer < ApplicationRecord
     supply["temple_due"] = 0
   end
 
+  # A Bonus tile counts from the turn after it is acquired (acquired tiles start "used").
+  def bonus_tile_active?(klass)
+    (tiles || []).any? { |t| t["klass"] == klass && !t["used"] }
+  end
+
   def settlements_remaining
     supply["settlements"].to_i
   end

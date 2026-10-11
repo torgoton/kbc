@@ -495,6 +495,11 @@ class Game < ApplicationRecord
     game_player.temple_due.positive? && mandatory_count.positive? && mandatory_count <= game_player.temple_due
   end
 
+  # No mandatory settlement has been built yet this turn.
+  def mandatory_untouched?(game_player)
+    mandatory_count == MANDATORY_COUNT + game_player.temple_due
+  end
+
   def can_build_mandatory?(game_player)
     mandatory_count.positive? && (game_player.settlements_remaining? || temple_build_next?(game_player))
   end

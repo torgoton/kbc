@@ -5,6 +5,7 @@ module Tiles
       DESCRIPTION = "Remove 1 of your settlements from the board and build it during your next mandatory action.".freeze
 
       def sets_aside_settlement? = true
+      def bonus_tile_klass = "TempleBonusTile"
 
       def action_message(player_handle:, terrain_names:, hand: nil)
         "#{player_handle} must select a settlement to set aside"

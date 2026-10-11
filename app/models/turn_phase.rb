@@ -243,7 +243,8 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
   def legal_targets(board_contents:, player:, game: nil)
     return [] unless game.can_build_mandatory?(player)
     terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand_terrains
-    if outpost_active?
+    # Outpost and the Temple Bonus tile (first mandatory settlement) waive adjacency.
+    if outpost_active? || (player.bonus_tile_active?("TempleBonusTile") && game.mandatory_untouched?(player))
       board_contents.available_cells_of(terrains)
     else
       board_contents.buildable_cells_for_any(player.order, terrains)
@@ -281,10 +282,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     else
       return "Not available" unless engine.legal_targets.include?([ row, col ])
       if card_terrain.nil?
-        card_terrain = game_player.hand_terrains.find { |t|
-          list = engine.available_list(game_player.order, t)
-          list.any? ? list[row][col] : true
-        }
+        card_terrain = game_player.hand_terrains.find { |t| game.board_contents.terrain_at(row, col) == t }
         engine.lock_terrain!(card_terrain, chosen_terrain_before)
       end
       engine.build_on_terrain(card_terrain, row, col, game_player)
