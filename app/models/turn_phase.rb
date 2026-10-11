@@ -1555,17 +1555,13 @@ class TurnPhase::SetAsidePhase < TurnPhase
 end
 
 # Canoe: a reaction, taken by each holder when the last tile is taken from a
-# location. Build or skip; to build, choose Water or Swamp, then build there
-# (adjacent if possible).
+# location. Build on any Water or Swamp hex (adjacent to your settlements if
+# possible) or skip.
 class TurnPhase::CanoePhase < TurnPhase
   TERRAINS = %w[W B].freeze
 
-  def self.from_hash(hash)
-    new(chosen_terrain: hash["chosen_terrain"])
-  end
-
-  def initialize(chosen_terrain: nil)
-    @chosen_terrain_value = chosen_terrain
+  def self.from_hash(_hash)
+    new
   end
 
   def type
@@ -1576,17 +1572,9 @@ class TurnPhase::CanoePhase < TurnPhase
     "CanoeTile"
   end
 
-  def chosen_terrain
-    @chosen_terrain_value
-  end
-
-  def with_chosen_terrain(terrain)
-    self.class.new(chosen_terrain: terrain)
-  end
-
   def legal_targets(board_contents:, player:, game: nil)
-    return [] unless chosen_terrain && player.settlements_remaining?
-    board_contents.buildable_cells_for(player.order, chosen_terrain)
+    return [] unless player.settlements_remaining?
+    board_contents.buildable_cells_for(player.order, TERRAINS)
   end
 
   def click(coordinate, engine)
@@ -1595,17 +1583,16 @@ class TurnPhase::CanoePhase < TurnPhase
     game = engine.game
     game.instantiate
     game_player = game.current_player
-    return "Choose a terrain first" unless chosen_terrain
     return "Not available" unless engine.legal_targets.include?([ row, col ])
 
-    engine.build_on_terrain(chosen_terrain, row, col, game_player, tile_klass: "CanoeTile")
+    engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: "CanoeTile")
     engine.finish_reaction!
     game_player.save
     game.save
   end
 
   def serialize
-    { "type" => "canoe", "klass" => "CanoeTile", "chosen_terrain" => chosen_terrain }.compact
+    { "type" => "canoe", "klass" => "CanoeTile" }
   end
 end
 

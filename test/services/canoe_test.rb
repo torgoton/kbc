@@ -62,10 +62,10 @@ class CanoeTest < ActiveSupport::TestCase
     empty_the_location
     engine.confirm_canoe
     reload
-    engine.choose_canoe_terrain("W")
-    reload
-    target = engine.legal_targets.first
-    assert_equal "W", @game.board_contents.terrain_at(*target)
+    targets = engine.legal_targets
+    assert targets.all? { |r, c| %w[W B].include?(@game.board_contents.terrain_at(r, c)) }
+    assert_equal @game.board_contents.available_cells_of(%w[W B]).to_set, targets.to_set, "all Water and Swamp hexes are offered"
+    target = targets.first
 
     engine.click(Coordinate.new(*target))
     reload
@@ -88,14 +88,18 @@ class CanoeTest < ActiveSupport::TestCase
     assert_equal "canoe", @game.turn_phase.type
   end
 
-  test "only Water and Swamp can be chosen" do
+  test "with a settlement on the board, only adjacent Water and Swamp hexes are offered" do
+    @game.board_contents = BoardState.new.tap do |s|
+      s.place_tile(2, 7, "OasisTile", 1)
+      s.place_settlement(7, 4, @paula.order)
+    end
+    @game.save!
     empty_the_location
     engine.confirm_canoe
     reload
-    engine.choose_canoe_terrain("G")
-    assert_nil reload && @game.turn_phase.chosen_terrain
-    engine.choose_canoe_terrain("B")
-    assert_equal "B", reload && @game.turn_phase.chosen_terrain
+
+    targets = engine.legal_targets
+    assert_equal [ [ 6, 4 ], [ 8, 4 ], [ 8, 5 ] ].to_set, targets.to_set
   end
 
   test "everyone skipping returns to the interrupted action" do
@@ -146,7 +150,6 @@ class CanoeTest < ActiveSupport::TestCase
     empty_the_location
     engine.confirm_canoe
     reload
-    engine.choose_canoe_terrain("W")
     engine.click(Coordinate.new(8, 5))
     reload
     assert_equal "canoe_confirm", @game.turn_phase.type

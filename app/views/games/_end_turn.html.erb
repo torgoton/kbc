@@ -4,11 +4,6 @@
 <% if my_turn && engine.canoe_confirmation? %>
   <%= button_to "Confirm", confirm_canoe_game_path(game) %>
 <% elsif my_turn && engine.canoe_reaction? %>
-  <% unless game.current_action["chosen_terrain"] %>
-    <% TurnPhase::CanoePhase::TERRAINS.each do |terrain| %>
-      <%= button_to "Canoe: build on #{Boards::Board::TERRAIN_NAMES[terrain]}", choose_canoe_terrain_game_path(game, terrain: terrain) %>
-    <% end %>
-  <% end %>
   <%= button_to "Skip Canoe", skip_canoe_game_path(game) %>
 <% elsif my_turn && engine.tile_action_endable? %>
   <%= button_to "End action", end_tile_action_game_path(game) %>

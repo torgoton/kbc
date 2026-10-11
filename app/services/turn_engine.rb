@@ -22,13 +22,6 @@ class TurnEngine
   # interrupted state waits on game.interrupts (a stack, since a Canoe build can
   # itself empty a location). Each reactor's time counts against their own clock.
 
-  def choose_canoe_terrain(terrain)
-    phase = @game.turn_phase
-    return "Not allowed" unless phase.type == "canoe" && TurnPhase::CanoePhase::TERRAINS.include?(terrain)
-    @game.turn_phase = phase.with_chosen_terrain(terrain)
-    @game.save
-  end
-
   def skip_canoe
     return "Not allowed" unless @game.turn_phase.type == "canoe"
     advance_reactions!
@@ -265,8 +258,7 @@ class TurnEngine
     when "canoe_confirm"
       return "#{handle}: confirm or undo"
     when "canoe"
-      terrain = current_phase.chosen_terrain
-      return terrain ? "#{handle} must build on #{Boards::Board::TERRAIN_NAMES[terrain]} (Canoe)" : "#{handle} may build on Water or Swamp (Canoe), or skip"
+      return "#{handle} may build on Water or Swamp (Canoe), or skip"
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"

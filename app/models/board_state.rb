@@ -101,14 +101,15 @@ class BoardState
   # mandatory builds (MandatoryBuildPhase) and the location build tiles
   # (Tiles::Tile#valid_destinations) so the rule lives in exactly one place.
   def buildable_cells_for(player_order, terrain, excluding: nil)
+    terrains = Array(terrain)
     sources = settlements_for(player_order)
     sources = sources.reject { |cell| cell == excluding } if excluding
     adjacent = sources.flat_map do |row, col|
-      neighbors_where(row, col) { |nr, nc| available_for_building?(nr, nc) && terrain_at(nr, nc) == terrain }
+      neighbors_where(row, col) { |nr, nc| available_for_building?(nr, nc) && terrains.include?(terrain_at(nr, nc)) }
     end.uniq
     return adjacent unless adjacent.empty?
 
-    available_cells_of([ terrain ])
+    available_cells_of(terrains)
   end
 
   # Every buildable cell (empty, not warrior-blocked) whose terrain is in
