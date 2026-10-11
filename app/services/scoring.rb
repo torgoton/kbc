@@ -6,6 +6,7 @@ class Scoring
     "discoverers" => Scoring::Goals::Discoverers,
     "families"    => Scoring::Goals::Families,
     "farmers"     => Scoring::Goals::Farmers,
+    "geologists"  => Scoring::Goals::Geologists,
     "fishermen"   => Scoring::Goals::Fishermen,
     "hermits"     => Scoring::Goals::Hermits,
     "knights"     => Scoring::Goals::Knights,
