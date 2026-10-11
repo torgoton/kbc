@@ -92,6 +92,7 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | Nomad::SwordTile | ✅ | `tiles/sword_tile_test.rb` | targeted removal of an opponent's settlement or meeple, returned to the matching supply; location-tile forfeit, undo round trip |
 | Nomad::TreasureTile | ✅ | `tiles/treasure_tile_test.rb` | pickup immediately scores 3 points and is not held |
 | TempleTile | ✅ | `services/temple_test.rb` | set a settlement aside (outside supply), extra mandatory build next turn, game end waits for pending pieces |
+| RefugeTile | ✅ | `services/refuge_tile_test.rb` | one-hex move to an unoccupied buildable neighbour (Swamp included), full select/move flow |
 | CastleTile | ✅ | `goals/castles_test.rb` | pure-data location tile; scoring covered by the Castles goal, no custom tile logic |
 
 ## Rules / cross-cutting mechanics
