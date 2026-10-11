@@ -119,6 +119,8 @@ class TurnEngine
           action_type: type,
           klass_name: klass_name
         )
+      elsif tile_obj&.sets_aside_settlement?
+        TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
       elsif tile_obj&.sword_tile?
         opponents = @game.game_players
           .reject { |gp| gp == @game.current_player }
@@ -170,7 +172,7 @@ class TurnEngine
     return false if tile["used"]
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
-      (@game.mandatory_count == Game::MANDATORY_COUNT || @game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
+      (@game.mandatory_count == Game::MANDATORY_COUNT + @game.current_player.temple_due || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
@@ -182,7 +184,7 @@ class TurnEngine
   def turn_endable?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
-      (@game.mandatory_count <= 0 || !@game.current_player.settlements_remaining?)
+      !@game.can_build_mandatory?(@game.current_player)
   end
 
   def outpost_activatable?(tile)
@@ -227,7 +229,7 @@ class TurnEngine
       remaining ? "#{msg} (#{remaining} remaining)" : msg
     else
       has_activatable = (@game.current_player&.tiles || []).any? { |t| tile_activatable?(t) }
-      if @game.mandatory_count > 0 && @game.current_player.settlements_remaining?
+      if @game.can_build_mandatory?(@game.current_player)
         terrain_name = if (ct = effective_terrain(@game.current_player))
           Boards::Board::TERRAIN_NAMES[ct]
         else
@@ -258,7 +260,7 @@ class TurnEngine
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
-    @game.mandatory_count = Game::MANDATORY_COUNT
+    game_player.end_temple_turn!([ game_player.temple_due, [ @game.mandatory_count, 0 ].max ].min)
     @game.current_action = { "type" => "mandatory" }
     @game.turn_started_at = Time.current if @game.timed?
     next_order = (@game.current_player.order + 1) % @game.game_players.count
@@ -266,6 +268,8 @@ class TurnEngine
     @game.current_player = @game.game_players.find { |p| p.order == next_order }
     Rails.logger.debug(" - next player #{@game.current_player.inspect}")
     @game.current_player.reset_tiles!
+    @game.current_player.start_temple_turn!
+    @game.mandatory_count = Game::MANDATORY_COUNT + @game.current_player.temple_due
     # Forfeit expired nomad tiles
     game_player.tiles = (game_player.tiles || []).reject do |tile|
       tile["expires_on_turn"] && tile["expires_on_turn"] == @game.turn_number
@@ -430,8 +434,10 @@ class TurnEngine
   def build_on_terrain(terrain, row, col, game_player, tile_klass: nil)
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
-    game_player.decrement_supply!
-    if game_player.settlements_remaining == 0
+    temple_piece = tile_klass.nil? && @game.temple_build_next?(game_player)
+    payload["temple"] = true if temple_piece
+    game_player.decrement_supply! unless temple_piece
+    if game_player.settlements_remaining == 0 && !temple_pieces_pending?(game_player, mandatory: tile_klass.nil?)
       @game.end_trigger_count += 1
       payload["triggered_ending"] = true
     end
@@ -450,6 +456,13 @@ class TurnEngine
     check_ambassadors_goal(game_player, row, col)
     check_shepherds_goal(game_player, row, col, terrain)
     apply_tile_pickup(game_player, row, col)
+  end
+
+  # The game ending waits while this player still holds Temple pieces: set aside for next
+  # turn, or due this turn and not yet built (this build, if mandatory, is already counted).
+  def temple_pieces_pending?(game_player, mandatory:)
+    remaining_after = @game.mandatory_count - (mandatory ? 1 : 0)
+    game_player.set_aside_count.positive? || [ game_player.temple_due, remaining_after ].min.positive?
   end
 
   def apply_tile_forfeit(game_player)

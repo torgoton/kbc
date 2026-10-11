@@ -69,6 +69,11 @@ module Tiles
       false
     end
 
+    # Temple: take one of your settlements off the board to build next turn.
+    def sets_aside_settlement?
+      false
+    end
+
     def places_meeple?
       false
     end

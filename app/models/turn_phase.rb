@@ -40,6 +40,8 @@ class TurnPhase
       TileBuildPhase.from_hash(hash)
     elsif tile&.sword_tile?
       TargetedRemovalPhase.from_hash(hash)
+    elsif tile&.sets_aside_settlement?
+      SetAsidePhase.from_hash(hash)
     elsif tile && tile.places_meeple? && tile.meeple_kind == "warrior"
       MeepleActionPhase.from_hash(hash)
     elsif tile&.places_city_hall?
@@ -235,7 +237,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
   def mandatory_build? = true
 
   def legal_targets(board_contents:, player:, game: nil)
-    return [] unless player.settlements_remaining? && game.mandatory_count > 0
+    return [] unless game.can_build_mandatory?(player)
     terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand_terrains
     if outpost_active?
       board_contents.available_cells_of(terrains)
@@ -254,7 +256,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     game = engine.game
     game.instantiate
     game_player = game.current_player
-    return "No settlements left" unless game_player.settlements_remaining?
+    return "No settlements left" unless game.can_build_mandatory?(game_player)
     chosen_terrain_before = chosen_terrain
     card_terrain = effective_terrain(game_player)
 
@@ -291,7 +293,8 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     end
 
     builds = game.turn_phase.builds || []
-    engine.check_families_goal(game_player) if builds.size == 3
+    # Swamp (2 settlements) cannot score Families; a 3rd build there is a Temple piece.
+    engine.check_families_goal(game_player) if builds.size == 3 && game.turn_phase.chosen_terrain != "B"
     game_player.save
     game.save
   end
@@ -1485,5 +1488,64 @@ class TurnPhase::CityHallPhase < TurnPhase
       "type" => action_type,
       "klass" => klass_name
     }
+  end
+end
+
+# Temple: pick one of your settlements to take off the board and set aside; it
+# is built during your next mandatory action.
+class TurnPhase::SetAsidePhase < TurnPhase
+  attr_reader :action_type, :klass_value
+
+  def self.from_hash(hash)
+    new(action_type: hash.fetch("type"), klass_name: hash["klass"])
+  end
+
+  def initialize(action_type:, klass_name:)
+    @action_type = action_type
+    @klass_value = klass_name
+  end
+
+  def type
+    action_type
+  end
+
+  def klass_name
+    klass_value
+  end
+
+  def legal_targets(board_contents:, player:, game: nil)
+    board_contents.settlements_for(player.order).reject { |r, c| board_contents.city_hall_at?(r, c) }
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "No Temple tile" unless game_player.find_unused_tile(tile_klass_name)
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    engine.record_move(
+      action: "set_aside_settlement",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      to: "set_aside",
+      message: "#{game_player.player.handle} set aside a settlement from [#{row}, #{col}]"
+    )
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    game_player.set_aside_settlement!
+    engine.apply_tile_forfeit(game_player)
+    game_player.mark_tile_used!(tile_klass_name)
+    engine.reset_to_mandatory
+    game_player.save
+    game.save
+  end
+
+  def serialize
+    { "type" => action_type, "klass" => klass_name }
   end
 end

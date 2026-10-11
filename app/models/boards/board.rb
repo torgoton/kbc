@@ -43,6 +43,7 @@ module Boards
       "FortTile"             => Tiles::Location::FortTile,
       "MonasteryTile"        => Tiles::Location::MonasteryTile,
       "WagonTile"            => Tiles::Location::WagonTile,
+      "TempleTile"           => Tiles::Location::TempleTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
