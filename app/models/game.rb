@@ -495,9 +495,11 @@ class Game < ApplicationRecord
     game_player.temple_due.positive? && mandatory_count.positive? && mandatory_count <= game_player.temple_due
   end
 
-  # No mandatory settlement has been built yet this turn.
+  # No mandatory settlement has been built yet this turn. Locking Swamp (possibly via a
+  # tile, before the mandatory action) lowers the full count by one without building.
   def mandatory_untouched?(game_player)
-    mandatory_count == MANDATORY_COUNT + game_player.temple_due
+    swamp = turn_phase.chosen_terrain == "B" ? 1 : 0
+    mandatory_count == MANDATORY_COUNT + game_player.temple_due - swamp
   end
 
   def can_build_mandatory?(game_player)

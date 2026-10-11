@@ -37,6 +37,18 @@ class DualCardsTest < ActiveSupport::TestCase
     assert_equal 2, game.mandatory_count
   end
 
+  test "locking Swamp before the mandatory action leaves it untouched, so other tiles stay usable" do
+    game = game_with_hand("GB")
+    game_players(:chris).update!(tiles: [ { "klass" => "FarmTile", "from" => "[0, 0]", "used" => false } ])
+    game.reload
+    engine = TurnEngine.new(game)
+    engine.lock_terrain!("B", nil) # as Oracle/Barn/Quarry would
+
+    assert_equal 2, game.mandatory_count
+    assert game.mandatory_untouched?(game.current_player)
+    assert engine.tile_activatable?(game.current_player.tiles.first)
+  end
+
   test "marshlands adds 5 dual cards to the terrain deck" do
     game = Game.new(options: { "expansions" => %w[marshlands] })
     game.send(:initialize_terrain_deck)
