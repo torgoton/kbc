@@ -11,6 +11,7 @@
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json
+#  interrupts        :json             not null
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
@@ -415,6 +416,7 @@ class Game < ApplicationRecord
       "current_action" => current_action.deep_dup,
       "current_player_order" => current_player.order,
       "stone_walls" => stone_walls,
+      "interrupts" => interrupts.deep_dup,
       "turn_number" => turn_number,
       "end_trigger_count" => end_trigger_count,
       "move_count" => move_count,
@@ -434,6 +436,7 @@ class Game < ApplicationRecord
     self.current_action = snapshot["current_action"]
     self.mandatory_count = snapshot["mandatory_count"]
     self.stone_walls = snapshot["stone_walls"]
+    self.interrupts = snapshot["interrupts"] || []
     self.turn_number = snapshot["turn_number"]
     self.end_trigger_count = snapshot["end_trigger_count"]
     self.move_count = snapshot["move_count"]
@@ -613,6 +616,7 @@ class Game < ApplicationRecord
   BASE_BOARD_IDS = (0..7).to_a.freeze
   NOMAD_BOARD_IDS = (8..11).to_a.freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
+  MARSHLANDS_BOARD_IDS = (16..19).to_a.freeze
 
   def select_goals
     instantiate
@@ -654,7 +658,8 @@ class Game < ApplicationRecord
   end
 
   def board_pool
-    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : [])
+    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +
+      (expansion?("marshlands") ? MARSHLANDS_BOARD_IDS : [])
   end
 
   def board_has_castles?

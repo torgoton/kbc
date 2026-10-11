@@ -5,10 +5,36 @@ class TurnEngine
 
   def initialize(game)
     @game = game
+    @emptied = []
   end
 
   def click(coordinate)
-    @game.turn_phase.click(coordinate, self)
+    result = @game.turn_phase.click(coordinate, self)
+    open_reactions!
+    result
+  end
+
+  # --- Canoe reactions -------------------------------------------------------
+  # Emptying a location lets each Canoe holder (starting with the active player,
+  # then in turn order) interrupt: current_player and phase are swapped to the
+  # reactor, and the interrupted state waits on game.interrupts (a stack, since a
+  # Canoe build can itself empty a location).
+
+  def choose_canoe_terrain(terrain)
+    phase = @game.turn_phase
+    return "Not allowed" unless phase.type == "canoe" && Tiles::Tile::BUILDABLE_TERRAIN.include?(terrain)
+    @game.turn_phase = phase.with_chosen_terrain(terrain)
+    @game.save
+  end
+
+  def skip_canoe
+    return "Not allowed" unless @game.turn_phase.type == "canoe"
+    advance_reactions!
+    @game.save
+  end
+
+  def finish_reaction!
+    @reaction_done = true
   end
 
   # A 20x20 boolean grid of the cells legal for a mandatory-style build of
@@ -205,12 +231,21 @@ class TurnEngine
   def undo_allowed?
     last_move = @game.moves.where(deliberate: true).order(order: :desc).first
     return false unless last_move
-    last_move.reversible
+    last_move.reversible && (last_move.game_player_id.nil? || last_move.game_player_id == @game.current_player_id)
+  end
+
+  def canoe_reaction?
+    @game.playing? && @game.turn_phase.type == "canoe"
   end
 
   def turn_state
     return "Game over" unless @game.current_player_id
     current_phase = @game.turn_phase
+    if current_phase.type == "canoe"
+      handle = @game.current_player.player.handle
+      terrain = current_phase.chosen_terrain
+      return terrain ? "#{handle} must build on #{Boards::Board::TERRAIN_NAMES[terrain]} (Canoe)" : "#{handle} may use the Canoe: choose a terrain"
+    end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
     if tile_klass
@@ -465,6 +500,55 @@ class TurnEngine
     game_player.set_aside_count.positive? || [ game_player.temple_due, remaining_after ].min.positive?
   end
 
+  def open_reactions!
+    reacting = @reaction_done
+    @reaction_done = false
+    holders = @emptied.any? ? canoe_holders : []
+    @emptied.clear
+    if holders.any?
+      resume = reacting ? { "type" => "reaction_done" } : @game.current_action
+      frame = { "return_order" => @game.current_player.order, "return_action" => resume, "queue" => holders }
+      @game.interrupts = @game.interrupts + [ frame ]
+    end
+    advance_reactions! if holders.any? || reacting
+    @game.save if holders.any? || reacting
+  end
+
+  # Orders of players holding an unused Canoe and a settlement to build, starting with the current player.
+  def canoe_holders
+    count = @game.game_players.count
+    start = @game.current_player.order
+    (0...count).map { |i| (start + i) % count }.select do |order|
+      can_canoe?(reactor(order))
+    end
+  end
+
+  def can_canoe?(game_player)
+    game_player.settlements_remaining? && game_player.find_unused_tile("CanoeTile")
+  end
+
+  def advance_reactions!
+    loop do
+      frames = @game.interrupts.deep_dup
+      frame = frames.last
+      return unless frame
+      frame["queue"].shift until frame["queue"].empty? || can_canoe?(reactor(frame["queue"].first))
+      if frame["queue"].any?
+        @game.current_player = reactor(frame["queue"].shift)
+        @game.interrupts = frames
+        @game.turn_phase = TurnPhase::CanoePhase.new
+        return
+      end
+      frames.pop
+      @game.interrupts = frames
+      @game.current_player = reactor(frame["return_order"])
+      @game.current_action = frame["return_action"]
+      return unless frame["return_action"]["type"] == "reaction_done"
+    end
+  end
+
+  def reactor(order) = @game.game_players.find { |g| g.order == order }
+
   def apply_tile_forfeit(game_player)
     return if (game_player.tiles || []).empty?
     active_tile_klass = @game.turn_phase.type == "mandatory" ? nil : current_action_tile_klass
@@ -580,6 +664,7 @@ class TurnEngine
     )
     @game.board_contents_will_change!
     @game.board_contents.decrement_tile(*Coordinate.from_key(tile[:key]))
+    @emptied << tile[:key] if @game.board_contents.tile_qty(*Coordinate.from_key(tile[:key])).zero?
     game_player.receive_tile!(tile[:klass], from: tile[:key])
     game_player.taken_from = (game_player.taken_from || []) + [ tile[:key] ]
     tile_obj = Tiles::Tile.for_klass(tile[:klass])&.new(0)

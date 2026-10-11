@@ -1,7 +1,15 @@
 <% my_turn = local_assigns.fetch(:my_turn, false) %>
 <% my_player = local_assigns[:my_player] %>
 <span id="my-turn-flag" data-my-turn="<%= my_turn %>" hidden></span>
-<% if my_turn && engine.tile_action_endable? %>
+<% if my_turn && engine.canoe_reaction? %>
+  <% canoe_terrain = game.current_action["chosen_terrain"] %>
+  <% unless canoe_terrain %>
+    <% Tiles::Tile::BUILDABLE_TERRAIN.each do |terrain| %>
+      <%= button_to Boards::Board::TERRAIN_NAMES[terrain], choose_canoe_terrain_game_path(game, terrain: terrain) %>
+    <% end %>
+  <% end %>
+  <%= button_to "Skip Canoe", skip_canoe_game_path(game) %>
+<% elsif my_turn && engine.tile_action_endable? %>
   <%= button_to "End action", end_tile_action_game_path(game) %>
 <% elsif my_turn && engine.turn_endable? %>
   <%= button_to "End turn", end_turn_game_path(game) %>

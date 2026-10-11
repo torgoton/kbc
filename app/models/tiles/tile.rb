@@ -70,6 +70,11 @@ module Tiles
     end
 
     # Temple: take one of your settlements off the board to build next turn.
+    # Canoe: a reaction to a location being emptied.
+    def canoe_tile?
+      false
+    end
+
     def sets_aside_settlement?
       false
     end

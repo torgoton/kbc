@@ -94,6 +94,7 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | TempleTile | ✅ | `services/temple_test.rb` | set a settlement aside (outside supply), extra mandatory build next turn, game end waits for pending pieces |
 | RefugeTile | ✅ | `services/refuge_tile_test.rb` | one-hex move to an unoccupied buildable neighbour (Swamp included), full select/move flow |
 | FountainTile | ✅ | `tiles/fountain_tile_test.rb` | builds next to exactly 1 own settlement and no opponent's |
+| CanoeTile | ✅ | `services/canoe_test.rb` | reaction when a location empties: reactor order, terrain choice, nested emptying, skip, undo guard |
 | CastleTile | ✅ | `goals/castles_test.rb` | pure-data location tile; scoring covered by the Castles goal, no custom tile logic |
 
 ## Rules / cross-cutting mechanics

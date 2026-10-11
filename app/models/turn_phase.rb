@@ -36,6 +36,8 @@ class TurnPhase
       FortPhase.from_hash(hash)
     elsif tile&.resettles?
       ResettlementPhase.from_hash(hash)
+    elsif tile&.canoe_tile?
+      CanoePhase.from_hash(hash)
     elsif tile && (tile.builds_settlement? || tile.places_wall?)
       TileBuildPhase.from_hash(hash)
     elsif tile&.sword_tile?
@@ -1547,5 +1549,58 @@ class TurnPhase::SetAsidePhase < TurnPhase
 
   def serialize
     { "type" => action_type, "klass" => klass_name }
+  end
+end
+
+# Canoe: a reaction, taken by the holder when a location is emptied. First choose
+# a terrain (any buildable one), then build there (adjacent if possible).
+class TurnPhase::CanoePhase < TurnPhase
+  def self.from_hash(hash)
+    new(chosen_terrain: hash["chosen_terrain"])
+  end
+
+  def initialize(chosen_terrain: nil)
+    @chosen_terrain_value = chosen_terrain
+  end
+
+  def type
+    "canoe"
+  end
+
+  def klass_name
+    "CanoeTile"
+  end
+
+  def chosen_terrain
+    @chosen_terrain_value
+  end
+
+  def with_chosen_terrain(terrain)
+    self.class.new(chosen_terrain: terrain)
+  end
+
+  def legal_targets(board_contents:, player:, game: nil)
+    return [] unless chosen_terrain && player.settlements_remaining?
+    board_contents.buildable_cells_for(player.order, chosen_terrain)
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "Choose a terrain first" unless chosen_terrain
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    engine.build_on_terrain(chosen_terrain, row, col, game_player, tile_klass: "CanoeTile")
+    game_player.mark_tile_used!("CanoeTile")
+    engine.finish_reaction!
+    game_player.save
+    game.save
+  end
+
+  def serialize
+    { "type" => "canoe", "klass" => "CanoeTile", "chosen_terrain" => chosen_terrain }.compact
   end
 end

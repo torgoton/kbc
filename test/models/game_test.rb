@@ -11,6 +11,7 @@
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json
+#  interrupts        :json             not null
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null

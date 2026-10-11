@@ -1,8 +1,8 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  around_action :log_game_action_timing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :choose_canoe_terrain, :skip_canoe ]
+  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :choose_canoe_terrain, :skip_canoe ]
+  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :choose_canoe_terrain, :skip_canoe ]
+  around_action :log_game_action_timing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort, :choose_canoe_terrain, :skip_canoe ]
 
   def new
     @game = Game.new
@@ -117,6 +117,22 @@ class GamesController < ApplicationController
     TurnEngine.new(@game).activate_outpost
     respond_to do |format|
       format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
+  def choose_canoe_terrain
+    TurnEngine.new(@game).choose_canoe_terrain(params[:terrain])
+    respond_to do |format|
+      format.html { head :no_content }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
+  def skip_canoe
+    TurnEngine.new(@game).skip_canoe
+    respond_to do |format|
+      format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
   end
