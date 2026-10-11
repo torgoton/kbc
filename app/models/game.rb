@@ -13,6 +13,7 @@
 #  goals             :json
 #  mandatory_count   :integer
 #  move_count        :integer
+#  options           :json             not null
 #  scores            :json
 #  speed             :string
 #  state             :string
@@ -38,6 +39,21 @@ class Game < ApplicationRecord
     "normal" => { bank_ms: 600_000, increment_ms: 30_000 }
   }.freeze
 
+  # Expansions offered on the new-game form. Only `enabled` ones can be chosen.
+  EXPANSIONS = {
+    "nomads" => { label: "Nomads", enabled: true },
+    "crossroads" => { label: "Crossroads", enabled: true },
+    "marshlands" => { label: "Marshlands", enabled: false },
+    "harvest" => { label: "Harvest", enabled: false }
+  }.freeze
+  QUEENIES = {
+    "capitol" => "Capitol",
+    "caves" => "Caves",
+    "island" => "The Island",
+    "emperors_choice" => "Emperor's Choice"
+  }.freeze
+  DEFAULT_OPTIONS = { "expansions" => %w[nomads crossroads], "nomads_sword" => true }.freeze
+
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
   has_many :moves, dependent: :destroy
@@ -53,6 +69,10 @@ class Game < ApplicationRecord
 
   after_find do |_game|
     update(state: "waiting") unless state
+  end
+
+  def expansion?(name)
+    options.fetch("expansions", []).include?(name)
   end
 
   def add_player(user)

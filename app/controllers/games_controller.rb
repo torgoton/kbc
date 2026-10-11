@@ -251,6 +251,15 @@ class GamesController < ApplicationController
   end
 
   def create_game_params
-    { state: "waiting", speed: params.fetch(:game, {}).permit(:speed)[:speed].presence }
+    game = params.fetch(:game, {})
+    { state: "waiting", speed: game.permit(:speed)[:speed].presence, options: create_options(game.fetch(:options, {})) }
+  end
+
+  def create_options(raw)
+    allowed = Game::EXPANSIONS.select { |_, e| e[:enabled] }.keys
+    expansions = Array(raw.permit(expansions: [])[:expansions]) & allowed
+    options = { "expansions" => expansions }
+    options["nomads_sword"] = raw[:nomads_sword] == "1" if expansions.include?("nomads")
+    options
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_13_171057) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_14_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -103,6 +103,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_13_171057) do
     t.json "goals"
     t.integer "mandatory_count"
     t.integer "move_count"
+    t.json "options", default: {}, null: false
     t.json "scores"
     t.string "speed"
     t.string "state"
