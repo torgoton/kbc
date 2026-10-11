@@ -13,6 +13,7 @@ class Scoring
     "merchants"   => Scoring::Goals::Merchants,
     "messengers"  => Scoring::Goals::Messengers,
     "miners"      => Scoring::Goals::Miners,
+    "noblewomen"  => Scoring::Goals::Noblewomen,
     "shepherds"   => Scoring::Goals::Shepherds,
     "workers"     => Scoring::Goals::Workers
   }.freeze

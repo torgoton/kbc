@@ -30,6 +30,7 @@ time (accumulated in `game_player.bonus_scores`). Tier-1 goals are pure
 | merchants | 1 | ✅ | `goals/merchants_test.rb` |
 | messengers | 1 | ✅ | `goals/messengers_test.rb` |
 | miners | 1 | ✅ | `goals/miners_test.rb` |
+| noblewomen | 1 | ✅ | `goals/noblewomen_test.rb` |
 | workers | 1 | ✅ | `goals/workers_test.rb` |
 
 ## Tasks (`Scoring::TASK_CLASSES`, `app/models/scoring/tasks/`)
