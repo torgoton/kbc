@@ -25,14 +25,22 @@ class TurnEngine
 
   def skip_canoe
     return "Not allowed" unless @game.turn_phase.type == "canoe"
-    advance_reactions!
-    @game.save
+    capture_undo_snapshot
+    record_move(
+      action: "skip_canoe",
+      deliberate: true,
+      reversible: true,
+      message: "#{@game.current_player.player.handle} declines to build"
+    )
+    finish_reaction!
+    open_reactions!
   end
 
   def confirm_canoe
     phase = @game.turn_phase
     return "Not allowed" unless phase.type == "canoe_confirm"
     @game.moves.where(deliberate: true).order(order: :desc).first&.update!(reversible: false)
+    log_canoe_start(phase.holders)
     @game.interrupts = reaction_frames(phase.resume, phase.holders)
     advance_reactions!
     @game.save
@@ -252,7 +260,7 @@ class TurnEngine
     current_phase = @game.turn_phase
     case current_phase.type
     when "canoe_confirm"
-      return "#{@game.current_player.player.handle}: confirm or undo"
+      return "#{@game.current_player.player.handle} (Canoe Reaction): confirm or undo"
     when "canoe"
       return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
     end
@@ -440,8 +448,8 @@ class TurnEngine
   # snapshot to deliberate moves so undo can restore it (ADR-0002). Also the
   # single place a timed player's clock_started_at gets stamped, on their
   # first deliberate move of the game: free thinking time before that.
-  def record_move(action:, deliberate:, reversible:, message: nil, game_player: nil, from: nil, to: nil, payload: nil)
-    mover = game_player || @game.current_player
+  def record_move(action:, deliberate:, reversible:, message: nil, game_player: :current, from: nil, to: nil, payload: nil)
+    mover = game_player == :current ? @game.current_player : game_player
     if deliberate && @game.timed? && mover&.clock_started_at.nil?
       mover.update!(clock_started_at: Time.current)
     end
@@ -518,6 +526,7 @@ class TurnEngine
     resume = reacting ? { "type" => "reaction_done" } : @game.current_action
     frames = reaction_frames(resume, holders)
     if next_reaction(frames)[1] == @game.current_player.order
+      log_canoe_start(holders)
       @game.interrupts = frames
       advance_reactions!
     else
@@ -574,9 +583,26 @@ class TurnEngine
     @game.interrupts = frames
     hand_over_to(reactor(order))
     if action
+      log_canoe("Canoe reactions end")
       @game.current_action = action
     else
       @game.turn_phase = TurnPhase::CanoePhase.new
+    end
+  end
+
+  def log_canoe(message, game_player = nil)
+    record_move(action: "canoe_log", deliberate: false, reversible: false, message: message, game_player: game_player)
+  end
+
+  # Logs the start of Canoe reactions and each player who will not react, and why.
+  def log_canoe_start(holders)
+    return if holders.empty?
+    log_canoe("Canoe reactions begin")
+    @game.game_players.sort_by(&:order).each do |gp|
+      next if holders.include?(gp.order)
+      handle = gp.player.handle
+      has_tile = (gp.tiles || []).any? { |t| t["klass"] == "CanoeTile" }
+      log_canoe(has_tile ? "#{handle} cannot build with the Canoe" : "#{handle} has no Canoe tile", gp)
     end
   end
 

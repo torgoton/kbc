@@ -1,4 +1,16 @@
 module Boards
+  # Terrain abbreviations
+  # B (Bog) Marshland
+  # C Canyon
+  # D Desert
+  # F Flowers
+  # G Grassland
+  # H (Harvest) Farmland
+  # L Location - Gold
+  # M Mountain
+  # S Silver - Castle, Nomad, Palace, Silo
+  # T (Timberland) Forest
+  # W Water
   class BoardSection
     SECTIONS = [
       # 0: Farm
@@ -387,7 +399,7 @@ module Boards
           "CTTBBGBWFF",
           "CMTBBGGWFF",
           "GTTTBWGFCC",
-          "GGGFLBGMCC",
+          "GGGTLBGMCC",
           "GGGBBGGGCC"
         ],
         silver_hexes: [
@@ -430,8 +442,8 @@ module Boards
           "TBTFBGGMMC",
           "BTFFBGMCMC",
           "TTBFFMMCCM",
-          "TBFFFFLGLC",
-          "TTTBWBFFGG",
+          "TBFFFFLGCG",
+          "TTTBWFBBGG",
           "TTTBFFFFGG"
         ],
         silver_hexes: [
@@ -440,6 +452,95 @@ module Boards
         location_hexes: [
           { r: 2, c: 8, k: "Fountain" },
           { r: 7, c: 6, k: "Fountain" }
+        ]
+      },
+      # 20: Bazaar/Water Mill
+      {
+        map: [
+          "GGTMWWFFGG",
+          "GMTTWFFGGG",
+          "GTTTTWFFMG",
+          "MTLTWFLFFG",
+          "TTTCWWFDFD",
+          "MCCWWWDDDD",
+          "MCCHHHHHDM",
+          "MCHHSHHHDD",
+          "CCCHHHWWDD",
+          "CMCWWWWDDD"
+        ],
+        silver_hexes: [
+          { r: 7, c: 4, k: "Silo" }
+        ],
+        location_hexes: [
+          { r: 3, c: 6, k: "Bazaar" },
+          { r: 3, c: 2, k: "Water Mill" }
+        ]
+      },
+      # 21: Mountain Station/Scout Cabin
+      {
+        map: [
+          "TTTTTTFFFH",
+          "TTTTTFFFHH",
+          "MMTLFFFFHH",
+          "GMMMMFFWHH",
+          "GGGLWMFWWH",
+          "GWCCWWWWHH",
+          "CCCMMMDSHH",
+          "MMMSMDDGHH",
+          "DDDDCCDGGG",
+          "DDCCCDDGGG"
+        ],
+        silver_hexes: [
+          { r: 6, c: 7, k: "Silo" },
+          { r: 7, c: 3, k: "Castle" }
+        ],
+        location_hexes: [
+          { r: 2, c: 3, k: "Mountain Station" },
+          { r: 4, c: 3, k: "Scout Cabin" }
+        ]
+      },
+      # 22: Cathedral/Watchtower
+      {
+        map: [
+          "TTTFFFGGGG",
+          "TTFFFMGWGG",
+          "FFFFFFDDWD",
+          "DDHSFMDDDD",
+          "DWHHHMCLDM",
+          "DWHMMMCCCC",
+          "DDHHHTMCCC",
+          "HHGHLTTCWC",
+          "HHGGGWTTWC",
+          "GGGWWWTTCC"
+        ],
+        silver_hexes: [
+          { r: 3, c: 3, k: "Silo" }
+        ],
+        location_hexes: [
+          { r: 7, c: 4, k: "Cathedral" },
+          { r: 4, c: 7, k: "Watchtower" }
+        ]
+      },
+      # 23: University/Palisade
+      {
+        map: [
+          "GGGGCCTTTH",
+          "TGGCMCTHHH",
+          "TTGMMCFMHH",
+          "TTLMMCFFFH",
+          "TTMMCCCFWW",
+          "TDMMCLFWGW",
+          "TDMDDHHWGG",
+          "DDDHHHWSFG",
+          "CDDDHHWFFG",
+          "CCDDWWFFFG"
+        ],
+        silver_hexes: [
+          { r: 7, c: 7, k: "Silo" }
+        ],
+        location_hexes: [
+          { r: 3, c: 2, k: "University" },
+          { r: 4, c: 5, k: "Palisade" }
         ]
       },
       # HIDDEN SECTION - used for testing, not actually in the game

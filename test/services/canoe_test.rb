@@ -25,8 +25,11 @@ class CanoeTest < ActiveSupport::TestCase
     reload
   end
 
+  # Skips, then confirms if the skip is awaiting confirmation (control passing to another player).
   def skip
     engine.skip_canoe
+    reload
+    engine.confirm_canoe if @game.turn_phase.type == "canoe_confirm"
     reload
   end
 
@@ -86,6 +89,68 @@ class CanoeTest < ActiveSupport::TestCase
     reload
     assert_equal @chris, @game.current_player, "the active player reacts last"
     assert_equal "canoe", @game.turn_phase.type
+  end
+
+  test "a reactor who skips confirms or undoes before anyone proceeds" do
+    empty_the_location
+    engine.confirm_canoe
+    reload
+
+    engine.skip_canoe
+    reload
+    assert_equal "canoe_confirm", @game.turn_phase.type
+    assert_equal @paula, @game.current_player, "others cannot proceed yet"
+    assert engine.undo_allowed?
+
+    engine.undo_max
+    reload
+    assert_equal "canoe", @game.turn_phase.type
+    assert_equal @paula, @game.current_player
+
+    engine.skip_canoe
+    reload
+    engine.confirm_canoe
+    reload
+    assert_equal @chris, @game.current_player
+    assert_equal "canoe", @game.turn_phase.type
+    assert_not engine.undo_allowed?, "the skip is final once confirmed"
+  end
+
+  test "the last reactor's skip needs no confirmation and can be undone" do
+    @paula.update!(tiles: [])
+    empty_the_location
+
+    engine.skip_canoe
+    reload
+    assert_equal "mandatory", @game.turn_phase.type
+    assert engine.undo_allowed?
+    engine.undo_last_move
+    reload
+    assert_equal "canoe", @game.turn_phase.type
+  end
+
+  test "begin and end entries belong to no player; each choice belongs to the player making it" do
+    @paula.update!(tiles: [])
+    @chris.update!(tiles: [ CANOE.dup ])
+    empty_the_location
+    log = -> { @game.moves.where(action: %w[canoe_log skip_canoe]).order(:order).map { |m| [ m.message, m.game_player ] } }
+
+    assert_equal [ [ "Canoe reactions begin", nil ], [ "#{@paula.player.handle} has no Canoe tile", @paula ] ], log.call
+    engine.skip_canoe
+    reload
+
+    assert_equal [ [ "#{@chris.player.handle} declines to build", @chris ], [ "Canoe reactions end", nil ] ], log.call.last(2)
+  end
+
+  test "reactions end entry has no player" do
+    empty_the_location
+    engine.confirm_canoe
+    reload
+    skip
+    skip
+
+    end_entry = @game.moves.find_by(message: "Canoe reactions end")
+    assert_nil end_entry.game_player
   end
 
   test "with a settlement on the board, only adjacent Water and Swamp hexes are offered" do

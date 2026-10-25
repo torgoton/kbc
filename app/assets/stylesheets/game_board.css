@@ -492,6 +492,11 @@ ul li .hex:hover .hex-bg {
     --hex-bg: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
 }
 
+/* marshland */
+.hex.terrain-b {
+    --hex-bg: color-mix(in srgb, #ff7310, transparent var(--fx-hex-transparency));
+}
+
 /* timberland (forest) */
 .hex.terrain-t {
     --hex-bg: color-mix(in srgb, forestgreen, transparent var(--fx-hex-transparency));
