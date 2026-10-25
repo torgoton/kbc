@@ -233,6 +233,11 @@ class TurnEngine
     @game.current_player.settlements_remaining?
   end
 
+  # Canoe reactions and their confirmation gate are not the holder's own turn.
+  def canoe_interrupt?
+    canoe_reaction? || canoe_confirmation?
+  end
+
   def tile_action_endable?
     @game.playing? && @game.turn_phase.tile_action_endable?
   end
@@ -468,7 +473,9 @@ class TurnEngine
     )
   end
 
+  # Outpost can be used only on your own turn, never during a Canoe reaction.
   def build_action?
+    return false if canoe_interrupt?
     return true if @game.turn_phase.mandatory_build?
     klass = Tiles::Tile.for_klass(current_action_tile_klass)
     klass&.new(0)&.builds_settlement? || false

@@ -267,6 +267,22 @@ class CanoeTest < ActiveSupport::TestCase
     assert_equal 90_000, @chris.reload.time_remaining_ms
   end
 
+  test "Outpost cannot be used during a Canoe reaction or its confirmation" do
+    outpost = { "klass" => "OutpostTile", "used" => false, "from" => "[9, 9]" }
+    @chris.update!(tiles: [ outpost.dup ])
+    @paula.update!(hand: [ "G" ], tiles: [ CANOE.dup, outpost.dup ])
+    empty_the_location
+    assert_not engine.outpost_activatable?(outpost), "mover at the confirm gate"
+    assert_equal "Not in build action", engine.activate_outpost
+
+    engine.confirm_canoe
+    reload
+    assert_equal @paula, @game.current_player
+    assert_not engine.outpost_activatable?(outpost), "reactor"
+    assert_equal "Not in build action", engine.activate_outpost
+    assert_equal "canoe", reload.turn_phase.type
+  end
+
   test "undo is refused to a player whose move is not the last one" do
     empty_the_location
     engine.confirm_canoe

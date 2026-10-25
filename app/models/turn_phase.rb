@@ -578,6 +578,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # The terrain(s) an Outpost build may target (adjacency waived): a played-
   # terrain tile with an unlocked two-card hand spans both, otherwise the tile's
   # fixed build terrain (or the locked/sole hand card).
+  # Unofficial ruling: this also waives Fountain's own adjacency rule (doc/rule details.md).
   def outpost_terrains(player)
     if tile.build_terrains
       tile.build_terrains

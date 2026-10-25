@@ -48,6 +48,8 @@ o DXV calls the Warrior, Ship, and Wagon tokens "Meeples"
 - For Canoe (and everything else), tile reset is done at the start of each player's turn - WOULD CHANGE tile reset is done at the end of each player's turn
 - Settlements set aside by Temple are played the next turn even if the Temple tile is lost
 - Settlements set aside by Temple CAN delay the end of game
+- Outpost can be used only on your own turn, so not during a Canoe reaction
+- UNOFFICIAL RULING: Outpost waives Fountain's adjacency requirement (Outpost disregards adjacency for extra actions), so Outpost + Fountain builds on any hex of your card's terrain
 
 ## Harvest
 - Bazaar CAN be used to repeat the Crossroads tile action to draw a 3rd card for your next turn

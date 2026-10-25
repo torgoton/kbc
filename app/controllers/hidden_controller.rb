@@ -5,12 +5,7 @@ class HiddenController < ApplicationController
     @game.state = "completed"
     @game.move_count = 0
     @game.mandatory_count = 3
-    @game.boards = [
-      [ 20, 0 ],
-      [ 21, 0 ],
-      [ 22, 0 ],
-      [ 23, 0 ]
-    ]
+    @game.boards = Boards::BoardSection::HIDDEN_SECTIONS.map { |id| [ id, 0 ] }
     @game.goals = %w[castles fishermen knights merchants]
     @game.current_player_id = nil
     @game.scores = {}

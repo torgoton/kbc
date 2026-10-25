@@ -662,6 +662,8 @@ module Boards
       }
     ].freeze
     LAST_SECTION = 19
+    # 20-23 (Harvest) are defined but not yet in the pool; the 4 test-only sections follow them.
+    HIDDEN_SECTIONS = (24..27).to_a.freeze
 
     SILVER_HEX_KINDS = {
       "Castle" => { css_class: "terrain-castlehex", description: "Castle - 3 points if you have an adjacent settlement" },
