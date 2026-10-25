@@ -21,9 +21,8 @@ class Scoring::Goals::MessengersTest < Scoring::Goals::GoalTestCase
   end
 
   test "a branching group scores its longest shortest path, not all hexes" do
+    # A plus around (7,3): the longest shortest path is 3 hexes, e.g. (6,3)-(7,3)-(7,4).
     ctx = build_game(chris_settlements: [ [ 7, 2 ], [ 7, 3 ], [ 7, 4 ], [ 6, 3 ], [ 8, 3 ] ])
-    result = score(ctx)
-    assert_operator result, :<, 10
-    assert_operator result, :>=, 6
+    assert_equal 6, score(ctx)
   end
 end

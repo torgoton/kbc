@@ -546,7 +546,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
     remaining = tile_obj.valid_destinations(
       board_contents: game.board_contents,
-      player_order: game_player.order, hand: wall_terrain || game_player.hand.first
+      player_order: game_player.order, hand: wall_terrain || game_player.hand_terrains.first
     )
     if walls_placed_after >= 2 || remaining.empty?
       game_player.mark_tile_used!("QuarryTile")
