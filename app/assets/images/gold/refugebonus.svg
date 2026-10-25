@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="#000">
-  <path d="M32 8L8 30h8v24h12V38h8v16h12V30h8z"/>
-  <path d="M46 4l10 8-10 8v-5H34v-6h12z"/>
+  <path d="M32 4L10 24h7v20h10V32h10v12h10V24h7z"/>
+  <path d="M4 56h10M20 56h8M34 56h8M48 56h4" stroke="#000" stroke-width="4" fill="none"/>
+  <path d="M50 48l10 8-10 8z"/>
+  <path d="M8 52q20-14 40 0" stroke="#000" stroke-width="2.5" stroke-dasharray="3 3" fill="none"/>
 </svg>
