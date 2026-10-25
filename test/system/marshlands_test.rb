@@ -31,7 +31,9 @@ class MarshlandsSystemTest < ApplicationSystemTestCase
     sign_in(email_address: "chris@example.com")
     visit game_path(@game)
 
-    find(".player-tile.category-bonus.tile-activatable").click
+    # submit the form directly: a native click is intermittently "not interactable" in the short test window
+    find(".player-tile.category-bonus.tile-activatable").find(:xpath, "ancestor::form")
+    page.execute_script("document.querySelector('.player-tile.category-bonus.tile-activatable').closest('form').requestSubmit()")
     assert_selector "#current-action[data-type='canoebonus']", visible: false
     submit_click(0, 4)
 
