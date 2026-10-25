@@ -49,6 +49,16 @@ class DualCardsTest < ActiveSupport::TestCase
     assert engine.tile_activatable?(game.current_player.tiles.first)
   end
 
+  test "a played-terrain tile is selectable when only the Swamp half has targets" do
+    # Board 17: (3,5) Flowers touches Swamp at (3,6) but no Grass.
+    game = game_with_hand("GB")
+    game.update!(stone_walls: 25, board_contents: BoardState.new.tap { |s| s.place_settlement(3, 5, game_players(:chris).order) })
+    game_players(:chris).update!(tiles: [ { "klass" => "QuarryTile", "used" => false, "from" => "[9, 9]" } ])
+    game.reload
+
+    assert TurnEngine.new(game).tile_activatable?(game.current_player.tiles.first)
+  end
+
   test "marshlands adds 5 dual cards to the terrain deck" do
     game = Game.new(options: { "expansions" => %w[marshlands] })
     game.send(:initialize_terrain_deck)

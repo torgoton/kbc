@@ -216,8 +216,11 @@ class TurnEngine
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
-    ctx = { player_order: @game.current_player.order, board_contents: @game.board_contents, hand: @game.current_player.hand_terrains.first, supply: @game.current_player.supply_hash }
-    tile_obj.activatable?(**ctx)
+    player = @game.current_player
+    # Until a terrain is locked, a tile is usable if any terrain in hand (dual card, Crossroads pair) has a target.
+    terrains = (ct = effective_terrain(player)) ? [ ct ] : player.hand_terrains.presence || [ nil ]
+    ctx = { player_order: player.order, board_contents: @game.board_contents, supply: player.supply_hash }
+    terrains.any? { |terrain| tile_obj.activatable?(**ctx, hand: terrain) }
   end
 
   def turn_endable?
