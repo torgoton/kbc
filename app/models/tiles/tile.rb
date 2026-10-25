@@ -46,6 +46,10 @@ module Tiles
 
     def bonus_active?(klass) = @player&.bonus_tile_active?(klass) || false
 
+    # Outpost waives adjacency only for a build on a named terrain: a fixed one (Farm, Donations,
+    # Canoe Bonus), the played card (Oracle) or Fort's drawn card. Not Tavern, Tower, Village, Fountain.
+    def outpost_applies? = builds_settlement? && !!(build_terrain || build_terrains || uses_played_terrain? || fort_tile?)
+
     # Klass of the Bonus tile awarded with the 2nd copy of this tile, if it has one.
     def bonus_tile_klass = nil
 

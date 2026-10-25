@@ -476,12 +476,13 @@ class TurnEngine
     )
   end
 
-  # Outpost can be used only on your own turn, never during a Canoe reaction.
+  # Outpost can be used only on your own turn (never during a Canoe reaction), for the
+  # mandatory action or a tile that builds on a named terrain.
   def build_action?
     return false if canoe_interrupt?
     return true if @game.turn_phase.mandatory_build?
     klass = Tiles::Tile.for_klass(current_action_tile_klass)
-    klass&.new(0)&.builds_settlement? || false
+    klass&.new(0)&.outpost_applies? || false
   end
 
 

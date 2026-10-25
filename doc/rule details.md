@@ -49,7 +49,7 @@ o DXV calls the Warrior, Ship, and Wagon tokens "Meeples"
 - Settlements set aside by Temple are played the next turn even if the Temple tile is lost
 - Settlements set aside by Temple CAN delay the end of game
 - Outpost can be used only on your own turn, so not during a Canoe reaction
-- UNOFFICIAL RULING: Outpost waives Fountain's adjacency requirement (Outpost disregards adjacency for extra actions), so Outpost + Fountain builds on any hex of your card's terrain
+- Outpost: "The settlement must still be built on the appropriate terrain type for your mandatory action or the specific extra action." So Outpost applies only to the mandatory action and to tiles that name a terrain: Oracle, Farm, Oasis, the Donation tiles, Garden, Forester's Lodge, Monastery, Fort, Canoe Bonus. It cannot be used with Tavern, Tower, Village, Fountain or Canoe.
 
 ## Harvest
 - Bazaar CAN be used to repeat the Crossroads tile action to draw a 3rd card for your next turn

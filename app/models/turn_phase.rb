@@ -578,7 +578,6 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # The terrain(s) an Outpost build may target (adjacency waived): a played-
   # terrain tile with an unlocked two-card hand spans both, otherwise the tile's
   # fixed build terrain (or the locked/sole hand card).
-  # Unofficial ruling: this also waives Fountain's own adjacency rule (doc/rule details.md).
   def outpost_terrains(player)
     if tile.build_terrains
       tile.build_terrains
@@ -592,14 +591,24 @@ end
 
 class TurnPhase::FortPhase < TurnPhase
   include TurnPhase::TileBuildOrchestration
-  attr_reader :fort_terrain_value
+  attr_reader :fort_terrain_value, :outpost_active_value
 
   def self.from_hash(hash)
-    new(fort_terrain: hash.fetch("fort_terrain"))
+    new(fort_terrain: hash.fetch("fort_terrain"), outpost_active: hash["outpost_active"] == true)
   end
 
-  def initialize(fort_terrain:)
+  def initialize(fort_terrain:, outpost_active: false)
     @fort_terrain_value = fort_terrain
+    @outpost_active_value = outpost_active
+  end
+
+  def outpost_active?
+    outpost_active_value == true
+  end
+
+  # Outpost waives adjacency; the build stays on the drawn card's terrain.
+  def with_outpost_active
+    self.class.new(fort_terrain: fort_terrain, outpost_active: true)
   end
 
   def type
@@ -615,6 +624,7 @@ class TurnPhase::FortPhase < TurnPhase
   end
 
   def legal_targets(board_contents:, player:, game: nil)
+    return board_contents.available_cells_of(fort_terrain.chars) if outpost_active?
     fort_terrain.chars.flat_map do |terrain|
       tile.valid_destinations(board_contents: board_contents, player_order: player.order, hand: terrain)
     end.uniq
@@ -629,7 +639,7 @@ class TurnPhase::FortPhase < TurnPhase
       "type" => "fort",
       "klass" => "FortTile",
       "fort_terrain" => fort_terrain
-    }
+    }.tap { |hash| hash["outpost_active"] = true if outpost_active? }
   end
 end
 
