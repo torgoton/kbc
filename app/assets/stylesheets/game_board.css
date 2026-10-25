@@ -1250,6 +1250,17 @@ ul li .hex:hover .hex-bg {
     border-color: silver;
 }
 
+/* celeste: heraldic sky blue, a "metal" like silver/gold */
+.player-tile.category-bonus {
+    background-color: #b2ffff;
+    border-color: #7fd4e6;
+}
+
+.player-tile.tile-inactive.category-bonus {
+    background-color: color-mix(in srgb, #b2ffff, #333 20%);
+    border-color: color-mix(in srgb, #7fd4e6, #333 20%);
+}
+
 .player-tile.tile-inactive.category-permanent {
     background-color: color-mix(in srgb, silver, #333 20%);
     border-color: color-mix(in srgb, black, #333 20%);
