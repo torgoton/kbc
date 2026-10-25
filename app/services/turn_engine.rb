@@ -275,17 +275,19 @@ class TurnEngine
     else
       has_activatable = (@game.current_player&.tiles || []).any? { |t| tile_activatable?(t) }
       if @game.can_build_mandatory?(@game.current_player)
-        terrain_name = if (ct = effective_terrain(@game.current_player))
-          Boards::Board::TERRAIN_NAMES[ct]
-        else
-          @game.current_player.hand_terrains.map { |t| Boards::Board::TERRAIN_NAMES[t] }.join(" or ")
-        end
-        from_temple = [ @game.current_player.temple_due, @game.mandatory_count ].min
-        "#{@game.current_player.player.handle} must build " \
-        "#{ActionController::Base.helpers.pluralize(@game.mandatory_count, "settlement")} " \
-        "#{"(#{from_temple} from Temple) " if from_temple.positive?}on " \
-        "#{terrain_name}" \
-        "#{" or select a tile" if has_activatable}"
+        player = @game.current_player
+        names = Boards::Board::TERRAIN_NAMES
+        terrains = (ct = effective_terrain(player)) ? [ ct ] : player.hand_terrains
+        # Unchosen dual card: mandatory_count is the full count; Swamp builds one fewer.
+        swamp, others = terrains.partition { |t| terrains.size > 1 && t == "B" }
+        helpers = ActionController::Base.helpers
+        options = []
+        options << "#{helpers.pluralize(@game.mandatory_count, "settlement")} on #{others.map { |t| names[t] }.join(" or ")}" if others.any?
+        options << "#{helpers.pluralize(@game.mandatory_count - 1, "settlement")} on #{names["B"]}" if swamp.any?
+        from_temple = [ player.temple_due, @game.mandatory_count ].min
+        options[-1] += " (#{from_temple} from Temple)" if from_temple.positive?
+        options << "select a tile" if has_activatable
+        "#{player.player.handle} must build #{options.to_sentence(two_words_connector: " or ", last_word_connector: ", or ")}"
       else
         "#{@game.current_player.player.handle} must end their turn" \
         "#{" or select a tile" if has_activatable}"

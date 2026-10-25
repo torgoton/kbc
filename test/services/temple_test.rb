@@ -122,14 +122,25 @@ class TempleTest < ActiveSupport::TestCase
   test "the build message says how many of the mandatory settlements come from Temple" do
     @chris.update!(supply: { "settlements" => 10, "temple_due" => 2 })
     @game.update!(mandatory_count: Game::MANDATORY_COUNT + 2)
-    assert_match(/must build 5 settlements \(2 from Temple\) on Grass/, engine.turn_state)
+    assert_match(/must build 5 settlements on Grass \(2 from Temple\)/, engine.turn_state)
 
     @game.update!(mandatory_count: 1)
-    assert_match(/must build 1 settlement \(1 from Temple\) on Grass/, engine.turn_state)
+    assert_match(/must build 1 settlement on Grass \(1 from Temple\)/, engine.turn_state)
 
     @chris.update!(supply: { "settlements" => 10 })
     @game.reload.update!(mandatory_count: Game::MANDATORY_COUNT)
     assert_match(/must build 3 settlements on Grass/, engine.turn_state)
+  end
+
+  test "a dual card lists each terrain with its own count" do
+    @chris.update!(hand: [ "DB" ], supply: { "settlements" => 10, "temple_due" => 1 })
+    @game.update!(mandatory_count: Game::MANDATORY_COUNT + 1)
+    assert_match(/Chris must build 4 settlements on Desert, 3 settlements on Swamp \(1 from Temple\)/, engine.turn_state)
+  end
+
+  test "a Crossroads pair of dual cards groups the non-Swamp terrains" do
+    @chris.update!(hand: [ "GB", "TB" ], tiles: [ { "klass" => "TempleTile", "used" => false, "from" => "[7, 5]" } ])
+    assert_equal "Chris must build 3 settlements on Grass or Timberland, 2 settlements on Swamp, or select a tile", engine.turn_state
   end
 
   test "Temple needs a settlement that is not part of a City Hall" do
