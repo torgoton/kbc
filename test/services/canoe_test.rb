@@ -1,7 +1,7 @@
 require "test_helper"
 
 class CanoeTest < ActiveSupport::TestCase
-  # tile "used" is irrelevant: a Canoe reacts every time a location is emptied
+  # tile "used" is irrelevant: a Canoe reacts every time another player empties a location
   CANOE = { "klass" => "CanoeTile", "used" => true, "from" => "[2, 8]" }.freeze
 
   def setup
@@ -33,12 +33,12 @@ class CanoeTest < ActiveSupport::TestCase
     reload
   end
 
-  test "emptying a location asks the mover to confirm, then reactions go next player first, mover last" do
+  test "emptying a location asks the mover to confirm; the mover does not react to their own emptying" do
     empty_the_location
 
     assert_equal "canoe_confirm", @game.turn_phase.type
     assert_equal @chris, @game.current_player
-    assert_equal [ @paula.order, @chris.order ], @game.turn_phase.holders
+    assert_equal [ @paula.order ], @game.turn_phase.holders
   end
 
   test "the mover can undo before confirming" do
@@ -87,8 +87,8 @@ class CanoeTest < ActiveSupport::TestCase
     reload
     engine.confirm_canoe
     reload
-    assert_equal @chris, @game.current_player, "the active player reacts last"
-    assert_equal "canoe", @game.turn_phase.type
+    assert_equal @chris, @game.current_player, "control returns to the mover, who does not react"
+    assert_equal "mandatory", @game.turn_phase.type
   end
 
   test "a reactor who skips confirms or undoes before anyone proceeds" do
@@ -112,41 +112,35 @@ class CanoeTest < ActiveSupport::TestCase
     engine.confirm_canoe
     reload
     assert_equal @chris, @game.current_player
-    assert_equal "canoe", @game.turn_phase.type
+    assert_equal "mandatory", @game.turn_phase.type
     assert_not engine.undo_allowed?, "the skip is final once confirmed"
   end
 
-  test "the last reactor's skip needs no confirmation and can be undone" do
+  test "the mover who holds the only Canoe gets no reaction to their own emptying" do
     @paula.update!(tiles: [])
     empty_the_location
 
-    engine.skip_canoe
-    reload
     assert_equal "mandatory", @game.turn_phase.type
-    assert engine.undo_allowed?
-    engine.undo_last_move
-    reload
-    assert_equal "canoe", @game.turn_phase.type
+    assert_equal @chris, @game.current_player
   end
 
   test "begin and end entries belong to no player; each choice belongs to the player making it" do
-    @paula.update!(tiles: [])
-    @chris.update!(tiles: [ CANOE.dup ])
+    @chris.update!(tiles: [])
     empty_the_location
+    engine.confirm_canoe
+    reload
     log = -> { @game.moves.where(action: %w[canoe_log skip_canoe]).order(:order).map { |m| [ m.message, m.game_player ] } }
 
-    assert_equal [ [ "Canoe reactions begin", nil ], [ "#{@paula.player.handle} has no Canoe tile", @paula ] ], log.call
-    engine.skip_canoe
-    reload
+    assert_equal [ [ "Canoe reactions begin", nil ], [ "#{@chris.player.handle} has no Canoe tile", @chris ] ], log.call
+    skip
 
-    assert_equal [ [ "#{@chris.player.handle} declines to build", @chris ], [ "Canoe reactions end", nil ] ], log.call.last(2)
+    assert_equal [ [ "#{@paula.player.handle} declines to build", @paula ], [ "Canoe reactions end", nil ] ], log.call.last(2)
   end
 
   test "reactions end entry has no player" do
     empty_the_location
     engine.confirm_canoe
     reload
-    skip
     skip
 
     end_entry = @game.moves.find_by(message: "Canoe reactions end")
@@ -171,8 +165,6 @@ class CanoeTest < ActiveSupport::TestCase
     empty_the_location
     engine.confirm_canoe
     reload
-    skip
-    assert_equal @chris, @game.current_player
     skip
 
     assert_equal @chris, @game.current_player
@@ -199,21 +191,6 @@ class CanoeTest < ActiveSupport::TestCase
     assert_equal "mandatory", @game.turn_phase.type
   end
 
-  test "when only the mover reacts there is no confirmation, and the mover can still undo" do
-    @paula.update!(tiles: [])
-    empty_the_location
-
-    assert_equal "canoe", @game.turn_phase.type
-    assert_equal @chris, @game.current_player
-    assert engine.undo_allowed?
-
-    target = engine.legal_targets.first
-    engine.click(Coordinate.new(*target))
-    reload
-    assert_equal "mandatory", @game.turn_phase.type, "back to the interrupted action without a confirmation"
-    assert_empty @game.interrupts
-  end
-
   test "a location that still has tiles does not trigger Canoe" do
     @game.board_contents = BoardState.new.tap { |s| s.place_tile(2, 7, "OasisTile", 2) }
     @game.save!
@@ -226,7 +203,7 @@ class CanoeTest < ActiveSupport::TestCase
     @paula.update!(tiles: [ CANOE.dup, CANOE.dup ])
     empty_the_location
 
-    assert_equal [ @paula.order, @paula.order, @chris.order ], @game.turn_phase.holders
+    assert_equal [ @paula.order, @paula.order ], @game.turn_phase.holders
   end
 
   test "adjacency is applied to Water and Swamp separately, as for a two-card hand" do
@@ -260,17 +237,13 @@ class CanoeTest < ActiveSupport::TestCase
     engine.click(Coordinate.new(8, 5))
     reload
     assert_equal "canoe_confirm", @game.turn_phase.type
-    assert_equal [ @chris.order, @paula.order ], @game.turn_phase.holders
+    assert_equal [ @chris.order ], @game.turn_phase.holders
 
     engine.confirm_canoe
     reload
     assert_equal 2, @game.interrupts.size
-    assert_equal @chris, @game.current_player, "nested reactions start after paula"
-    skip # chris, nested
-    assert_equal @paula, @game.current_player
-    skip # paula, nested; the nested frame is done
-    assert_equal @chris, @game.current_player, "back to the outer queue: chris is still owed his reaction"
-    skip
+    assert_equal @chris, @game.current_player, "chris reacts to paula's emptying"
+    skip # chris, nested; paula (the nested mover) is not asked
 
     assert_equal @chris, @game.current_player
     assert_equal "mandatory", @game.turn_phase.type

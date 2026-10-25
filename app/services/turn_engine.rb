@@ -15,9 +15,9 @@ class TurnEngine
   end
 
   # --- Canoe reactions -------------------------------------------------------
-  # Taking the last tile from a location lets every Canoe tile react, in turn
-  # order starting after the active player (who is last, and may react to their
-  # own emptying). First the mover confirms or undoes (CanoeConfirmPhase); then
+  # Taking the last tile from a location lets every other player's Canoe tiles react,
+  # in turn order starting after the active player (who never reacts to their own
+  # emptying). First the mover confirms or undoes (CanoeConfirmPhase); then
   # current_player and phase are swapped to each reactor in turn, and the
   # interrupted state waits on game.interrupts (a stack, since a Canoe build can
   # itself empty a location). Each reactor's time counts against their own clock.
@@ -543,11 +543,11 @@ class TurnEngine
     @game.interrupts + [ frame ]
   end
 
-  # Reactor orders, one per Canoe reaction, starting after the current player and ending with them.
+  # Reactor orders, one per Canoe reaction, starting after the current player; the mover is excluded.
   def canoe_holders
     count = @game.game_players.count
     start = @game.current_player.order
-    (1..count).flat_map do |i|
+    (1...count).flat_map do |i|
       order = (start + i) % count
       [ order ] * canoe_reactions(reactor(order))
     end

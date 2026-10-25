@@ -2,7 +2,7 @@ module Tiles
   class Location
     class CanoeTile < Tiles::Location
       CREATOR = "Claude (placeholder icon)".freeze
-      DESCRIPTION = "Whenever the last tile is taken from a location, you may build 1 settlement " \
+      DESCRIPTION = "Whenever another player takes the last tile from a location, you may build 1 settlement " \
                     "on Water or Swamp (adjacent if possible).".freeze
       TERRAINS = %w[W B].freeze
 

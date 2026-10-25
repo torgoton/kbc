@@ -1563,7 +1563,7 @@ class TurnPhase::SetAsidePhase < TurnPhase
   end
 end
 
-# Canoe: a reaction, taken by each holder when the last tile is taken from a
+# Canoe: a reaction, taken by each holder when another player takes the last tile from a
 # location. Build on any Water or Swamp hex (adjacent to your settlements if
 # possible) or skip.
 class TurnPhase::CanoePhase < TurnPhase
