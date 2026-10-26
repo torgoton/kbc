@@ -57,7 +57,7 @@
     <% end %>
   </div>
   <div class="player-stats">
-    <% display_cards = (is_me || game.current_player_id == player.id) ? Array(player.hand) : Array(player.hand).map { "Z" } %>
+    <% display_cards = (is_me || (game.current_player_id == player.id && !engine.canoe_reaction?)) ? Array(player.hand) : Array(player.hand).map { "Z" } %>
     <% chosen = (game.current_player_id == player.id) ? game.current_action["chosen_terrain"] : nil %>
     <% display_cards.each do |card| %>
       <% shunned = chosen && !card.include?(chosen) %>
