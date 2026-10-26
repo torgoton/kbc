@@ -11,10 +11,16 @@ module Boards
       "T" => "Timberland",
       "W" => "Water",
       "M" => "Mountain",
+      "B" => "Swamp",
       "S" => "Silver",
       "L" => "Location",
       "Z" => ""
     }
+
+    # "GB" => "Grass / Swamp"
+    def self.card_name(card)
+      card.to_s.chars.map { |t| TERRAIN_NAMES[t] }.join(" / ")
+    end
 
     TILE_CLASSES = {
       "BarnTile"             => Tiles::Location::BarnTile,
@@ -37,6 +43,14 @@ module Boards
       "FortTile"             => Tiles::Location::FortTile,
       "MonasteryTile"        => Tiles::Location::MonasteryTile,
       "WagonTile"            => Tiles::Location::WagonTile,
+      "TempleTile"           => Tiles::Location::TempleTile,
+      "RefugeTile"           => Tiles::Location::RefugeTile,
+      "FountainTile"         => Tiles::Location::FountainTile,
+      "CanoeTile"            => Tiles::Location::CanoeTile,
+      "FountainBonusTile"    => Tiles::Bonus::FountainBonusTile,
+      "TempleBonusTile"      => Tiles::Bonus::TempleBonusTile,
+      "CanoeBonusTile"       => Tiles::Bonus::CanoeBonusTile,
+      "RefugeBonusTile"      => Tiles::Bonus::RefugeBonusTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,

@@ -7,7 +7,7 @@ module Tiles
       self.class.const_defined?(:DESCRIPTION) ? self.class::DESCRIPTION : "should be overridden"
     end
 
-    BUILDABLE_TERRAIN = %w[C D F G T].freeze
+    BUILDABLE_TERRAIN = %w[C D F G T B].freeze
     CATEGORIES = %w[permanent location nomad bonus].freeze
 
     attr_accessor :qty
@@ -34,6 +34,24 @@ module Tiles
     end
 
     def build_terrain = nil
+
+    # Fixed set of terrains a tile may build on (Canoe Bonus), else nil.
+    def build_terrains = nil
+
+    # The holder, so a tile can check for the Bonus tile that modifies it.
+    def with_player(game_player)
+      @player = game_player
+      self
+    end
+
+    def bonus_active?(klass) = @player&.bonus_tile_active?(klass) || false
+
+    # Outpost waives adjacency only for a build on a named terrain: a fixed one (Farm, Donations,
+    # Canoe Bonus), the played card (Oracle) or Fort's drawn card. Not Tavern, Tower, Village, Fountain.
+    def outpost_applies? = builds_settlement? && !!(build_terrain || build_terrains || uses_played_terrain? || fort_tile?)
+
+    # Klass of the Bonus tile awarded with the 2nd copy of this tile, if it has one.
+    def bonus_tile_klass = nil
 
     def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0), budget: nil)
       terrain = build_terrain || hand
@@ -66,6 +84,16 @@ module Tiles
     end
 
     def places_wall?
+      false
+    end
+
+    # Temple: take one of your settlements off the board to build next turn.
+    # Canoe: a reaction to a location being emptied.
+    def canoe_tile?
+      false
+    end
+
+    def sets_aside_settlement?
       false
     end
 

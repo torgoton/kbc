@@ -5,6 +5,7 @@ class GameOptionsTest < ActiveSupport::TestCase
   BASE_BOARDS = (0..7).to_a
   NOMAD_BOARDS = (8..11).to_a
   CROSSROADS_BOARDS = (12..15).to_a
+  MARSHLANDS_BOARDS = (16..19).to_a
 
   BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   NOMAD_GOALS = %w[families shepherds ambassadors].freeze
@@ -40,8 +41,19 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_equal CROSSROADS_BOARDS, (ids & CROSSROADS_BOARDS).sort
   end
 
+  test "marshlands adds boards 16-19 to the pool, and only those" do
+    ids = boards_over_runs({ "expansions" => %w[marshlands] }).flatten.uniq
+    assert_empty ids - BASE_BOARDS - MARSHLANDS_BOARDS
+    assert_equal MARSHLANDS_BOARDS, (ids & MARSHLANDS_BOARDS).sort
+  end
+
+  test "a game with a Palace on its board always lists the Palaces goal" do
+    games = Array.new(RUNS) { started_game({ "expansions" => %w[marshlands] }, include_boards: MARSHLANDS_BOARDS.first(1)) }
+    assert games.all? { |g| g.goals.include?("palaces") }
+  end
+
   def goals_over_runs(options)
-    Array.new(GOAL_RUNS) { started_game(options).goals - [ "castles" ] }.flatten.uniq
+    Array.new(GOAL_RUNS) { started_game(options).goals - %w[castles palaces] }.flatten.uniq
   end
 
   test "base game goals exclude families, shepherds and ambassadors" do
@@ -56,6 +68,13 @@ class GameOptionsTest < ActiveSupport::TestCase
 
   test "crossroads does not change the goal pool" do
     assert_empty goals_over_runs({ "expansions" => %w[crossroads] }) - BASE_GOALS
+  end
+
+  test "marshlands adds its six goals to the goal pool" do
+    marshlands = Game::MARSHLANDS_GOALS
+    goals = goals_over_runs({ "expansions" => %w[marshlands] })
+    assert_empty goals - BASE_GOALS - marshlands
+    assert_equal marshlands.sort, (goals & marshlands).sort
   end
 
   def nomad_tiles_over_runs(options)

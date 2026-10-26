@@ -1,8 +1,13 @@
 class GamesController < ApplicationController
-  before_action :require_game_playing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  before_action :require_current_player, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  after_action :broadcast_game_update, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
-  around_action :log_game_action_timing, only: [ :action, :select_action, :end_turn, :undo_move, :undo_max_moves, :end_tile_action, :activate_outpost, :remove_meeple, :select_meeple, :activate_fort ]
+  GAME_ACTIONS = %i[
+    action select_action end_turn undo_move undo_max_moves end_tile_action activate_outpost
+    remove_meeple select_meeple activate_fort skip_canoe confirm_canoe
+  ].freeze
+
+  before_action :require_game_playing, only: GAME_ACTIONS
+  before_action :require_current_player, only: GAME_ACTIONS
+  after_action :broadcast_game_update, only: GAME_ACTIONS
+  around_action :log_game_action_timing, only: GAME_ACTIONS
 
   def new
     @game = Game.new
@@ -117,6 +122,22 @@ class GamesController < ApplicationController
     TurnEngine.new(@game).activate_outpost
     respond_to do |format|
       format.html { redirect_to @game }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
+  def confirm_canoe
+    TurnEngine.new(@game).confirm_canoe
+    respond_to do |format|
+      format.html { head :no_content }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
+  def skip_canoe
+    TurnEngine.new(@game).skip_canoe
+    respond_to do |format|
+      format.html { head :no_content }
       format.turbo_stream { head :no_content }
     end
   end

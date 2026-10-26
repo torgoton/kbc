@@ -10,6 +10,11 @@ module Tiles
       def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
         true
       end
+
+      # The drawn card may be a Marshlands dual card ("GB" => "Grass / Swamp").
+      def action_message(player_handle:, terrain_names:, hand: nil)
+        hand ? "#{player_handle} must build on a #{Boards::Board.card_name(hand)} hex" : "#{player_handle} must build"
+      end
     end
   end
 end

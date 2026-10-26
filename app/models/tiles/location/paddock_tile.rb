@@ -6,21 +6,11 @@ module Tiles
                     "to any eligible hex. You may jump across " \
                     "<em>any</em> hex, even if occupied. ".freeze
 
-      # Each entry is [even_row_step, odd_row_step] for one of the 6 straight-line directions.
-      STRAIGHT_LINES = [
-        [ [ 0, -1 ], [ 0, -1 ] ],   # W
-        [ [ 0,  1 ], [ 0,  1 ] ],   # E
-        [ [ -1, -1 ], [ -1, 0 ] ],  # NW
-        [ [ -1,  0 ], [ -1, 1 ] ],  # NE
-        [ [ 1, -1 ],  [ 1, 0 ] ],   # SW
-        [ [ 1,  0 ],  [ 1, 1 ] ]    # SE
-      ].freeze
-
-      def moves_settlement? = true
+      include Tiles::MovesFromSource
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order: nil, hand: nil, budget: nil)
         return [] if from_row.nil? || from_col.nil?
-        STRAIGHT_LINES.filter_map do |steps|
+        BoardState::STRAIGHT_LINES.filter_map do |steps|
           dr1, dc1 = steps[from_row % 2]
           r1 = from_row + dr1
           c1 = from_col + dc1
@@ -32,17 +22,6 @@ module Tiles
           next unless board_contents.available_for_building?(r2, c2)
           next unless BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r2, c2))
           [ r2, c2 ]
-        end
-      end
-
-      def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))
-        selectable_settlements(player_order:, board_contents:, hand:).any?
-      end
-
-      def selectable_settlements(player_order:, board_contents:, hand: nil, budget: nil)
-        board_contents.settlements_for(player_order).filter_map do |r, c|
-          next if board_contents.city_hall_at?(r, c)
-          [ r, c ] if valid_destinations(from_row: r, from_col: c, board_contents:).any?
         end
       end
     end

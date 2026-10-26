@@ -26,6 +26,8 @@ class TurnPhase
     hash = (data || { "type" => "mandatory" }).deep_stringify_keys
     type = hash["type"] || "mandatory"
 
+    return CanoeConfirmPhase.from_hash(hash) if type == "canoe_confirm"
+
     return MandatoryBuildPhase.from_hash(hash) if type == "mandatory"
 
     klass_name = hash["klass"] || "#{type.capitalize}Tile"
@@ -36,10 +38,14 @@ class TurnPhase
       FortPhase.from_hash(hash)
     elsif tile&.resettles?
       ResettlementPhase.from_hash(hash)
+    elsif tile&.canoe_tile?
+      CanoePhase.from_hash(hash)
     elsif tile && (tile.builds_settlement? || tile.places_wall?)
       TileBuildPhase.from_hash(hash)
     elsif tile&.sword_tile?
       TargetedRemovalPhase.from_hash(hash)
+    elsif tile&.sets_aside_settlement?
+      SetAsidePhase.from_hash(hash)
     elsif tile && tile.places_meeple? && tile.meeple_kind == "warrior"
       MeepleActionPhase.from_hash(hash)
     elsif tile&.places_city_hall?
@@ -114,7 +120,7 @@ class TurnPhase
   # was already committed, otherwise the sole hand card (a two-card hand stays
   # unlocked → nil). Shared by the build and settlement-move phases.
   def effective_terrain(player)
-    chosen_terrain || (player.hand.size == 1 ? player.hand.first : nil)
+    chosen_terrain || (player.hand_terrains.size == 1 ? player.hand_terrains.first : nil)
   end
 
   # Return a copy of this phase with the outpost power active. Non-build phases
@@ -182,9 +188,9 @@ module TurnPhase::SettlementMoveTargets
   def legal_targets(board_contents:, player:, game: nil)
     terrains =
       if tile.uses_played_terrain? && effective_terrain(player).nil?
-        player.hand
+        player.hand_terrains
       else
-        [ effective_terrain(player) || player.hand.first ]
+        [ effective_terrain(player) || player.hand_terrains.first ]
       end
     step_budget = budget.to_i
 
@@ -235,12 +241,13 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
   def mandatory_build? = true
 
   def legal_targets(board_contents:, player:, game: nil)
-    return [] unless player.settlements_remaining? && game.mandatory_count > 0
-    terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand
-    if outpost_active?
+    return [] unless game.can_build_mandatory?(player)
+    terrains = effective_terrain(player) ? [ effective_terrain(player) ] : player.hand_terrains
+    # Outpost and the Temple Bonus tile (first mandatory settlement) waive adjacency.
+    if outpost_active? || (player.bonus_tile_active?("TempleBonusTile") && game.mandatory_untouched?(player))
       board_contents.available_cells_of(terrains)
     else
-      terrains.flat_map { |terrain| board_contents.buildable_cells_for(player.order, terrain) }.uniq
+      board_contents.buildable_cells_for_any(player.order, terrains)
     end
   end
 
@@ -254,13 +261,13 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     game = engine.game
     game.instantiate
     game_player = game.current_player
-    return "No settlements left" unless game_player.settlements_remaining?
+    return "No settlements left" unless game.can_build_mandatory?(game_player)
     chosen_terrain_before = chosen_terrain
     card_terrain = effective_terrain(game_player)
 
     if outpost_active?
       return "Not available" unless engine.legal_targets.include?([ row, col ])
-      card_terrain ||= game_player.hand.find { |t| game.board_contents.terrain_at(row, col) == t }
+      card_terrain ||= game_player.hand_terrains.find { |t| game.board_contents.terrain_at(row, col) == t }
       engine.lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
       engine.build_on_terrain(card_terrain, row, col, game_player)
       game.mandatory_count -= 1
@@ -275,10 +282,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     else
       return "Not available" unless engine.legal_targets.include?([ row, col ])
       if card_terrain.nil?
-        card_terrain = game_player.hand.find { |t|
-          list = engine.available_list(game_player.order, t)
-          list.any? ? list[row][col] : true
-        }
+        card_terrain = game_player.hand_terrains.find { |t| game.board_contents.terrain_at(row, col) == t }
         engine.lock_terrain!(card_terrain, chosen_terrain_before)
       end
       engine.build_on_terrain(card_terrain, row, col, game_player)
@@ -291,7 +295,8 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
     end
 
     builds = game.turn_phase.builds || []
-    engine.check_families_goal(game_player) if builds.size == 3
+    # Swamp (2 settlements) cannot score Families, even with a Temple piece making a 3rd build.
+    engine.check_families_goal(game_player) if builds.size >= 3 && game.turn_phase.chosen_terrain != "B"
     game_player.save
     game.save
   end
@@ -355,7 +360,7 @@ module TurnPhase::TileBuildOrchestration
     return "Not available" unless tile
     tile_obj = Tiles::Tile.from_hash(tile)
     return "Not available" unless engine.legal_targets.include?([ row, col ])
-    if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand.size > 1
+    if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
     end
     engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
@@ -423,7 +428,11 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
   def tile_action_endable? = walls_placed.to_i >= 1
 
+  # The tile as held by the acting player, so Bonus tiles can modify it.
+  def tile = super&.with_player(@tile_owner)
+
   def legal_targets(board_contents:, player:, game: nil)
+    @tile_owner = player
     return [] if tile.places_wall? && game.stone_walls <= 0
     if tile.builds_settlement? && outpost_active?
       board_contents.available_cells_of(outpost_terrains(player))
@@ -514,7 +523,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
     return "Not available" unless engine.legal_targets.include?([ row, col ])
 
     current_phase = self
-    if chosen_terrain.nil? && game_player.hand.size > 1
+    if chosen_terrain.nil? && game_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
       current_phase = game.turn_phase
     end
@@ -537,7 +546,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
 
     remaining = tile_obj.valid_destinations(
       board_contents: game.board_contents,
-      player_order: game_player.order, hand: wall_terrain || game_player.hand.first
+      player_order: game_player.order, hand: wall_terrain || game_player.hand_terrains.first
     )
     if walls_placed_after >= 2 || remaining.empty?
       game_player.mark_tile_used!("QuarryTile")
@@ -555,13 +564,13 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # terrain, or spans both cards of an as-yet-unlocked two-card hand.
   def played_terrain_targets(board_contents, player)
     if tile.uses_played_terrain? && effective_terrain(player).nil?
-      player.hand.flat_map do |terrain|
+      player.hand_terrains.flat_map do |terrain|
         tile.valid_destinations(board_contents: board_contents, player_order: player.order, hand: terrain)
       end.uniq
     else
       tile.valid_destinations(
         board_contents: board_contents, player_order: player.order,
-        hand: effective_terrain(player) || player.hand.first
+        hand: effective_terrain(player) || player.hand_terrains.first
       )
     end
   end
@@ -570,24 +579,36 @@ class TurnPhase::TileBuildPhase < TurnPhase
   # terrain tile with an unlocked two-card hand spans both, otherwise the tile's
   # fixed build terrain (or the locked/sole hand card).
   def outpost_terrains(player)
-    if tile.uses_played_terrain? && effective_terrain(player).nil?
-      player.hand
+    if tile.build_terrains
+      tile.build_terrains
+    elsif tile.uses_played_terrain? && effective_terrain(player).nil?
+      player.hand_terrains
     else
-      [ tile.build_terrain || effective_terrain(player) || player.hand.first ].compact
+      [ tile.build_terrain || effective_terrain(player) || player.hand_terrains.first ].compact
     end
   end
 end
 
 class TurnPhase::FortPhase < TurnPhase
   include TurnPhase::TileBuildOrchestration
-  attr_reader :fort_terrain_value
+  attr_reader :fort_terrain_value, :outpost_active_value
 
   def self.from_hash(hash)
-    new(fort_terrain: hash.fetch("fort_terrain"))
+    new(fort_terrain: hash.fetch("fort_terrain"), outpost_active: hash["outpost_active"] == true)
   end
 
-  def initialize(fort_terrain:)
+  def initialize(fort_terrain:, outpost_active: false)
     @fort_terrain_value = fort_terrain
+    @outpost_active_value = outpost_active
+  end
+
+  def outpost_active?
+    outpost_active_value == true
+  end
+
+  # Outpost waives adjacency; the build stays on the drawn card's terrain.
+  def with_outpost_active
+    self.class.new(fort_terrain: fort_terrain, outpost_active: true)
   end
 
   def type
@@ -603,9 +624,10 @@ class TurnPhase::FortPhase < TurnPhase
   end
 
   def legal_targets(board_contents:, player:, game: nil)
-    tile.valid_destinations(
-      board_contents: board_contents, player_order: player.order, hand: fort_terrain
-    )
+    return board_contents.available_cells_of(fort_terrain.chars) if outpost_active?
+    fort_terrain.chars.flat_map do |terrain|
+      tile.valid_destinations(board_contents: board_contents, player_order: player.order, hand: terrain)
+    end.uniq
   end
 
   def click(coordinate, engine)
@@ -617,7 +639,7 @@ class TurnPhase::FortPhase < TurnPhase
       "type" => "fort",
       "klass" => "FortTile",
       "fort_terrain" => fort_terrain
-    }
+    }.tap { |hash| hash["outpost_active"] = true if outpost_active? }
   end
 end
 
@@ -659,7 +681,7 @@ module TurnPhase::SettlementMoveOrchestration
   # terrain back from game.turn_phase (not self, which stays pre-lock).
   def lock_move_terrain(row, col, engine)
     game = engine.game
-    if tile&.uses_played_terrain? && chosen_terrain.nil? && game.current_player.hand.size > 1
+    if tile&.uses_played_terrain? && chosen_terrain.nil? && game.current_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
     end
   end
@@ -717,7 +739,7 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     tile_klass = tile_klass_name
     tile_obj = tile
     lock_move_terrain(row, col, engine)
-    hand_arg = game.turn_phase.effective_terrain(game.current_player) || game.current_player.hand.first
+    hand_arg = game.turn_phase.effective_terrain(game.current_player) || game.current_player.hand_terrains.first
     return "Not available" unless tile_obj.valid_destinations(
       from_row: from_coord.row, from_col: from_coord.col,
       board_contents: game.board_contents, player_order: game.current_player.order, hand: hand_arg
@@ -1485,5 +1507,143 @@ class TurnPhase::CityHallPhase < TurnPhase
       "type" => action_type,
       "klass" => klass_name
     }
+  end
+end
+
+# Temple: pick one of your settlements to take off the board and set aside; it
+# is built during your next mandatory action.
+class TurnPhase::SetAsidePhase < TurnPhase
+  attr_reader :action_type, :klass_value
+
+  def self.from_hash(hash)
+    new(action_type: hash.fetch("type"), klass_name: hash["klass"])
+  end
+
+  def initialize(action_type:, klass_name:)
+    @action_type = action_type
+    @klass_value = klass_name
+  end
+
+  def type
+    action_type
+  end
+
+  def klass_name
+    klass_value
+  end
+
+  def legal_targets(board_contents:, player:, game: nil)
+    board_contents.settlements_for(player.order).reject { |r, c| board_contents.city_hall_at?(r, c) }
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "No Temple tile" unless game_player.find_unused_tile(tile_klass_name)
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    engine.record_move(
+      action: "set_aside_settlement",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      to: "set_aside",
+      message: "#{game_player.player.handle} set aside a settlement from [#{row}, #{col}]"
+    )
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    # An empty supply with nothing set aside means this player triggered the ending; the
+    # set-aside piece withdraws that trigger until it is built.
+    if game_player.settlements_remaining.zero? && game_player.set_aside_count.zero? && game.end_trigger_count.positive?
+      game.end_trigger_count -= 1
+    end
+    game_player.set_aside_settlement!
+    engine.apply_tile_forfeit(game_player)
+    game_player.mark_tile_used!(tile_klass_name)
+    engine.reset_to_mandatory
+    game_player.save
+    game.save
+  end
+
+  def serialize
+    { "type" => action_type, "klass" => klass_name }
+  end
+end
+
+# Canoe: a reaction, taken by each holder when another player takes the last tile from a
+# location. Build on any Water or Swamp hex (adjacent to your settlements if
+# possible) or skip.
+class TurnPhase::CanoePhase < TurnPhase
+  def self.from_hash(_hash)
+    new
+  end
+
+  def type
+    "canoe"
+  end
+
+  def klass_name
+    "CanoeTile"
+  end
+
+  def legal_targets(board_contents:, player:, game: nil)
+    return [] unless player.settlements_remaining?
+    board_contents.buildable_cells_for_any(player.order, Tiles::Location::CanoeTile::TERRAINS)
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: "CanoeTile")
+    engine.finish_reaction!
+    game_player.save
+    game.save
+  end
+
+  def serialize
+    { "type" => "canoe", "klass" => "CanoeTile" }
+  end
+end
+
+# Gate after a move that empties a location Canoe holders can react to, and after
+# each Canoe build: the mover confirms (or undoes) before anyone else proceeds.
+# Confirming makes the move final. `resume` is the action to restore when the
+# reactions are over; `holders` the reactor order (one entry per Canoe tile).
+class TurnPhase::CanoeConfirmPhase < TurnPhase
+  attr_reader :resume, :holders, :reacting
+
+  def self.from_hash(hash)
+    new(resume: hash["resume"], holders: Array(hash["holders"]), reacting: hash["reacting"] == true)
+  end
+
+  def initialize(resume:, holders:, reacting:)
+    @resume = resume
+    @holders = holders
+    @reacting = reacting
+  end
+
+  def type
+    "canoe_confirm"
+  end
+
+  def klass_name
+    "CanoeTile"
+  end
+
+  def click(_coordinate, _engine)
+    "Confirm or undo first"
+  end
+
+  def serialize
+    { "type" => "canoe_confirm", "resume" => resume, "holders" => holders, "reacting" => reacting }
   end
 end

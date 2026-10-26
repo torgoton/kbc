@@ -429,6 +429,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     get new_game_url
     assert_select "input[name='game[options][expansions][]'][value=nomads][checked]:not([disabled])"
     assert_select "input[name='game[options][expansions][]'][value=crossroads][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=marshlands]:not([checked]):not([disabled])"
     assert_select "input[name='game[options][expansions][]'][value=harvest][disabled]"
     assert_select "input[name='game[options][queenies][]'][disabled]", 4
     assert_select "input#game_options_nomads_sword[checked]"

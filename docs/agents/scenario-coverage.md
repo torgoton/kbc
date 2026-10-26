@@ -18,16 +18,23 @@ time (accumulated in `game_player.bonus_scores`). Tier-1 goals are pure
 | --- | --- | --- | --- |
 | ambassadors | 2 | ✅ | `goals/ambassadors_test.rb` |
 | families | 2 | ✅ | `goals/families_test.rb` |
+| scouts | 1 | ✅ | `goals/scouts_test.rb` |
 | shepherds | 2 | ✅ | `goals/shepherds_test.rb` |
+| vassals | 1 | ✅ | `goals/vassals_test.rb` |
 | hermits | 1 | ✅ | `goals/hermits_test.rb` |
+| captains | 1 | ✅ | `goals/captains_test.rb` |
 | castles | 1 | ✅ | `goals/castles_test.rb` |
 | citizens | 1 | ✅ | `goals/citizens_test.rb` |
 | discoverers | 1 | ✅ | `goals/discoverers_test.rb` |
 | farmers | 1 | ✅ | `goals/farmers_test.rb` |
 | fishermen | 1 | ✅ | `goals/fishermen_test.rb` |
+| geologists | 1 | ✅ | `goals/geologists_test.rb` |
 | knights | 1 | ✅ | `goals/knights_test.rb` |
 | merchants | 1 | ✅ | `goals/merchants_test.rb` |
+| messengers | 1 | ✅ | `goals/messengers_test.rb` |
 | miners | 1 | ✅ | `goals/miners_test.rb` |
+| noblewomen | 1 | ✅ | `goals/noblewomen_test.rb` |
+| palaces | 1 | ✅ | `goals/palaces_test.rb` |
 | workers | 1 | ✅ | `goals/workers_test.rb` |
 
 ## Tasks (`Scoring::TASK_CLASSES`, `app/models/scoring/tasks/`)
@@ -84,6 +91,14 @@ All Tier-1 (board-derived, no `TurnEngine` callback).
 | QuarryTile | ✅ | `tiles/quarry_tile_test.rb` | wall placement on played-terrain hexes adjacent to a settlement, up to 2 walls, `activatable?` |
 | Nomad::SwordTile | ✅ | `tiles/sword_tile_test.rb` | targeted removal of an opponent's settlement or meeple, returned to the matching supply; location-tile forfeit, undo round trip |
 | Nomad::TreasureTile | ✅ | `tiles/treasure_tile_test.rb` | pickup immediately scores 3 points and is not held |
+| TempleTile | ✅ | `services/temple_test.rb` | set a settlement aside (outside supply), extra mandatory build next turn, game end waits for pending pieces |
+| RefugeTile | ✅ | `services/refuge_tile_test.rb` | one-hex move to an unoccupied buildable neighbour (Swamp included), full select/move flow |
+| FountainTile | ✅ | `tiles/fountain_tile_test.rb` | builds next to exactly 1 own settlement and no opponent's |
+| CanoeTile | ✅ | `services/canoe_test.rb` | reaction when a location empties: reactor order, terrain choice, nested emptying, skip, undo guard |
+| Bonus::FountainBonusTile | ✅ | `tiles/fountain_bonus_tile_test.rb` | awarded with the 2nd Fountain, never forfeited, Mountain buildable for Fountain from the next turn |
+| Bonus::TempleBonusTile | ✅ | `tiles/temple_bonus_tile_test.rb` | awarded with the 2nd Temple; first mandatory settlement ignores adjacency |
+| Bonus::RefugeBonusTile | ✅ | `tiles/refuge_bonus_tile_test.rb` | selectable straight-line mover, awarded with the 2nd Refuge |
+| Bonus::CanoeBonusTile | ✅ | `tiles/canoe_bonus_tile_test.rb` | selectable Water/Swamp build, awarded with the 2nd Canoe |
 | CastleTile | ✅ | `goals/castles_test.rb` | pure-data location tile; scoring covered by the Castles goal, no custom tile logic |
 
 ## Rules / cross-cutting mechanics

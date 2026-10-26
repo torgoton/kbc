@@ -23,4 +23,10 @@ class Tiles::FortTileTest < ActiveSupport::TestCase
     board = Struct.new(:terrain).new({})
     assert tile.activatable?(player_order: 0, board_contents: with_terrain(state, board), hand: "G")
   end
+
+  test "action message names both terrains of a drawn dual card" do
+    names = Boards::Board::TERRAIN_NAMES
+    assert_equal "Chris must build on a Grass / Swamp hex", tile.action_message(player_handle: "Chris", terrain_names: names, hand: "GB")
+    assert_equal "Chris must build on a Grass hex", tile.action_message(player_handle: "Chris", terrain_names: names, hand: "G")
+  end
 end

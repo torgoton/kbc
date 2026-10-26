@@ -38,6 +38,36 @@ class GamePlayer < ApplicationRecord
 
   scope :in_player_order, -> { order(order: :asc) }
 
+  # Terrains the hand offers. A card is one terrain letter, or two for a Marshlands
+  # dual card ("GB" = Grass or Swamp). Tolerates legacy hands stored as a bare string.
+  def hand_terrains
+    Array(hand).compact.flat_map(&:chars).uniq
+  end
+
+  # Temple: settlements taken off the board wait here (outside the supply) until next turn,
+  # when they return to the supply as "due" extra mandatory builds.
+  def set_aside_count = supply["set_aside"].to_i
+  def temple_due = supply["temple_due"].to_i
+
+  def set_aside_settlement!
+    supply["set_aside"] = set_aside_count + 1
+  end
+
+  def start_temple_turn!
+    supply["settlements"] = settlements_remaining + set_aside_count
+    supply["temple_due"] = set_aside_count
+    supply["set_aside"] = 0
+  end
+
+  def end_temple_turn!
+    supply["temple_due"] = 0
+  end
+
+  # A Bonus tile counts from the turn after it is acquired (acquired tiles start "used").
+  def bonus_tile_active?(klass)
+    (tiles || []).any? { |t| t["klass"] == klass && !t["used"] }
+  end
+
   def settlements_remaining
     supply["settlements"].to_i
   end

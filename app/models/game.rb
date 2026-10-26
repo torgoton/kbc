@@ -11,9 +11,11 @@
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json
+#  interrupts        :json             not null
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
+#  removed_terrain   :string
 #  scores            :json
 #  speed             :string
 #  state             :string
@@ -32,6 +34,8 @@
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
   DECK = "C" * 5 + "D" * 5 + "F" * 5 + "G" * 5 + "T" * 5
+  # Marshlands dual cards: Swamp (B) or the other terrain. Choosing Swamp makes the mandatory action 2 settlements.
+  MARSHLANDS_CARDS = %w[CB DB FB GB TB].freeze
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
   SPEEDS = {
@@ -43,7 +47,7 @@ class Game < ApplicationRecord
   EXPANSIONS = {
     "nomads" => { label: "Nomads", enabled: true },
     "crossroads" => { label: "Crossroads", enabled: true },
-    "marshlands" => { label: "Marshlands", enabled: false },
+    "marshlands" => { label: "Marshlands", enabled: true },
     "harvest" => { label: "Harvest", enabled: false }
   }.freeze
   QUEENIES = {
@@ -146,7 +150,8 @@ class Game < ApplicationRecord
       return false
     end
     self.moves.destroy_all
-    self.discard ? self.discard.clear : self.discard = DECK.chars
+    self.discard ? self.discard.clear : self.discard = terrain_cards
+    self.removed_terrain = nil
     self.scores ? self.scores.clear : self.scores = {}
     @board = nil
     start(false, options)
@@ -238,7 +243,7 @@ class Game < ApplicationRecord
   # Stable domain query: the hexes where game_player may legally build right
   # now. Delegates to the engine's availability rule; returns coordinate pairs.
   def legal_builds(game_player, terrain: nil)
-    terrain ||= Array(game_player.hand).first
+    terrain ||= game_player.hand_terrains.first
     instantiate
     list = TurnEngine.new(self).available_list(game_player.order, terrain)
     return [] unless list
@@ -411,6 +416,7 @@ class Game < ApplicationRecord
       "current_action" => current_action.deep_dup,
       "current_player_order" => current_player.order,
       "stone_walls" => stone_walls,
+      "interrupts" => interrupts.deep_dup,
       "turn_number" => turn_number,
       "end_trigger_count" => end_trigger_count,
       "move_count" => move_count,
@@ -430,6 +436,7 @@ class Game < ApplicationRecord
     self.current_action = snapshot["current_action"]
     self.mandatory_count = snapshot["mandatory_count"]
     self.stone_walls = snapshot["stone_walls"]
+    self.interrupts = snapshot["interrupts"] || []
     self.turn_number = snapshot["turn_number"]
     self.end_trigger_count = snapshot["end_trigger_count"]
     self.move_count = snapshot["move_count"]
@@ -481,6 +488,17 @@ class Game < ApplicationRecord
       reversible: false
     )
     save
+  end
+
+  # No mandatory settlement has been built yet this turn. Locking Swamp (possibly via a
+  # tile, before the mandatory action) lowers the full count by one without building.
+  def mandatory_untouched?(game_player)
+    swamp = turn_phase.chosen_terrain == "B" ? 1 : 0
+    mandatory_count == MANDATORY_COUNT + game_player.temple_due - swamp
+  end
+
+  def can_build_mandatory?(game_player)
+    mandatory_count.positive? && game_player.settlements_remaining?
   end
 
   private
@@ -567,22 +585,46 @@ class Game < ApplicationRecord
   end
 
   def initialize_terrain_deck
-    self.discard = DECK.chars
+    self.discard = terrain_cards
+    self.removed_terrain = nil
+    remove_scouts_terrain if Array(goals).include?("scouts")
     shuffle_terrain_deck
+  end
+
+  def terrain_cards
+    DECK.chars + (expansion?("marshlands") ? MARSHLANDS_CARDS : [])
+  end
+
+  # Scouts: draw a terrain at random and take every card offering it (dual cards too) out of the deck.
+  def remove_scouts_terrain
+    self.removed_terrain = DECK.chars.uniq.sample
+    discard.reject! { |card| card.include?(removed_terrain) }
+    self.move_count = (move_count || 0) + 1
+    moves.build(
+      order: move_count,
+      action: "scouts_terrain",
+      message: "Scouts: #{Boards::Board::TERRAIN_NAMES[removed_terrain]} cards removed from the deck",
+      payload: { "terrain" => removed_terrain },
+      deliberate: false,
+      reversible: false
+    )
   end
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
   BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   NOMAD_GOALS = %w[ambassadors families shepherds].freeze
+  MARSHLANDS_GOALS = %w[captains geologists messengers noblewomen scouts vassals].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
   BASE_BOARD_IDS = (0..7).to_a.freeze
   NOMAD_BOARD_IDS = (8..11).to_a.freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
+  MARSHLANDS_BOARD_IDS = (16..19).to_a.freeze
 
   def select_goals
     instantiate
     castle_goal = board_has_castles? ? [ "castles" ] : []
-    self.goals = castle_goal + goal_pool.sample(3)
+    palace_goal = board_has_palaces? ? [ "palaces" ] : []
+    self.goals = castle_goal + palace_goal + goal_pool.sample(3)
     @board = nil
     self.move_count = (move_count || 0) + 1
     moves.build(
@@ -614,15 +656,20 @@ class Game < ApplicationRecord
   end
 
   def goal_pool
-    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : [])
+    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : []) + (expansion?("marshlands") ? MARSHLANDS_GOALS : [])
   end
 
   def board_pool
-    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : [])
+    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +
+      (expansion?("marshlands") ? MARSHLANDS_BOARD_IDS : [])
   end
 
   def board_has_castles?
     board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
+  end
+
+  def board_has_palaces?
+    board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Palace" } }
   end
 
   def start_clocks
@@ -642,7 +689,7 @@ class Game < ApplicationRecord
 
   def deal_terrain_cards
     game_players.each do |p|
-      p.update(hand: next_card)
+      p.update(hand: [ next_card ])
     end
     save # update the deck
   end

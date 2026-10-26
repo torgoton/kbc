@@ -1,0 +1,11 @@
+<%# A terrain card: one letter, or two for a Marshlands dual card ("GB" = Grass or Swamp). %>
+<% shunned = local_assigns[:shunned] %>
+<% card = card.to_s %>
+<% if card.size == 2 %>
+  <%= content_tag :span, title: Boards::Board.card_name(card), class: "player-card card-dual#{" card-shunned" if shunned}" do %>
+    <%= content_tag :span, nil, class: "card-half card-#{card[0]}" %>
+    <%= content_tag :span, nil, class: "card-half card-#{card[1]}" %>
+  <% end %>
+<% else %>
+  <%= content_tag :span, card, title: Boards::Board::TERRAIN_NAMES[card], class: "player-card card-#{card}#{" card-shunned" if shunned}" %>
+<% end %>
