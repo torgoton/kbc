@@ -2,7 +2,9 @@ module Tiles
   class Location
     class RefugeTile < Tiles::Location
       CREATOR = "Claude (placeholder icon)".freeze
-      DESCRIPTION = "Move one of your existing settlements to an adjacent unoccupied hex of a suitable terrain.".freeze
+      DESCRIPTION = "Move one of your existing settlements to an adjacent unoccupied hex of a suitable terrain." \
+                    "<hr>When you collect a 2nd Refuge tile, you will get a Refuge Bonus tile." \
+                    "<br>Refuge Bonus: Move one of your settlements in a straight line to the next empty suitable hex.".freeze
 
       include Tiles::MovesFromSource
 

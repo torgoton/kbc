@@ -2,7 +2,9 @@ module Tiles
   class Location
     class TempleTile < Tiles::Location
       CREATOR = "Claude (placeholder icon)".freeze
-      DESCRIPTION = "Remove 1 of your settlements from the board and build it during your next mandatory action.".freeze
+      DESCRIPTION = "Remove 1 of your settlements from the board and build it during your next mandatory action." \
+                    "<hr>When you collect a 2nd Temple tile, you will get a Temple Bonus tile." \
+                    "<br>Temple Bonus: On every turn, the first build of your mandatory need not be adjacent.".freeze
 
       def sets_aside_settlement? = true
       def bonus_tile_klass = "TempleBonusTile"

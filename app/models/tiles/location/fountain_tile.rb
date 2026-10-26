@@ -2,7 +2,9 @@ module Tiles
   class Location
     class FountainTile < Tiles::Location
       CREATOR = "Claude (placeholder icon)".freeze
-      DESCRIPTION = "Build 1 settlement next to exactly 1 of your own settlements and next to no opponent's settlement.".freeze
+      DESCRIPTION = "Build 1 settlement next to exactly 1 of your own settlements and next to no opponent's settlement." \
+                    "<hr>When you collect a 2nd Fountain tile, you will get a Fountain Bonus tile." \
+                    "<br>Fountain Bonus: Your Fountain tile builds may be on a mountain hex.".freeze
 
       def builds_settlement? = true
       def bonus_tile_klass = "FountainBonusTile"
