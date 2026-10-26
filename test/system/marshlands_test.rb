@@ -37,7 +37,18 @@ class MarshlandsSystemTest < ApplicationSystemTestCase
     assert_selector "#current-action[data-type='canoebonus']", visible: false
     submit_click(0, 4)
 
-    assert_selector ".player-tile.tile-used .tile-container.canoebonus"
+    begin
+      assert_selector ".player-tile.tile-used .tile-container.canoebonus"
+    rescue Minitest::Assertion
+      # diagnostic for an intermittent CI failure: matched but not "visible"; log what Selenium saw
+      warn "CANOEBONUS FLAKE: " + page.evaluate_script(<<~JS)
+        JSON.stringify([...document.querySelectorAll(".tile-container.canoebonus")].map((e) => {
+          const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+          return { cls: e.parentElement.className, w: r.width, h: r.height, display: c.display, visibility: c.visibility, opacity: c.opacity, html: e.parentElement.outerHTML };
+        }))
+      JS
+      raise
+    end
     assert_equal @chris.order, @game.reload.board_contents.player_at(0, 4)
   end
 
