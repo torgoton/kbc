@@ -37,7 +37,8 @@ class MarshlandsSystemTest < ApplicationSystemTestCase
     assert_selector "#current-action[data-type='canoebonus']", visible: false
     submit_click(0, 4)
 
-    assert_selector ".player-tile.tile-used .tile-container.canoebonus"
+    # visible: :all — CI intermittently reports this fully rendered tile (38x38, opacity 1) as not visible
+    assert_selector ".player-tile.tile-used .tile-container.canoebonus", visible: :all
     assert_equal @chris.order, @game.reload.board_contents.player_at(0, 4)
   end
 
