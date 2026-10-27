@@ -659,6 +659,16 @@ class TurnEngine
       end
       should_forfeit
     end
+    drop_orphaned_bonus_tiles(game_player)
+  end
+
+  # A Bonus tile needs 2 copies of its parent tile; losing one loses the Bonus tile too.
+  def drop_orphaned_bonus_tiles(game_player)
+    game_player.tiles = game_player.tiles.reject do |t|
+      parent = Tiles::Location.constants.map { |c| Tiles::Location.const_get(c) }
+        .find { |k| k.is_a?(Class) && k.new(0).bonus_tile_klass == t["klass"] }
+      parent && game_player.tiles.count { |o| o["klass"] == parent.name.demodulize } < 2
+    end
   end
 
   # A tile is subject to location forfeit unless it is the currently-active
