@@ -29,6 +29,11 @@ class Tiles::BonusTileLossTest < ActiveSupport::TestCase
       assert_empty forfeit_with(parent, bonus, [ "[9, 8]", "[9, 9]" ])
     end
 
+    test "losing #{bonus} is logged as a forfeit" do
+      forfeit_with(parent, bonus, [ "[5, 3]", "[9, 9]" ])
+      assert @game.moves.exists?(action: "forfeit_tile", payload: { "klass" => bonus })
+    end
+
     test "#{bonus} is kept while both #{parent} copies are held" do
       assert_equal [ parent, parent, bonus ], forfeit_with(parent, bonus, [ "[5, 3]", "[5, 1]" ])
     end
