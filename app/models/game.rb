@@ -97,6 +97,13 @@ class Game < ApplicationRecord
     state.to_s == "playing"
   end
 
+  # Whose turn it really is: during Canoe reactions current_player is the reactor, and the
+  # player whose turn was interrupted is the bottom of the interrupt stack.
+  def turn_player_id
+    order = interrupts.first&.dig("return_order")
+    order ? game_players.find { |g| g.order == order }&.id : current_player_id
+  end
+
   def waiting?
     state.to_s == "waiting"
   end
