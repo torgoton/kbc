@@ -642,22 +642,34 @@ class TurnEngine
       loc = tile["from"]
       should_forfeit = !source_adjacent?(game_player, loc)
       klass = @game.board_contents.tile_klass(*Coordinate.from_key(loc)) || tile["klass"]
-      if should_forfeit
-        record_move(
-          action: "forfeit_tile",
-          deliberate: false,
-          reversible: true,
-          game_player: game_player,
-          from: loc,
-          to: tile["used"].to_s,
-          payload: { "klass" => klass },
-          message: (
-            tile_name = klass.delete_suffix("Tile").downcase
-            "#{game_player.player.handle} forfeited #{/\A[aeiou]/.match?(tile_name) ? "an" : "a"} #{tile_name} tile"
-          )
-        )
-      end
+      record_forfeit(game_player, klass, loc, tile["used"]) if should_forfeit
       should_forfeit
+    end
+    drop_orphaned_bonus_tiles(game_player)
+  end
+
+  def record_forfeit(game_player, klass, from, used)
+    tile_name = klass.delete_suffix("Tile").downcase
+    record_move(
+      action: "forfeit_tile",
+      deliberate: false,
+      reversible: true,
+      game_player: game_player,
+      from: from,
+      to: used.to_s,
+      payload: { "klass" => klass },
+      message: "#{game_player.player.handle} forfeited #{/\A[aeiou]/.match?(tile_name) ? "an" : "a"} #{tile_name} tile"
+    )
+  end
+
+  # A Bonus tile needs 2 copies of its parent tile; losing one loses the Bonus tile too.
+  def drop_orphaned_bonus_tiles(game_player)
+    game_player.tiles = game_player.tiles.reject do |t|
+      parent = Tiles::Location.constants.map { |c| Tiles::Location.const_get(c) }
+        .find { |k| k.is_a?(Class) && k.new(0).bonus_tile_klass == t["klass"] }
+      orphaned = parent && game_player.tiles.count { |o| o["klass"] == parent.name.demodulize } < 2
+      record_forfeit(game_player, t["klass"], t["from"], t["used"]) if orphaned
+      orphaned
     end
   end
 

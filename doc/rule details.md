@@ -44,6 +44,7 @@ o DXV calls the Warrior, Ship, and Wagon tokens "Meeples"
 - Canoe goes 1) choose terrain, 2) build settlement
 - Temple pieces built DURING your mandatory action are NOT part of the mandatory action, so for example, do not effect Families
 - If you build 2 in Marshland, you cannot score Families
+- Bonus tiles are lost when you lose either of the 2 tiles that earned them
 - Fountain Bonus tile does not modify Fountain until the turn after it is acquired
 - For Canoe (and everything else), tile reset is done at the start of each player's turn - WOULD CHANGE tile reset is done at the end of each player's turn
 - Settlements set aside by Temple are played the next turn even if the Temple tile is lost
