@@ -95,19 +95,24 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-card.card-D", count: 0
   end
 
-  test "a Canoe reactor's terrain card is hidden, since it is not their turn; other players' cards still show" do
+  test "a Canoe reactor's terrain card is hidden; the interrupted player's card shows" do
     post session_url, params: { email_address: "chris@example.com", password: "password" }
     game = games(:game2player)
     chris = game_players(:chris)
     paula = game_players(:paula)
     chris.update!(hand: [ "T" ])
     paula.update!(hand: [ "D" ])
-    game.update!(current_player: paula, turn_phase: TurnPhase::CanoePhase.new)
+    game.update!(current_player: paula, turn_phase: TurnPhase::CanoePhase.new,
+                 interrupts: [ { "return_order" => chris.order, "return_action" => {}, "queue" => [] } ])
 
     get game_url(game)
 
     assert_select ".player-card.card-T"
     assert_select ".player-card.card-D", count: 0
+
+    game.update!(interrupts: [ { "return_order" => paula.order, "return_action" => {}, "queue" => [] } ])
+    get game_url(game)
+    assert_select ".player-card.card-D"
   end
 
   test "select_action sets current_action type on the game" do
