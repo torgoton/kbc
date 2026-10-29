@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="800" height="800" fill="#000">
+  <path d="M12 6h5v6h-5zM22.5 6h5v6h-5zM33 6h5v6h-5zM11 12h28v5H11z"/>
+  <path fill-rule="evenodd" d="M16 17h18l2 27H14zM24 24h2v9h-2z"/>
+  <path d="M10 44h30v3H10z"/>
+</svg>

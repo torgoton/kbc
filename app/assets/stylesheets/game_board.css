@@ -472,6 +472,11 @@ ul li .hex:hover .hex-bg {
 }
 
 /* Terrains suitable for building */
+/* bog (swamp) from Marshlands */
+.hex.terrain-b {
+    --hex-bg: color-mix(in srgb, #ff7310, transparent var(--fx-hex-transparency));
+}
+
 /* canyon */
 .hex.terrain-c {
     --hex-bg: color-mix(in srgb, #a52a2a, transparent var(--fx-hex-transparency));
@@ -492,9 +497,9 @@ ul li .hex:hover .hex-bg {
     --hex-bg: color-mix(in srgb, rgb(0,255,5), transparent var(--fx-hex-transparency));
 }
 
-/* marshland */
-.hex.terrain-b {
-    --hex-bg: color-mix(in srgb, #ff7310, transparent var(--fx-hex-transparency));
+/* Harvest's farmland */
+.hex.terrain-h {
+    --hex-bg: color-mix(in srgb, #ff10a3, transparent var(--fx-hex-transparency));
 }
 
 /* timberland (forest) */
@@ -531,7 +536,7 @@ ul li .hex:hover .hex-bg {
 .hex.terrain-m .terrain-icon { background-image: url("terrain-icons/mountain.svg"); }
 .hex.terrain-w .terrain-icon { background-image: url("terrain-icons/water.svg"); }
 .hex.terrain-b .terrain-icon { background-image: url("terrain-icons/marshland.svg"); }
-.hex.terrain-p .terrain-icon { background-image: url("terrain-icons/farmland.svg"); }
+.hex.terrain-h .terrain-icon { background-image: url("terrain-icons/farmland.svg"); }
 
 /* Special terrains */
 .hex.terrain-l, .hex.terrain-s {
@@ -578,6 +583,15 @@ ul li .hex:hover .hex-bg {
     position: absolute;
     inset: 0;
     background-image: url("silver/palace.svg");
+    background-repeat: no-repeat;
+    background-size: 80%;
+    background-position: 5px 6px;
+}
+
+.hex .terrain-silo {
+    position: absolute;
+    inset: 0;
+    background-image: url("silver/silo.svg");
     background-repeat: no-repeat;
     background-size: 80%;
     background-position: 5px 6px;
@@ -636,6 +650,60 @@ ul li .hex:hover .hex-bg {
 .tile-container.tower {
     background-image: url("gold/tower.svg");
     background-size: 80%;
+    background-position: center 50%;
+}
+
+.tile-container.bazaar {
+    background-image: url("gold/bazaar.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.watermill {
+    background-image: url("gold/watermill.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.mountainstation {
+    background-image: url("gold/mountainstation.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.scoutcabin {
+    background-image: url("gold/scoutcabin.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.cathedral {
+    background-image: url("gold/cathedral.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.watchtower {
+    background-image: url("gold/watchtower.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.university {
+    background-image: url("gold/university.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.palisade {
+    background-image: url("gold/palisade.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.farmland {
+    background-image: url("permanent/farmland.svg");
+    background-size: 75%;
     background-position: center 50%;
 }
 

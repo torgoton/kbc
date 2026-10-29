@@ -48,7 +48,7 @@ class Game < ApplicationRecord
     "nomads" => { label: "Nomads", enabled: true },
     "crossroads" => { label: "Crossroads", enabled: true },
     "marshlands" => { label: "Marshlands", enabled: true },
-    "harvest" => { label: "Harvest", enabled: false }
+    "harvest" => { label: "Harvest", enabled: true }
   }.freeze
   QUEENIES = {
     "capitol" => "Capitol",
@@ -626,6 +626,7 @@ class Game < ApplicationRecord
   NOMAD_BOARD_IDS = (8..11).to_a.freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
   MARSHLANDS_BOARD_IDS = (16..19).to_a.freeze
+  HARVEST_BOARD_IDS = (20..23).to_a.freeze
 
   def select_goals
     instantiate
@@ -667,8 +668,15 @@ class Game < ApplicationRecord
   end
 
   def board_pool
-    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +
-      (expansion?("marshlands") ? MARSHLANDS_BOARD_IDS : [])
+    BASE_BOARD_IDS +
+      (expansion?("nomads") ? NOMAD_BOARD_IDS : []) +
+      (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +
+      (expansion?("marshlands") ? MARSHLANDS_BOARD_IDS : []) +
+      (expansion?("harvest") ? HARVEST_BOARD_IDS : [])
+  end
+
+  def any_harvest_board?
+    boards.any? { |id, _| HARVEST_BOARD_IDS.include?(id) }
   end
 
   def board_has_castles?
@@ -689,7 +697,9 @@ class Game < ApplicationRecord
   def populate_player_supplies
     game_players.each do |p|
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
-      p.update(tiles: [ { "klass" => "MandatoryTile", "used" => true } ])
+      tiles = [ { "klass" => "MandatoryTile", "used" => true } ]
+      tiles << { "klass" => "FarmlandTile", "used" => false } if any_harvest_board?
+      p.update(tiles:)
     end
     # save no change to the game object
   end

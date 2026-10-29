@@ -5,7 +5,7 @@ module Boards
   # D Desert
   # F Flowers
   # G Grassland
-  # H (Harvest) Farmland
+  # P (Harvest) Farmland
   # L Location - Gold
   # M Mountain
   # S Silver - Castle, Nomad, Palace, Silo
@@ -473,7 +473,7 @@ module Boards
         ],
         location_hexes: [
           { r: 3, c: 6, k: "Bazaar" },
-          { r: 3, c: 2, k: "Water Mill" }
+          { r: 3, c: 2, k: "WaterMill" }
         ]
       },
       # 21: Mountain Station/Scout Cabin
@@ -495,8 +495,8 @@ module Boards
           { r: 7, c: 3, k: "Castle" }
         ],
         location_hexes: [
-          { r: 2, c: 3, k: "Mountain Station" },
-          { r: 4, c: 3, k: "Scout Cabin" }
+          { r: 2, c: 3, k: "MountainStation" },
+          { r: 4, c: 3, k: "ScoutCabin" }
         ]
       },
       # 22: Cathedral/Watchtower
@@ -540,7 +540,7 @@ module Boards
         ],
         location_hexes: [
           { r: 3, c: 2, k: "University" },
-          { r: 4, c: 5, k: "Palisade" }
+          { r: 5, c: 5, k: "Palisade" }
         ]
       },
       # HIDDEN SECTION - used for testing, not actually in the game
@@ -661,14 +661,15 @@ module Boards
         ]
       }
     ].freeze
-    LAST_SECTION = 19
-    # 20-23 (Harvest) are defined but not yet in the pool; the 4 test-only sections follow them.
+    LAST_SECTION = 23
+    # The 4 test-only sections follow the Harvest sections (20-23).
     HIDDEN_SECTIONS = (24..27).to_a.freeze
 
     SILVER_HEX_KINDS = {
       "Castle" => { css_class: "terrain-castlehex", description: "Castle - 3 points if you have an adjacent settlement" },
       "Nomad"  => { css_class: "terrain-nomad", description: nil },
-      "Palace" => { css_class: "terrain-palacehex", description: "Palace - 5 points for the most adjacent settlements" }
+      "Palace" => { css_class: "terrain-palacehex", description: "Palace - 5 points for the most adjacent settlements" },
+      "Silo"   => { css_class: "terrain-silo", description: "Silo" }
     }.freeze
 
     attr_accessor :terrain

@@ -10,8 +10,11 @@
 <h3>Learn more about Claude: <a href="https://claude.com/product/claude-code">https://claude.com/product/claude-code</a></h3>
 
 <h2>Tile Icons</h2>
-All tile icons have a Creative Commons Attribution License (CC BY 3.0).
-All tile icons except those by Chris are from <a href="https://thenounproject.com/">The Noun Project</a>.
+<p>Project creator Chris made some of the icon art. Those are presented here under a
+Creative Commons Attribution license (CC BY 3.0).</p>
+<p>Some icons are created by Claude AI. Those are presented here in the public domian.</p>
+<p>The remaining icons are from <a href="https://thenounproject.com/">The Noun Project</a>
+and have a Creative Commons Attribution license (CC BY 3.0).</p>
 <ul class="tile-icons">
   <% Boards::Board::TILE_CLASSES.each do |klass| %>
     <li><%= "#{klass[0][0..-5]} by #{klass[1]::CREATOR}" %></li>
