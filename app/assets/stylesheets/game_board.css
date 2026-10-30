@@ -798,8 +798,29 @@ ul li .hex:hover .hex-bg {
 }
 
 .set-aside {
-    font-size: 0.8em;
-    opacity: 0.8;
+    font-size: 1.5rem;
+    font-weight: 700;
+    opacity: 0.9;
+}
+
+.cathedral-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 2px solid #0008;
+    border-radius: 8px;
+    padding: 2px 6px;
+    background: rgba(255, 215, 0, 0.25);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.cathedral-count-icon {
+    display: inline-block;
+    width: 1.6rem;
+    height: 1.6rem;
+    background: url("gold/cathedral.svg") center / contain no-repeat;
 }
 
 .tile-container.fort {

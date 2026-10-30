@@ -364,13 +364,14 @@ module TurnPhase::TileBuildOrchestration
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
     end
     engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
+    game_player.spend_cathedral! if tile_obj.cathedral_tile?
     if tile_obj.repeats_build?
       remaining_after = remaining.to_i - 1
       if remaining_after > 0
         game.turn_phase = TurnPhase::TileBuildPhase.new(
           action_type: type,
           klass_name: klass_name,
-          chosen_terrain: chosen_terrain,
+          chosen_terrain: game.turn_phase.chosen_terrain,
           remaining: remaining_after
         )
       else
@@ -426,7 +427,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
     outpost_active_value == true
   end
 
-  def tile_action_endable? = walls_placed.to_i >= 1
+  def tile_action_endable? = walls_placed.to_i >= 1 || tile.cathedral_tile?
 
   # The tile as held by the acting player, so Bonus tiles can modify it.
   def tile = super&.with_player(@tile_owner)

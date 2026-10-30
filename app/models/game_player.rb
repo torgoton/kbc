@@ -63,6 +63,18 @@ class GamePlayer < ApplicationRecord
     supply["temple_due"] = 0
   end
 
+  # Cathedral: a stock of settlements to build with the tile. It starts at 1 when the tile is
+  # collected and stays, idle, if the tile is lost.
+  def cathedral_count = supply["cathedral"].to_i
+
+  def add_cathedral!
+    supply["cathedral"] = cathedral_count + 1
+  end
+
+  def spend_cathedral!
+    supply["cathedral"] = cathedral_count - 1
+  end
+
   # A Bonus tile counts from the turn after it is acquired (acquired tiles start "used").
   def bonus_tile_active?(klass)
     (tiles || []).any? { |t| t["klass"] == klass && !t["used"] }

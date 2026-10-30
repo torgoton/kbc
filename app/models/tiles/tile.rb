@@ -123,6 +123,11 @@ module Tiles
       false
     end
 
+    # Cathedral: spends the holder's Cathedral count, one per settlement built.
+    def cathedral_tile?
+      false
+    end
+
     # Settlement movement with a per-turn budget (ResettlementTile), as opposed
     # to the single-step movers handled by SettlementMovePhase.
     def resettles?

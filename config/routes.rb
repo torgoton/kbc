@@ -83,6 +83,7 @@ Rails.application.routes.draw do
       post :remove_meeple
       post :select_meeple
       post :activate_fort
+      post :activate_cathedral
       post :skip_canoe
       post :confirm_canoe
       post :resign

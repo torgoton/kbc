@@ -115,6 +115,52 @@ class TurnEngine
     @game.save
   end
 
+  # Cathedral's modal: "add" 1 to the count (ends the action) or "build" with it. Both log a
+  # deliberate selection plus the choice, so one undo removes them together.
+  def activate_cathedral(mode)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    tile = game_player.find_unused_tile("CathedralTile")
+    return "Not available" unless tile && tile_activatable?(tile) && %w[add build].include?(mode)
+    return "Not available" if mode == "build" && game_player.cathedral_count.zero?
+
+    handle = game_player.player.handle
+    record_move(
+      action: "select_action",
+      deliberate: true,
+      reversible: true,
+      to: "cathedral",
+      payload: { "klass" => "CathedralTile" },
+      message: "#{handle} selected the cathedral action"
+    )
+    if mode == "add"
+      game_player.add_cathedral!
+      game_player.mark_tile_used!("CathedralTile")
+      record_move(
+        action: "cathedral_add",
+        deliberate: false,
+        reversible: true,
+        message: "#{handle} added 1 to their Cathedral count (#{game_player.cathedral_count})"
+      )
+    else
+      record_move(
+        action: "cathedral_build",
+        deliberate: false,
+        reversible: true,
+        message: "#{handle} chose to build with the Cathedral (#{game_player.cathedral_count} available)"
+      )
+      @game.turn_phase = TurnPhase::TileBuildPhase.new(
+        action_type: "cathedral",
+        klass_name: "CathedralTile",
+        chosen_terrain: @game.turn_phase.chosen_terrain,
+        remaining: game_player.cathedral_count
+      )
+    end
+    game_player.save
+    @game.save
+  end
+
   def select_action(type)
     capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
@@ -196,12 +242,32 @@ class TurnEngine
     @game.instantiate
     game_player = @game.current_player
     tile_klass_name = current_action_tile_klass
+    return end_cathedral_action(game_player) if tile_klass_name == "CathedralTile"
     current_phase = @game.turn_phase
     moves_made = current_phase.moves.to_i
     walls_placed = current_phase.walls_placed.to_i
     return "Not allowed" unless moves_made >= 1 || walls_placed >= 1
 
     game_player.mark_tile_used!(tile_klass_name)
+    reset_to_mandatory
+    game_player.save
+    @game.save
+  end
+
+  # Before the first build, ending the action cancels the selection (as an undo would). After
+  # building, it is a move of its own, so it can be undone separately from the builds.
+  def end_cathedral_action(game_player)
+    last = @game.moves.where(deliberate: true).order(:id).last
+    return undo_last_move if last&.action == "select_action"
+
+    capture_undo_snapshot
+    record_move(
+      action: "end_cathedral",
+      deliberate: true,
+      reversible: true,
+      message: "#{game_player.player.handle} ended the Cathedral action (#{game_player.cathedral_count} left)"
+    )
+    game_player.mark_tile_used!("CathedralTile")
     reset_to_mandatory
     game_player.save
     @game.save

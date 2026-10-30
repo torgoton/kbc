@@ -61,6 +61,36 @@ class GameScenario
     perform { |engine| engine.activate_fort_tile }
   end
 
+  # Activate a held Cathedral tile with its modal choice: "add" or "build".
+  def activate_cathedral(mode)
+    perform { |engine| engine.activate_cathedral(mode) }
+  end
+
+  def end_tile_action
+    perform { |engine| engine.end_tile_action }
+  end
+
+  # Hand a player an unused Cathedral tile with a given count (direct setup).
+  def give_cathedral(player, count:, used: false)
+    give_tile(player, "CathedralTile", from: [ 0, 0 ], used: used)
+    gp = game_player(player)
+    gp.supply["cathedral"] = count
+    gp.save!
+  end
+
+  def tile_action_endable?
+    fresh_board
+    TurnEngine.new(@game).tile_action_endable?
+  end
+
+  def moves
+    @game.moves.order(:order)
+  end
+
+  def cathedral_count(player)
+    game_player(player).cathedral_count
+  end
+
   # Activate a held Outpost tile, skipping the adjacency requirement for the
   # current mandatory (or tile-build) action.
   def activate_outpost
