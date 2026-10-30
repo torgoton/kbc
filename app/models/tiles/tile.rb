@@ -123,6 +123,17 @@ module Tiles
       false
     end
 
+    # Scout Cabin: places Scout tokens instead of settlements.
+    def places_scouts?
+      false
+    end
+
+    # A tile whose action can be cancelled before it does anything, and once begun is ended
+    # with End action as a move of its own (Cathedral, Scout Cabin).
+    def cancellable_action?
+      false
+    end
+
     # Cathedral: spends the holder's Cathedral count, one per settlement built.
     def cathedral_tile?
       false

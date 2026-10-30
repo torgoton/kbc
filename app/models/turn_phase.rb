@@ -46,6 +46,8 @@ class TurnPhase
       TargetedRemovalPhase.from_hash(hash)
     elsif tile&.sets_aside_settlement?
       SetAsidePhase.from_hash(hash)
+    elsif tile&.places_scouts?
+      ScoutPhase.from_hash(hash)
     elsif tile && tile.places_meeple? && tile.meeple_kind == "warrior"
       MeepleActionPhase.from_hash(hash)
     elsif tile&.places_city_hall?
@@ -1578,6 +1580,64 @@ end
 # Canoe: a reaction, taken by each holder when another player takes the last tile from a
 # location. Build on any Water or Swamp hex (adjacent to your settlements if
 # possible) or skip.
+# Scout Cabin: place up to 2 Scouts, one click each. A Scout is not a build, so none of the
+# build orchestration (scoring, tile pickup, supply) applies.
+class TurnPhase::ScoutPhase < TurnPhase
+  attr_reader :remaining, :chosen_terrain
+
+  def self.from_hash(hash)
+    new(remaining: hash.fetch("remaining"), chosen_terrain: hash["chosen_terrain"])
+  end
+
+  def initialize(remaining: Tiles::Location::ScoutCabinTile::SCOUTS, chosen_terrain: nil)
+    @remaining = remaining
+    @chosen_terrain = chosen_terrain
+  end
+
+  def type = "scoutcabin"
+  def klass_name = "ScoutCabinTile"
+  def tile_action_endable? = true
+
+  def legal_targets(board_contents:, player:, game: nil)
+    tile.valid_destinations(board_contents: board_contents, player_order: player.order)
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "Not available" unless game_player.find_unused_tile(klass_name)
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    engine.record_move(
+      action: "place_scout",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      message: "#{game_player.player.handle} placed a Scout at [#{row}, #{col}]"
+    )
+    game.board_contents_will_change!
+    game.board_contents.place_scout(row, col, game_player.order)
+    if remaining > 1
+      game.turn_phase = self.class.new(remaining: remaining - 1, chosen_terrain: chosen_terrain)
+    else
+      game_player.mark_tile_used!(klass_name)
+      engine.reset_to_mandatory
+    end
+    game_player.save
+    game.save
+  end
+
+  def serialize
+    { "type" => type, "klass" => klass_name, "remaining" => remaining }.tap do |hash|
+      hash["chosen_terrain"] = chosen_terrain if chosen_terrain
+    end
+  end
+end
+
 class TurnPhase::CanoePhase < TurnPhase
   def self.from_hash(_hash)
     new

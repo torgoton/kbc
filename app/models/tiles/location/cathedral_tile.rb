@@ -10,6 +10,7 @@ module Tiles
       def uses_played_terrain? = true
       def repeats_build? = true
       def cathedral_tile? = true
+      def cancellable_action? = true
 
       def on_pickup(game_player:)
         game_player.add_cathedral!

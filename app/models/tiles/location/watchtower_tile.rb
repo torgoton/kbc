@@ -7,7 +7,7 @@ module Tiles
       def builds_settlement? = true
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0), budget: nil)
-        mine = board_contents.settlements_for(player_order)
+        mine = board_contents.adjacency_sources_for(player_order)
         by_opponent = (0..19).flat_map do |r|
           (0..19).filter_map do |c|
             next unless board_contents.available_for_building?(r, c) && BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c))

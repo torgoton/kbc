@@ -63,4 +63,14 @@ class BoardTest < ActiveSupport::TestCase
     assert_equal 1, settlement.player
     assert_equal "warrior", settlement.meeple_type
   end
+
+  test "Board.new reconstructs a scout as a Scout owned by its player" do
+    contents = BoardState.new
+    contents.place_scout(3, 5, 1)
+    board = Boards::Board.new(GameStub.new([], contents))
+
+    scout = board.content_at(3, 5)
+    assert_instance_of Scout, scout
+    assert_equal 1, scout.player
+  end
 end

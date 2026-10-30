@@ -39,6 +39,7 @@ class Move < ApplicationRecord
     "remove_settlement" => "removed",
     "activate_outpost"  => "outpost",
     "place_wall"        => "wall",
+    "place_scout"       => "build",
     "place_city_hall"   => "build"
   }.freeze
 

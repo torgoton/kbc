@@ -89,6 +89,8 @@
               <% end %>
             <% when Wall %>
               <%= content_tag :div, nil, class: "hex-wall" %>
+            <% when Scout %>
+              <%= render "games/scout", color: player_color(content.player), css_class: "hex-scout" %>
             <% else %>
               <%= content_tag :div, nil, class: "hex-mystery" %>
             <% end %>

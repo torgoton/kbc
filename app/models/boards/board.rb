@@ -97,6 +97,8 @@ module Boards
           klass = game.board_contents.tile_klass(row, col)
           if klass == "Wall"
             @content[row][col] = Wall.new
+          elsif klass == "Scout"
+            @content[row][col] = Scout.new(game.board_contents.scout_owner(row, col))
           elsif klass
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
             @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))

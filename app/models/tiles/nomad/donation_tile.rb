@@ -19,7 +19,7 @@ module Tiles
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil)
         terrain = build_terrain
-        settlements = board_contents.settlements_for(player_order)
+        settlements = board_contents.adjacency_sources_for(player_order)
 
         # Adjacency-first: find empty hexes of build_terrain adjacent to player's settlements
         # Note: Donation tiles can build on W and M (unlike normal builds)

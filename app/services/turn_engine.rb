@@ -206,6 +206,8 @@ class TurnEngine
         )
       elsif tile_obj&.sets_aside_settlement?
         TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
+      elsif tile_obj&.places_scouts?
+        TurnPhase::ScoutPhase.new(chosen_terrain: @game.turn_phase.chosen_terrain)
       elsif tile_obj&.sword_tile?
         opponents = @game.game_players
           .reject { |gp| gp == @game.current_player }
@@ -242,7 +244,7 @@ class TurnEngine
     @game.instantiate
     game_player = @game.current_player
     tile_klass_name = current_action_tile_klass
-    return end_cathedral_action(game_player) if tile_klass_name == "CathedralTile"
+    return end_cancellable_action(game_player, tile_klass_name) if Tiles::Tile.for_klass(tile_klass_name)&.new(0)&.cancellable_action?
     current_phase = @game.turn_phase
     moves_made = current_phase.moves.to_i
     walls_placed = current_phase.walls_placed.to_i
@@ -256,18 +258,18 @@ class TurnEngine
 
   # Before the first build, ending the action cancels the selection (as an undo would). After
   # building, it is a move of its own, so it can be undone separately from the builds.
-  def end_cathedral_action(game_player)
+  def end_cancellable_action(game_player, klass_name)
     last = @game.moves.where(deliberate: true).order(:id).last
     return undo_last_move if last&.action == "select_action"
 
     capture_undo_snapshot
     record_move(
-      action: "end_cathedral",
+      action: "end_tile_action",
       deliberate: true,
       reversible: true,
-      message: "#{game_player.player.handle} ended the Cathedral action (#{game_player.cathedral_count} left)"
+      message: "#{game_player.player.handle} ended the #{klass_name.delete_suffix("Tile").titleize} action"
     )
-    game_player.mark_tile_used!("CathedralTile")
+    game_player.mark_tile_used!(klass_name)
     reset_to_mandatory
     game_player.save
     @game.save
@@ -377,6 +379,20 @@ class TurnEngine
     end
   end
 
+  # Scouts last only for the turn they were placed.
+  def remove_scouts(game_player)
+    return if @game.board_contents.scouts_for(game_player.order).empty?
+    @game.board_contents_will_change!
+    @game.board_contents.remove_scouts(game_player.order)
+    record_move(
+      action: "remove_scouts",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "#{game_player.player.handle}'s Scouts were removed"
+    )
+  end
+
   def end_turn
     capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
@@ -392,6 +408,7 @@ class TurnEngine
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
     game_player.end_temple_turn!
+    remove_scouts(game_player)
     @game.current_action = { "type" => "mandatory" }
     @game.turn_started_at = Time.current if @game.timed?
     next_order = (@game.current_player.order + 1) % @game.game_players.count

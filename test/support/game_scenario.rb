@@ -83,6 +83,14 @@ class GameScenario
     TurnEngine.new(@game).tile_action_endable?
   end
 
+  def place_scout(at:)
+    perform { |engine| engine.click(Coordinate.new(*at)) }
+  end
+
+  def scouts(player)
+    @game.board_contents.scouts_for(player)
+  end
+
   def moves
     @game.moves.order(:order)
   end

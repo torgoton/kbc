@@ -20,7 +20,7 @@ module Tiles
       private
 
       def area_around(board_contents, owner, start)
-        mine = board_contents.settlements_for(owner)
+        mine = board_contents.adjacency_sources_for(owner)
         area = [ start ]
         area.each do |r, c|
           board_contents.neighbors(r, c).each { |n| area << n if mine.include?(n) && !area.include?(n) }

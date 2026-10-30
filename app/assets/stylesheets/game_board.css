@@ -946,6 +946,14 @@ ul li .hex:hover .hex-bg {
     height: 60%;
 }
 
+.hex-scout {
+    position: absolute;
+    top: 5%;
+    left: 20%;
+    width: 60%;
+    height: 60%;
+}
+
 .city-hall-settlement {
     filter: drop-shadow(0 0 5px gold) drop-shadow(0 0 2px #b8860b);
 }

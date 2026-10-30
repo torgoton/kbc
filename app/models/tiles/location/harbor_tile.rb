@@ -8,7 +8,7 @@ module Tiles
       def move_terrain(hand:) = "W"
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, budget: nil)
-        other_settlements = board_contents.settlements_for(player_order).reject { |r, c| r == from_row && c == from_col }
+        other_settlements = board_contents.adjacency_sources_for(player_order).reject { |r, c| r == from_row && c == from_col }
 
         adjacent = other_settlements.flat_map do |r, c|
           board_contents.neighbors_where(r, c) do |nr, nc|

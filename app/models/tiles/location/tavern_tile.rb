@@ -20,7 +20,7 @@ module Tiles
       ].freeze
 
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil)
-        settlements = board_contents.settlements_for(player_order).to_set
+        settlements = board_contents.adjacency_sources_for(player_order).to_set
         candidates = []
 
         DIRECTION_PAIRS.each do |fwd, bwd|
