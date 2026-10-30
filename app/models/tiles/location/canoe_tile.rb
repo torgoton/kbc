@@ -10,6 +10,7 @@ module Tiles
 
       def builds_settlement? = true
       def canoe_tile? = true
+      def bazaar_copyable? = false
       def bonus_tile_klass = "CanoeBonusTile"
 
       # A reaction to a location emptying, never a normal tile action.

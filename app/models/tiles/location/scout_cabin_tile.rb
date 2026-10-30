@@ -13,6 +13,7 @@ module Tiles
 
       # No fallback: a Scout must touch one of your pieces (settlements or Scouts).
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0), budget: nil)
+        return [] if board_contents.scouts_for(player_order).size >= SCOUTS
         board_contents.adjacency_sources_for(player_order).flat_map do |row, col|
           board_contents.neighbors_where(row, col) do |nr, nc|
             board_contents.empty?(nr, nc) && SCOUT_TERRAINS.include?(board_contents.terrain_at(nr, nc))

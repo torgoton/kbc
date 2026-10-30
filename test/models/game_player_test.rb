@@ -112,10 +112,10 @@ class GamePlayerTest < ActiveSupport::TestCase
     assert @gp.tiles.all? { |t| t["used"] == false }
   end
 
-  test "receive_tile! appends a new tile marked used" do
+  test "receive_tile! appends a new tile marked used and fresh" do
     @gp.tiles = []
     @gp.receive_tile!("FarmTile", from: "[11, 17]")
-    assert_equal [ { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true } ], @gp.tiles
+    assert_equal [ { "klass" => "FarmTile", "from" => "[11, 17]", "used" => true, "fresh" => true } ], @gp.tiles
   end
 
   test "receive_tile! works when tiles is nil" do

@@ -48,6 +48,22 @@
             <button data-action="click->meeple-popup#cancel" class="popup-btn popup-btn-cancel">Cancel</button>
           </div>
         </div>
+      <% elsif activatable && tile_obj.bazaar_tile? %>
+        <div class="player-tile-popup"
+             data-controller="meeple-popup"
+             data-action="click->meeple-popup#toggle">
+          <div class="player-tile <%= state %> <%= category %>">
+            <div class="tile-container <%= type %>"></div>
+            <div class="tile-tooltip"><%= description.html_safe %></div>
+          </div>
+          <div data-meeple-popup-target="popup" class="meeple-popup hidden">
+            <% engine.bazaar_entries(player).each do |entry| %>
+              <%= button_to entry[:label], activate_bazaar_game_path(game, klass: entry[:klass], mode: entry[:mode]),
+                    class: "popup-btn", data: { turbo_stream: true } %>
+            <% end %>
+            <button data-action="click->meeple-popup#cancel" class="popup-btn popup-btn-cancel">Cancel</button>
+          </div>
+        </div>
       <% elsif activatable && tile_obj.cathedral_tile? %>
         <% count = player.cathedral_count %>
         <div class="player-tile-popup"

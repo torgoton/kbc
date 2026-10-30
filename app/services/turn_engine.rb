@@ -88,6 +88,11 @@ class TurnEngine
     return "Not available" unless game_player.find_unused_tile("FortTile")
     return "No settlements left" unless game_player.settlements_remaining?
 
+    begin_fort(game_player)
+  end
+
+  # Fort's action once chosen (directly, or copied by Bazaar): draw a card and build on it.
+  def begin_fort(game_player)
     record_move(
       action: "activate_fort",
       deliberate: true,
@@ -125,15 +130,22 @@ class TurnEngine
     return "Not available" unless tile && tile_activatable?(tile) && %w[add build].include?(mode)
     return "Not available" if mode == "build" && game_player.cathedral_count.zero?
 
-    handle = game_player.player.handle
     record_move(
       action: "select_action",
       deliberate: true,
       reversible: true,
       to: "cathedral",
       payload: { "klass" => "CathedralTile" },
-      message: "#{handle} selected the cathedral action"
+      message: "#{game_player.player.handle} selected the cathedral action"
     )
+    begin_cathedral(game_player, mode)
+    game_player.save
+    @game.save
+  end
+
+  # Cathedral's action once chosen (directly, or copied by Bazaar).
+  def begin_cathedral(game_player, mode)
+    handle = game_player.player.handle
     if mode == "add"
       game_player.add_cathedral!
       game_player.mark_tile_used!("CathedralTile")
@@ -157,6 +169,59 @@ class TurnEngine
         remaining: game_player.cathedral_count
       )
     end
+  end
+
+  # Bazaar: what it can copy, as {klass:, mode:, label:} entries (Cathedral offers one per
+  # choice). Any other location tile you hold that could act now, used or not, except tiles
+  # acquired this turn.
+  def bazaar_entries(game_player)
+    @game.instantiate
+    (game_player.tiles || []).uniq { |t| t["klass"] }.flat_map do |tile|
+      tile_obj = Tiles::Tile.for_klass(tile["klass"])&.new(0)
+      next [] unless tile_obj&.bazaar_copyable? && !tile["fresh"]
+      next [] unless tile_obj.passive_effect? || tile_actionable?(tile)
+      name = tile["klass"].delete_suffix("Tile").titleize
+      if tile_obj.cathedral_tile?
+        entries = [ { klass: tile["klass"], mode: "add", label: "Copy #{name}: Add 1 to Count" } ]
+        entries << { klass: tile["klass"], mode: "build", label: "Copy #{name}: Build (#{game_player.cathedral_count} left)" } if game_player.cathedral_count.positive?
+        entries
+      else
+        [ { klass: tile["klass"], mode: nil, label: "Copy #{name}#{" (cannot be undone)" if tile_obj.fort_tile?}" } ]
+      end
+    end
+  end
+
+  # Bazaar acts like the tile it copies: its name stands for the Bazaar tile while that action
+  # runs (GamePlayer#find_unused_tile / mark_tile_used!). Logged as a deliberate selection plus
+  # the choice, so one undo removes both.
+  def activate_bazaar(target_klass, mode = nil)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    bazaar = game_player.find_unused_tile("BazaarTile")
+    return "Not available" unless bazaar && tile_activatable?(bazaar)
+    return "Not available" unless bazaar_entries(game_player).any? { |e| e[:klass] == target_klass && e[:mode] == mode }
+
+    handle = game_player.player.handle
+    name = target_klass.delete_suffix("Tile").titleize
+    record_move(
+      action: "select_action",
+      deliberate: true,
+      reversible: true,
+      to: "bazaar",
+      payload: { "klass" => "BazaarTile" },
+      message: "#{handle} selected the bazaar action"
+    )
+    record_move(
+      action: "bazaar_copy",
+      deliberate: false,
+      reversible: true,
+      payload: { "klass" => target_klass, "mode" => mode },
+      message: "#{handle} chose to copy the #{name} action with Bazaar"
+    )
+    game_player.supply["bazaar_copy"] = target_klass
+    begin_copied_action(game_player, target_klass, mode)
+    game_player.supply.delete("bazaar_copy") if @game.turn_phase.mandatory_build? # nothing left to do
     game_player.save
     @game.save
   end
@@ -167,63 +232,8 @@ class TurnEngine
     payload = { "klass" => klass_name }
     tile_klass = Tiles::Tile.for_klass(klass_name)
     tile_obj = tile_klass&.new(0)
-    selected_phase =
-      if tile_obj&.builds_settlement? || tile_obj&.places_wall?
-        TurnPhase::TileBuildPhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          chosen_terrain: @game.turn_phase.chosen_terrain,
-          remaining: (tile_obj.build_quota if tile_obj.repeats_build?),
-          walls_placed: (0 if tile_obj.places_wall?)
-        )
-      elsif tile_obj&.moves_settlement? && !tile_obj.resettles?
-        TurnPhase::SettlementMovePhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          chosen_terrain: @game.turn_phase.chosen_terrain
-        )
-      elsif tile_obj&.resettles?
-        TurnPhase::ResettlementPhase.new(
-          budget: 4,
-          moves: 0
-        )
-      elsif tile_obj&.places_meeple? && %w[ship wagon].include?(tile_obj.meeple_kind)
-        TurnPhase::MeepleMovementPhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          budget: 3,
-          moves: 0
-        )
-      elsif tile_obj&.places_meeple? && tile_obj.meeple_kind == "warrior"
-        TurnPhase::MeepleActionPhase.new(
-          action_type: type,
-          klass_name: klass_name
-        )
-      elsif tile_obj&.places_city_hall?
-        TurnPhase::CityHallPhase.new(
-          action_type: type,
-          klass_name: klass_name
-        )
-      elsif tile_obj&.sets_aside_settlement?
-        TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
-      elsif tile_obj&.places_scouts?
-        TurnPhase::ScoutPhase.new(chosen_terrain: @game.turn_phase.chosen_terrain)
-      elsif tile_obj&.sword_tile?
-        opponents = @game.game_players
-          .reject { |gp| gp == @game.current_player }
-          .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
-          .map(&:order)
-          .sort
-        return "No opponents with settlements" if opponents.empty?
-        payload["pending_orders"] = opponents
-        TurnPhase::TargetedRemovalPhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          pending_orders: opponents
-        )
-      else
-        raise ArgumentError, "no TurnPhase for action type #{type.inspect}"
-      end
+    selected_phase = build_selected_phase(type, klass_name, tile_obj, payload)
+    return selected_phase if selected_phase.is_a?(String)
     record_move(
       action: "select_action",
       deliberate: true,
@@ -238,6 +248,70 @@ class TurnEngine
     )
     @game.turn_phase = phase_result.next_phase
     @game.save
+  end
+
+  # The phase a tile's action runs in, or an error string. Shared by selecting a tile and by
+  # Bazaar copying one.
+  def build_selected_phase(type, klass_name, tile_obj, payload)
+    if tile_obj&.builds_settlement? || tile_obj&.places_wall?
+      TurnPhase::TileBuildPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        chosen_terrain: @game.turn_phase.chosen_terrain,
+        remaining: (tile_obj.build_quota if tile_obj.repeats_build?),
+        walls_placed: (0 if tile_obj.places_wall?)
+      )
+    elsif tile_obj&.moves_settlement? && !tile_obj.resettles?
+      TurnPhase::SettlementMovePhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        chosen_terrain: @game.turn_phase.chosen_terrain
+      )
+    elsif tile_obj&.resettles?
+      TurnPhase::ResettlementPhase.new(
+        budget: 4,
+        moves: 0
+      )
+    elsif tile_obj&.places_meeple? && %w[ship wagon].include?(tile_obj.meeple_kind)
+      TurnPhase::MeepleMovementPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        budget: 3,
+        moves: 0
+      )
+    elsif tile_obj&.places_meeple? && tile_obj.meeple_kind == "warrior"
+      TurnPhase::MeepleActionPhase.new(
+        action_type: type,
+        klass_name: klass_name
+      )
+    elsif tile_obj&.places_city_hall?
+      TurnPhase::CityHallPhase.new(
+        action_type: type,
+        klass_name: klass_name
+      )
+    elsif tile_obj&.sets_aside_settlement?
+      TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
+    elsif tile_obj&.places_scouts?
+      TurnPhase::ScoutPhase.new(
+        remaining: Tiles::Location::ScoutCabinTile::SCOUTS - @game.board_contents.scouts_for(@game.current_player.order).size,
+        chosen_terrain: @game.turn_phase.chosen_terrain
+      )
+    elsif tile_obj&.sword_tile?
+      opponents = @game.game_players
+        .reject { |gp| gp == @game.current_player }
+        .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
+        .map(&:order)
+        .sort
+      return "No opponents with settlements" if opponents.empty?
+      payload["pending_orders"] = opponents
+      TurnPhase::TargetedRemovalPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        pending_orders: opponents
+      )
+    else
+      raise ArgumentError, "no TurnPhase for action type #{type.inspect}"
+    end
   end
 
   def end_tile_action
@@ -276,12 +350,18 @@ class TurnEngine
   end
 
   def tile_activatable?(tile)
-    return false if tile["used"]
+    !tile["used"] && tile_actionable?(tile)
+  end
+
+  # Everything about a tile being usable this turn except whether it is already used, which
+  # Bazaar ignores when copying.
+  def tile_actionable?(tile)
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
       (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
+    return bazaar_entries(@game.current_player).any? if tile_obj.bazaar_tile?
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     player = @game.current_player
@@ -404,6 +484,9 @@ class TurnEngine
     @game.discard.push(*game_player.hand)
     new_cards = [ @game.next_card ]
     new_cards << @game.next_card if has_crossroads_tile?(game_player)
+    game_player.extra_cards.times { new_cards << @game.next_card }
+    game_player.supply.delete("extra_cards")
+    game_player.supply.delete("bazaar_copy")
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
@@ -976,7 +1059,28 @@ class TurnEngine
   def reset_to_mandatory
     current_phase = @game.turn_phase
     ct = current_phase.chosen_terrain
+    @game.current_player.supply.delete("bazaar_copy")
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
+  end
+
+  def begin_copied_action(game_player, klass_name, mode)
+    tile_obj = Tiles::Tile.for_klass(klass_name).new(0)
+    if tile_obj.crossroads_tile?
+      game_player.supply["extra_cards"] = game_player.extra_cards + 1
+      game_player.mark_tile_used!(klass_name)
+    elsif tile_obj.cathedral_tile?
+      begin_cathedral(game_player, mode)
+    elsif tile_obj.fort_tile?
+      begin_fort(game_player)
+    else
+      type = klass_name.delete_suffix("Tile").downcase
+      phase = build_selected_phase(type, klass_name, tile_obj, {})
+      phase_result = @game.turn_phase.transition(
+        TurnPhase::Events::TileActionSelected.new,
+        TurnPhase::Facts::TileActionSelection.new(selected_phase: phase)
+      )
+      @game.turn_phase = phase_result.next_phase
+    end
   end
 
   def has_crossroads_tile?(game_player)

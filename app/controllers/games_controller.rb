@@ -1,7 +1,7 @@
 class GamesController < ApplicationController
   GAME_ACTIONS = %i[
     action select_action end_turn undo_move undo_max_moves end_tile_action activate_outpost
-    remove_meeple select_meeple activate_fort activate_cathedral skip_canoe confirm_canoe
+    remove_meeple select_meeple activate_fort activate_cathedral activate_bazaar skip_canoe confirm_canoe
   ].freeze
 
   before_action :require_game_playing, only: GAME_ACTIONS
@@ -152,6 +152,14 @@ class GamesController < ApplicationController
 
   def activate_cathedral
     TurnEngine.new(@game).activate_cathedral(params[:mode])
+    respond_to do |format|
+      format.html { head :no_content }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
+  def activate_bazaar
+    TurnEngine.new(@game).activate_bazaar(params[:klass], params[:mode].presence)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }

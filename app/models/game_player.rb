@@ -217,7 +217,14 @@ class GamePlayer < ApplicationRecord
     (tiles || []).reject { |t| t["used"] }
   end
 
+  # Bazaar: while it copies another tile's action, that tile's name stands for the Bazaar tile,
+  # so the copied action checks and uses up the Bazaar and leaves the original alone. The
+  # marker lasts until the action completes (TurnEngine#reset_to_mandatory).
+  def bazaar_copy = supply["bazaar_copy"]
+  def extra_cards = supply["extra_cards"].to_i
+
   def mark_tile_used!(klass)
+    klass = "BazaarTile" if copying_through_bazaar?(klass)
     idx = (tiles || []).find_index { |t| t["klass"] == klass && !t["used"] }
     return unless idx
     updated = tiles.dup
@@ -242,11 +249,12 @@ class GamePlayer < ApplicationRecord
   end
 
   def reset_tiles!
-    self.tiles = (tiles || []).map { |t| t["permanent"] ? t : t.merge("used" => false) }
+    self.tiles = (tiles || []).map { |t| t["permanent"] ? t : t.merge("used" => false).except("fresh") }
   end
 
+  # A tile acquired this turn is used and "fresh": it can't be copied by the Bazaar either.
   def receive_tile!(klass, from:)
-    self.tiles = (tiles || []) + [ { "klass" => klass, "from" => from, "used" => true } ]
+    self.tiles = (tiles || []) + [ { "klass" => klass, "from" => from, "used" => true, "fresh" => true } ]
   end
 
   def remove_tile_from!(from)
@@ -258,7 +266,12 @@ class GamePlayer < ApplicationRecord
   end
 
   def find_unused_tile(klass)
+    klass = "BazaarTile" if copying_through_bazaar?(klass)
     (tiles || []).find { |t| t["klass"] == klass && !t["used"] }
+  end
+
+  def copying_through_bazaar?(klass)
+    klass == bazaar_copy && (tiles || []).any? { |t| t["klass"] == "BazaarTile" && !t["used"] }
   end
 
   def mark_tile_unused!(klass)

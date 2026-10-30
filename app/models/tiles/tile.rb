@@ -123,6 +123,20 @@ module Tiles
       false
     end
 
+    # Bazaar copies the action of another location tile. Canoe (a reaction) and the Bazaar itself
+    # opt out; Crossroads has no action to take, only an effect to repeat.
+    def bazaar_tile?
+      false
+    end
+
+    def bazaar_copyable?
+      is_a?(Tiles::Location)
+    end
+
+    def passive_effect?
+      false
+    end
+
     # Scout Cabin: places Scout tokens instead of settlements.
     def places_scouts?
       false

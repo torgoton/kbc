@@ -360,7 +360,7 @@ module TurnPhase::TileBuildOrchestration
     tile_klass = tile_klass_name
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash("klass" => tile_klass)
     return "Not available" unless engine.legal_targets.include?([ row, col ])
     if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
@@ -943,7 +943,7 @@ module TurnPhase::MeepleOrchestration
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
 
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash("klass" => tile_klass)
 
     movement_step = false
     if from
@@ -1025,7 +1025,7 @@ module TurnPhase::MeepleOrchestration
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
 
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash("klass" => tile_klass)
     moveable = case tile_obj.meeple_kind
     when "ship"  then game.board_contents.ship_at?(row, col)
     when "wagon" then game.board_contents.wagon_at?(row, col)

@@ -83,6 +83,37 @@ class GameScenario
     TurnEngine.new(@game).tile_action_endable?
   end
 
+  # Bazaar: copy another held tile's action (mode picks Cathedral's "add" or "build").
+  def activate_bazaar(klass, mode = nil)
+    perform { |engine| engine.activate_bazaar(klass, mode) }
+  end
+
+  def give_cathedral_count(player, count)
+    gp = game_player(player)
+    gp.supply["cathedral"] = count
+    gp.save!
+  end
+
+  # Put a Scout on the board directly (setup, no rules applied).
+  def place_scout_for(player, at:)
+    mutate_board { |contents| contents.place_scout(*at, player) }
+  end
+
+  def bazaar_entry_labels(player)
+    fresh_board
+    TurnEngine.new(@game).bazaar_entries(game_player(player)).map { |e| e[:label] }
+  end
+
+  # The Bazaar popup's entries as [klass, mode] pairs.
+  def bazaar_entries(player)
+    fresh_board
+    TurnEngine.new(@game).bazaar_entries(game_player(player)).map { |e| [ e[:klass], e[:mode] ] }
+  end
+
+  def tile_used?(player, klass)
+    held_tiles(player, klass: klass).first["used"]
+  end
+
   def place_scout(at:)
     perform { |engine| engine.click(Coordinate.new(*at)) }
   end
