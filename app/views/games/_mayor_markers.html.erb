@@ -1,7 +1,7 @@
 <div class="mayor-markers">
   <% game.game_players.each do |gp| %>
     <% Array(gp.supply["mayors"]).select { |row| rows.cover?(row) }.each do |row| %>
-      <div class="mayor-marker" style="top: <%= (row % 10) * 3.927 %>cqw">
+      <div class="mayor-marker" style="--row: <%= row % 10 %>">
         <%= render "games/settlement", color: player_color(gp.order), css_class: "" %>
       </div>
     <% end %>

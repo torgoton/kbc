@@ -5,7 +5,7 @@ module Boards
   # D Desert
   # F Flowers
   # G Grassland
-  # P (Harvest) Farmland
+  # H (Harvest) Farmland
   # L Location - Gold
   # M Mountain
   # S Silver - Castle, Nomad, Palace, Silo

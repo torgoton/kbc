@@ -401,7 +401,7 @@ class TurnEngine
     if phase.mode.nil?
       "#{prefix} must choose to build or move, or skip"
     elsif phase.action_spent?
-      "#{prefix} must end the action"
+      "#{prefix} must end the turn"
     elsif phase.mode == "build"
       "#{prefix} may build (#{phase.remaining} left)"
     else
@@ -496,7 +496,7 @@ class TurnEngine
   end
 
   def end_turn
-    return end_silo_choice(@game.current_player) if @game.turn_phase.type == "silo"
+    return end_silo_turn(@game.current_player) if @game.turn_phase.type == "silo"
     capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
@@ -563,7 +563,7 @@ class TurnEngine
     if mode == "skip"
       record_move(action: "silo_skip", deliberate: true, reversible: true,
                   message: "#{handle} skipped #{label}")
-      advance_silo
+      finish_silo(phase.with_mode("skip"))
     else
       record_move(action: "silo_choose", deliberate: true, reversible: true, payload: { "mode" => mode },
                   message: "#{handle} chose to #{mode} for #{label}")
@@ -572,12 +572,30 @@ class TurnEngine
     end
   end
 
+  # End action: stops this Silo's build or move early.
   def end_silo_choice(game_player)
-    return "Not allowed" unless @game.turn_phase.mode
+    return "Not allowed" unless @game.turn_phase.tile_action_endable?
     capture_undo_snapshot
     record_move(action: "silo_end", deliberate: true, reversible: true,
                 message: "#{game_player.player.handle} ended the Silo #{@game.turn_phase.mode}")
+    finish_silo(@game.turn_phase)
+  end
+
+  # End turn: hands the Silo round on once the player's last Silo is spent.
+  def end_silo_turn(game_player)
+    return "Not allowed" unless @game.turn_phase.action_spent?
+    capture_undo_snapshot
+    record_move(action: "silo_end_turn", deliberate: true, reversible: true,
+                message: "#{game_player.player.handle} ended their Silo turn")
     advance_silo
+  end
+
+  # The next Silo starts at once; after the last one the player stays on, so the choice can
+  # still be undone, until they end the turn.
+  def finish_silo(phase)
+    return advance_silo if phase.silo < phase.of
+    @game.turn_phase = phase.with_remaining(0)
+    @game.save
   end
 
   # Next Silo for this player, else the next player's first Silo, else the game ends.

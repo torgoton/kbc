@@ -12,6 +12,6 @@ class MayorMarkersTest < ActionView::TestCase
 
     assert_equal 1, top.scan("mayor-marker\"").size
     assert_equal 1, bottom.scan("mayor-marker\"").size
-    assert_includes bottom, "top: 7.854cqw"
+    assert_includes bottom, "--row: 2"
   end
 end

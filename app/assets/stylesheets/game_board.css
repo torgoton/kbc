@@ -52,6 +52,7 @@ main {
     position: relative;
     cursor: grab;
     container-type: inline-size;
+    --hex-row-height: 3.927cqw; /* board rows and the Mayor markers beside them */
 }
 
 #board-viewport.grabbing {
@@ -194,7 +195,7 @@ section#log-chat {
 .quadrant {
     display: grid;
     grid-template-columns: repeat(21, 1fr);
-    grid-template-rows: repeat(10, 3.927cqw);
+    grid-template-rows: repeat(10, var(--hex-row-height));
     position: relative;
 }
 
@@ -952,6 +953,7 @@ ul li .hex:hover .hex-bg {
 
 .mayor-marker {
     position: absolute;
+    top: calc(var(--row) * var(--hex-row-height));
     left: 0;
     width: 3.5cqw;
     height: 3.5cqw;

@@ -1588,9 +1588,6 @@ class TurnPhase::SetAsidePhase < TurnPhase
   end
 end
 
-# Canoe: a reaction, taken by each holder when another player takes the last tile from a
-# location. Build on any Water or Swamp hex (adjacent to your settlements if
-# possible) or skip.
 # Scout Cabin: place up to 2 Scouts, one click each. A Scout is not a build, so none of the
 # build orchestration (scoring, tile pickup, supply) applies.
 class TurnPhase::ScoutPhase < TurnPhase
@@ -1649,6 +1646,9 @@ class TurnPhase::ScoutPhase < TurnPhase
   end
 end
 
+# Canoe: a reaction, taken by each holder when another player takes the last tile from a
+# location. Build on any Water or Swamp hex (adjacent to your settlements if
+# possible) or skip.
 class TurnPhase::CanoePhase < TurnPhase
   def self.from_hash(_hash)
     new

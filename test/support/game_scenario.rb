@@ -129,6 +129,14 @@ class GameScenario
     perform { |engine| engine.silo_choice(mode) }
   end
 
+  def confirm_canoe
+    perform { |engine| engine.confirm_canoe }
+  end
+
+  def skip_canoe
+    perform { |engine| engine.skip_canoe }
+  end
+
   def turn_state
     fresh_board
     TurnEngine.new(@game).turn_state

@@ -219,12 +219,16 @@ class GamePlayer < ApplicationRecord
 
   # Bazaar: while it copies another tile's action, that tile's name stands for the Bazaar tile,
   # so the copied action checks and uses up the Bazaar and leaves the original alone. The
-  # marker lasts until the action completes (TurnEngine#reset_to_mandatory).
+  # marker is cleared when the Bazaar is used up (mark_tile_used!) or the action ends
+  # (TurnEngine#reset_to_mandatory).
   def bazaar_copy = supply["bazaar_copy"]
   def extra_cards = supply["extra_cards"].to_i
 
   def mark_tile_used!(klass)
-    klass = "BazaarTile" if copying_through_bazaar?(klass)
+    if copying_through_bazaar?(klass)
+      klass = "BazaarTile"
+      supply.delete("bazaar_copy")
+    end
     idx = (tiles || []).find_index { |t| t["klass"] == klass && !t["used"] }
     return unless idx
     updated = tiles.dup

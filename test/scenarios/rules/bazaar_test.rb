@@ -169,6 +169,7 @@ class BazaarScenarioTest < ActiveSupport::TestCase
     assert_empty scenario.held_tiles(0, klass: "BazaarTile"), "forfeited when its hex is left, as the used Paddock would be"
     assert_empty scenario.held_tiles(0, klass: "PaddockTile")
     assert_equal 2, scenario.moves.where(action: "forfeit_tile").count
+    assert_nil scenario.game_player(0).bazaar_copy, "the copy marker goes once the Bazaar is used"
   end
 
   test "using the original tile after a copy needs no marker: the next action resolves to the real tile" do

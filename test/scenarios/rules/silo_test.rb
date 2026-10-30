@@ -39,14 +39,25 @@ class SiloScenarioTest < ActiveSupport::TestCase
     assert_equal "completed", s.state
   end
 
-  test "skipping the only Silo ends the game when nobody else has one" do
+  test "skipping the only Silo waits for End turn, which ends the game when nobody else has one" do
     s = scenario
     s.place_settlement(0, at: SILO_NEIGHBOURS[0])
     s.finish_final_round
 
     s.silo_choice("skip")
+    assert_equal "playing", s.state
+    assert s.turn_endable?
 
+    s.end_turn
     assert_equal "completed", s.state
+  end
+
+  test "skipping the last Silo can be undone before ending the turn" do
+    s = scenario
+    s.place_settlement(0, at: SILO_NEIGHBOURS[0])
+    s.finish_final_round
+
+    assert_undo_round_trip(s) { s.silo_choice("skip") }
   end
 
   test "skipping a Silo moves on to the player's next Silo" do
@@ -69,6 +80,8 @@ class SiloScenarioTest < ActiveSupport::TestCase
     s.finish_final_round
 
     s.silo_choice("skip")
+    assert_equal 0, s.current_order
+    s.end_turn
 
     assert_equal "playing", s.state
     assert_equal 1, s.current_order
@@ -144,16 +157,26 @@ class SiloScenarioTest < ActiveSupport::TestCase
     assert_equal "For Silo 1 (of 1): #{handle} may build (3 left)", s.turn_state
 
     3.times { s.build_settlement(at: s.buildable_cells.first) }
-    assert_equal "For Silo 1 (of 1): #{handle} must end the action", s.turn_state
+    assert_equal "For Silo 1 (of 1): #{handle} must end the turn", s.turn_state
   end
 
-  test "End action stops a Silo build early" do
+  test "End action stops a Silo build early, then End turn ends the game" do
     s = silo_build_scenario
     s.build_settlement(at: s.buildable_cells.first)
 
     s.end_tile_action
+    assert_equal "playing", s.state
+    assert_empty s.buildable_cells
 
+    s.end_turn
     assert_equal "completed", s.state
+  end
+
+  test "End action on the last Silo can be undone before ending the turn" do
+    s = silo_build_scenario
+    s.build_settlement(at: s.buildable_cells.first)
+
+    assert_undo_round_trip(s) { s.end_tile_action }
   end
 
   test "a Silo build with no settlements in supply has no targets" do
@@ -272,6 +295,7 @@ class SiloScenarioTest < ActiveSupport::TestCase
     s.move_step(to: s.buildable_cells.first)
 
     s.end_tile_action
+    s.end_turn
 
     assert_equal "completed", s.state
   end
@@ -319,5 +343,28 @@ class SiloScenarioTest < ActiveSupport::TestCase
     2.times { s.build_settlement(at: s.buildable_cells.first) }
 
     assert_undo_round_trip(s) { s.build_settlement(at: s.buildable_cells.first) }
+  end
+
+  test "a Silo build that empties a location gives Canoe holders their reaction, then the Silo resumes" do
+    s = scenario
+    s.place_settlement(0, at: SILO_NEIGHBOURS[0])
+    s.place_settlement(0, at: FAR_SETTLEMENT)
+    s.place_tile("BazaarTile", at: [ 3, 6 ], qty: 1)
+    s.give_tile(1, "CanoeTile", from: [ 0, 0 ], used: true)
+    s.finish_final_round
+    s.silo_choice("build")
+
+    s.build_settlement(at: [ 3, 7 ])
+    assert_equal "canoe_confirm", s.phase["type"]
+    s.confirm_canoe
+    assert_equal 1, s.current_order
+    assert_equal "canoe", s.phase["type"]
+
+    s.skip_canoe
+    s.confirm_canoe if s.phase["type"] == "canoe_confirm"
+
+    assert_equal 0, s.current_order
+    assert_equal({ "type" => "silo", "silo" => 1, "of" => 1, "mode" => "build", "remaining" => 2 }, s.phase)
+    refute_empty s.buildable_cells
   end
 end
