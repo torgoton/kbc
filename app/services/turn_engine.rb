@@ -772,11 +772,7 @@ class TurnEngine
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
     game_player.decrement_supply!
-    # A settlement set aside by Temple holds the ending off until it is built.
-    if game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
-      @game.end_trigger_count += 1
-      payload["triggered_ending"] = true
-    end
+    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player)
     record_move(
       action: "build",
       deliberate: true,
@@ -792,7 +788,15 @@ class TurnEngine
     check_ambassadors_goal(game_player, row, col)
     check_shepherds_goal(game_player, row, col, terrain)
     check_rovers_goal(game_player, row, col)
+    check_mayors_goal(game_player, row)
     apply_tile_pickup(game_player, row, col)
+  end
+
+  # A settlement set aside by Temple holds the ending off until it is built.
+  def trigger_ending_if_supply_empty(game_player)
+    return false unless game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
+    @game.end_trigger_count += 1
+    true
   end
 
   # Called after every board click: if it emptied a location Canoes can react to, or was a
@@ -1118,6 +1122,23 @@ class TurnEngine
     score_goal(game_player, "rovers", 1, "#{game_player.player.handle} scored 1 point (Rovers)")
   end
 
+  # A build or move leaving 4+ of your settlements on a row nobody has marked turns a settlement
+  # from your supply into that row's marker (scores 4 for Mayors).
+  def check_mayors_goal(game_player, row)
+    return unless Array(@game.goals).include?("mayors") && game_player.settlements_remaining?
+    players = @game.game_players.map { |gp| gp.id == game_player.id ? game_player : gp }
+    return if players.any? { |gp| Array(gp.supply["mayors"]).include?(row) }
+    return if @game.board_contents.settlements_for(game_player.order).count { |r, _| r == row } < 4
+    game_player.supply["mayors"] = Array(game_player.supply["mayors"]) + [ row ]
+    game_player.decrement_supply!
+    payload = { "row" => row }
+    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player)
+    record_move(
+      action: "claim_mayor", deliberate: false, reversible: true, game_player: game_player, payload: payload,
+      message: "#{game_player.player.handle} claims Mayor of row #{row}"
+    )
+  end
+
   def check_families_goal(game_player)
     return unless Array(@game.goals).include?("families")
     builds = @game.turn_phase.builds
@@ -1228,6 +1249,7 @@ class TurnEngine
       apply_tile_pickup(game_player, destination.row, destination.col)
       current = destination
     end
+    check_mayors_goal(game_player, current.row)
   end
 
   # The shared mutation primitives a Sub-phase's #click calls to carry out its
@@ -1237,5 +1259,6 @@ class TurnEngine
   # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
   public :capture_undo_snapshot, :record_move, :advance_silo, :reset_to_mandatory, :apply_tile_forfeit,
          :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
-         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal, :check_rovers_goal
+         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal, :check_rovers_goal,
+         :check_mayors_goal
 end

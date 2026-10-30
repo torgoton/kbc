@@ -946,6 +946,22 @@ ul li .hex:hover .hex-bg {
     height: 60%;
 }
 
+.mayor-markers {
+    position: relative;
+}
+
+.mayor-marker {
+    position: absolute;
+    left: 0;
+    width: 3.5cqw;
+    height: 3.5cqw;
+}
+
+.mayor-marker svg {
+    width: 100%;
+    height: 100%;
+}
+
 .hex-scout {
     position: absolute;
     top: 5%;

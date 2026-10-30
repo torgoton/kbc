@@ -373,6 +373,17 @@ class GameScenario
     game_player(player).settlements_remaining
   end
 
+  # Rows the player has claimed with a Mayor marker.
+  def mayor_rows(player)
+    game_player(player).supply["mayors"] || []
+  end
+
+  def give_mayor_row(player, row)
+    gp = game_player(player)
+    gp.supply["mayors"] = (gp.supply["mayors"] || []) + [ row ]
+    gp.save!
+  end
+
   def mandatory_remaining
     @game.mandatory_count
   end

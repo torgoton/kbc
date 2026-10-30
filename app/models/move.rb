@@ -40,7 +40,8 @@ class Move < ApplicationRecord
     "activate_outpost"  => "outpost",
     "place_wall"        => "wall",
     "place_scout"       => "build",
-    "place_city_hall"   => "build"
+    "place_city_hall"   => "build",
+    "claim_mayor"       => "claimed"
   }.freeze
 
   belongs_to :game

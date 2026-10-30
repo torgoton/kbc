@@ -13,6 +13,7 @@ class Scoring
     "hermits"     => Scoring::Goals::Hermits,
     "homesteaders" => Scoring::Goals::Homesteaders,
     "knights"     => Scoring::Goals::Knights,
+    "mayors"      => Scoring::Goals::Mayors,
     "merchants"   => Scoring::Goals::Merchants,
     "messengers"  => Scoring::Goals::Messengers,
     "miners"      => Scoring::Goals::Miners,
