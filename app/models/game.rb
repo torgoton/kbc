@@ -678,7 +678,9 @@ class Game < ApplicationRecord
   end
 
   def goal_pool
-    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : []) + (expansion?("marshlands") ? MARSHLANDS_GOALS : []) +
+    BASE_GOALS +
+      (expansion?("nomads") ? NOMAD_GOALS : []) +
+      (expansion?("marshlands") ? MARSHLANDS_GOALS : []) +
       (expansion?("harvest") ? HARVEST_GOALS : [])
   end
 
