@@ -5,6 +5,10 @@
   <%= button_to "Confirm", confirm_canoe_game_path(game) %>
 <% elsif my_turn && engine.canoe_reaction? %>
   <%= button_to "Skip Canoe", skip_canoe_game_path(game) %>
+<% elsif my_turn && engine.silo_prompt? %>
+  <% %w[build move skip].each do |mode| %>
+    <%= button_to mode.capitalize, silo_choice_game_path(game, mode:) %>
+  <% end %>
 <% elsif my_turn && engine.tile_action_endable? %>
   <%= button_to "End action", end_tile_action_game_path(game) %>
 <% elsif my_turn && engine.turn_endable? %>

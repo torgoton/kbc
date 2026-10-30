@@ -30,6 +30,8 @@ class TurnPhase
 
     return MandatoryBuildPhase.from_hash(hash) if type == "mandatory"
 
+    return SiloPhase.from_hash(hash) if type == "silo"
+
     klass_name = hash["klass"] || "#{type.capitalize}Tile"
     tile_class = Tiles::Tile.for_klass(klass_name)
     tile = tile_class&.new(0)
@@ -1706,5 +1708,114 @@ class TurnPhase::CanoeConfirmPhase < TurnPhase
 
   def serialize
     { "type" => "canoe_confirm", "resume" => resume, "holders" => holders, "reacting" => reacting }
+  end
+end
+
+# Harvest end-game: one choice per Silo (silo N of `of`) to build, move or skip.
+class TurnPhase::SiloPhase < TurnPhase
+  BUILDS = 3
+
+  attr_reader :silo, :of, :mode, :remaining, :from
+
+  def self.from_hash(hash)
+    new(silo: hash.fetch("silo"), of: hash.fetch("of"), mode: hash["mode"], remaining: hash["remaining"], from: hash["from"])
+  end
+
+  def initialize(silo:, of:, mode: nil, remaining: nil, from: nil)
+    @silo = silo
+    @of = of
+    @mode = mode
+    @remaining = remaining
+    @from = from
+  end
+
+  def type = "silo"
+  def tile_action_endable? = !mode.nil? && remaining.to_i.positive?
+  def action_spent? = !mode.nil? && remaining.to_i.zero?
+
+  def with_mode(mode)
+    self.class.new(silo: silo, of: of, mode: mode, remaining: BUILDS)
+  end
+
+  def legal_targets(board_contents:, player:, game: nil)
+    return [] if remaining.to_i.zero?
+    case mode
+    when "build" then player.settlements_remaining? ? cells_next_to(board_contents, board_contents.adjacency_sources_for(player.order), Tiles::Tile::BUILDABLE_TERRAIN) : []
+    when "move" then from ? move_destinations(board_contents, player) : movable_settlements(board_contents, player)
+    else []
+    end
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+    game_player = game.current_player
+
+    if mode == "build"
+      engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player)
+    elsif from.nil?
+      return select_source(row, col, engine)
+    else
+      from_row, from_col = Coordinate.from_key(from).to_a
+      engine.log_piece_movement_steps(
+        action: "move_settlement", game_player: game_player, from_row:, from_col:,
+        path: [ [ row, col ] ], payload: { "tile_klass" => "SiloAction" }, message_piece: "settlement"
+      )
+    end
+    game.turn_phase = with_remaining(remaining - 1)
+    game_player.save
+    # After the 3rd piece the next Silo starts; after the last Silo's, the player ends the turn (or undoes).
+    engine.advance_silo if remaining == 1 && silo < of
+    game.save
+  end
+
+  def with_remaining(count)
+    self.class.new(silo: silo, of: of, mode: mode, remaining: count)
+  end
+
+  def serialize
+    { "type" => type, "silo" => silo, "of" => of }.tap do |hash|
+      hash["mode"] = mode if mode
+      hash["remaining"] = remaining if remaining
+      hash["from"] = from if from
+    end
+  end
+
+  private
+
+  def select_source(row, col, engine)
+    key = Coordinate.new(row, col).to_key
+    engine.record_move(action: "select_settlement", deliberate: true, reversible: true, from: key,
+                       message: "#{engine.game.current_player.player.handle} selected a settlement at #{key}")
+    engine.game.turn_phase = self.class.new(silo: silo, of: of, mode: mode, remaining: remaining, from: key)
+    engine.game.save
+  end
+
+  # Where a piece may go: empty hexes of suitable terrain next to any of your pieces.
+  def cells_next_to(board_contents, sources, terrains)
+    sources.flat_map do |row, col|
+      board_contents.neighbors_where(row, col) do |r, c|
+        board_contents.available_for_building?(r, c) && terrains.include?(board_contents.terrain_at(r, c))
+      end
+    end.uniq
+  end
+
+  # A moving piece never anchors itself; every kind of piece uses the settlement rule.
+  def destinations_for(board_contents, player, cell)
+    cells_next_to(board_contents, board_contents.adjacency_sources_for(player.order) - [ cell ], Tiles::Tile::BUILDABLE_TERRAIN)
+  end
+
+  def move_destinations(board_contents, player)
+    destinations_for(board_contents, player, Coordinate.from_key(from).to_a)
+  end
+
+  # Settlements and the three meeple kinds, but not City Hall.
+  def movable_settlements(board_contents, player)
+    board_contents.settlements_for(player.order).select do |cell|
+      !board_contents.city_hall_at?(*cell) && destinations_for(board_contents, player, cell).any?
+    end
   end
 end

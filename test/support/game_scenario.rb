@@ -110,6 +110,47 @@ class GameScenario
     TurnEngine.new(@game).bazaar_entries(game_player(player)).map { |e| [ e[:klass], e[:mode] ] }
   end
 
+  # --- Silo ---
+
+  HARVEST_BOARDS = [ [ 20, 0 ], [ 21, 0 ], [ 5, 0 ], [ 0, 0 ] ].freeze
+
+  def silos(player)
+    fresh_board
+    @game.silos_for(player)
+  end
+
+  # Serialized current phase, e.g. {"type" => "silo", "silo" => 1, "of" => 2, ...}.
+  def phase
+    @game.reload.turn_phase.serialize
+  end
+
+  # Answer the Silo prompt: "build", "move" or "skip".
+  def silo_choice(mode)
+    perform { |engine| engine.silo_choice(mode) }
+  end
+
+  def turn_state
+    fresh_board
+    TurnEngine.new(@game).turn_state
+  end
+
+  def turn_endable?
+    fresh_board
+    TurnEngine.new(@game).turn_endable?
+  end
+
+  def current_order
+    @game.reload.current_player&.order
+  end
+
+  # Trigger the end of the game and finish the last player's turn, as in game_end_test.
+  def finish_final_round
+    @game.update!(end_trigger_count: 1)
+    make_current(@game.game_players.count - 1)
+    set_mandatory(0)
+    end_turn
+  end
+
   def tile_used?(player, klass)
     held_tiles(player, klass: klass).first["used"]
   end
@@ -173,6 +214,10 @@ class GameScenario
 
   def place_settlement(player, at:)
     mutate_board { |contents| contents.place_settlement(*at, player) }
+  end
+
+  def place_city_hall_hex(player, at:)
+    mutate_board { |contents| contents.place_city_hall_hex(*at, player) }
   end
 
   def place_wagon(player, at:)

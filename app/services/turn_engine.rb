@@ -317,6 +317,7 @@ class TurnEngine
   def end_tile_action
     @game.instantiate
     game_player = @game.current_player
+    return end_silo_choice(game_player) if @game.turn_phase.type == "silo"
     tile_klass_name = current_action_tile_klass
     return end_cancellable_action(game_player, tile_klass_name) if Tiles::Tile.for_klass(tile_klass_name)&.new(0)&.cancellable_action?
     current_phase = @game.turn_phase
@@ -372,6 +373,7 @@ class TurnEngine
   end
 
   def turn_endable?
+    return true if @game.playing? && @game.turn_phase.type == "silo" && @game.turn_phase.action_spent?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
       !@game.can_build_mandatory?(@game.current_player)
@@ -387,6 +389,24 @@ class TurnEngine
   # Canoe reactions and their confirmation gate are not the holder's own turn.
   def canoe_interrupt?
     canoe_reaction? || canoe_confirmation?
+  end
+
+  def silo_prompt?
+    @game.playing? && @game.turn_phase.type == "silo" && @game.turn_phase.mode.nil?
+  end
+
+  def silo_turn_state(phase)
+    handle = @game.current_player.player.handle
+    prefix = "For Silo #{phase.silo} (of #{phase.of}): #{handle}"
+    if phase.mode.nil?
+      "#{prefix} must choose to build or move, or skip"
+    elsif phase.action_spent?
+      "#{prefix} must end the action"
+    elsif phase.mode == "build"
+      "#{prefix} may build (#{phase.remaining} left)"
+    else
+      "#{prefix} may move a piece (#{phase.remaining} left)"
+    end
   end
 
   def tile_action_endable?
@@ -419,6 +439,8 @@ class TurnEngine
       return "#{@game.current_player.player.handle} (Canoe Reaction): confirm or undo"
     when "canoe"
       return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
+    when "silo"
+      return silo_turn_state(current_phase)
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -474,6 +496,7 @@ class TurnEngine
   end
 
   def end_turn
+    return end_silo_choice(@game.current_player) if @game.turn_phase.type == "silo"
     capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
@@ -523,16 +546,95 @@ class TurnEngine
     end
     max_order = @game.game_players.count - 1
     if @game.ending? && game_player.order == max_order
-      record_move(
-        action: "end_game",
-        deliberate: false,
-        reversible: false,
-        game_player: game_player,
-        message: "Game over!"
-      )
-      @game.save
-      @game.complete!
+      begin_silo_round(game_player) || finish_game(game_player)
     end
+  end
+
+  # The Silo prompt's answer: "build" or "move" opens that mode, "skip" gives up this Silo.
+  def silo_choice(mode)
+    phase = @game.turn_phase
+    return "Not available" unless phase.type == "silo" && phase.mode.nil? && %w[build move skip].include?(mode)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    handle = game_player.player.handle
+    label = "Silo #{phase.silo} (of #{phase.of})"
+    if mode == "skip"
+      record_move(action: "silo_skip", deliberate: true, reversible: true,
+                  message: "#{handle} skipped #{label}")
+      advance_silo
+    else
+      record_move(action: "silo_choose", deliberate: true, reversible: true, payload: { "mode" => mode },
+                  message: "#{handle} chose to #{mode} for #{label}")
+      @game.turn_phase = phase.with_mode(mode)
+      @game.save
+    end
+  end
+
+  def end_silo_choice(game_player)
+    return "Not allowed" unless @game.turn_phase.mode
+    capture_undo_snapshot
+    record_move(action: "silo_end", deliberate: true, reversible: true,
+                message: "#{game_player.player.handle} ended the Silo #{@game.turn_phase.mode}")
+    advance_silo
+  end
+
+  # Next Silo for this player, else the next player's first Silo, else the game ends.
+  def advance_silo
+    phase = @game.turn_phase
+    current = @game.current_player
+    if phase.silo < phase.of
+      @game.turn_phase = TurnPhase::SiloPhase.new(silo: phase.silo + 1, of: phase.of)
+      return @game.save
+    end
+
+    nxt = @game.game_players.in_player_order.find do |gp|
+      gp.order > current.order && !gp.resigned? && gp.supply["silos"].to_i.positive?
+    end
+    return finish_game(current) unless nxt
+
+    if @game.timed?
+      apply_clock!(current, credit: false)
+      current.save
+      @game.turn_started_at = Time.current
+    end
+    @game.current_player = nxt
+    @game.turn_phase = TurnPhase::SiloPhase.new(silo: 1, of: nxt.supply["silos"])
+    @game.save
+  end
+
+  def finish_game(game_player)
+    record_move(
+      action: "end_game",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "Game over!"
+    )
+    @game.save
+    @game.complete!
+  end
+
+  # After the final regular round, each player with Silos takes one choice per Silo, in turn
+  # order. Silos are counted now, so moving away during the round does not change them.
+  def begin_silo_round(game_player)
+    @game.instantiate
+    players = @game.game_players.in_player_order.reject(&:resigned?)
+    players.each { |gp| gp.update!(supply: gp.supply.merge("silos" => @game.silos_for(gp.order))) }
+    first = players.find { |gp| gp.supply["silos"].positive? }
+    return false unless first
+
+    record_move(
+      action: "begin_silo_round",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "Silo round"
+    )
+    @game.current_player = first
+    @game.turn_phase = TurnPhase::SiloPhase.new(silo: 1, of: first.supply["silos"])
+    @game.save
+    true
   end
 
   # The cells the current player may legally target right now, owned by the
@@ -1120,7 +1222,7 @@ class TurnEngine
   # steps). Defined among the privates above; re-exposed here as the phase-
   # facing interface. Also called by the engine's own turn-level gestures
   # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
-  public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
+  public :capture_undo_snapshot, :record_move, :advance_silo, :reset_to_mandatory, :apply_tile_forfeit,
          :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
          :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal
 end

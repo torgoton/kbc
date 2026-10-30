@@ -168,6 +168,19 @@ class Game < ApplicationRecord
     end_trigger_count > 0
   end
 
+  # Harvest: [row, col] of every Silo hex on the board.
+  def silo_hexes
+    instantiate.map.each_with_index.flat_map do |section, i|
+      section.silver_hexes.select { |h| h[:k] == "Silo" }.map { |h| overall_location(i, h[:r], h[:c]) }
+    end
+  end
+
+  # Silo hexes with at least one of the player's settlements next to them.
+  def silos_for(order)
+    mine = board_contents.settlements_for(order)
+    silo_hexes.count { |row, col| (board_contents.neighbors(row, col) & mine).any? }
+  end
+
   def turn_state
     return "Waiting for players" if waiting?
     return "Game has ended" if completed?
