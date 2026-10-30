@@ -84,6 +84,12 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_equal marshlands.sort, (goals & marshlands).sort
   end
 
+  test "harvest adds its goals to the goal pool" do
+    goals = goals_over_runs({ "expansions" => %w[harvest] })
+    assert_empty goals - BASE_GOALS - Game::HARVEST_GOALS
+    assert_equal Game::HARVEST_GOALS.sort, (goals & Game::HARVEST_GOALS).sort
+  end
+
   def nomad_tiles_over_runs(options)
     Array.new(RUNS) do
       game = started_game(options, include_boards: NOMAD_BOARDS)

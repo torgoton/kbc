@@ -18,6 +18,7 @@ class Scoring
     "palaces"     => Scoring::Goals::Palaces,
     "scouts"      => Scoring::Goals::Scouts,
     "shepherds"   => Scoring::Goals::Shepherds,
+    "travellers"  => Scoring::Goals::Travellers,
     "vassals"     => Scoring::Goals::Vassals,
     "workers"     => Scoring::Goals::Workers
   }.freeze
