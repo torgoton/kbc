@@ -16,6 +16,7 @@ class Scoring
     "miners"      => Scoring::Goals::Miners,
     "noblewomen"  => Scoring::Goals::Noblewomen,
     "palaces"     => Scoring::Goals::Palaces,
+    "rangers"     => Scoring::Goals::Rangers,
     "scouts"      => Scoring::Goals::Scouts,
     "shepherds"   => Scoring::Goals::Shepherds,
     "travellers"  => Scoring::Goals::Travellers,
