@@ -634,7 +634,7 @@ class Game < ApplicationRecord
   BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   NOMAD_GOALS = %w[ambassadors families shepherds].freeze
   MARSHLANDS_GOALS = %w[captains geologists messengers noblewomen scouts vassals].freeze
-  HARVEST_GOALS = %w[chainers homesteaders rangers travellers].freeze
+  HARVEST_GOALS = %w[chainers homesteaders rangers rovers travellers].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
   BASE_BOARD_IDS = (0..7).to_a.freeze
   NOMAD_BOARD_IDS = (8..11).to_a.freeze

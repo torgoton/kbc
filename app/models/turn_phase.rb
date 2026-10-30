@@ -1076,6 +1076,7 @@ module TurnPhase::MeepleOrchestration
     game.board_contents_will_change!
     game.board_contents.place_warrior(row, col, game_player.order)
     game_player.decrement_warrior_supply!
+    engine.check_rovers_goal(game_player, row, col)
     engine.apply_tile_pickup(game_player, row, col)
   end
 
@@ -1110,6 +1111,7 @@ module TurnPhase::MeepleOrchestration
     game.board_contents_will_change!
     game.board_contents.place_ship(row, col, game_player.order)
     game_player.decrement_ship_supply!
+    engine.check_rovers_goal(game_player, row, col)
     engine.apply_tile_pickup(game_player, row, col)
   end
 
@@ -1158,6 +1160,7 @@ module TurnPhase::MeepleOrchestration
     game.board_contents_will_change!
     game.board_contents.place_wagon(row, col, game_player.order)
     game_player.decrement_wagon_supply!
+    engine.check_rovers_goal(game_player, row, col)
     engine.apply_tile_pickup(game_player, row, col)
   end
 
@@ -1500,6 +1503,7 @@ class TurnPhase::CityHallPhase < TurnPhase
     cluster.each do |r, c|
       engine.check_ambassadors_goal(game_player, r, c)
       engine.check_shepherds_goal(game_player, r, c, game.board_contents.terrain_at(r, c))
+      engine.check_rovers_goal(game_player, r, c)
       engine.apply_tile_pickup(game_player, r, c)
     end
     engine.reset_to_mandatory

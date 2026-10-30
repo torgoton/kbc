@@ -510,6 +510,7 @@ class TurnEngine
     game_player.extra_cards.times { new_cards << @game.next_card }
     game_player.supply.delete("extra_cards")
     game_player.supply.delete("bazaar_copy")
+    game_player.supply.delete("rovers")
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
@@ -790,6 +791,7 @@ class TurnEngine
     @game.board_contents.place_settlement(row, col, game_player.order)
     check_ambassadors_goal(game_player, row, col)
     check_shepherds_goal(game_player, row, col, terrain)
+    check_rovers_goal(game_player, row, col)
     apply_tile_pickup(game_player, row, col)
   end
 
@@ -1105,6 +1107,17 @@ class TurnEngine
       "#{game_player.player.handle} scored 2 points (Shepherds)")
   end
 
+  # 1 point for the first build in each board section during your own turn (not Canoe or Silo).
+  def check_rovers_goal(game_player, row, col)
+    return unless Array(@game.goals).include?("rovers")
+    return if %w[canoe silo].include?(@game.turn_phase.type)
+    section = row / 10 * 2 + col / 10
+    built_in = game_player.supply["rovers"] || []
+    return if built_in.include?(section)
+    game_player.supply["rovers"] = built_in + [ section ]
+    score_goal(game_player, "rovers", 1, "#{game_player.player.handle} scored 1 point (Rovers)")
+  end
+
   def check_families_goal(game_player)
     return unless Array(@game.goals).include?("families")
     builds = @game.turn_phase.builds
@@ -1224,5 +1237,5 @@ class TurnEngine
   # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
   public :capture_undo_snapshot, :record_move, :advance_silo, :reset_to_mandatory, :apply_tile_forfeit,
          :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
-         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal
+         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal, :check_rovers_goal
 end

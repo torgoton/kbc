@@ -19,6 +19,7 @@ class Scoring
     "noblewomen"  => Scoring::Goals::Noblewomen,
     "palaces"     => Scoring::Goals::Palaces,
     "rangers"     => Scoring::Goals::Rangers,
+    "rovers"      => Scoring::Goals::Rovers,
     "scouts"      => Scoring::Goals::Scouts,
     "shepherds"   => Scoring::Goals::Shepherds,
     "travellers"  => Scoring::Goals::Travellers,

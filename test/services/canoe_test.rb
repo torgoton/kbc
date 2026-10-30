@@ -289,4 +289,16 @@ class CanoeTest < ActiveSupport::TestCase
     reload
     assert_not engine.undo_allowed?
   end
+
+  test "a Canoe reaction build does not score Rovers" do
+    @game.update!(goals: [ "rovers" ])
+    empty_the_location
+    assert_equal 1, @chris.reload.bonus_scores["rovers"], "the mover's own build scores"
+    engine.confirm_canoe
+    reload
+
+    engine.click(Coordinate.new(*engine.legal_targets.first))
+
+    assert_nil @paula.reload.bonus_scores["rovers"]
+  end
 end
