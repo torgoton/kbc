@@ -3,6 +3,7 @@ class Scoring
     "ambassadors" => Scoring::Goals::Ambassadors,
     "captains"    => Scoring::Goals::Captains,
     "castles"     => Scoring::Goals::Castles,
+    "chainers"    => Scoring::Goals::Chainers,
     "citizens"    => Scoring::Goals::Citizens,
     "discoverers" => Scoring::Goals::Discoverers,
     "families"    => Scoring::Goals::Families,
