@@ -1,11 +1,10 @@
 module Tiles
   class Location
-    class MountainStationTile < Tiles::Location
+    class MountainStationTile < Tiles::Location::WaterMillTile
       CREATOR = "Claude".freeze
-      DESCRIPTION = "Not yet implemented.".freeze
+      DESCRIPTION = "Build on a hex next to a mountain, adjacent to your settlements if possible.".freeze
 
-      # Harvest tiles are placeholders until their rules are built.
-      def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0)) = false
+      def adjacent_terrain = "M"
     end
   end
 end
