@@ -11,6 +11,7 @@ class Scoring
     "geologists"  => Scoring::Goals::Geologists,
     "fishermen"   => Scoring::Goals::Fishermen,
     "hermits"     => Scoring::Goals::Hermits,
+    "homesteaders" => Scoring::Goals::Homesteaders,
     "knights"     => Scoring::Goals::Knights,
     "merchants"   => Scoring::Goals::Merchants,
     "messengers"  => Scoring::Goals::Messengers,
