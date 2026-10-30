@@ -50,4 +50,14 @@ class FarmlandEngineTest < ActiveSupport::TestCase
 
     assert_not @player.tiles.first["used"]
   end
+
+  test "Outpost waives adjacency: any open farmland is a target" do
+    @player.update!(tiles: @player.tiles + [ { "klass" => "OutpostTile", "used" => false } ])
+    engine = place([ 6, 2 ])
+    engine.select_action("farmland")
+    engine.activate_outpost
+
+    assert_includes TurnEngine.new(@game.reload).legal_targets, [ 6, 6 ]
+    assert_equal @game.board_contents.available_cells_of([ "H" ]).sort, TurnEngine.new(@game).legal_targets.to_a.sort
+  end
 end
