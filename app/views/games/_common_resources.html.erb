@@ -3,3 +3,9 @@
 <% if game.board_has_quarry? %>
   <div>Stone walls: <%= game.stone_walls %> remaining</div>
 <% end %>
+<% if game.removed_terrain.present? %>
+  <span class="side-card removed-terrain" title="Scouts removed <%= Boards::Board::TERRAIN_NAMES[game.removed_terrain] %>">
+    <span class="side-card-label">Scouts <br>removed</span>
+    <%= render "games/card", card: game.removed_terrain %>
+  </span>
+<% end %>
