@@ -1,6 +1,6 @@
 class Scoring
   class Scorer
-    AREA_TERRAINS = %w[C D F G T W M B].freeze
+    AREA_TERRAINS = %w[C D F G T W M B H].freeze
 
     def initialize(game)
       @game = game

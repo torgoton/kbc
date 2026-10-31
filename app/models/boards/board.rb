@@ -8,6 +8,7 @@ module Boards
       "D" => "Desert",
       "F" => "Flowers",
       "G" => "Grass",
+      "H" => "Farmland",
       "T" => "Timberland",
       "W" => "Water",
       "M" => "Mountain",
@@ -47,11 +48,20 @@ module Boards
       "RefugeTile"           => Tiles::Location::RefugeTile,
       "FountainTile"         => Tiles::Location::FountainTile,
       "CanoeTile"            => Tiles::Location::CanoeTile,
+      "BazaarTile"           => Tiles::Location::BazaarTile,
+      "WaterMillTile"        => Tiles::Location::WaterMillTile,
+      "MountainStationTile"  => Tiles::Location::MountainStationTile,
+      "ScoutCabinTile"       => Tiles::Location::ScoutCabinTile,
+      "CathedralTile"        => Tiles::Location::CathedralTile,
+      "WatchtowerTile"       => Tiles::Location::WatchtowerTile,
+      "UniversityTile"       => Tiles::Location::UniversityTile,
+      "PalisadeTile"         => Tiles::Location::PalisadeTile,
       "FountainBonusTile"    => Tiles::Bonus::FountainBonusTile,
       "TempleBonusTile"      => Tiles::Bonus::TempleBonusTile,
       "CanoeBonusTile"       => Tiles::Bonus::CanoeBonusTile,
       "RefugeBonusTile"      => Tiles::Bonus::RefugeBonusTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
+      "FarmlandTile"         => Tiles::Permanent::FarmlandTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
       "DonationFlowerTile"   => Tiles::Nomad::DonationFlowerTile,
@@ -87,6 +97,8 @@ module Boards
           klass = game.board_contents.tile_klass(row, col)
           if klass == "Wall"
             @content[row][col] = Wall.new
+          elsif klass == "Scout"
+            @content[row][col] = Scout.new(game.board_contents.scout_owner(row, col))
           elsif klass
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
             @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))

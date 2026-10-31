@@ -34,7 +34,7 @@ module Tiles
       private
 
       def placement_hexes(board_contents:, player_order:)
-        own = board_contents.settlements_for(player_order)
+        own = board_contents.adjacency_sources_for(player_order)
         adjacent = own.flat_map do |r, c|
           board_contents.neighbors_where(r, c) do |nr, nc|
             board_contents.empty?(nr, nc) && SUITABLE_TERRAIN.include?(board_contents.terrain_at(nr, nc))

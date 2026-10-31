@@ -15,7 +15,7 @@ module Tiles
         border = ->(r, c) { r == 0 || r == 19 || c == 0 || c == 19 }
         buildable = ->(r, c) { BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c)) }
 
-        adjacent = board_contents.settlements_for(player_order).flat_map do |r, c|
+        adjacent = board_contents.adjacency_sources_for(player_order).flat_map do |r, c|
           board_contents.neighbors_where(r, c) do |nr, nc|
             border.(nr, nc) && board_contents.available_for_building?(nr, nc) && buildable.(nr, nc)
           end

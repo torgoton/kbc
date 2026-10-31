@@ -289,4 +289,58 @@ class BoardStateTest < ActiveSupport::TestCase
     state.terrain_source = source
     assert_equal "T", state.dup.terrain_at(5, 5)
   end
+
+  # Scouts (Scout Cabin) count as their owner's pieces for adjacency only.
+  test "a scout occupies its hex but is not one of the player's settlements" do
+    state = BoardState.new
+    state.place_scout(2, 7, 0)
+
+    assert_not state.empty?(2, 7)
+    assert_equal [ [ 2, 7 ] ], state.scouts_for(0)
+    assert_empty state.scouts_for(1)
+    assert_empty state.settlements_for(0)
+    assert_nil state.player_at(2, 7)
+    assert_equal 0, state.tile_qty(2, 7)
+  end
+
+  test "adjacency_sources_for is a player's settlements plus their scouts" do
+    state = BoardState.new
+    state.place_settlement(2, 7, 0)
+    state.place_scout(2, 8, 0)
+    state.place_settlement(5, 5, 1)
+    state.place_scout(6, 6, 1)
+
+    assert_equal [ [ 2, 7 ], [ 2, 8 ] ], state.adjacency_sources_for(0).sort
+  end
+
+  test "remove_scouts takes away only that player's scouts" do
+    state = BoardState.new
+    state.place_scout(2, 8, 0)
+    state.place_scout(2, 9, 0)
+    state.place_scout(6, 6, 1)
+    state.place_settlement(2, 7, 0)
+
+    state.remove_scouts(0)
+
+    assert_empty state.scouts_for(0)
+    assert_equal [ [ 6, 6 ] ], state.scouts_for(1)
+    assert_equal [ [ 2, 7 ] ], state.settlements_for(0)
+  end
+
+  test "buildable_cells_for treats a scout as an adjacency source" do
+    state = BoardState.new
+    state.terrain_source = Struct.new(:x) { def terrain_at(*) = "G" }.new
+    state.place_scout(10, 10, 0)
+
+    cells = state.buildable_cells_for(0, "G")
+
+    assert_equal state.neighbors(10, 10).sort, cells.sort, "only hexes next to the scout, not anywhere"
+  end
+
+  test "dump and load round-trip a scout" do
+    state = BoardState.new
+    state.place_scout(3, 4, 1)
+
+    assert_equal [ [ 3, 4 ] ], BoardState.load(BoardState.dump(state)).scouts_for(1)
+  end
 end

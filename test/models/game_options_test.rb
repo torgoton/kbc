@@ -6,6 +6,7 @@ class GameOptionsTest < ActiveSupport::TestCase
   NOMAD_BOARDS = (8..11).to_a
   CROSSROADS_BOARDS = (12..15).to_a
   MARSHLANDS_BOARDS = (16..19).to_a
+  HARVEST_BOARDS = (20..23).to_a
 
   BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   NOMAD_GOALS = %w[families shepherds ambassadors].freeze
@@ -47,6 +48,12 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_equal MARSHLANDS_BOARDS, (ids & MARSHLANDS_BOARDS).sort
   end
 
+  test "harvest adds boards 20-23 to the pool, and only those" do
+    ids = boards_over_runs({ "expansions" => %w[harvest] }).flatten.uniq
+    assert_empty ids - BASE_BOARDS - HARVEST_BOARDS
+    assert_equal HARVEST_BOARDS, (ids & HARVEST_BOARDS).sort
+  end
+
   test "a game with a Palace on its board always lists the Palaces goal" do
     games = Array.new(RUNS) { started_game({ "expansions" => %w[marshlands] }, include_boards: MARSHLANDS_BOARDS.first(1)) }
     assert games.all? { |g| g.goals.include?("palaces") }
@@ -77,6 +84,12 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_equal marshlands.sort, (goals & marshlands).sort
   end
 
+  test "harvest adds its goals to the goal pool" do
+    goals = goals_over_runs({ "expansions" => %w[harvest] })
+    assert_empty goals - BASE_GOALS - Game::HARVEST_GOALS
+    assert_equal Game::HARVEST_GOALS.sort, (goals & Game::HARVEST_GOALS).sort
+  end
+
   def nomad_tiles_over_runs(options)
     Array.new(RUNS) do
       game = started_game(options, include_boards: NOMAD_BOARDS)
@@ -93,5 +106,15 @@ class GameOptionsTest < ActiveSupport::TestCase
     tiles = nomad_tiles_over_runs({ "expansions" => %w[nomads], "nomads_sword" => false })
     assert_includes tiles, "TreasureTile" # other nomad tiles still placed
     assert_not_includes tiles, "SwordTile"
+  end
+
+  test "a game with a Harvest board grants every player the Farmland tile" do
+    game = started_game({ "expansions" => %w[harvest] }, include_boards: HARVEST_BOARDS.first(1))
+    game.game_players.each { |gp| assert_equal %w[MandatoryTile FarmlandTile], gp.tiles.map { |t| t["klass"] } }
+  end
+
+  test "a game with no Harvest board does not grant the Farmland tile" do
+    game = started_game({ "expansions" => %w[nomads] })
+    game.game_players.each { |gp| assert_equal %w[MandatoryTile], gp.tiles.map { |t| t["klass"] } }
   end
 end

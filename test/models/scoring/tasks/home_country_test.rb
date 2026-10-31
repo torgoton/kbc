@@ -60,4 +60,14 @@ class Scoring::Tasks::HomeCountryTest < Scoring::Goals::GoalTestCase
     result = Scoring::Tasks::HomeCountry.new(ctx[:game]).score_for(ctx[:chris])
     assert_equal 5, result[:score]
   end
+
+  test "Farmland can form a qualifying area" do
+    # Board 21's right edge (columns 8-9, rows 0-7) is one Farmland area.
+    farmland = [ [ 0, 9 ], [ 1, 8 ], [ 1, 9 ], [ 2, 8 ], [ 2, 9 ], [ 3, 8 ], [ 3, 9 ], [ 4, 9 ],
+                 [ 5, 8 ], [ 5, 9 ], [ 6, 8 ], [ 6, 9 ], [ 7, 8 ], [ 7, 9 ] ].map { |r, c| [ r, c + 10 ] }
+    ctx = build_game(boards: [ [ 20, 0 ], [ 21, 0 ], [ 5, 0 ], [ 0, 0 ] ], chris_settlements: farmland, goals: [ "home_country" ])
+    assert farmland.all? { |r, c| ctx[:game].board_contents.terrain_at(r, c) == "H" }, "the area is Farmland"
+    result = Scoring::Tasks::HomeCountry.new(ctx[:game]).score_for(ctx[:chris])
+    assert_equal 5, result[:score]
+  end
 end

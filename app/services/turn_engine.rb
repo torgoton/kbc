@@ -88,6 +88,11 @@ class TurnEngine
     return "Not available" unless game_player.find_unused_tile("FortTile")
     return "No settlements left" unless game_player.settlements_remaining?
 
+    begin_fort(game_player)
+  end
+
+  # Fort's action once chosen (directly, or copied by Bazaar): draw a card and build on it.
+  def begin_fort(game_player)
     record_move(
       action: "activate_fort",
       deliberate: true,
@@ -115,67 +120,120 @@ class TurnEngine
     @game.save
   end
 
+  # Cathedral's modal: "add" 1 to the count (ends the action) or "build" with it. Both log a
+  # deliberate selection plus the choice, so one undo removes them together.
+  def activate_cathedral(mode)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    tile = game_player.find_unused_tile("CathedralTile")
+    return "Not available" unless tile && tile_activatable?(tile) && %w[add build].include?(mode)
+    return "Not available" if mode == "build" && game_player.cathedral_count.zero?
+
+    record_move(
+      action: "select_action",
+      deliberate: true,
+      reversible: true,
+      to: "cathedral",
+      payload: { "klass" => "CathedralTile" },
+      message: "#{game_player.player.handle} selected the cathedral action"
+    )
+    begin_cathedral(game_player, mode)
+    game_player.save
+    @game.save
+  end
+
+  # Cathedral's action once chosen (directly, or copied by Bazaar).
+  def begin_cathedral(game_player, mode)
+    handle = game_player.player.handle
+    if mode == "add"
+      game_player.add_cathedral!
+      game_player.mark_tile_used!("CathedralTile")
+      record_move(
+        action: "cathedral_add",
+        deliberate: false,
+        reversible: true,
+        message: "#{handle} added 1 to their Cathedral count (#{game_player.cathedral_count})"
+      )
+    else
+      record_move(
+        action: "cathedral_build",
+        deliberate: false,
+        reversible: true,
+        message: "#{handle} chose to build with the Cathedral (#{game_player.cathedral_count} available)"
+      )
+      @game.turn_phase = TurnPhase::TileBuildPhase.new(
+        action_type: "cathedral",
+        klass_name: "CathedralTile",
+        chosen_terrain: @game.turn_phase.chosen_terrain,
+        remaining: game_player.cathedral_count
+      )
+    end
+  end
+
+  # Bazaar: what it can copy, as {klass:, mode:, label:} entries (Cathedral offers one per
+  # choice). Any other location tile you hold that could act now, used or not, except tiles
+  # acquired this turn.
+  def bazaar_entries(game_player)
+    @game.instantiate
+    (game_player.tiles || []).uniq { |t| t["klass"] }.flat_map do |tile|
+      tile_obj = Tiles::Tile.for_klass(tile["klass"])&.new(0)
+      next [] unless tile_obj&.bazaar_copyable? && !tile["fresh"]
+      next [] unless tile_obj.passive_effect? || tile_actionable?(tile)
+      name = tile["klass"].delete_suffix("Tile").titleize
+      if tile_obj.cathedral_tile?
+        entries = [ { klass: tile["klass"], mode: "add", label: "Copy #{name}: Add 1 to Count" } ]
+        entries << { klass: tile["klass"], mode: "build", label: "Copy #{name}: Build (#{game_player.cathedral_count} left)" } if game_player.cathedral_count.positive?
+        entries
+      else
+        [ { klass: tile["klass"], mode: nil, label: "Copy #{name}#{" (cannot be undone)" if tile_obj.fort_tile?}" } ]
+      end
+    end
+  end
+
+  # Bazaar acts like the tile it copies: its name stands for the Bazaar tile while that action
+  # runs (GamePlayer#find_unused_tile / mark_tile_used!). Logged as a deliberate selection plus
+  # the choice, so one undo removes both.
+  def activate_bazaar(target_klass, mode = nil)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    bazaar = game_player.find_unused_tile("BazaarTile")
+    return "Not available" unless bazaar && tile_activatable?(bazaar)
+    return "Not available" unless bazaar_entries(game_player).any? { |e| e[:klass] == target_klass && e[:mode] == mode }
+
+    handle = game_player.player.handle
+    name = target_klass.delete_suffix("Tile").titleize
+    record_move(
+      action: "select_action",
+      deliberate: true,
+      reversible: true,
+      to: "bazaar",
+      payload: { "klass" => "BazaarTile" },
+      message: "#{handle} selected the bazaar action"
+    )
+    record_move(
+      action: "bazaar_copy",
+      deliberate: false,
+      reversible: true,
+      payload: { "klass" => target_klass, "mode" => mode },
+      message: "#{handle} chose to copy the #{name} action with Bazaar"
+    )
+    game_player.supply["bazaar_copy"] = target_klass
+    begin_copied_action(game_player, target_klass, mode)
+    game_player.supply.delete("bazaar_copy") if @game.turn_phase.mandatory_build? # nothing left to do
+    game_player.save
+    @game.save
+  end
+
   def select_action(type)
     capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
     payload = { "klass" => klass_name }
     tile_klass = Tiles::Tile.for_klass(klass_name)
     tile_obj = tile_klass&.new(0)
-    selected_phase =
-      if tile_obj&.builds_settlement? || tile_obj&.places_wall?
-        TurnPhase::TileBuildPhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          chosen_terrain: @game.turn_phase.chosen_terrain,
-          remaining: (tile_obj.build_quota if tile_obj.repeats_build?),
-          walls_placed: (0 if tile_obj.places_wall?)
-        )
-      elsif tile_obj&.moves_settlement? && !tile_obj.resettles?
-        TurnPhase::SettlementMovePhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          chosen_terrain: @game.turn_phase.chosen_terrain
-        )
-      elsif tile_obj&.resettles?
-        TurnPhase::ResettlementPhase.new(
-          budget: 4,
-          moves: 0
-        )
-      elsif tile_obj&.places_meeple? && %w[ship wagon].include?(tile_obj.meeple_kind)
-        TurnPhase::MeepleMovementPhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          budget: 3,
-          moves: 0
-        )
-      elsif tile_obj&.places_meeple? && tile_obj.meeple_kind == "warrior"
-        TurnPhase::MeepleActionPhase.new(
-          action_type: type,
-          klass_name: klass_name
-        )
-      elsif tile_obj&.places_city_hall?
-        TurnPhase::CityHallPhase.new(
-          action_type: type,
-          klass_name: klass_name
-        )
-      elsif tile_obj&.sets_aside_settlement?
-        TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
-      elsif tile_obj&.sword_tile?
-        opponents = @game.game_players
-          .reject { |gp| gp == @game.current_player }
-          .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
-          .map(&:order)
-          .sort
-        return "No opponents with settlements" if opponents.empty?
-        payload["pending_orders"] = opponents
-        TurnPhase::TargetedRemovalPhase.new(
-          action_type: type,
-          klass_name: klass_name,
-          pending_orders: opponents
-        )
-      else
-        raise ArgumentError, "no TurnPhase for action type #{type.inspect}"
-      end
+    selected_phase = build_selected_phase(type, klass_name, tile_obj, payload)
+    return selected_phase if selected_phase.is_a?(String)
     record_move(
       action: "select_action",
       deliberate: true,
@@ -192,10 +250,76 @@ class TurnEngine
     @game.save
   end
 
+  # The phase a tile's action runs in, or an error string. Shared by selecting a tile and by
+  # Bazaar copying one.
+  def build_selected_phase(type, klass_name, tile_obj, payload)
+    if tile_obj&.builds_settlement? || tile_obj&.places_wall?
+      TurnPhase::TileBuildPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        chosen_terrain: @game.turn_phase.chosen_terrain,
+        remaining: (tile_obj.build_quota if tile_obj.repeats_build?),
+        walls_placed: (0 if tile_obj.places_wall?)
+      )
+    elsif tile_obj&.moves_settlement? && !tile_obj.resettles?
+      TurnPhase::SettlementMovePhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        chosen_terrain: @game.turn_phase.chosen_terrain
+      )
+    elsif tile_obj&.resettles?
+      TurnPhase::ResettlementPhase.new(
+        budget: 4,
+        moves: 0
+      )
+    elsif tile_obj&.places_meeple? && %w[ship wagon].include?(tile_obj.meeple_kind)
+      TurnPhase::MeepleMovementPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        budget: 3,
+        moves: 0
+      )
+    elsif tile_obj&.places_meeple? && tile_obj.meeple_kind == "warrior"
+      TurnPhase::MeepleActionPhase.new(
+        action_type: type,
+        klass_name: klass_name
+      )
+    elsif tile_obj&.places_city_hall?
+      TurnPhase::CityHallPhase.new(
+        action_type: type,
+        klass_name: klass_name
+      )
+    elsif tile_obj&.sets_aside_settlement?
+      TurnPhase::SetAsidePhase.new(action_type: type, klass_name: klass_name)
+    elsif tile_obj&.places_scouts?
+      TurnPhase::ScoutPhase.new(
+        remaining: Tiles::Location::ScoutCabinTile::SCOUTS - @game.board_contents.scouts_for(@game.current_player.order).size,
+        chosen_terrain: @game.turn_phase.chosen_terrain
+      )
+    elsif tile_obj&.sword_tile?
+      opponents = @game.game_players
+        .reject { |gp| gp == @game.current_player }
+        .select { |gp| @game.board_contents.settlements_for(gp.order).any? }
+        .map(&:order)
+        .sort
+      return "No opponents with settlements" if opponents.empty?
+      payload["pending_orders"] = opponents
+      TurnPhase::TargetedRemovalPhase.new(
+        action_type: type,
+        klass_name: klass_name,
+        pending_orders: opponents
+      )
+    else
+      raise ArgumentError, "no TurnPhase for action type #{type.inspect}"
+    end
+  end
+
   def end_tile_action
     @game.instantiate
     game_player = @game.current_player
+    return end_silo_choice(game_player) if @game.turn_phase.type == "silo"
     tile_klass_name = current_action_tile_klass
+    return end_cancellable_action(game_player, tile_klass_name) if Tiles::Tile.for_klass(tile_klass_name)&.new(0)&.cancellable_action?
     current_phase = @game.turn_phase
     moves_made = current_phase.moves.to_i
     walls_placed = current_phase.walls_placed.to_i
@@ -207,13 +331,38 @@ class TurnEngine
     @game.save
   end
 
+  # Before the first build, ending the action cancels the selection (as an undo would). After
+  # building, it is a move of its own, so it can be undone separately from the builds.
+  def end_cancellable_action(game_player, klass_name)
+    last = @game.moves.where(deliberate: true).order(:id).last
+    return undo_last_move if last&.action == "select_action"
+
+    capture_undo_snapshot
+    record_move(
+      action: "end_tile_action",
+      deliberate: true,
+      reversible: true,
+      message: "#{game_player.player.handle} ended the #{klass_name.delete_suffix("Tile").titleize} action"
+    )
+    game_player.mark_tile_used!(klass_name)
+    reset_to_mandatory
+    game_player.save
+    @game.save
+  end
+
   def tile_activatable?(tile)
-    return false if tile["used"]
+    !tile["used"] && tile_actionable?(tile)
+  end
+
+  # Everything about a tile being usable this turn except whether it is already used, which
+  # Bazaar ignores when copying.
+  def tile_actionable?(tile)
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
       (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
+    return bazaar_entries(@game.current_player).any? if tile_obj.bazaar_tile?
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     player = @game.current_player
@@ -224,6 +373,7 @@ class TurnEngine
   end
 
   def turn_endable?
+    return true if @game.playing? && @game.turn_phase.type == "silo" && @game.turn_phase.action_spent?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
       !@game.can_build_mandatory?(@game.current_player)
@@ -239,6 +389,24 @@ class TurnEngine
   # Canoe reactions and their confirmation gate are not the holder's own turn.
   def canoe_interrupt?
     canoe_reaction? || canoe_confirmation?
+  end
+
+  def silo_prompt?
+    @game.playing? && @game.turn_phase.type == "silo" && @game.turn_phase.mode.nil?
+  end
+
+  def silo_turn_state(phase)
+    handle = @game.current_player.player.handle
+    prefix = "For Silo #{phase.silo} (of #{phase.of}): #{handle}"
+    if phase.mode.nil?
+      "#{prefix} must choose to build or move, or skip"
+    elsif phase.action_spent?
+      "#{prefix} must end the turn"
+    elsif phase.mode == "build"
+      "#{prefix} may build (#{phase.remaining} left)"
+    else
+      "#{prefix} may move a piece (#{phase.remaining} left)"
+    end
   end
 
   def tile_action_endable?
@@ -271,6 +439,8 @@ class TurnEngine
       return "#{@game.current_player.player.handle} (Canoe Reaction): confirm or undo"
     when "canoe"
       return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
+    when "silo"
+      return silo_turn_state(current_phase)
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -311,7 +481,22 @@ class TurnEngine
     end
   end
 
+  # Scouts last only for the turn they were placed.
+  def remove_scouts(game_player)
+    return if @game.board_contents.scouts_for(game_player.order).empty?
+    @game.board_contents_will_change!
+    @game.board_contents.remove_scouts(game_player.order)
+    record_move(
+      action: "remove_scouts",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "#{game_player.player.handle}'s Scouts were removed"
+    )
+  end
+
   def end_turn
+    return end_silo_turn(@game.current_player) if @game.turn_phase.type == "silo"
     capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
@@ -322,10 +507,15 @@ class TurnEngine
     @game.discard.push(*game_player.hand)
     new_cards = [ @game.next_card ]
     new_cards << @game.next_card if has_crossroads_tile?(game_player)
+    game_player.extra_cards.times { new_cards << @game.next_card }
+    game_player.supply.delete("extra_cards")
+    game_player.supply.delete("bazaar_copy")
+    game_player.supply.delete("rovers")
     game_player.hand = new_cards
     card_drawn = game_player.hand
     reshuffled = @game.discard.empty?
     game_player.end_temple_turn!
+    remove_scouts(game_player)
     @game.current_action = { "type" => "mandatory" }
     @game.turn_started_at = Time.current if @game.timed?
     next_order = (@game.current_player.order + 1) % @game.game_players.count
@@ -357,16 +547,113 @@ class TurnEngine
     end
     max_order = @game.game_players.count - 1
     if @game.ending? && game_player.order == max_order
-      record_move(
-        action: "end_game",
-        deliberate: false,
-        reversible: false,
-        game_player: game_player,
-        message: "Game over!"
-      )
-      @game.save
-      @game.complete!
+      begin_silo_round(game_player) || finish_game(game_player)
     end
+  end
+
+  # The Silo prompt's answer: "build" or "move" opens that mode, "skip" gives up this Silo.
+  def silo_choice(mode)
+    phase = @game.turn_phase
+    return "Not available" unless phase.type == "silo" && phase.mode.nil? && %w[build move skip].include?(mode)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    handle = game_player.player.handle
+    label = "Silo #{phase.silo} (of #{phase.of})"
+    if mode == "skip"
+      record_move(action: "silo_skip", deliberate: true, reversible: true,
+                  message: "#{handle} skipped #{label}")
+      finish_silo(phase.with_mode("skip"))
+    else
+      record_move(action: "silo_choose", deliberate: true, reversible: true, payload: { "mode" => mode },
+                  message: "#{handle} chose to #{mode} for #{label}")
+      @game.turn_phase = phase.with_mode(mode)
+      @game.save
+    end
+  end
+
+  # End action: stops this Silo's build or move early.
+  def end_silo_choice(game_player)
+    return "Not allowed" unless @game.turn_phase.tile_action_endable?
+    capture_undo_snapshot
+    record_move(action: "silo_end", deliberate: true, reversible: true,
+                message: "#{game_player.player.handle} ended the Silo #{@game.turn_phase.mode}")
+    finish_silo(@game.turn_phase)
+  end
+
+  # End turn: hands the Silo round on once the player's last Silo is spent.
+  def end_silo_turn(game_player)
+    return "Not allowed" unless @game.turn_phase.action_spent?
+    capture_undo_snapshot
+    record_move(action: "silo_end_turn", deliberate: true, reversible: true,
+                message: "#{game_player.player.handle} ended their Silo turn")
+    advance_silo
+  end
+
+  # The next Silo starts at once; after the last one the player stays on, so the choice can
+  # still be undone, until they end the turn.
+  def finish_silo(phase)
+    return advance_silo if phase.silo < phase.of
+    @game.turn_phase = phase.with_remaining(0)
+    @game.save
+  end
+
+  # Next Silo for this player, else the next player's first Silo, else the game ends.
+  def advance_silo
+    phase = @game.turn_phase
+    current = @game.current_player
+    if phase.silo < phase.of
+      @game.turn_phase = TurnPhase::SiloPhase.new(silo: phase.silo + 1, of: phase.of)
+      return @game.save
+    end
+
+    nxt = @game.game_players.in_player_order.find do |gp|
+      gp.order > current.order && !gp.resigned? && gp.supply["silos"].to_i.positive?
+    end
+    return finish_game(current) unless nxt
+
+    if @game.timed?
+      apply_clock!(current, credit: false)
+      current.save
+      @game.turn_started_at = Time.current
+    end
+    @game.current_player = nxt
+    @game.turn_phase = TurnPhase::SiloPhase.new(silo: 1, of: nxt.supply["silos"])
+    @game.save
+  end
+
+  def finish_game(game_player)
+    record_move(
+      action: "end_game",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "Game over!"
+    )
+    @game.save
+    @game.complete!
+  end
+
+  # After the final regular round, each player with Silos takes one choice per Silo, in turn
+  # order. Silos are counted now, so moving away during the round does not change them.
+  def begin_silo_round(game_player)
+    @game.instantiate
+    players = @game.game_players.in_player_order.reject(&:resigned?)
+    players.each { |gp| gp.update!(supply: gp.supply.merge("silos" => @game.silos_for(gp.order))) }
+    first = players.find { |gp| gp.supply["silos"].positive? }
+    return false unless first
+
+    record_move(
+      action: "begin_silo_round",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "Silo round"
+    )
+    @game.current_player = first
+    @game.turn_phase = TurnPhase::SiloPhase.new(silo: 1, of: first.supply["silos"])
+    @game.save
+    true
   end
 
   # The cells the current player may legally target right now, owned by the
@@ -503,11 +790,7 @@ class TurnEngine
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
     game_player.decrement_supply!
-    # A settlement set aside by Temple holds the ending off until it is built.
-    if game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
-      @game.end_trigger_count += 1
-      payload["triggered_ending"] = true
-    end
+    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player)
     record_move(
       action: "build",
       deliberate: true,
@@ -522,7 +805,16 @@ class TurnEngine
     @game.board_contents.place_settlement(row, col, game_player.order)
     check_ambassadors_goal(game_player, row, col)
     check_shepherds_goal(game_player, row, col, terrain)
+    check_rovers_goal(game_player, row, col)
+    check_mayors_goal(game_player, row)
     apply_tile_pickup(game_player, row, col)
+  end
+
+  # A settlement set aside by Temple holds the ending off until it is built.
+  def trigger_ending_if_supply_empty(game_player)
+    return false unless game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
+    @game.end_trigger_count += 1
+    true
   end
 
   # Called after every board click: if it emptied a location Canoes can react to, or was a
@@ -837,6 +1129,34 @@ class TurnEngine
       "#{game_player.player.handle} scored 2 points (Shepherds)")
   end
 
+  # 1 point for the first build in each board section during your own turn (not Canoe or Silo).
+  def check_rovers_goal(game_player, row, col)
+    return unless Array(@game.goals).include?("rovers")
+    return if %w[canoe silo].include?(@game.turn_phase.type)
+    section = row / 10 * 2 + col / 10
+    built_in = game_player.supply["rovers"] || []
+    return if built_in.include?(section)
+    game_player.supply["rovers"] = built_in + [ section ]
+    score_goal(game_player, "rovers", 1, "#{game_player.player.handle} scored 1 point (Rovers)")
+  end
+
+  # A build or move leaving 4+ of your settlements on a row nobody has marked turns a settlement
+  # from your supply into that row's marker (scores 4 for Mayors).
+  def check_mayors_goal(game_player, row)
+    return unless Array(@game.goals).include?("mayors") && game_player.settlements_remaining?
+    players = @game.game_players.map { |gp| gp.id == game_player.id ? game_player : gp }
+    return if players.any? { |gp| Array(gp.supply["mayors"]).include?(row) }
+    return if @game.board_contents.settlements_for(game_player.order).count { |r, _| r == row } < 4
+    game_player.supply["mayors"] = Array(game_player.supply["mayors"]) + [ row ]
+    game_player.decrement_supply!
+    payload = { "row" => row }
+    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player)
+    record_move(
+      action: "claim_mayor", deliberate: false, reversible: true, game_player: game_player, payload: payload,
+      message: "#{game_player.player.handle} claims Mayor of row #{row}"
+    )
+  end
+
   def check_families_goal(game_player)
     return unless Array(@game.goals).include?("families")
     builds = @game.turn_phase.builds
@@ -893,7 +1213,28 @@ class TurnEngine
   def reset_to_mandatory
     current_phase = @game.turn_phase
     ct = current_phase.chosen_terrain
+    @game.current_player.supply.delete("bazaar_copy")
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
+  end
+
+  def begin_copied_action(game_player, klass_name, mode)
+    tile_obj = Tiles::Tile.for_klass(klass_name).new(0)
+    if tile_obj.crossroads_tile?
+      game_player.supply["extra_cards"] = game_player.extra_cards + 1
+      game_player.mark_tile_used!(klass_name)
+    elsif tile_obj.cathedral_tile?
+      begin_cathedral(game_player, mode)
+    elsif tile_obj.fort_tile?
+      begin_fort(game_player)
+    else
+      type = klass_name.delete_suffix("Tile").downcase
+      phase = build_selected_phase(type, klass_name, tile_obj, {})
+      phase_result = @game.turn_phase.transition(
+        TurnPhase::Events::TileActionSelected.new,
+        TurnPhase::Facts::TileActionSelection.new(selected_phase: phase)
+      )
+      @game.turn_phase = phase_result.next_phase
+    end
   end
 
   def has_crossroads_tile?(game_player)
@@ -926,6 +1267,7 @@ class TurnEngine
       apply_tile_pickup(game_player, destination.row, destination.col)
       current = destination
     end
+    check_mayors_goal(game_player, current.row)
   end
 
   # The shared mutation primitives a Sub-phase's #click calls to carry out its
@@ -933,7 +1275,8 @@ class TurnEngine
   # steps). Defined among the privates above; re-exposed here as the phase-
   # facing interface. Also called by the engine's own turn-level gestures
   # (select_action, end_turn, activate_fort_tile, ...) that no single phase owns.
-  public :capture_undo_snapshot, :record_move, :reset_to_mandatory, :apply_tile_forfeit,
+  public :capture_undo_snapshot, :record_move, :advance_silo, :reset_to_mandatory, :apply_tile_forfeit,
          :lock_terrain!, :build_on_terrain, :apply_tile_pickup, :log_piece_movement_steps,
-         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal
+         :check_families_goal, :check_ambassadors_goal, :check_shepherds_goal, :check_rovers_goal,
+         :check_mayors_goal
 end

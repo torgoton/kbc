@@ -30,7 +30,7 @@ module Tiles
           end
         end
 
-        own = board_contents.settlements_for(player_order)
+        own = board_contents.adjacency_sources_for(player_order)
         adjacent = own.flat_map { |r, c|
           board_contents.neighbors_where(r, c) { |nr, nc| all_valid.include?([ nr, nc ]) }
         }.uniq

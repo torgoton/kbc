@@ -8,6 +8,7 @@ module Tiles
 
       def activatable?(**) = false
       def crossroads_tile? = true
+      def passive_effect? = true
     end
   end
 end
