@@ -343,6 +343,7 @@ class Game < ApplicationRecord
 
   def broadcast_game_update
     @board = nil # reset the board so we can re-construct it from the game state
+    game_players.reload # board markers and scores render before the per-player reloads below
     instantiate
     engine = TurnEngine.new(self)
     scores = live_scores
