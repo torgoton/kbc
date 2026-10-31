@@ -115,6 +115,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select ".player-card.card-D"
   end
 
+  test "common resources show the card Scouts removed from the deck" do
+    game = games(:game2player)
+    get game_url(game)
+    assert_select "#common-resources .removed-terrain", count: 0
+
+    game.update!(removed_terrain: "T")
+    get game_url(game)
+    assert_select "#common-resources .removed-terrain .side-card-label", text: "Scouts removed"
+    assert_select "#common-resources .removed-terrain .player-card.card-T"
+  end
+
   test "select_action sets current_action type on the game" do
     game = games(:game2player)
     post select_action_game_url(game), params: { action_type: "paddock" }
