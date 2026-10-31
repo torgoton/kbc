@@ -63,6 +63,18 @@ class GamePlayer < ApplicationRecord
     supply["temple_due"] = 0
   end
 
+  # Cathedral: a stock of settlements to build with the tile. It starts at 1 when the tile is
+  # collected and stays, idle, if the tile is lost.
+  def cathedral_count = supply["cathedral"].to_i
+
+  def add_cathedral!
+    supply["cathedral"] = cathedral_count + 1
+  end
+
+  def spend_cathedral!
+    supply["cathedral"] = cathedral_count - 1
+  end
+
   # A Bonus tile counts from the turn after it is acquired (acquired tiles start "used").
   def bonus_tile_active?(klass)
     (tiles || []).any? { |t| t["klass"] == klass && !t["used"] }
@@ -205,7 +217,18 @@ class GamePlayer < ApplicationRecord
     (tiles || []).reject { |t| t["used"] }
   end
 
+  # Bazaar: while it copies another tile's action, that tile's name stands for the Bazaar tile,
+  # so the copied action checks and uses up the Bazaar and leaves the original alone. The
+  # marker is cleared when the Bazaar is used up (mark_tile_used!) or the action ends
+  # (TurnEngine#reset_to_mandatory).
+  def bazaar_copy = supply["bazaar_copy"]
+  def extra_cards = supply["extra_cards"].to_i
+
   def mark_tile_used!(klass)
+    if copying_through_bazaar?(klass)
+      klass = "BazaarTile"
+      supply.delete("bazaar_copy")
+    end
     idx = (tiles || []).find_index { |t| t["klass"] == klass && !t["used"] }
     return unless idx
     updated = tiles.dup
@@ -230,11 +253,12 @@ class GamePlayer < ApplicationRecord
   end
 
   def reset_tiles!
-    self.tiles = (tiles || []).map { |t| t["permanent"] ? t : t.merge("used" => false) }
+    self.tiles = (tiles || []).map { |t| t["permanent"] ? t : t.merge("used" => false).except("fresh") }
   end
 
+  # A tile acquired this turn is used and "fresh": it can't be copied by the Bazaar either.
   def receive_tile!(klass, from:)
-    self.tiles = (tiles || []) + [ { "klass" => klass, "from" => from, "used" => true } ]
+    self.tiles = (tiles || []) + [ { "klass" => klass, "from" => from, "used" => true, "fresh" => true } ]
   end
 
   def remove_tile_from!(from)
@@ -246,7 +270,12 @@ class GamePlayer < ApplicationRecord
   end
 
   def find_unused_tile(klass)
+    klass = "BazaarTile" if copying_through_bazaar?(klass)
     (tiles || []).find { |t| t["klass"] == klass && !t["used"] }
+  end
+
+  def copying_through_bazaar?(klass)
+    klass == bazaar_copy && (tiles || []).any? { |t| t["klass"] == "BazaarTile" && !t["used"] }
   end
 
   def mark_tile_unused!(klass)

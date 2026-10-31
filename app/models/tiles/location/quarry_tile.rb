@@ -11,7 +11,7 @@ module Tiles
         terrain = hand
         return [] unless terrain
 
-        settlements = board_contents.settlements_for(player_order)
+        settlements = board_contents.adjacency_sources_for(player_order)
         settlements.flat_map do |r, c|
           board_contents.neighbors_where(r, c) do |nr, nc|
             board_contents.available_for_building?(nr, nc) && board_contents.terrain_at(nr, nc) == terrain

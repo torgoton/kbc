@@ -71,7 +71,7 @@ class GameTest < ActiveSupport::TestCase
 
     assert_equal 1, game.board_contents.tile_qty(2, 7)
     chris = game_players(:chris).reload
-    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true } ], chris.tiles
+    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true, "fresh" => true } ], chris.tiles
     assert_equal 2, game.moves.count  # deliberate build + consequential pick_up_tile
     assert game.moves.exists?(action: "pick_up_tile", deliberate: false)
   end
@@ -221,7 +221,7 @@ class GameTest < ActiveSupport::TestCase
 
     assert_equal 1, game.board_contents.tile_qty(2, 7)
     chris = game_players(:chris).reload
-    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true } ], chris.tiles
+    assert_equal [ { "klass" => "OasisTile", "from" => "[2, 7]", "used" => true, "fresh" => true } ], chris.tiles
   end
 
   test "move_settlement does not pick up a tile the player already holds from that location" do

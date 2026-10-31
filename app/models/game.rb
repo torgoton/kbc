@@ -48,7 +48,7 @@ class Game < ApplicationRecord
     "nomads" => { label: "Nomads", enabled: true },
     "crossroads" => { label: "Crossroads", enabled: true },
     "marshlands" => { label: "Marshlands", enabled: true },
-    "harvest" => { label: "Harvest", enabled: false }
+    "harvest" => { label: "Harvest", enabled: true }
   }.freeze
   QUEENIES = {
     "capitol" => "Capitol",
@@ -166,6 +166,19 @@ class Game < ApplicationRecord
 
   def ending?
     end_trigger_count > 0
+  end
+
+  # Harvest: [row, col] of every Silo hex on the board.
+  def silo_hexes
+    instantiate.map.each_with_index.flat_map do |section, i|
+      section.silver_hexes.select { |h| h[:k] == "Silo" }.map { |h| overall_location(i, h[:r], h[:c]) }
+    end
+  end
+
+  # Silo hexes with at least one of the player's settlements next to them.
+  def silos_for(order)
+    mine = board_contents.settlements_for(order)
+    silo_hexes.count { |row, col| (board_contents.neighbors(row, col) & mine).any? }
   end
 
   def turn_state
@@ -330,6 +343,7 @@ class Game < ApplicationRecord
 
   def broadcast_game_update
     @board = nil # reset the board so we can re-construct it from the game state
+    game_players.reload # board markers and scores render before the per-player reloads below
     instantiate
     engine = TurnEngine.new(self)
     scores = live_scores
@@ -621,11 +635,13 @@ class Game < ApplicationRecord
   BASE_GOALS = %w[citizens discoverers farmers fishermen hermits knights merchants miners workers].freeze
   NOMAD_GOALS = %w[ambassadors families shepherds].freeze
   MARSHLANDS_GOALS = %w[captains geologists messengers noblewomen scouts vassals].freeze
+  HARVEST_GOALS = %w[chainers homesteaders mayors rangers rovers travellers].freeze
   TASKS = %w[advance compass_points fortress home_country place_of_refuge road].freeze
   BASE_BOARD_IDS = (0..7).to_a.freeze
   NOMAD_BOARD_IDS = (8..11).to_a.freeze
   CROSSROADS_BOARD_IDS = (12..15).to_a.freeze
   MARSHLANDS_BOARD_IDS = (16..19).to_a.freeze
+  HARVEST_BOARD_IDS = (20..23).to_a.freeze
 
   def select_goals
     instantiate
@@ -663,12 +679,22 @@ class Game < ApplicationRecord
   end
 
   def goal_pool
-    BASE_GOALS + (expansion?("nomads") ? NOMAD_GOALS : []) + (expansion?("marshlands") ? MARSHLANDS_GOALS : [])
+    BASE_GOALS +
+      (expansion?("nomads") ? NOMAD_GOALS : []) +
+      (expansion?("marshlands") ? MARSHLANDS_GOALS : []) +
+      (expansion?("harvest") ? HARVEST_GOALS : [])
   end
 
   def board_pool
-    BASE_BOARD_IDS + (expansion?("nomads") ? NOMAD_BOARD_IDS : []) + (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +
-      (expansion?("marshlands") ? MARSHLANDS_BOARD_IDS : [])
+    BASE_BOARD_IDS +
+      (expansion?("nomads") ? NOMAD_BOARD_IDS : []) +
+      (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +
+      (expansion?("marshlands") ? MARSHLANDS_BOARD_IDS : []) +
+      (expansion?("harvest") ? HARVEST_BOARD_IDS : [])
+  end
+
+  def any_harvest_board?
+    boards.any? { |id, _| HARVEST_BOARD_IDS.include?(id) }
   end
 
   def board_has_castles?
@@ -689,7 +715,9 @@ class Game < ApplicationRecord
   def populate_player_supplies
     game_players.each do |p|
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
-      p.update(tiles: [ { "klass" => "MandatoryTile", "used" => true } ])
+      tiles = [ { "klass" => "MandatoryTile", "used" => true } ]
+      tiles << { "klass" => "FarmlandTile", "used" => false } if any_harvest_board?
+      p.update(tiles:)
     end
     # save no change to the game object
   end

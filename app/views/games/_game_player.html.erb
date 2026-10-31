@@ -78,6 +78,11 @@
         <% end %>
         <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>
       </div>
+      <% if player.cathedral_count.positive? || player.holds_tile?(klass: "CathedralTile") %>
+        <span class="cathedral-count" title="Cathedral count: settlements you can build with the Cathedral tile">
+          <span class="cathedral-count-icon"></span><%= player.cathedral_count %>
+        </span>
+      <% end %>
       <% player.warriors_remaining.times do %>
         <%= render "games/warrior", color: player_color(player.order), css_class: "warrior-icon" %>
       <% end %>

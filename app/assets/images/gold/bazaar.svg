@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="800" height="800" fill="#000">
+  <path d="M4 6h42v2H4z"/>
+  <path d="M4 8h6v12h-6z"/><circle cx="7" cy="20" r="3"/><path d="M16 8h6v12h-6z"/><circle cx="19" cy="20" r="3"/><path d="M28 8h6v12h-6z"/><circle cx="31" cy="20" r="3"/><path d="M40 8h6v12h-6z"/><circle cx="43" cy="20" r="3"/>
+  <path d="M6 22h3v22H6zM41 22h3v22h-3zM4 34h42v4H4zM4 44h42v3H4z"/>
+  <circle cx="15" cy="30" r="3"/><circle cx="25" cy="30" r="3"/><circle cx="35" cy="30" r="3"/>
+</svg>

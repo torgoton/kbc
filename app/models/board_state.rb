@@ -87,6 +87,30 @@ class BoardState
     cell && cell["klass"] == "Settlement" && cell["meeple"] == "wagon"
   end
 
+  # Scouts (Scout Cabin) are their own cell kind: they occupy a hex and count as the owner's
+  # pieces for adjacency, but are not settlements, so scoring and tile pickup never see them.
+  def place_scout(row, col, player)
+    @cells[[ row, col ]] = { "klass" => "Scout", "player" => player }
+  end
+
+  def scouts_for(player)
+    @cells.filter_map { |(row, col), cell| [ row, col ] if cell["klass"] == "Scout" && cell["player"] == player }
+  end
+
+  def scout_owner(row, col)
+    cell = @cells[[ row, col ]]
+    cell["player"] if cell && cell["klass"] == "Scout"
+  end
+
+  def remove_scouts(player)
+    scouts_for(player).each { |row, col| remove(row, col) }
+  end
+
+  # What "adjacent to your settlements" is measured from: settlements and scouts.
+  def adjacency_sources_for(player)
+    settlements_for(player) + scouts_for(player)
+  end
+
   def restore_piece(meeple, row, col, player)
     case meeple
     when "warrior" then place_warrior(row, col, player)
@@ -111,7 +135,7 @@ class BoardState
   # mandatory builds (MandatoryBuildPhase) and the location build tiles
   # (Tiles::Tile#valid_destinations) so the rule lives in exactly one place.
   def buildable_cells_for(player_order, terrain, excluding: nil)
-    sources = settlements_for(player_order)
+    sources = adjacency_sources_for(player_order)
     sources = sources.reject { |cell| cell == excluding } if excluding
     adjacent = sources.flat_map do |row, col|
       neighbors_where(row, col) { |nr, nc| available_for_building?(nr, nc) && terrain_at(nr, nc) == terrain }

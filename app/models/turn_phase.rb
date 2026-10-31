@@ -30,6 +30,8 @@ class TurnPhase
 
     return MandatoryBuildPhase.from_hash(hash) if type == "mandatory"
 
+    return SiloPhase.from_hash(hash) if type == "silo"
+
     klass_name = hash["klass"] || "#{type.capitalize}Tile"
     tile_class = Tiles::Tile.for_klass(klass_name)
     tile = tile_class&.new(0)
@@ -46,6 +48,8 @@ class TurnPhase
       TargetedRemovalPhase.from_hash(hash)
     elsif tile&.sets_aside_settlement?
       SetAsidePhase.from_hash(hash)
+    elsif tile&.places_scouts?
+      ScoutPhase.from_hash(hash)
     elsif tile && tile.places_meeple? && tile.meeple_kind == "warrior"
       MeepleActionPhase.from_hash(hash)
     elsif tile&.places_city_hall?
@@ -358,19 +362,20 @@ module TurnPhase::TileBuildOrchestration
     tile_klass = tile_klass_name
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash("klass" => tile_klass)
     return "Not available" unless engine.legal_targets.include?([ row, col ])
     if tile_obj.uses_played_terrain? && chosen_terrain.nil? && game_player.hand_terrains.size > 1
       engine.lock_terrain!(game.board_contents.terrain_at(row, col), chosen_terrain)
     end
     engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player, tile_klass: tile_klass)
+    game_player.spend_cathedral! if tile_obj.cathedral_tile?
     if tile_obj.repeats_build?
       remaining_after = remaining.to_i - 1
       if remaining_after > 0
         game.turn_phase = TurnPhase::TileBuildPhase.new(
           action_type: type,
           klass_name: klass_name,
-          chosen_terrain: chosen_terrain,
+          chosen_terrain: game.turn_phase.chosen_terrain,
           remaining: remaining_after
         )
       else
@@ -426,7 +431,7 @@ class TurnPhase::TileBuildPhase < TurnPhase
     outpost_active_value == true
   end
 
-  def tile_action_endable? = walls_placed.to_i >= 1
+  def tile_action_endable? = walls_placed.to_i >= 1 || tile.cathedral_tile?
 
   # The tile as held by the acting player, so Bonus tiles can modify it.
   def tile = super&.with_player(@tile_owner)
@@ -755,6 +760,7 @@ class TurnPhase::SettlementMovePhase < TurnPhase
     )
     game.board_contents_will_change!
     game.board_contents.move_settlement(*from_coord, row, col)
+    engine.check_mayors_goal(game.current_player, row)
     phase_result = transition(
       TurnPhase::Events::DestinationChosen.new,
       TurnPhase::Facts::DestinationChoice.new(
@@ -940,7 +946,7 @@ module TurnPhase::MeepleOrchestration
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
 
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash("klass" => tile_klass)
 
     movement_step = false
     if from
@@ -1022,7 +1028,7 @@ module TurnPhase::MeepleOrchestration
     tile = game_player.find_unused_tile(tile_klass)
     return "Not available" unless tile
 
-    tile_obj = Tiles::Tile.from_hash(tile)
+    tile_obj = Tiles::Tile.from_hash("klass" => tile_klass)
     moveable = case tile_obj.meeple_kind
     when "ship"  then game.board_contents.ship_at?(row, col)
     when "wagon" then game.board_contents.wagon_at?(row, col)
@@ -1071,6 +1077,8 @@ module TurnPhase::MeepleOrchestration
     game.board_contents_will_change!
     game.board_contents.place_warrior(row, col, game_player.order)
     game_player.decrement_warrior_supply!
+    engine.check_rovers_goal(game_player, row, col)
+    engine.check_mayors_goal(game_player, row)
     engine.apply_tile_pickup(game_player, row, col)
   end
 
@@ -1105,6 +1113,8 @@ module TurnPhase::MeepleOrchestration
     game.board_contents_will_change!
     game.board_contents.place_ship(row, col, game_player.order)
     game_player.decrement_ship_supply!
+    engine.check_rovers_goal(game_player, row, col)
+    engine.check_mayors_goal(game_player, row)
     engine.apply_tile_pickup(game_player, row, col)
   end
 
@@ -1153,6 +1163,8 @@ module TurnPhase::MeepleOrchestration
     game.board_contents_will_change!
     game.board_contents.place_wagon(row, col, game_player.order)
     game_player.decrement_wagon_supply!
+    engine.check_rovers_goal(game_player, row, col)
+    engine.check_mayors_goal(game_player, row)
     engine.apply_tile_pickup(game_player, row, col)
   end
 
@@ -1495,8 +1507,10 @@ class TurnPhase::CityHallPhase < TurnPhase
     cluster.each do |r, c|
       engine.check_ambassadors_goal(game_player, r, c)
       engine.check_shepherds_goal(game_player, r, c, game.board_contents.terrain_at(r, c))
+      engine.check_rovers_goal(game_player, r, c)
       engine.apply_tile_pickup(game_player, r, c)
     end
+    cluster.map(&:first).uniq.each { |r| engine.check_mayors_goal(game_player, r) }
     engine.reset_to_mandatory
     game_player.save
     game.save
@@ -1574,6 +1588,64 @@ class TurnPhase::SetAsidePhase < TurnPhase
   end
 end
 
+# Scout Cabin: place up to 2 Scouts, one click each. A Scout is not a build, so none of the
+# build orchestration (scoring, tile pickup, supply) applies.
+class TurnPhase::ScoutPhase < TurnPhase
+  attr_reader :remaining, :chosen_terrain
+
+  def self.from_hash(hash)
+    new(remaining: hash.fetch("remaining"), chosen_terrain: hash["chosen_terrain"])
+  end
+
+  def initialize(remaining: Tiles::Location::ScoutCabinTile::SCOUTS, chosen_terrain: nil)
+    @remaining = remaining
+    @chosen_terrain = chosen_terrain
+  end
+
+  def type = "scoutcabin"
+  def klass_name = "ScoutCabinTile"
+  def tile_action_endable? = true
+
+  def legal_targets(board_contents:, player:, game: nil)
+    tile.valid_destinations(board_contents: board_contents, player_order: player.order)
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    game_player = game.current_player
+    return "Not available" unless game_player.find_unused_tile(klass_name)
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+
+    engine.record_move(
+      action: "place_scout",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      to: "[#{row}, #{col}]",
+      message: "#{game_player.player.handle} placed a Scout at [#{row}, #{col}]"
+    )
+    game.board_contents_will_change!
+    game.board_contents.place_scout(row, col, game_player.order)
+    if remaining > 1
+      game.turn_phase = self.class.new(remaining: remaining - 1, chosen_terrain: chosen_terrain)
+    else
+      game_player.mark_tile_used!(klass_name)
+      engine.reset_to_mandatory
+    end
+    game_player.save
+    game.save
+  end
+
+  def serialize
+    { "type" => type, "klass" => klass_name, "remaining" => remaining }.tap do |hash|
+      hash["chosen_terrain"] = chosen_terrain if chosen_terrain
+    end
+  end
+end
+
 # Canoe: a reaction, taken by each holder when another player takes the last tile from a
 # location. Build on any Water or Swamp hex (adjacent to your settlements if
 # possible) or skip.
@@ -1645,5 +1717,114 @@ class TurnPhase::CanoeConfirmPhase < TurnPhase
 
   def serialize
     { "type" => "canoe_confirm", "resume" => resume, "holders" => holders, "reacting" => reacting }
+  end
+end
+
+# Harvest end-game: one choice per Silo (silo N of `of`) to build, move or skip.
+class TurnPhase::SiloPhase < TurnPhase
+  BUILDS = 3
+
+  attr_reader :silo, :of, :mode, :remaining, :from
+
+  def self.from_hash(hash)
+    new(silo: hash.fetch("silo"), of: hash.fetch("of"), mode: hash["mode"], remaining: hash["remaining"], from: hash["from"])
+  end
+
+  def initialize(silo:, of:, mode: nil, remaining: nil, from: nil)
+    @silo = silo
+    @of = of
+    @mode = mode
+    @remaining = remaining
+    @from = from
+  end
+
+  def type = "silo"
+  def tile_action_endable? = !mode.nil? && remaining.to_i.positive?
+  def action_spent? = !mode.nil? && remaining.to_i.zero?
+
+  def with_mode(mode)
+    self.class.new(silo: silo, of: of, mode: mode, remaining: BUILDS)
+  end
+
+  def legal_targets(board_contents:, player:, game: nil)
+    return [] if remaining.to_i.zero?
+    case mode
+    when "build" then player.settlements_remaining? ? cells_next_to(board_contents, board_contents.adjacency_sources_for(player.order), Tiles::Tile::BUILDABLE_TERRAIN) : []
+    when "move" then from ? move_destinations(board_contents, player) : movable_settlements(board_contents, player)
+    else []
+    end
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+    game_player = game.current_player
+
+    if mode == "build"
+      engine.build_on_terrain(game.board_contents.terrain_at(row, col), row, col, game_player)
+    elsif from.nil?
+      return select_source(row, col, engine)
+    else
+      from_row, from_col = Coordinate.from_key(from).to_a
+      engine.log_piece_movement_steps(
+        action: "move_settlement", game_player: game_player, from_row:, from_col:,
+        path: [ [ row, col ] ], payload: { "tile_klass" => "SiloAction" }, message_piece: "settlement"
+      )
+    end
+    game.turn_phase = with_remaining(remaining - 1)
+    game_player.save
+    # After the 3rd piece the next Silo starts; after the last Silo's, the player ends the turn (or undoes).
+    engine.advance_silo if remaining == 1 && silo < of
+    game.save
+  end
+
+  def with_remaining(count)
+    self.class.new(silo: silo, of: of, mode: mode, remaining: count)
+  end
+
+  def serialize
+    { "type" => type, "silo" => silo, "of" => of }.tap do |hash|
+      hash["mode"] = mode if mode
+      hash["remaining"] = remaining if remaining
+      hash["from"] = from if from
+    end
+  end
+
+  private
+
+  def select_source(row, col, engine)
+    key = Coordinate.new(row, col).to_key
+    engine.record_move(action: "select_settlement", deliberate: true, reversible: true, from: key,
+                       message: "#{engine.game.current_player.player.handle} selected a settlement at #{key}")
+    engine.game.turn_phase = self.class.new(silo: silo, of: of, mode: mode, remaining: remaining, from: key)
+    engine.game.save
+  end
+
+  # Where a piece may go: empty hexes of suitable terrain next to any of your pieces.
+  def cells_next_to(board_contents, sources, terrains)
+    sources.flat_map do |row, col|
+      board_contents.neighbors_where(row, col) do |r, c|
+        board_contents.available_for_building?(r, c) && terrains.include?(board_contents.terrain_at(r, c))
+      end
+    end.uniq
+  end
+
+  # A moving piece never anchors itself; every kind of piece uses the settlement rule.
+  def destinations_for(board_contents, player, cell)
+    cells_next_to(board_contents, board_contents.adjacency_sources_for(player.order) - [ cell ], Tiles::Tile::BUILDABLE_TERRAIN)
+  end
+
+  def move_destinations(board_contents, player)
+    destinations_for(board_contents, player, Coordinate.from_key(from).to_a)
+  end
+
+  # Settlements and the three meeple kinds, but not City Hall.
+  def movable_settlements(board_contents, player)
+    board_contents.settlements_for(player.order).select do |cell|
+      !board_contents.city_hall_at?(*cell) && destinations_for(board_contents, player, cell).any?
+    end
   end
 end

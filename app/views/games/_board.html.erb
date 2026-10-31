@@ -1,7 +1,7 @@
 <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[0], index: 0 } %>
 <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[1], index: 1 } %>
-<div> <!-- for Mayor markers --></div>
+<%= render "games/mayor_markers", game:, rows: 0...10 %>
 <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[2], index: 2 } %>
 <%= render partial: "games/quadrant", locals: { game: game, quadrant: game.board.map[3], index: 3 } %>
-<div> <!-- for Mayor markers --></div>
+<%= render "games/mayor_markers", game:, rows: 10...20 %>
 

@@ -61,6 +61,124 @@ class GameScenario
     perform { |engine| engine.activate_fort_tile }
   end
 
+  # Activate a held Cathedral tile with its modal choice: "add" or "build".
+  def activate_cathedral(mode)
+    perform { |engine| engine.activate_cathedral(mode) }
+  end
+
+  def end_tile_action
+    perform { |engine| engine.end_tile_action }
+  end
+
+  # Hand a player an unused Cathedral tile with a given count (direct setup).
+  def give_cathedral(player, count:, used: false)
+    give_tile(player, "CathedralTile", from: [ 0, 0 ], used: used)
+    gp = game_player(player)
+    gp.supply["cathedral"] = count
+    gp.save!
+  end
+
+  def tile_action_endable?
+    fresh_board
+    TurnEngine.new(@game).tile_action_endable?
+  end
+
+  # Bazaar: copy another held tile's action (mode picks Cathedral's "add" or "build").
+  def activate_bazaar(klass, mode = nil)
+    perform { |engine| engine.activate_bazaar(klass, mode) }
+  end
+
+  def give_cathedral_count(player, count)
+    gp = game_player(player)
+    gp.supply["cathedral"] = count
+    gp.save!
+  end
+
+  # Put a Scout on the board directly (setup, no rules applied).
+  def place_scout_for(player, at:)
+    mutate_board { |contents| contents.place_scout(*at, player) }
+  end
+
+  def bazaar_entry_labels(player)
+    fresh_board
+    TurnEngine.new(@game).bazaar_entries(game_player(player)).map { |e| e[:label] }
+  end
+
+  # The Bazaar popup's entries as [klass, mode] pairs.
+  def bazaar_entries(player)
+    fresh_board
+    TurnEngine.new(@game).bazaar_entries(game_player(player)).map { |e| [ e[:klass], e[:mode] ] }
+  end
+
+  # --- Silo ---
+
+  HARVEST_BOARDS = [ [ 20, 0 ], [ 21, 0 ], [ 5, 0 ], [ 0, 0 ] ].freeze
+
+  def silos(player)
+    fresh_board
+    @game.silos_for(player)
+  end
+
+  # Serialized current phase, e.g. {"type" => "silo", "silo" => 1, "of" => 2, ...}.
+  def phase
+    @game.reload.turn_phase.serialize
+  end
+
+  # Answer the Silo prompt: "build", "move" or "skip".
+  def silo_choice(mode)
+    perform { |engine| engine.silo_choice(mode) }
+  end
+
+  def confirm_canoe
+    perform { |engine| engine.confirm_canoe }
+  end
+
+  def skip_canoe
+    perform { |engine| engine.skip_canoe }
+  end
+
+  def turn_state
+    fresh_board
+    TurnEngine.new(@game).turn_state
+  end
+
+  def turn_endable?
+    fresh_board
+    TurnEngine.new(@game).turn_endable?
+  end
+
+  def current_order
+    @game.reload.current_player&.order
+  end
+
+  # Trigger the end of the game and finish the last player's turn, as in game_end_test.
+  def finish_final_round
+    @game.update!(end_trigger_count: 1)
+    make_current(@game.game_players.count - 1)
+    set_mandatory(0)
+    end_turn
+  end
+
+  def tile_used?(player, klass)
+    held_tiles(player, klass: klass).first["used"]
+  end
+
+  def place_scout(at:)
+    perform { |engine| engine.click(Coordinate.new(*at)) }
+  end
+
+  def scouts(player)
+    @game.board_contents.scouts_for(player)
+  end
+
+  def moves
+    @game.moves.order(:order)
+  end
+
+  def cathedral_count(player)
+    game_player(player).cathedral_count
+  end
+
   # Activate a held Outpost tile, skipping the adjacency requirement for the
   # current mandatory (or tile-build) action.
   def activate_outpost
@@ -104,6 +222,10 @@ class GameScenario
 
   def place_settlement(player, at:)
     mutate_board { |contents| contents.place_settlement(*at, player) }
+  end
+
+  def place_city_hall_hex(player, at:)
+    mutate_board { |contents| contents.place_city_hall_hex(*at, player) }
   end
 
   def place_wagon(player, at:)
@@ -257,6 +379,17 @@ class GameScenario
 
   def settlements_remaining(player)
     game_player(player).settlements_remaining
+  end
+
+  # Rows the player has claimed with a Mayor marker.
+  def mayor_rows(player)
+    game_player(player).supply["mayors"] || []
+  end
+
+  def give_mayor_row(player, row)
+    gp = game_player(player)
+    gp.supply["mayors"] = (gp.supply["mayors"] || []) + [ row ]
+    gp.save!
   end
 
   def mandatory_remaining
