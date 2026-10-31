@@ -252,6 +252,16 @@ class Game < ApplicationRecord
     "⚡ #{speed.capitalize} #{bank_min}+#{increment_sec}"
   end
 
+  # e.g. "Expansions: Nomads (Sword), Harvest" or "Expansions: None"
+  def expansions_label
+    labels = EXPANSIONS.filter_map do |key, exp|
+      next unless expansion?(key)
+      # ponytail: only Nomads has an option; generalize if another expansion gains one
+      key == "nomads" ? "#{exp[:label]} (#{options['nomads_sword'] == false ? 'No Sword' : 'Maybe Sword'})" : exp[:label]
+    end
+    "Expansions: #{labels.presence&.join(', ') || 'None'}"
+  end
+
   def player_handles
     game_players.map { |gp| gp.player.handle }.join(", ")
   end

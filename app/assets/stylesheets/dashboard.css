@@ -2,6 +2,11 @@
     position: relative;
 }
 
+.game-options {
+    margin-left: 1.5em;
+    font-size: 0.85em;
+}
+
 .pulser {
     animation: turn-pulse 1.6s ease-in-out infinite;
 }
