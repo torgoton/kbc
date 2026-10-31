@@ -24,6 +24,13 @@ class GameOptionsTest < ActiveSupport::TestCase
     Array.new(RUNS) { started_game(options).boards.map(&:first) }
   end
 
+  test "expansions_label lists included expansions or None" do
+    assert_equal "Expansions: Crossroads, Harvest", Game.new(options: { "expansions" => %w[harvest crossroads] }).expansions_label
+    assert_equal "Expansions: Nomads (Maybe Sword)", Game.new(options: { "expansions" => %w[nomads] }).expansions_label
+    assert_equal "Expansions: Nomads (No Sword)", Game.new(options: { "expansions" => %w[nomads], "nomads_sword" => false }).expansions_label
+    assert_equal "Expansions: None", Game.new(options: {}).expansions_label
+  end
+
   test "base game only uses boards 0-7" do
     boards_over_runs({}).each do |ids|
       assert_empty ids - BASE_BOARDS, "unexpected boards #{ids.inspect}"
