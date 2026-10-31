@@ -65,8 +65,8 @@
     <% end %>
     <% fort_terrain = (game.current_player_id == player.id) ? game.current_action["fort_terrain"] : nil %>
     <% if fort_terrain %>
-      <span class="fort-drawn" title="Fort drew <%= Boards::Board.card_name(fort_terrain) %>">
-        <span class="fort-drawn-label">Fort drew</span>
+      <span class="side-card" title="Fort drew <%= Boards::Board.card_name(fort_terrain) %>">
+        <span class="side-card-label">Fort drew</span>
         <%= render "games/card", card: fort_terrain %>
       </span>
     <% end %>
