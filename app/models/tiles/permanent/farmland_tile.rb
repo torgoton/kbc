@@ -2,7 +2,7 @@ module Tiles
   class Permanent
     class FarmlandTile < Tiles::Permanent
       CREATOR = "Claude".freeze
-      DESCRIPTION = "Build on Farmland adjacent to one of your settlements. Optional, once per turn.".freeze
+      DESCRIPTION = "Build on Farmland. MUST be adjacent to one of your settlements. Optional, once per turn.".freeze
 
       def build_terrain = "H"
       def builds_settlement? = true
