@@ -78,6 +78,7 @@ class DualCardsTest < ActiveSupport::TestCase
   test "Scouts also removes dual cards offering the removed terrain" do
     game = Game.new(options: { "expansions" => %w[marshlands] }, goals: [ "scouts" ])
     game.send(:initialize_terrain_deck)
+    game.send(:remove_scouts_terrain)
 
     cards = game.deck + game.discard
     assert_equal 24, cards.size

@@ -1,3 +1,9 @@
+<% if (decree = game.decree_info) %>
+  <div class="goal-item decree-item">
+    <span class="goal-name">Emperor's Decree: <%= decree[:label] %> <span class="goal-signifier">⊕</span></span>
+    <div class="goal-tooltip"><%= decree[:description] %></div>
+  </div>
+<% end %>
 <div>Deck: <%= game.deck.size %> cards left</div>
 <div>Discard: <%= game.discard.size %> cards</div>
 <% if game.board_has_quarry? %>

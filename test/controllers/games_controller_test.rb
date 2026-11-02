@@ -126,6 +126,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#common-resources .removed-terrain .player-card.card-T"
   end
 
+  test "common resources lead with the Emperor's Decree and its rule text when one is drawn" do
+    game = games(:game2player)
+    get game_url(game)
+    assert_select "#common-resources .decree-item", count: 0
+
+    game.update!(decree: { "name" => "native_soil", "terrain" => "G" })
+    get game_url(game)
+    assert_select "#common-resources .decree-item .goal-name", text: /Emperor's Decree: Native Soil/
+    assert_select "#common-resources .decree-item .goal-tooltip", text: /play that terrain/
+  end
+
   test "select_action sets current_action type on the game" do
     game = games(:game2player)
     post select_action_game_url(game), params: { action_type: "paddock" }

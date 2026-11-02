@@ -1653,6 +1653,10 @@ ul li .hex:hover .hex-bg {
     margin-left: 6px;
 }
 
+.side-card.native-soil {
+    margin: 0 6px 0 0;
+}
+
 .side-card-label {
     font-size: 9px;
     line-height: 1;
@@ -1663,7 +1667,7 @@ ul li .hex:hover .hex-bg {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-.side-card:not(.removed-terrain) .player-card {
+.side-card:not(.removed-terrain):not(.native-soil) .player-card {
     transform-origin: center;
     /* deal-in flip, then a settling golden pulse */
     animation:

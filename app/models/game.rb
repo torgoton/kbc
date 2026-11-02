@@ -53,7 +53,19 @@ class Game < ApplicationRecord
   }.freeze
   QUEENIES = %w[emperors_choice].freeze
   DECREE_CHANCES = %w[80 100].freeze
-  DECREES = %w[island].freeze
+  # The Emperor's Choice decrees: `description` is the player-facing rule text shown in the game.
+  DECREES = {
+    "island" => {
+      label: "Island",
+      description: "A second, separate board sits beside the map. Settlements can be built on it, " \
+                   "and moved to and from it, like any other hex. Its sea rim counts as water."
+    },
+    "native_soil" => {
+      label: "Native Soil",
+      description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
+                   "each player may play that terrain as if it were in their hand."
+    }
+  }.freeze
   DEFAULT_OPTIONS = { "expansions" => %w[nomads crossroads], "nomads_sword" => true }.freeze
 
   has_many :game_players, dependent: :destroy
@@ -106,6 +118,15 @@ class Game < ApplicationRecord
     decree&.dig("name") == "island"
   end
 
+  def decree_info = DECREES[decree&.dig("name")]
+
+  def native_soil? = decree&.dig("name") == "native_soil"
+
+  # The terrain every player may play, in addition to their hand (Native Soil decree).
+  def native_soil
+    decree["terrain"] if native_soil?
+  end
+
   def waiting?
     state.to_s == "waiting"
   end
@@ -141,10 +162,11 @@ class Game < ApplicationRecord
     moves.build(order: move_count, action: "start_game", message: "Game started.", deliberate: false, reversible: false)
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
+    initialize_terrain_deck
     select_decree(options)
     populate_boards(options)
     select_goals
-    initialize_terrain_deck
+    remove_scouts_terrain if Array(goals).include?("scouts")
     select_tasks
     populate_player_supplies
     deal_terrain_cards
@@ -589,16 +611,18 @@ class Game < ApplicationRecord
     return unless Array(self.options["queenies"]).include?("emperors_choice")
     chance = (options[:decree_chance] || self.options["decree_chance"] || DECREE_CHANCES.first).to_i
     return unless rand(100) < chance
-    self.decree = { "name" => DECREES.sample, "map" => rand(Boards::Island::SECTIONS.size) }
+    self.decree = { "name" => DECREES.keys.sample }
+    decree["map"] = rand(Boards::Island::SECTIONS.size) if island?
     self.move_count += 1
     moves.build(
       order: move_count,
       action: "select_decree",
-      message: "Decree drawn: #{decree['name'].humanize}",
+      message: "Decree drawn: #{decree_info[:label]}",
       payload: { "decree" => decree },
       deliberate: false,
       reversible: false
     )
+    decree["terrain"] = remove_terrain("native_soil_terrain", "Native Soil") if native_soil?
   end
 
   def populate_boards(options = {})
@@ -649,7 +673,6 @@ class Game < ApplicationRecord
   def initialize_terrain_deck
     self.discard = terrain_cards
     self.removed_terrain = nil
-    remove_scouts_terrain if Array(goals).include?("scouts")
     shuffle_terrain_deck
   end
 
@@ -657,19 +680,26 @@ class Game < ApplicationRecord
     DECK.chars + (expansion?("marshlands") ? MARSHLANDS_CARDS : [])
   end
 
-  # Scouts: draw a terrain at random and take every card offering it (dual cards too) out of the deck.
+  # Scouts: a terrain is taken out of the deck, and the Scouts goal scores next to it.
   def remove_scouts_terrain
-    self.removed_terrain = DECK.chars.uniq.sample
-    discard.reject! { |card| card.include?(removed_terrain) }
+    self.removed_terrain = remove_terrain("scouts_terrain", "Scouts")
+  end
+
+  # Draw a random terrain still in the deck and take every card offering it (dual cards too) out
+  # of the deck, so Scouts and Native Soil never take the same one. Returns the terrain.
+  def remove_terrain(action, label)
+    terrain = (DECK.chars.uniq & deck.flat_map(&:chars)).sample
+    deck.reject! { |card| card.include?(terrain) }
     self.move_count = (move_count || 0) + 1
     moves.build(
       order: move_count,
-      action: "scouts_terrain",
-      message: "Scouts: #{Boards::Board::TERRAIN_NAMES[removed_terrain]} cards removed from the deck",
-      payload: { "terrain" => removed_terrain },
+      action:,
+      message: "#{label}: #{Boards::Board::TERRAIN_NAMES[terrain]} cards removed from the deck",
+      payload: { "terrain" => terrain },
       deliberate: false,
       reversible: false
     )
+    terrain
   end
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze

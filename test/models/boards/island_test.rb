@@ -30,13 +30,16 @@ class IslandTest < ActiveSupport::TestCase
     assert_not state.in_bounds?(20, 5, from: 19)
   end
 
+  # The decree is drawn at random from the pool, so keep dealing until it's the Island (or isn't drawn).
   def started_game(options)
-    game = Game.new(state: "waiting", options:)
-    game.add_player(users(:chris))
-    game.add_player(users(:jules))
-    game.save!
-    game.start
-    game
+    loop do
+      game = Game.new(state: "waiting", options:)
+      game.add_player(users(:chris))
+      game.add_player(users(:jules))
+      game.save!
+      game.start
+      return game if game.island? || options["decree_chance"].nil?
+    end
   end
 
   test "100% decree chance draws the Island, places its tiles, and sea hexes count as water" do

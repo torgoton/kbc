@@ -40,8 +40,9 @@ class GamePlayer < ApplicationRecord
 
   # Terrains the hand offers. A card is one terrain letter, or two for a Marshlands
   # dual card ("GB" = Grass or Swamp). Tolerates legacy hands stored as a bare string.
+  # Native Soil's terrain is always on offer too, as if it were in every hand.
   def hand_terrains
-    Array(hand).compact.flat_map(&:chars).uniq
+    (Array(hand).compact.flat_map(&:chars) + Array(game&.native_soil)).uniq
   end
 
   # Temple: settlements taken off the board wait here (outside the supply) until next turn,
