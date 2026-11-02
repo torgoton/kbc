@@ -1898,6 +1898,11 @@ aside, section#log-chat {
     transition: transform 0.35s ease;
 }
 
+/* The sidebar's popups (score breakdown) hang over the log and chat below it. */
+section#log-chat {
+    z-index: 4;
+}
+
 #game-area {
     position: relative;
 }
