@@ -672,7 +672,7 @@ class Game < ApplicationRecord
     decree["terrain"] = remove_terrain("native_soil_terrain", "Native Soil") if native_soil?
     decree["hex"] = place_volcano if volcano?
     decree["hex"] = place_ferry if ferry?
-    decree["hexes"] = place_caves if caves?
+    place_caves_and_log if caves?
   end
 
   # A random Mountain hex of the main map (the Island is not a board section).
@@ -691,6 +691,19 @@ class Game < ApplicationRecord
   end
 
   CAVE_MIN_DISTANCE = 3
+
+  def place_caves_and_log
+    decree["hexes"] = place_caves
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "place_caves",
+      message: "Caves placed: #{decree["hexes"].map { |r, c| "[#{r},#{c}]" }.join(", ").presence || "none"}",
+      payload: { "hexes" => decree["hexes"] },
+      deliberate: false,
+      reversible: false
+    )
+  end
 
   # One Cave per quadrant, on the Mountain hex with the most buildable neighbors (random among
   # ties) that is at least CAVE_MIN_DISTANCE from every Silver and Location hex. A quadrant with

@@ -35,6 +35,12 @@ class CavesTest < ActiveSupport::TestCase
     game.game_players.each { |gp| assert_includes gp.tiles.map { |t| t["klass"] }, "CaveTile" }
   end
 
+  test "placing the caves is logged with their locations" do
+    game = caves_game
+    move = game.moves.find_by!(action: "place_caves")
+    assert_equal "Caves placed: #{game.cave_hexes.map { |r, c| "[#{r},#{c}]" }.join(", ")}", move.message
+  end
+
   test "a cave goes where the most neighbors are buildable" do
     game = caves_game
     board = game.instantiate
