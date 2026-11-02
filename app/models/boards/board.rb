@@ -1,6 +1,6 @@
 module Boards
   class Board
-    attr_reader :map, :island
+    attr_reader :map, :island, :ferry_hex
     attr_reader :content
 
     TERRAIN_NAMES = {
@@ -64,6 +64,7 @@ module Boards
       "RefugeBonusTile"      => Tiles::Bonus::RefugeBonusTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
       "FarmlandTile"         => Tiles::Permanent::FarmlandTile,
+      "FerryTile"            => Tiles::Permanent::FerryTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
       "DonationFlowerTile"   => Tiles::Nomad::DonationFlowerTile,
@@ -90,6 +91,7 @@ module Boards
     def initialize(game)
       @map = []
       @island = Island.new(game.decree["map"]) if game.island?
+      @ferry_hex = game.ferry_hex
       game.boards.each do |section|
         @map << BoardSection.new(section[0], section[1])
       end

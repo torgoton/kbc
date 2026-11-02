@@ -39,6 +39,8 @@ class NativeSoilTest < ActiveSupport::TestCase
     loop do
       game = started_game
       game.update!(goals: [ "scouts" ])
+      game.move_count = 0
+      game.send(:select_boards)
       game.send(:initialize_terrain_deck)
       game.send(:select_decree)
       break if game.native_soil?

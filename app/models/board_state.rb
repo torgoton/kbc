@@ -245,6 +245,44 @@ class BoardState
     end
   end
 
+  # Each connected body of water on the main map, as a set of cells.
+  def water_bodies
+    seen = Set.new
+    MAIN_CELLS.filter_map do |cell|
+      next if seen.include?(cell) || terrain_at(*cell) != "W"
+      water_body(*cell).tap { |body| seen.merge(body) }
+    end
+  end
+
+  def water_body(row, col)
+    body = Set[[ row, col ]]
+    queue = [ [ row, col ] ]
+    until queue.empty?
+      neighbors_where(*queue.shift) { |nr, nc| terrain_at(nr, nc) == "W" }.each { |n| queue << n if body.add?(n) }
+    end
+    body
+  end
+
+  # The cell of `cells` nearest their centroid, on the hex grid's real (offset-row) geometry.
+  def self.center_of(cells)
+    point = ->(r, c) { [ c + 0.5 * (r % 2), r * Math.sqrt(3) / 2 ] }
+    points = cells.map { |r, c| point.(r, c) }
+    cx = points.sum(&:first) / points.size
+    cy = points.sum(&:last) / points.size
+    cells.min_by { |r, c| x, y = point.(r, c); (x - cx)**2 + (y - cy)**2 }
+  end
+
+  def ferry_hex
+    @terrain_source.ferry_hex if @terrain_source.respond_to?(:ferry_hex)
+  end
+
+  # Every hex next to the ferry's body of water (Ferry decree); empty without a ferry.
+  def ferry_shore
+    return [] unless ferry_hex
+    body = water_body(*ferry_hex)
+    body.flat_map { |r, c| neighbors(r, c) }.uniq.reject { |cell| body.include?(cell) }
+  end
+
   def neighbors_where(row, col, &block)
     neighbors(row, col).select { |nr, nc| block.call(nr, nc) }
   end

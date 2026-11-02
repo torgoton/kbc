@@ -65,6 +65,11 @@ class Game < ApplicationRecord
       description: "At the end of the game before final scoring, each player in turn order removes one third " \
                    "(rounding up) of their settlements from the game board section with the volcano."
     },
+    "ferry" => {
+      label: "Ferry",
+      description: "Move one of your settlements adjacent to the body of water with the ferry token to any " \
+                   "empty hex adjacent to that same body of water."
+    },
     "native_soil" => {
       label: "Native Soil",
       description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
@@ -126,6 +131,12 @@ class Game < ApplicationRecord
   def decree_info = DECREES[decree&.dig("name")]
 
   def volcano? = decree&.dig("name") == "volcano"
+
+  def ferry? = decree&.dig("name") == "ferry"
+
+  def ferry_hex
+    decree["hex"] if ferry?
+  end
 
   def volcano_hex
     decree["hex"] if volcano?
@@ -650,12 +661,22 @@ class Game < ApplicationRecord
     )
     decree["terrain"] = remove_terrain("native_soil_terrain", "Native Soil") if native_soil?
     decree["hex"] = place_volcano if volcano?
+    decree["hex"] = place_ferry if ferry?
   end
 
   # A random Mountain hex of the main map (the Island is not a board section).
   def place_volcano
     instantiate
     BoardState::MAIN_CELLS.select { |r, c| @board.terrain_at(r, c) == "M" }.sample
+  end
+
+  # The ferry sits in the middle of the largest body of water (a random one if several tie).
+  def place_ferry
+    instantiate
+    bodies = board_contents.water_bodies
+    largest = bodies.map(&:size).max
+    body = bodies.select { |b| b.size == largest }.sample
+    BoardState.center_of(body)
   end
 
   def populate_boards(options = {})
@@ -821,6 +842,7 @@ class Game < ApplicationRecord
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
       tiles = [ { "klass" => "MandatoryTile", "used" => true } ]
       tiles << { "klass" => "FarmlandTile", "used" => false } if any_harvest_board?
+      tiles << { "klass" => "FerryTile", "used" => false } if ferry?
       p.update(tiles:)
     end
     # save no change to the game object
