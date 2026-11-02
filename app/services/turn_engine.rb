@@ -12,7 +12,7 @@ class TurnEngine
     return resolve_plateau(coordinate) if plateau_pending?
     before = @game.board_contents.settlements_for(@game.current_player.order)
     result = @game.turn_phase.click(coordinate, self)
-    offer_plateau(before) unless result.is_a?(String)
+    return result if !result.is_a?(String) && offer_plateau(before) # reactions wait for the choice
     open_reactions!
     result
   end
@@ -22,13 +22,12 @@ class TurnEngine
   # mountains pauses for a choice: click a highlighted mountain to move the piece there, or click
   # the piece again to leave it. The pending build's hex is kept in the builder's supply, so undo
   # (which restores the supply) takes back the whole build. Pickups and goals were decided at the
-  # build hex: moving is a plain relocation.
+  # build hex: moving is a plain relocation. Any Canoe reactions the build set off (and a Canoe
+  # build's own end) wait, remembered in the pending entry, until the choice is made.
 
-  def plateau_pending?
-    @game.playing? && !%w[canoe canoe_confirm].include?(@game.turn_phase.type) && plateau_from.present?
-  end
+  def plateau_pending? = @game.playing? && plateau_from.present?
 
-  def plateau_from = @game.current_player&.supply&.dig("plateau")
+  def plateau_from = @game.current_player&.supply&.dig("plateau", "from")
 
   def plateau_options(row, col)
     @game.instantiate
@@ -37,15 +36,19 @@ class TurnEngine
     contents.neighbors_where(row, col) { |nr, nc| contents.terrain_at(nr, nc) == "M" && contents.available_for_building?(nr, nc) }
   end
 
+  # Starts the choice if the click was such a build; true when it did.
   def offer_plateau(before)
-    return unless @game.plateaus? && @game.turn_phase.type != "canoe"
+    return false unless @game.plateaus?
     player = @game.current_player
     after = @game.board_contents.settlements_for(player.order)
     added = after - before
-    return unless added.one? && (before - after).empty? && !@game.board_contents.city_hall_at?(*added.first)
-    return if plateau_options(*added.first).empty?
-    player.supply["plateau"] = added.first
+    return false unless added.one? && (before - after).empty? && !@game.board_contents.city_hall_at?(*added.first)
+    return false if plateau_options(*added.first).empty?
+    player.supply["plateau"] = { "from" => added.first, "reaction_done" => @reaction_done, "emptied" => @emptied.any? }
+    @reaction_done = false
+    @emptied.clear
     player.save
+    true
   end
 
   def resolve_plateau(coordinate)
@@ -66,9 +69,12 @@ class TurnEngine
         message: "#{player.player.handle} moved the settlement from [#{from[0]}, #{from[1]}] to the mountain at [#{target[0]}, #{target[1]}]"
       )
     end
-    player.supply.delete("plateau")
+    pending = player.supply.delete("plateau")
+    @reaction_done = pending["reaction_done"]
+    @emptied << :deferred if pending["emptied"]
     player.save
     @game.save
+    open_reactions!
   end
 
   def plateau_turn_state
@@ -85,7 +91,7 @@ class TurnEngine
   # The confirmation is only needed when control passes to another player.
 
   def skip_canoe
-    return "Not allowed" unless @game.turn_phase.type == "canoe"
+    return "Not allowed" unless @game.turn_phase.type == "canoe" && !plateau_pending?
     capture_undo_snapshot
     record_move(
       action: "skip_canoe",
