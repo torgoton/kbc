@@ -32,11 +32,7 @@ module Tiles
         return adjacent unless adjacent.empty?
 
         # Fallback: all empty hexes of that terrain anywhere on board
-        (0..19).flat_map do |r|
-          (0..19).filter_map do |c|
-            [ r, c ] if board_contents.available_for_building?(r, c) && board_contents.terrain_at(r, c) == terrain
-          end
-        end
+        board_contents.cells.select { |r, c| board_contents.available_for_building?(r, c) && board_contents.terrain_at(r, c) == terrain }
       end
 
       def activatable?(player_order:, board_contents:, hand: nil, supply: Hash.new(0))

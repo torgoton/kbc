@@ -15,6 +15,12 @@ class BoardState
   # game.instantiate so BoardState can answer both occupancy and terrain.
   attr_writer :terrain_source
 
+  MAIN = (0..19)
+  MAIN_CELLS = MAIN.flat_map { |r| MAIN.map { |c| [ r, c ] } }.freeze
+  # The Island decree's board lives below the main map; see Boards::Island.
+  ISLAND_ROWS = (Boards::Island::ROW..Boards::Island::ROW + 6)
+  ISLAND_COLS = (Boards::Island::COL..Boards::Island::COL + 8)
+
   def initialize
     @cells = {}
   end
@@ -22,6 +28,21 @@ class BoardState
   def initialize_copy(original)
     @cells = original.instance_variable_get(:@cells).transform_values(&:dup)
     @terrain_source = original.instance_variable_get(:@terrain_source)
+  end
+
+  # Every hex that can be played on: the main map plus the Island, when the game has one.
+  def cells
+    island = @terrain_source.respond_to?(:island_cells) ? @terrain_source.island_cells : []
+    MAIN_CELLS + island
+  end
+
+  def occupied = @cells.keys
+
+  # The main map and the Island are separate boards: from a hex, `from` is a row in the board
+  # being walked, and a step that crosses to the other board is out of bounds.
+  def in_bounds?(row, col, from: row)
+    return false unless (row >= Boards::Island::ROW) == (from >= Boards::Island::ROW)
+    row >= Boards::Island::ROW ? ISLAND_ROWS.cover?(row) && ISLAND_COLS.cover?(col) : MAIN.cover?(row) && MAIN.cover?(col)
   end
 
   def terrain_at(row, col)
@@ -155,11 +176,7 @@ class BoardState
   # `terrains`, row-major. The "anywhere on this terrain" set used by the
   # Outpost power (ADR-0001's "all buildable terrain cells" primitive).
   def available_cells_of(terrains)
-    (0..19).flat_map do |row|
-      (0..19).filter_map do |col|
-        [ row, col ] if available_for_building?(row, col) && terrains.include?(terrain_at(row, col))
-      end
-    end
+    cells.select { |row, col| available_for_building?(row, col) && terrains.include?(terrain_at(row, col)) }
   end
 
   def move_settlement(from_row, from_col, to_row, to_col)
@@ -224,7 +241,7 @@ class BoardState
   def neighbors(row, col)
     ADJACENCIES[row % 2].filter_map do |dr, dc|
       nr, nc = row + dr, col + dc
-      [ nr, nc ] if (0..19).cover?(nr) && (0..19).cover?(nc)
+      [ nr, nc ] if in_bounds?(nr, nc, from: row)
     end
   end
 

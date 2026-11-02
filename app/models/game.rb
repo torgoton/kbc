@@ -8,6 +8,7 @@
 #  completed_at      :datetime
 #  current_action    :json
 #  deck              :json
+#  decree            :json
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json
@@ -50,12 +51,9 @@ class Game < ApplicationRecord
     "marshlands" => { label: "Marshlands", enabled: true },
     "harvest" => { label: "Harvest", enabled: true }
   }.freeze
-  QUEENIES = {
-    "capitol" => "Capitol",
-    "caves" => "Caves",
-    "island" => "The Island",
-    "emperors_choice" => "Emperor's Choice"
-  }.freeze
+  QUEENIES = %w[emperors_choice].freeze
+  DECREE_CHANCES = %w[80 100].freeze
+  DECREES = %w[island].freeze
   DEFAULT_OPTIONS = { "expansions" => %w[nomads crossroads], "nomads_sword" => true }.freeze
 
   has_many :game_players, dependent: :destroy
@@ -104,6 +102,10 @@ class Game < ApplicationRecord
     order ? game_players.find { |g| g.order == order }&.id : current_player_id
   end
 
+  def island?
+    decree&.dig("name") == "island"
+  end
+
   def waiting?
     state.to_s == "waiting"
   end
@@ -139,6 +141,7 @@ class Game < ApplicationRecord
     moves.build(order: move_count, action: "start_game", message: "Game started.", deliberate: false, reversible: false)
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
+    select_decree(options)
     populate_boards(options)
     select_goals
     initialize_terrain_deck
@@ -275,11 +278,8 @@ class Game < ApplicationRecord
   def legal_builds(game_player, terrain: nil)
     terrain ||= game_player.hand_terrains.first
     instantiate
-    list = TurnEngine.new(self).available_list(game_player.order, terrain)
-    return [] unless list
-    list.each_with_index.flat_map do |row_cells, row|
-      row_cells.each_index.select { |col| row_cells[col] }.map { |col| [ row, col ] }
-    end
+    return [] unless playing?
+    board_contents.buildable_cells_for(game_player.order, terrain).sort
   end
 
   # Stable domain query: the held tiles game_player could activate right now
@@ -378,6 +378,13 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "board",
       partial: "games/board",
+      locals: { game: self }
+    )
+    # - Island pull-tab (the decree is drawn when the game starts)
+    broadcast_update_to(
+      "game_#{id}",
+      target: "island-control",
+      partial: "games/island_tab",
       locals: { game: self }
     )
     # - game log
@@ -575,6 +582,25 @@ class Game < ApplicationRecord
     save
   end
 
+  # The Emperor's Choice: with the chosen chance one decree is drawn before any turn, and it
+  # stays visible to everyone. Unlike `options` (what the table chose), `decree` is what happened.
+  def select_decree(options = {})
+    self.decree = nil
+    return unless Array(self.options["queenies"]).include?("emperors_choice")
+    chance = (options[:decree_chance] || self.options["decree_chance"] || DECREE_CHANCES.first).to_i
+    return unless rand(100) < chance
+    self.decree = { "name" => DECREES.sample, "map" => rand(Boards::Island::SECTIONS.size) }
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "select_decree",
+      message: "Decree drawn: #{decree['name'].humanize}",
+      payload: { "decree" => decree },
+      deliberate: false,
+      reversible: false
+    )
+  end
+
   def populate_boards(options = {})
     state = BoardState.new
     instantiate
@@ -591,6 +617,11 @@ class Game < ApplicationRecord
     nomad_pool = Boards::Board::NOMAD_TILE_POOL.shuffle
     if options[:no_swords] || self.options["nomads_sword"] == false
       nomad_pool.reject! { |t| t.include?("SwordTile") }
+    end
+    @board.island&.location_hexes&.each do |loc|
+      klass = "#{loc[:k]}Tile"
+      state.place_tile(loc[:r], loc[:c], klass, 2)
+      placements << { row: loc[:r], col: loc[:c], klass:, qty: 2 }
     end
     @board.map.each_with_index do |board_section, i|
       board_section.silver_hexes.select { |h| h[:k] == "Nomad" }.each do |nomad_hex|
@@ -708,7 +739,7 @@ class Game < ApplicationRecord
   end
 
   def board_has_castles?
-    board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
+    board.silver_hexes_of("Castle").any?
   end
 
   def board_has_palaces?

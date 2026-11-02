@@ -258,7 +258,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
   # Build a mandatory settlement. This phase owns the action; the engine supplies
   # the shared primitives. Outpost waives adjacency and re-derives the card from
   # the clicked hex; otherwise a still-unlocked two-card hand is disambiguated by
-  # which card can legally build on the clicked cell (available_list).
+  # which card can legally build on the clicked cell (buildable_cells_for).
   def click(coordinate, engine)
     row, col = coordinate.row, coordinate.col
     engine.capture_undo_snapshot

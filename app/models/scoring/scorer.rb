@@ -18,9 +18,10 @@ class Scoring
     def neighbors(r, c) = board_contents.neighbors(r, c)
 
     def count_adjacent_to(order, terrain)
+      terrains = terrain == "W" ? Boards::Board::WATER : [ terrain ]
       settlements_for(order).count do |r, c|
-        board_contents.terrain_at(r, c) != terrain &&
-          neighbors(r, c).any? { |nr, nc| board_contents.terrain_at(nr, nc) == terrain }
+        !terrains.include?(board_contents.terrain_at(r, c)) &&
+          neighbors(r, c).any? { |nr, nc| terrains.include?(board_contents.terrain_at(nr, nc)) }
       end
     end
 
@@ -28,11 +29,7 @@ class Scoring
 
     def silver_hexes_of(kind)
       @silver_hexes_of ||= {}
-      @silver_hexes_of[kind] ||= board.map.each_with_index.flat_map do |section, i|
-        section.silver_hexes
-               .select { |h| h[:k] == kind }
-               .map { |h| [ i / 2 * 10 + h[:r], i % 2 * 10 + h[:c] ] }
-      end
+      @silver_hexes_of[kind] ||= board.silver_hexes_of(kind)
     end
 
     # 5 points for each of +hexes+ where the player has the most adjacent settlements (ties score for all tied).
@@ -94,9 +91,7 @@ class Scoring
 
     def terrain_hexes(terrain)
       @terrain_hexes ||= {}
-      @terrain_hexes[terrain] ||= 20.times.flat_map do |r|
-        20.times.filter_map { |c| [ r, c ] if board_contents.terrain_at(r, c) == terrain }
-      end
+      @terrain_hexes[terrain] ||= board_contents.cells.select { |r, c| board_contents.terrain_at(r, c) == terrain }
     end
   end
 end

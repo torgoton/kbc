@@ -1,7 +1,7 @@
 require "test_helper"
 
 class BoardTest < ActiveSupport::TestCase
-  GameStub = Struct.new(:boards, :board_contents)
+  GameStub = Struct.new(:boards, :board_contents) { def island? = false }
 
   def game_with_boards(*ids)
     contents = BoardState.new

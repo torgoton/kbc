@@ -50,17 +50,6 @@ class TurnEngine
     @reaction_done = true
   end
 
-  # A 20x20 boolean grid of the cells legal for a mandatory-style build of
-  # `terrain` (used for 2-card terrain disambiguation and view highlighting).
-  # A grid view of BoardState#buildable_cells_for — the adjacent-if-possible
-  # rule lives there, not here.
-  def available_list(active_player, terrain)
-    return nil unless @game.playing?
-    grid = Array.new(20) { Array.new(20, false) }
-    @game.board_contents.buildable_cells_for(active_player, terrain).each { |row, col| grid[row][col] = true }
-    grid
-  end
-
   def activate_outpost
     capture_undo_snapshot
     @game.instantiate

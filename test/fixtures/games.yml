@@ -10,6 +10,7 @@
 #  completed_at      :datetime
 #  current_action    :json
 #  deck              :json
+#  decree            :json
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json

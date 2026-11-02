@@ -14,7 +14,7 @@ module Tiles
           loop do
             dr, dc = steps[r % 2]
             nr, nc = r + dr, c + dc
-            break unless (0..19).cover?(nr) && (0..19).cover?(nc) &&
+            break unless board_contents.in_bounds?(nr, nc, from: r) &&
                          board_contents.available_for_building?(nr, nc) &&
                          BUILDABLE_TERRAIN.include?(board_contents.terrain_at(nr, nc))
             last = [ nr, nc ]

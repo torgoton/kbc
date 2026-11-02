@@ -23,11 +23,7 @@ module Tiles
 
         return adjacent unless adjacent.empty?
 
-        (0..19).flat_map do |r|
-          (0..19).filter_map do |c|
-            [ r, c ] if border.(r, c) && board_contents.available_for_building?(r, c) && buildable.(r, c)
-          end
-        end
+        board_contents.cells.select { |r, c| border.(r, c) && board_contents.available_for_building?(r, c) && buildable.(r, c) }
       end
     end
   end

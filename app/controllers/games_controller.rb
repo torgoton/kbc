@@ -305,6 +305,11 @@ class GamesController < ApplicationController
     expansions = Array(raw.permit(expansions: [])[:expansions]) & allowed
     options = { "expansions" => expansions }
     options["nomads_sword"] = raw[:nomads_sword] == "1" if expansions.include?("nomads")
+    queenies = Array(raw.permit(queenies: [])[:queenies]) & Game::QUEENIES
+    if queenies.any?
+      options["queenies"] = queenies
+      options["decree_chance"] = Game::DECREE_CHANCES.include?(raw[:decree_chance]) ? raw[:decree_chance].to_i : 80
+    end
     options
   end
 end

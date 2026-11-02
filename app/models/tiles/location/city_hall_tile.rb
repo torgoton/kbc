@@ -17,11 +17,7 @@ module Tiles
       def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order:, hand: nil, supply: Hash.new(0))
         return [] if supply["city_hall"].to_i < 1
 
-        (0..19).flat_map do |r|
-          (0..19).filter_map do |c|
-            [ r, c ] if valid_center?(r, c, board_contents:, player_order:)
-          end
-        end
+        board_contents.cells.select { |r, c| valid_center?(r, c, board_contents:, player_order:) }
       end
 
       def action_message(player_handle:, terrain_names:, hand: nil)

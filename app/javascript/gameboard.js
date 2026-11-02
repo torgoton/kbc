@@ -58,6 +58,23 @@ function prepForMove() {
   }
 }
 
+// The pull-tab swaps the sidebars with the Island. The tab itself is re-rendered by broadcasts,
+// so listen on the document.
+function initIslandTab() {
+  function toggle() {
+    const area = document.getElementById("game-area");
+    const tab = document.getElementById("island-tab");
+    if (!area || !tab) return;
+    const on = area.classList.toggle("island-view");
+    tab.setAttribute("aria-pressed", on);
+    document.getElementById("board-viewport")?.dispatchEvent(new CustomEvent("island-view", { detail: { on } }));
+  }
+  document.addEventListener("click", (e) => { if (e.target.closest("#island-tab")) toggle(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "i" && !e.ctrlKey && !e.metaKey && !e.altKey && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) toggle();
+  });
+}
+
 function initBoardZoom() {
   const viewport = document.getElementById("board-viewport");
   const board = document.getElementById("board");
@@ -70,16 +87,26 @@ function initBoardZoom() {
     board.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
   }
 
+  // The viewport spans the whole game area (the Island sits under the sidebars); `main` is the
+  // part the map itself is fitted to.
+  const main = viewport.parentElement;
+
+  // Map plus Island, unscaled.
+  function extentWidth() {
+    const island = document.getElementById("island");
+    return island ? island.offsetLeft + island.offsetWidth : board.offsetWidth;
+  }
+
   function clampTranslation(newTx, newTy, newScale) {
     const vpW = viewport.clientWidth;
     const vpH = viewport.clientHeight;
-    const scaledW = board.offsetWidth * newScale;
+    const mapW = board.offsetWidth * newScale;
+    const scaledW = extentWidth() * newScale;
     const scaledH = board.offsetHeight * newScale;
-    // When zoomed in (board larger than viewport), prevent panning past edges.
-    // When at minScale (board smaller in one dimension), snap to padded position.
-    const clampedTx = scaledW >= vpW
-      ? Math.min(0, Math.max(vpW - scaledW, newTx))
-      : (vpW - scaledW) / 2;
+    // A map narrower than its column is centred in it; wider, pan within map + Island.
+    const clampedTx = mapW < main.clientWidth
+      ? (main.clientWidth - mapW) / 2
+      : Math.min(0, Math.max(vpW - scaledW, newTx));
     const clampedTy = scaledH >= vpH
       ? Math.min(0, Math.max(vpH - scaledH, newTy))
       : padTop;
@@ -87,16 +114,38 @@ function initBoardZoom() {
   }
 
   function fitBoard() {
-    const vpW = viewport.clientWidth;
+    const mainW = main.clientWidth;
     const vpH = viewport.clientHeight;
     const bW = board.offsetWidth;
     const bH = board.offsetHeight;
     if (!bW || !bH) return;
-    scale = Math.min((vpW - pad * 2) / bW, (vpH - padTop - pad) / bH);
+    scale = Math.min((mainW - pad * 2) / bW, (vpH - padTop - pad) / bH);
     minScale = scale;
     [tx, ty] = clampTranslation(0, 0, scale);
     applyTransform();
   }
+
+  // Island view: the sidebars slide left and uncover the Island, so centre it in the strip
+  // they left free. Leaving restores wherever the map was.
+  let mapView = null;
+  viewport.addEventListener("island-view", (e) => {
+    const island = document.getElementById("island");
+    if (!island) return;
+    board.style.transition = "transform 0.35s ease";
+    setTimeout(() => { board.style.transition = ""; }, 400);
+    if (e.detail.on) {
+      mapView = { tx, ty, scale };
+      const vp = viewport.getBoundingClientRect();
+      const box = island.getBoundingClientRect();
+      const stripCentre = (viewport.clientWidth + (viewport.clientWidth - main.clientWidth)) / 2;
+      const [cx, cy] = [(box.left - vp.left - tx + box.width / 2) / scale, (box.top - vp.top - ty + box.height / 2) / scale];
+      [tx, ty] = clampTranslation(stripCentre - cx * scale, viewport.clientHeight / 2 - cy * scale, scale);
+    } else if (mapView) {
+      ({ scale } = mapView);
+      [tx, ty] = clampTranslation(mapView.tx, mapView.ty, scale);
+    }
+    applyTransform();
+  });
 
   let dragging = false, hasDragged = false, dragX = 0, dragY = 0;
 
@@ -199,5 +248,6 @@ prepForMove();
 enableClicks();
 // set up board zoom
 initBoardZoom();
+if (!window.islandTabBound) { window.islandTabBound = true; initIslandTab(); }
 // set up sound triggers
 initSoundTriggers();

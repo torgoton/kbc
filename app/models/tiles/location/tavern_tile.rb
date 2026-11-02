@@ -61,7 +61,7 @@ module Tiles
       end
 
       def valid_build?(r, c, board_contents)
-        (0..19).cover?(r) && (0..19).cover?(c) &&
+        board_contents.in_bounds?(r, c) &&
           board_contents.available_for_building?(r, c) &&
           BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c))
       end

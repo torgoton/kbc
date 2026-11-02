@@ -10,6 +10,7 @@
     --clr-p-d: #cccccc;
     --clr-p-e: #aa00aa;
 
+    --main-share: 0.6; /* main's share of #game-area; keep in step with its 6fr 2fr 2fr columns */
     --fx-hex-transparency: 20%;
     --fx-loc-transparency: 35%;
 }
@@ -40,7 +41,7 @@ body.game-page {
 
 main {
     grid-area: main;
-    overflow: hidden;
+    overflow: visible; /* the board viewport reaches under the sidebars, for the Island */
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -51,7 +52,7 @@ main {
     overflow: hidden;
     position: relative;
     cursor: grab;
-    container-type: inline-size;
+    width: calc(100% / var(--main-share)); /* all of #game-area: pan/zoom reaches the Island under the sidebars */
     --hex-row-height: 3.927cqw; /* board rows and the Mayor markers beside them */
 }
 
@@ -147,12 +148,12 @@ section#log-chat {
     margin: 1px;
     padding: 1px;
     overflow-wrap: anywhere;
-    &.a { background-color: oklch(from var(--clr-p-a) l c h / 30%); }
-    &.b { background-color: oklch(from var(--clr-p-b) l c h / 30%); }
-    &.c { background-color: oklch(from var(--clr-p-c) l c h / 30%); }
-    &.d { background-color: oklch(from var(--clr-p-d) l c h / 30%); }
-    &.e { background-color: oklch(from var(--clr-p-e) l c h / 30%); }
-    &.system { background-color: oklch(from gray l c h / 30%); opacity: 0.7; font-style: italic; }
+    &.a { background-color: oklch(from var(--clr-p-a) l c h / 60%); }
+    &.b { background-color: oklch(from var(--clr-p-b) l c h / 60%); }
+    &.c { background-color: oklch(from var(--clr-p-c) l c h / 60%); }
+    &.d { background-color: oklch(from var(--clr-p-d) l c h / 60%); }
+    &.e { background-color: oklch(from var(--clr-p-e) l c h / 60%); }
+    &.system { background-color: oklch(from gray l c h / 60%); font-style: italic; }
 }
 
 .chat-message .handle {
@@ -184,7 +185,8 @@ section#log-chat {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
+    width: calc(100% * var(--main-share)); /* the main column; hex sizes (cqw) are relative to this */
+    container-type: inline-size;
     transform-origin: 0 0;
     /* ponytail: no `will-change: transform` — it pins Chrome to a base-scale
        cached raster texture, so zooming in upscales that bitmap and pixellates
@@ -702,6 +704,18 @@ ul li .hex:hover .hex-bg {
     background-position: center 50%;
 }
 
+.tile-container.ropebridge {
+    background-image: url("gold/ropebridge.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.treehouse {
+    background-image: url("gold/treehouse.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
 .tile-container.farmland {
     background-image: url("permanent/farmland.svg");
     background-size: 75%;
@@ -1174,7 +1188,7 @@ ul li .hex:hover .hex-bg {
 
 
 .player-area {
-    background-color: #4a7a4a;
+    background-color: #4a7a4ae0;
     color: #111;
     padding: 4px;
     flex: 1 0 auto;
@@ -1182,7 +1196,7 @@ ul li .hex:hover .hex-bg {
 }
 
 .player-area:has(.player-spinner) {
-    background-color: #5a8f5a;
+    background-color: #5a8f5ae0;
     border-left-color: var(--clr-g-link);
 }
 
@@ -1813,4 +1827,128 @@ ul li .hex:hover .hex-bg {
     background-image: url("gold/canoebonus.svg");
     background-size: 70%;
     background-position: center 75%;
+}
+
+
+/* ---- The Island decree ---- */
+
+/* Sidebars slide over the board; the pull-tab rides their edge. */
+aside, section#log-chat {
+    position: relative;
+    z-index: 5;
+    transition: transform 0.35s ease;
+}
+
+#game-area {
+    position: relative;
+}
+
+#game-area.island-view aside,
+#game-area.island-view section#log-chat {
+    transform: translateX(-300%); /* 3 sidebar widths: from the right 40% to the left 40% */
+}
+
+#island-control {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--main-share) * 100%);
+    z-index: 6;
+    transform: translate(-50%, -50%);
+    transition: left 0.35s ease;
+}
+
+#game-area.island-view #island-control {
+    left: calc((1 - var(--main-share)) * 100%);
+}
+
+#island-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 30px;
+    height: 170px;
+    padding: 8px 0;
+    border: 2px solid #0008;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #2f6f8f, #5ab0d0 45%, #2f6f8f);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 2px 8px #0008;
+}
+
+#island-tab:hover {
+    filter: brightness(1.15);
+}
+
+#island-tab:focus-visible {
+    outline: 3px solid var(--clr-g-link);
+}
+
+.island-tab-icon {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.island-tab-label {
+    writing-mode: vertical-rl;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.island-tab-label .to-map,
+#game-area.island-view .island-tab-label .to-island {
+    display: none;
+}
+
+#game-area.island-view .island-tab-label .to-map {
+    display: inline;
+}
+
+.island-tab-grip {
+    width: 12px;
+    height: 10px;
+    background: repeating-linear-gradient(#0006 0 2px, transparent 2px 5px);
+}
+
+/* The Island sits right of the board at the same scale: a hex is 2 of these columns wide. */
+#island {
+    --hex-col: calc(100cqw * 28 / 1197); /* a quadrant column: the board's 28/57 share over 21 columns */
+    position: absolute;
+    left: calc(100% + 4cqw);
+    top: 50%;
+    transform: translateY(-50%);
+    width: calc(19 * var(--hex-col)); /* 19 columns */
+    height: calc(7 * var(--hex-row-height) + 1.31cqw);
+}
+
+#island .island-sea, #island .island-land {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(19, var(--hex-col));
+    grid-template-rows: repeat(7, var(--hex-row-height));
+}
+
+#island .island-sea {
+    filter: url(#island-shore);
+}
+
+#island .spacer {
+    grid-column: span 1;
+}
+
+.sea-hex, .no-hex {
+    grid-column: span 2;
+    height: 5.236cqw;
+    align-self: start;
+}
+
+.sea-hex {
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    background: color-mix(in srgb, #8cf, transparent var(--fx-hex-transparency));
 }
