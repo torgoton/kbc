@@ -30,20 +30,17 @@ class IslandTest < ActiveSupport::TestCase
     assert_not state.in_bounds?(20, 5, from: 19)
   end
 
-  # The decree is drawn at random from the pool, so keep dealing until it's the Island (or isn't drawn).
   def started_game(options)
-    loop do
-      game = Game.new(state: "waiting", options:)
-      game.add_player(users(:chris))
-      game.add_player(users(:jules))
-      game.save!
-      game.start
-      return game if game.island? || options["decree_chance"].nil?
-    end
+    game = Game.new(state: "waiting", options:)
+    game.add_player(users(:chris))
+    game.add_player(users(:jules))
+    game.save!
+    game.start
+    game
   end
 
-  test "100% decree chance draws the Island, places its tiles, and sea hexes count as water" do
-    game = started_game("queenies" => [ "emperors_choice" ], "decree_chance" => 100)
+  test "the Island decree puts the Island in play, places its tiles, and sea hexes count as water" do
+    game = started_game("decree" => "island")
     assert game.island?
     game.instantiate
     loc = game.board.island.location_hexes.first
@@ -53,7 +50,7 @@ class IslandTest < ActiveSupport::TestCase
     assert_equal 1, Scoring::Goals::Fishermen.new(game).score_for(game.game_players.first)[:score]
   end
 
-  test "no Emperor's Choice means no decree" do
+  test "no chosen decree means no decree" do
     assert_not started_game({}).island?
   end
 end

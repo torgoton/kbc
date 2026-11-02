@@ -33,7 +33,9 @@ class GamesController < ApplicationController
     @game = Game.find(params[:id])
     @game.instantiate
     @my_player = @game.game_players.find { |gp| gp.player == Current.user }
-    render :show, locals: { game: @game, my_player: @my_player }
+    # Always HTML: a Turbo form's redirect to here carries its turbo-stream Accept header, and a
+    # stream response would be appended to the page the form was on (the dashboard).
+    render :show, formats: :html, locals: { game: @game, my_player: @my_player }
   end
 
   # ACTION - do a part of a turn by a player. Either
@@ -313,11 +315,7 @@ class GamesController < ApplicationController
     expansions = Array(raw.permit(expansions: [])[:expansions]) & allowed
     options = { "expansions" => expansions }
     options["nomads_sword"] = raw[:nomads_sword] == "1" if expansions.include?("nomads")
-    queenies = Array(raw.permit(queenies: [])[:queenies]) & Game::QUEENIES
-    if queenies.any?
-      options["queenies"] = queenies
-      options["decree_chance"] = Game::DECREE_CHANCES.include?(raw[:decree_chance]) ? raw[:decree_chance].to_i : 80
-    end
+    options["decree"] = raw[:decree] if Game::DECREES.key?(raw[:decree])
     options
   end
 end

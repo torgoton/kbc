@@ -24,6 +24,12 @@ class GameOptionsTest < ActiveSupport::TestCase
     Array.new(RUNS) { started_game(options).boards.map(&:first) }
   end
 
+  test "options_label adds the chosen decree when there is one" do
+    assert_equal "Expansions: None", Game.new(options: {}).options_label
+    assert_equal "Expansions: None · Decree: Native Soil", Game.new(options: { "decree" => "native_soil" }).options_label
+    assert_equal "Expansions: Crossroads", Game.new(options: { "expansions" => %w[crossroads], "decree" => "bogus" }).options_label
+  end
+
   test "expansions_label lists included expansions or None" do
     assert_equal "Expansions: Crossroads, Harvest", Game.new(options: { "expansions" => %w[harvest crossroads] }).expansions_label
     assert_equal "Expansions: Nomads (Maybe Sword)", Game.new(options: { "expansions" => %w[nomads] }).expansions_label

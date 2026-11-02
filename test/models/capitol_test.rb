@@ -3,12 +3,11 @@ require "test_helper"
 class CapitolTest < ActiveSupport::TestCase
   def capitol_game(board_ids: nil)
     loop do
-      game = Game.new(state: "waiting", options: { "queenies" => [ "emperors_choice" ], "decree_chance" => 100 })
+      game = Game.new(state: "waiting", options: { "decree" => "capitol" })
       game.add_player(users(:chris))
       game.add_player(users(:jules))
       game.save!
       game.start
-      next game.destroy unless game.capitol?
       return game if board_ids.nil? || board_ids.call(game.boards.map(&:first))
       game.destroy
     end

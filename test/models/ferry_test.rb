@@ -2,14 +2,12 @@ require "test_helper"
 
 class FerryTest < ActiveSupport::TestCase
   def ferry_game
-    loop do
-      game = Game.new(state: "waiting", options: { "queenies" => [ "emperors_choice" ], "decree_chance" => 100 })
-      game.add_player(users(:chris))
-      game.add_player(users(:jules))
-      game.save!
-      game.start
-      return game if game.ferry?
-    end
+    game = Game.new(state: "waiting", options: { "decree" => "ferry" })
+    game.add_player(users(:chris))
+    game.add_player(users(:jules))
+    game.save!
+    game.start
+    game
   end
 
   test "the ferry sits in the largest body of water, and every player gets the Ferry tile" do

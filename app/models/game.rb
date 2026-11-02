@@ -51,8 +51,6 @@ class Game < ApplicationRecord
     "marshlands" => { label: "Marshlands", enabled: true },
     "harvest" => { label: "Harvest", enabled: true }
   }.freeze
-  QUEENIES = %w[emperors_choice].freeze
-  DECREE_CHANCES = %w[80 100].freeze
   # The Emperor's Choice decrees: `description` is the player-facing rule text shown in the game.
   DECREES = {
     "island" => {
@@ -95,7 +93,7 @@ class Game < ApplicationRecord
   }.freeze
   # The permanent tile each of these decrees gives every player.
   DECREE_TILES = { "ferry" => "FerryTile", "caves" => "CaveTile", "spy_network" => "SpyNetworkTile" }.freeze
-  DEFAULT_OPTIONS = { "expansions" => %w[nomads crossroads], "nomads_sword" => true }.freeze
+  DEFAULT_OPTIONS = { "expansions" => [], "nomads_sword" => true }.freeze
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -233,7 +231,7 @@ class Game < ApplicationRecord
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
     initialize_terrain_deck
-    select_decree(options)
+    select_decree
     populate_boards(options)
     select_goals
     remove_scouts_terrain if Array(goals).include?("scouts")
@@ -355,6 +353,12 @@ class Game < ApplicationRecord
       key == "nomads" ? "#{exp[:label]} (#{options['nomads_sword'] == false ? 'No Sword' : 'Maybe Sword'})" : exp[:label]
     end
     "Expansions: #{labels.presence&.join(', ') || 'None'}"
+  end
+
+  # The game-options line shown on the dashboard: expansions, then the chosen decree if any.
+  # e.g. "Expansions: Nomads (Maybe Sword) · Decree: Ferry"
+  def options_label
+    [ expansions_label, (decree_label = DECREES.dig(options["decree"], :label)) && "Decree: #{decree_label}" ].compact.join(" · ")
   end
 
   def player_handles
@@ -674,20 +678,19 @@ class Game < ApplicationRecord
     save
   end
 
-  # The Emperor's Choice: with the chosen chance one decree is drawn before any turn, and it
-  # stays visible to everyone. Unlike `options` (what the table chose), `decree` is what happened.
-  def select_decree(options = {})
+  # The Emperor's Choice: the decree the table chose (options["decree"]) is put in play before any
+  # turn, and stays visible to everyone. Unlike `options` (what the table chose), `decree` is what
+  # is in play, with whatever was placed for it.
+  def select_decree
     self.decree = nil
-    return unless Array(self.options["queenies"]).include?("emperors_choice")
-    chance = (options[:decree_chance] || self.options["decree_chance"] || DECREE_CHANCES.first).to_i
-    return unless rand(100) < chance
-    self.decree = { "name" => DECREES.keys.sample }
+    return unless DECREES.key?(options["decree"])
+    self.decree = { "name" => options["decree"] }
     decree["map"] = rand(Boards::Island::SECTIONS.size) if island?
     self.move_count += 1
     moves.build(
       order: move_count,
       action: "select_decree",
-      message: "Decree drawn: #{decree_info[:label]}",
+      message: "Decree: #{decree_info[:label]}",
       payload: { "decree" => decree },
       deliberate: false,
       reversible: false

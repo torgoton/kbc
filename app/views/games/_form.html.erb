@@ -52,19 +52,10 @@
           </label><br>
         <% end %>
       <% end %>
-  </fieldset>
-
-  <fieldset>
-    <label>
-      <%= check_box_tag "game[options][queenies][]", "emperors_choice", false, id: "game_options_queenies_emperors_choice",
-            onchange: "document.querySelectorAll('input[id^=game_options_decree_chance]').forEach(r => r.disabled = !this.checked)" %>
-      The Emperor's Choice
-    </label><br>
-    <% { "80" => "80% chance of Decree", "100" => "100% chance of Decree" }.each do |chance, label| %>
-      <label style="margin-left: 1.5em">
-        <%= radio_button_tag "game[options][decree_chance]", chance, chance == "80", disabled: true %> <%= label %>
-      </label><br>
-    <% end %>
+    <label for="game_options_decree">The Emperor's Choice</label>
+    <%= select_tag "game[options][decree]",
+          options_for_select([ [ "None", "" ] ] + Game::DECREES.map { |key, d| [ d[:label], key ] }.sort_by(&:first)),
+          id: "game_options_decree" %>
   </fieldset>
 
   <div>

@@ -2,14 +2,12 @@ require "test_helper"
 
 class CavesTest < ActiveSupport::TestCase
   def caves_game
-    loop do
-      game = Game.new(state: "waiting", options: { "queenies" => [ "emperors_choice" ], "decree_chance" => 100 })
-      game.add_player(users(:chris))
-      game.add_player(users(:jules))
-      game.save!
-      game.start
-      return game if game.caves?
-    end
+    game = Game.new(state: "waiting", options: { "decree" => "caves" })
+    game.add_player(users(:chris))
+    game.add_player(users(:jules))
+    game.save!
+    game.start
+    game
   end
 
   test "distance counts hex steps on offset rows" do

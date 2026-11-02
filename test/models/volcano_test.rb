@@ -1,16 +1,13 @@
 require "test_helper"
 
 class VolcanoTest < ActiveSupport::TestCase
-  # The decree is drawn at random from the pool, so keep dealing until it's the Volcano.
   def volcano_game
-    loop do
-      game = Game.new(state: "waiting", options: { "queenies" => [ "emperors_choice" ], "decree_chance" => 100 })
-      game.add_player(users(:chris))
-      game.add_player(users(:jules))
-      game.save!
-      game.start
-      return game if game.volcano?
-    end
+    game = Game.new(state: "waiting", options: { "decree" => "volcano" })
+    game.add_player(users(:chris))
+    game.add_player(users(:jules))
+    game.save!
+    game.start
+    game
   end
 
   test "the Volcano starts on a Mountain hex of the main map" do

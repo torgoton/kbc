@@ -2,7 +2,7 @@ require "test_helper"
 
 class NativeSoilTest < ActiveSupport::TestCase
   def started_game(extra = {})
-    options = { "queenies" => [ "emperors_choice" ], "decree_chance" => 100 }.merge(extra)
+    options = { "decree" => "native_soil" }.merge(extra)
     game = Game.new(state: "waiting", options:)
     game.add_player(users(:chris))
     game.add_player(users(:jules))
@@ -10,13 +10,8 @@ class NativeSoilTest < ActiveSupport::TestCase
     game
   end
 
-  # Draw until Native Soil comes up (the pool has more than one decree).
   def native_soil_game(extra = {})
-    loop do
-      game = started_game(extra)
-      game.start
-      return game if game.native_soil?
-    end
+    started_game(extra).tap(&:start)
   end
 
   test "Native Soil takes every card of one terrain out of the deck before anyone is dealt" do
@@ -35,16 +30,12 @@ class NativeSoilTest < ActiveSupport::TestCase
   end
 
   test "Scouts removes a different terrain from the remaining deck" do
-    game = nil
-    loop do
-      game = started_game
-      game.update!(goals: [ "scouts" ])
-      game.move_count = 0
-      game.send(:select_boards)
-      game.send(:initialize_terrain_deck)
-      game.send(:select_decree)
-      break if game.native_soil?
-    end
+    game = started_game
+    game.update!(goals: [ "scouts" ])
+    game.move_count = 0
+    game.send(:select_boards)
+    game.send(:initialize_terrain_deck)
+    game.send(:select_decree)
     game.send(:remove_scouts_terrain)
     assert_not_equal game.native_soil, game.removed_terrain
     assert_equal 15, game.deck.size
@@ -59,7 +50,7 @@ class NativeSoilTest < ActiveSupport::TestCase
   end
 
   test "no decree, no Native Soil" do
-    game = started_game("decree_chance" => 0)
+    game = started_game("decree" => "")
     game.start
     assert_nil game.native_soil
   end
