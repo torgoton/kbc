@@ -83,6 +83,10 @@ class Game < ApplicationRecord
       label: "Spy Network",
       description: "Use one location tile of the opponent to your right."
     },
+    "plateaus" => {
+      label: "Plateaus",
+      description: "You may move every build to an empty adjacent mountain hex."
+    },
     "native_soil" => {
       label: "Native Soil",
       description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
@@ -150,6 +154,8 @@ class Game < ApplicationRecord
   def ferry? = decree&.dig("name") == "ferry"
 
   def caves? = decree&.dig("name") == "caves"
+
+  def plateaus? = decree&.dig("name") == "plateaus"
 
   def capitol? = decree&.dig("name") == "capitol"
 

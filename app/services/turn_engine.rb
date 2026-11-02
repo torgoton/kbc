@@ -9,9 +9,70 @@ class TurnEngine
   end
 
   def click(coordinate)
+    return resolve_plateau(coordinate) if plateau_pending?
+    before = @game.board_contents.settlements_for(@game.current_player.order)
     result = @game.turn_phase.click(coordinate, self)
+    offer_plateau(before) unless result.is_a?(String)
     open_reactions!
     result
+  end
+
+  # --- Plateaus decree -------------------------------------------------------
+  # Any build (a settlement, warrior, ship or wagon placed, nothing moved or removed) next to empty
+  # mountains pauses for a choice: click a highlighted mountain to move the piece there, or click
+  # the piece again to leave it. The pending build's hex is kept in the builder's supply, so undo
+  # (which restores the supply) takes back the whole build. Pickups and goals were decided at the
+  # build hex: moving is a plain relocation.
+
+  def plateau_pending?
+    @game.playing? && !%w[canoe canoe_confirm].include?(@game.turn_phase.type) && plateau_from.present?
+  end
+
+  def plateau_from = @game.current_player&.supply&.dig("plateau")
+
+  def plateau_options(row, col)
+    @game.instantiate
+    # Without the piece itself, so a warrior doesn't block the hexes it could move to.
+    contents = @game.board_contents.dup.tap { |c| c.remove(row, col) }
+    contents.neighbors_where(row, col) { |nr, nc| contents.terrain_at(nr, nc) == "M" && contents.available_for_building?(nr, nc) }
+  end
+
+  def offer_plateau(before)
+    return unless @game.plateaus? && @game.turn_phase.type != "canoe"
+    player = @game.current_player
+    after = @game.board_contents.settlements_for(player.order)
+    added = after - before
+    return unless added.one? && (before - after).empty? && !@game.board_contents.city_hall_at?(*added.first)
+    return if plateau_options(*added.first).empty?
+    player.supply["plateau"] = added.first
+    player.save
+  end
+
+  def resolve_plateau(coordinate)
+    player = @game.current_player
+    from = plateau_from
+    target = [ coordinate.row, coordinate.col ]
+    unless target == from
+      return "Not available" unless plateau_options(*from).include?(target)
+      @game.board_contents_will_change!
+      @game.board_contents.move_settlement(*from, *target)
+      record_move(
+        action: "plateau_move",
+        deliberate: false,
+        reversible: true,
+        game_player: player,
+        from: "[#{from[0]}, #{from[1]}]",
+        to: "[#{target[0]}, #{target[1]}]",
+        message: "#{player.player.handle} moved the settlement from [#{from[0]}, #{from[1]}] to the mountain at [#{target[0]}, #{target[1]}]"
+      )
+    end
+    player.supply.delete("plateau")
+    player.save
+    @game.save
+  end
+
+  def plateau_turn_state
+    "#{@game.current_player.player.handle}: move to mountain or click again"
   end
 
   # --- Canoe reactions -------------------------------------------------------
@@ -70,6 +131,7 @@ class TurnEngine
   end
 
   def activate_fort_tile
+    return "Not available" if plateau_pending?
     capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
@@ -276,6 +338,7 @@ class TurnEngine
   end
 
   def select_action(type)
+    return "Not available" if plateau_pending?
     capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
     payload = { "klass" => klass_name }
@@ -364,6 +427,7 @@ class TurnEngine
   end
 
   def end_tile_action
+    return "Not available" if plateau_pending?
     @game.instantiate
     game_player = @game.current_player
     return end_silo_choice(game_player) if @game.turn_phase.type == "silo"
@@ -406,6 +470,7 @@ class TurnEngine
   # Everything about a tile being usable this turn except whether it is already used, which
   # Bazaar ignores when copying.
   def tile_actionable?(tile)
+    return false if plateau_pending?
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
       (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
@@ -423,6 +488,7 @@ class TurnEngine
   end
 
   def turn_endable?
+    return false if plateau_pending?
     return true if @game.playing? && %w[silo volcano].include?(@game.turn_phase.type) && @game.turn_phase.action_spent?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
@@ -430,7 +496,7 @@ class TurnEngine
   end
 
   def outpost_activatable?(tile)
-    return false if tile["used"]
+    return false if tile["used"] || plateau_pending?
     return false unless build_action?
     return false if @game.turn_phase.outpost_active?
     @game.current_player.settlements_remaining?
@@ -489,6 +555,7 @@ class TurnEngine
 
   def turn_state
     return "Game over" unless @game.current_player_id
+    return plateau_turn_state if plateau_pending?
     current_phase = @game.turn_phase
     case current_phase.type
     when "canoe_confirm"
@@ -554,6 +621,7 @@ class TurnEngine
   end
 
   def end_turn
+    return "Not available" if plateau_pending?
     return end_silo_turn(@game.current_player) if @game.turn_phase.type == "silo"
     return end_volcano_turn(@game.current_player) if @game.turn_phase.type == "volcano"
     capture_undo_snapshot
@@ -767,6 +835,7 @@ class TurnEngine
   def buildable_cells
     return [] unless @game.playing?
     @game.instantiate
+    return [ plateau_from ] + plateau_options(*plateau_from) if plateau_pending?
     @game.turn_phase.legal_targets(
       board_contents: @game.board_contents, player: @game.current_player, game: @game
     )
