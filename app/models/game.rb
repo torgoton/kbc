@@ -60,6 +60,11 @@ class Game < ApplicationRecord
       description: "A second, separate board sits beside the map. Settlements can be built on it, " \
                    "and moved to and from it, like any other hex. Its sea rim counts as water."
     },
+    "volcano" => {
+      label: "Volcano",
+      description: "At the end of the game before final scoring, each player in turn order removes one third " \
+                   "(rounding up) of their settlements from the game board section with the volcano."
+    },
     "native_soil" => {
       label: "Native Soil",
       description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
@@ -119,6 +124,27 @@ class Game < ApplicationRecord
   end
 
   def decree_info = DECREES[decree&.dig("name")]
+
+  def volcano? = decree&.dig("name") == "volcano"
+
+  def volcano_hex
+    decree["hex"] if volcano?
+  end
+
+  # What the player has in the volcano's board section: settlements, meeples and City Hall hexes.
+  def volcano_pieces_for(order)
+    vr, vc = volcano_hex
+    board_contents.settlements_for(order).select { |r, c| r / 10 == vr / 10 && c / 10 == vc / 10 }
+  end
+
+  # City Hall hexes count towards the third but cannot be removed.
+  def volcano_removable_for(order)
+    volcano_pieces_for(order).reject { |r, c| board_contents.city_hall_at?(r, c) }
+  end
+
+  def volcano_due_for(order)
+    [ (volcano_pieces_for(order).size + 2) / 3, volcano_removable_for(order).size ].min
+  end
 
   def native_soil? = decree&.dig("name") == "native_soil"
 
@@ -623,6 +649,13 @@ class Game < ApplicationRecord
       reversible: false
     )
     decree["terrain"] = remove_terrain("native_soil_terrain", "Native Soil") if native_soil?
+    decree["hex"] = place_volcano if volcano?
+  end
+
+  # A random Mountain hex of the main map (the Island is not a board section).
+  def place_volcano
+    instantiate
+    BoardState::MAIN_CELLS.select { |r, c| @board.terrain_at(r, c) == "M" }.sample
   end
 
   def populate_boards(options = {})

@@ -362,7 +362,7 @@ class TurnEngine
   end
 
   def turn_endable?
-    return true if @game.playing? && @game.turn_phase.type == "silo" && @game.turn_phase.action_spent?
+    return true if @game.playing? && %w[silo volcano].include?(@game.turn_phase.type) && @game.turn_phase.action_spent?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
       !@game.can_build_mandatory?(@game.current_player)
@@ -398,6 +398,12 @@ class TurnEngine
     end
   end
 
+  def volcano_turn_state(phase)
+    handle = @game.current_player.player.handle
+    return "Volcano: #{handle} must end the turn" if phase.action_spent?
+    "Volcano: #{handle} must remove #{phase.remaining} more #{phase.remaining == 1 ? 'piece' : 'pieces'}"
+  end
+
   def tile_action_endable?
     @game.playing? && @game.turn_phase.tile_action_endable?
   end
@@ -430,6 +436,8 @@ class TurnEngine
       return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
     when "silo"
       return silo_turn_state(current_phase)
+    when "volcano"
+      return volcano_turn_state(current_phase)
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -486,6 +494,7 @@ class TurnEngine
 
   def end_turn
     return end_silo_turn(@game.current_player) if @game.turn_phase.type == "silo"
+    return end_volcano_turn(@game.current_player) if @game.turn_phase.type == "volcano"
     capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
@@ -536,7 +545,7 @@ class TurnEngine
     end
     max_order = @game.game_players.count - 1
     if @game.ending? && game_player.order == max_order
-      begin_silo_round(game_player) || finish_game(game_player)
+      begin_silo_round(game_player) || begin_volcano_round(game_player) || finish_game(game_player)
     end
   end
 
@@ -599,15 +608,60 @@ class TurnEngine
     nxt = @game.game_players.in_player_order.find do |gp|
       gp.order > current.order && !gp.resigned? && gp.supply["silos"].to_i.positive?
     end
-    return finish_game(current) unless nxt
+    return (begin_volcano_round(current, pass_clock: true) || finish_game(current)) unless nxt
 
-    if @game.timed?
-      apply_clock!(current, credit: false)
-      current.save
-      @game.turn_started_at = Time.current
-    end
+    pass_clock(current)
     @game.current_player = nxt
     @game.turn_phase = TurnPhase::SiloPhase.new(silo: 1, of: nxt.supply["silos"])
+    @game.save
+  end
+
+  # Closes the clock of an end-of-game player handing the round on (no increment).
+  def pass_clock(from)
+    return unless @game.timed?
+    apply_clock!(from, credit: false)
+    from.save
+    @game.turn_started_at = Time.current
+  end
+
+  # After the Silo round, the Volcano decree has each player remove a third of their pieces from
+  # the volcano's section, in turn order. Counted now so removing pieces doesn't change the others.
+  def begin_volcano_round(game_player, pass_clock: false)
+    return false unless @game.volcano?
+    @game.instantiate
+    players = @game.game_players.in_player_order.reject(&:resigned?)
+    players.each { |gp| gp.update!(supply: gp.supply.merge("volcano" => @game.volcano_due_for(gp.order))) }
+    first = players.find { |gp| gp.supply["volcano"].positive? }
+    return false unless first
+
+    pass_clock(game_player) if pass_clock
+    record_move(
+      action: "begin_volcano_round",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "Volcano"
+    )
+    @game.current_player = first
+    @game.turn_phase = TurnPhase::VolcanoPhase.new(remaining: first.supply["volcano"])
+    @game.save
+    true
+  end
+
+  # End turn: next player in order with pieces to remove, else the game ends.
+  def end_volcano_turn(game_player)
+    return "Not allowed" unless @game.turn_phase.action_spent?
+    capture_undo_snapshot
+    record_move(action: "volcano_end_turn", deliberate: true, reversible: true,
+                message: "#{game_player.player.handle} ended their Volcano turn")
+    nxt = @game.game_players.in_player_order.find do |gp|
+      gp.order > game_player.order && !gp.resigned? && gp.supply["volcano"].to_i.positive?
+    end
+    return finish_game(game_player) unless nxt
+
+    pass_clock(game_player)
+    @game.current_player = nxt
+    @game.turn_phase = TurnPhase::VolcanoPhase.new(remaining: nxt.supply["volcano"])
     @game.save
   end
 

@@ -32,6 +32,8 @@ class TurnPhase
 
     return SiloPhase.from_hash(hash) if type == "silo"
 
+    return VolcanoPhase.from_hash(hash) if type == "volcano"
+
     klass_name = hash["klass"] || "#{type.capitalize}Tile"
     tile_class = Tiles::Tile.for_klass(klass_name)
     tile = tile_class&.new(0)
@@ -1826,5 +1828,49 @@ class TurnPhase::SiloPhase < TurnPhase
     board_contents.settlements_for(player.order).select do |cell|
       !board_contents.city_hall_at?(*cell) && destinations_for(board_contents, player, cell).any?
     end
+  end
+end
+
+
+# The Volcano decree, at the end of the game after the Silo round: the player removes `remaining`
+# of their pieces (a third of those in the volcano's board section, rounded up) and then ends the turn.
+class TurnPhase::VolcanoPhase < TurnPhase
+  attr_reader :remaining
+
+  def self.from_hash(hash) = new(remaining: hash.fetch("remaining"))
+
+  def initialize(remaining:)
+    @remaining = remaining
+  end
+
+  def type = "volcano"
+  def action_spent? = remaining.zero?
+  def serialize = { "type" => type, "remaining" => remaining }
+
+  def legal_targets(board_contents:, player:, game: nil)
+    remaining.zero? ? [] : game.volcano_removable_for(player.order)
+  end
+
+  def click(coordinate, engine)
+    row, col = coordinate.row, coordinate.col
+    engine.capture_undo_snapshot
+    game = engine.game
+    game.instantiate
+    return "Not available" unless engine.legal_targets.include?([ row, col ])
+    game_player = game.current_player
+    meeple = game.board_contents.meeple_at(row, col)
+    engine.record_move(
+      action: "volcano_remove",
+      deliberate: true,
+      reversible: true,
+      game_player: game_player,
+      from: "[#{row}, #{col}]",
+      payload: { "meeple" => meeple },
+      message: "#{game_player.player.handle} removed a #{meeple || 'settlement'} from [#{row}, #{col}] (Volcano)"
+    )
+    game.board_contents_will_change!
+    game.board_contents.remove(row, col)
+    game.turn_phase = self.class.new(remaining: remaining - 1)
+    game.save
   end
 end
