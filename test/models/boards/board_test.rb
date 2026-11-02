@@ -1,7 +1,7 @@
 require "test_helper"
 
 class BoardTest < ActiveSupport::TestCase
-  GameStub = Struct.new(:boards, :board_contents) { def island? = false; def ferry_hex = nil; def cave_hexes = nil }
+  GameStub = Struct.new(:boards, :board_contents) { def island? = false; def ferry_hex = nil; def cave_hexes = nil; def capitol_hexes = nil }
 
   def game_with_boards(*ids)
     contents = BoardState.new

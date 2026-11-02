@@ -74,6 +74,11 @@ class Game < ApplicationRecord
       label: "Caves",
       description: "Move a settlement adjacent to a Cave to any eligible hex adjacent to any Cave."
     },
+    "capitol" => {
+      label: "Capitol",
+      description: "On boards 2, 7 and 21 a Castle becomes a Capitol (or one random Castle, if none of them is in play). " \
+                   "Capitol is a scoring goal: 1 point for each of your settlements 1 or 2 hexes away from a Capitol."
+    },
     "native_soil" => {
       label: "Native Soil",
       description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
@@ -139,6 +144,12 @@ class Game < ApplicationRecord
   def ferry? = decree&.dig("name") == "ferry"
 
   def caves? = decree&.dig("name") == "caves"
+
+  def capitol? = decree&.dig("name") == "capitol"
+
+  def capitol_hexes
+    decree["hexes"] if capitol?
+  end
 
   def cave_hexes
     decree["hexes"] if caves?
@@ -673,6 +684,7 @@ class Game < ApplicationRecord
     decree["hex"] = place_volcano if volcano?
     decree["hex"] = place_ferry if ferry?
     place_caves_and_log if caves?
+    place_capitols_and_log if capitol?
   end
 
   # A random Mountain hex of the main map (the Island is not a board section).
@@ -688,6 +700,30 @@ class Game < ApplicationRecord
     largest = bodies.map(&:size).max
     body = bodies.select { |b| b.size == largest }.sample
     BoardState.center_of(body)
+  end
+
+  CAPITOL_BOARD_IDS = [ 2, 7, 21 ].freeze
+
+  # Each of boards 2, 7 and 21 in play turns one of its Castles into a Capitol; with none of them,
+  # one random Castle does. No Castles, no Capitol.
+  def place_capitols_and_log
+    instantiate
+    castles_by_board = @board.map.each_with_index.map do |section, i|
+      [ section.id, section.silver_hexes.select { |h| h[:k] == "Castle" }.map { |h| overall_location(i, h[:r], h[:c]) } ]
+    end
+    chosen = castles_by_board.select { |id, _| CAPITOL_BOARD_IDS.include?(id) }.map { |_, castles| castles.sample }.compact
+    chosen = [ castles_by_board.flat_map(&:last).sample ].compact if chosen.empty? && castles_by_board.none? { |id, _| CAPITOL_BOARD_IDS.include?(id) }
+    decree["hexes"] = chosen
+    @board = nil
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "place_capitols",
+      message: "Capitol placed: #{chosen.map { |r, c| "[#{r},#{c}]" }.join(", ").presence || "none"}",
+      payload: { "hexes" => chosen },
+      deliberate: false,
+      reversible: false
+    )
   end
 
   CAVE_MIN_DISTANCE = 3
@@ -813,7 +849,8 @@ class Game < ApplicationRecord
     instantiate
     castle_goal = board_has_castles? ? [ "castles" ] : []
     palace_goal = board_has_palaces? ? [ "palaces" ] : []
-    self.goals = castle_goal + palace_goal + goal_pool.sample(3)
+    capitol_goal = board.silver_hexes_of("Capitol").any? ? [ "capitol" ] : []
+    self.goals = capitol_goal + castle_goal + palace_goal + goal_pool.sample(3)
     @board = nil
     self.move_count = (move_count || 0) + 1
     moves.build(

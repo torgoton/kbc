@@ -667,6 +667,7 @@ module Boards
 
     SILVER_HEX_KINDS = {
       "Castle" => { css_class: "terrain-castlehex", description: "Castle - 3 points if you have an adjacent settlement" },
+      "Capitol" => { css_class: "terrain-capitolhex", description: "Capitol - 1 point for each of your settlements 1 or 2 hexes away" },
       "Nomad"  => { css_class: "terrain-nomad", description: nil },
       "Palace" => { css_class: "terrain-palacehex", description: "Palace - 5 points for the most adjacent settlements" },
       "Silo"   => { css_class: "terrain-silo", description: "Silo" }
@@ -680,6 +681,7 @@ module Boards
       data = SECTIONS[id] || raise(ArgumentError, "Unknown board id: #{id}")
       @id = id
       @flipped = flipped
+      @kind_overrides = {}
       @raw_silver_hexes = data[:silver_hexes]
       @raw_location_hexes = data[:location_hexes]
       map_data = @flipped == 0 ? data[:map] : data[:map].reverse.map(&:reverse)
@@ -694,7 +696,15 @@ module Boards
     end
 
     def silver_hexes
-      flip_hexes(@raw_silver_hexes)
+      flip_hexes(@raw_silver_hexes).map do |h|
+        kind = @kind_overrides[[ h[:r], h[:c] ]]
+        kind ? h.merge(k: kind) : h
+      end
+    end
+
+    # Capitol decree: the silver hex at section [row, col] becomes another kind (Castle -> Capitol).
+    def change_silver_hex(row, col, kind)
+      @kind_overrides[[ row, col ]] = kind
     end
 
     def silver_hex_kind(row, col)

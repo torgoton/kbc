@@ -97,6 +97,7 @@ module Boards
       game.boards.each do |section|
         @map << BoardSection.new(section[0], section[1])
       end
+      game.capitol_hexes&.each { |r, c| @map[2 * (r / 10) + c / 10].change_silver_hex(r % 10, c % 10, "Capitol") }
       # This fills in the in-memory content of the board from board_contents, which is the source of
       # truth for what's on the board. We need to do this to properly instantiate tile objects with
       # their qty, and to properly instantiate settlements with their player.
