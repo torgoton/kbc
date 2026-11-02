@@ -24,6 +24,11 @@
     <svg class="ferry-ring" viewBox="0 0 100 115.47" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,0 100,28.87 100,86.60 50,115.47 0,86.60 0,28.87"/></svg>
     <div class="tile-tooltip"><%= Game::DECREES["ferry"][:description] %></div>
   <% end %>
+  <% if game.cave_hexes&.include?([ board_row, board_col ]) %>
+    <div class="cave-icon"></div>
+    <svg class="cave-ring" viewBox="0 0 100 115.47" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,0 100,28.87 100,86.60 50,115.47 0,86.60 0,28.87"/></svg>
+    <div class="tile-tooltip"><%= Game::DECREES["caves"][:description] %></div>
+  <% end %>
   <svg class="hex-outline" viewBox="0 0 100 115.47" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><polygon points="50,0 100,28.87 100,86.60 50,115.47 0,86.60 0,28.87"/></svg>
   <% if terrain == "s" && !content.is_a?(Tiles::Tile) %>
     <%= content_tag :div, nil, class: silver_css %>

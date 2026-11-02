@@ -70,6 +70,10 @@ class Game < ApplicationRecord
       description: "Move one of your settlements adjacent to the body of water with the ferry token to any " \
                    "empty hex adjacent to that same body of water."
     },
+    "caves" => {
+      label: "Caves",
+      description: "Move a settlement adjacent to a Cave to any eligible hex adjacent to any Cave."
+    },
     "native_soil" => {
       label: "Native Soil",
       description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
@@ -133,6 +137,12 @@ class Game < ApplicationRecord
   def volcano? = decree&.dig("name") == "volcano"
 
   def ferry? = decree&.dig("name") == "ferry"
+
+  def caves? = decree&.dig("name") == "caves"
+
+  def cave_hexes
+    decree["hexes"] if caves?
+  end
 
   def ferry_hex
     decree["hex"] if ferry?
@@ -662,6 +672,7 @@ class Game < ApplicationRecord
     decree["terrain"] = remove_terrain("native_soil_terrain", "Native Soil") if native_soil?
     decree["hex"] = place_volcano if volcano?
     decree["hex"] = place_ferry if ferry?
+    decree["hexes"] = place_caves if caves?
   end
 
   # A random Mountain hex of the main map (the Island is not a board section).
@@ -677,6 +688,23 @@ class Game < ApplicationRecord
     largest = bodies.map(&:size).max
     body = bodies.select { |b| b.size == largest }.sample
     BoardState.center_of(body)
+  end
+
+  CAVE_MIN_DISTANCE = 3
+
+  # One Cave per quadrant, on the Mountain hex with the most buildable neighbors (random among
+  # ties) that is at least CAVE_MIN_DISTANCE from every Silver and Location hex. A quadrant with
+  # no such Mountain gets no Cave.
+  def place_caves
+    instantiate
+    special = BoardState::MAIN_CELLS.select { |r, c| %w[S L].include?(@board.terrain_at(r, c)) }
+    BoardState::MAIN_CELLS.group_by { |r, c| [ r / 10, c / 10 ] }.values.filter_map do |quadrant|
+      candidates = quadrant.select do |cell|
+        @board.terrain_at(*cell) == "M" && special.all? { |s| BoardState.distance(cell, s) >= CAVE_MIN_DISTANCE }
+      end
+      best = candidates.group_by { |cell| board_contents.neighbors(*cell).count { |n| Tiles::Tile::BUILDABLE_TERRAIN.include?(@board.terrain_at(*n)) } }
+      best.max_by(&:first)&.last&.sample
+    end
   end
 
   def populate_boards(options = {})
@@ -843,6 +871,7 @@ class Game < ApplicationRecord
       tiles = [ { "klass" => "MandatoryTile", "used" => true } ]
       tiles << { "klass" => "FarmlandTile", "used" => false } if any_harvest_board?
       tiles << { "klass" => "FerryTile", "used" => false } if ferry?
+      tiles << { "klass" => "CaveTile", "used" => false } if caves?
       p.update(tiles:)
     end
     # save no change to the game object

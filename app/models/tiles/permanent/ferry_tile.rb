@@ -4,18 +4,9 @@ module Tiles
       CREATOR = "Claude".freeze
       DESCRIPTION = Game::DECREES["ferry"][:description]
 
-      include Tiles::MovesFromSource
+      include Tiles::MovesAlongShore
 
-      def selectable_settlements(player_order:, board_contents:, hand: nil, budget: nil)
-        shore = board_contents.ferry_shore
-        super.select { |cell| shore.include?(cell) }
-      end
-
-      def valid_destinations(from_row: nil, from_col: nil, board_contents:, player_order: nil, hand: nil, budget: nil)
-        board_contents.ferry_shore.select do |r, c|
-          board_contents.available_for_building?(r, c) && BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c))
-        end
-      end
+      def shore(board_contents) = board_contents.ferry_shore
     end
   end
 end

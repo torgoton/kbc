@@ -586,6 +586,30 @@ ul li .hex:hover .hex-bg {
     stroke: #00b7ff;
     stroke-width: 5px;
 }
+
+/* The Caves decree's caves: the cave, and a white glowing ring. */
+.hex .cave-icon {
+    position: absolute;
+    inset: 0;
+    background: url("terrain-icons/cave.svg") center / 78% no-repeat;
+    pointer-events: none;
+}
+
+.hex .cave-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+    filter: drop-shadow(0 0 3px white) drop-shadow(0 0 8px rgba(255, 255, 255, 0.85));
+}
+
+.hex .cave-ring polygon {
+    fill: none;
+    stroke: white;
+    stroke-width: 5px;
+}
 .hex.terrain-w .terrain-icon { background-image: url("terrain-icons/water.svg"); }
 .hex.terrain-b .terrain-icon { background-image: url("terrain-icons/marshland.svg"); }
 .hex.terrain-h .terrain-icon { background-image: url("terrain-icons/farmland.svg"); }
@@ -773,6 +797,12 @@ ul li .hex:hover .hex-bg {
 
 .tile-container.ferry {
     background-image: url("permanent/ferry.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
+.tile-container.cave {
+    background-image: url("permanent/cave.svg");
     background-size: 75%;
     background-position: center 50%;
 }

@@ -272,6 +272,22 @@ class BoardState
     cells.min_by { |r, c| x, y = point.(r, c); (x - cx)**2 + (y - cy)**2 }
   end
 
+  # Hex distance between two [row, col] cells (odd rows are shifted right).
+  def self.distance(a, b)
+    cube = ->((r, c)) { [ c - (r - (r & 1)) / 2, r ] }
+    (ax, az), (bx, bz) = cube.(a), cube.(b)
+    [ (ax - bx).abs, (az - bz).abs, ((ax + az) - (bx + bz)).abs ].max
+  end
+
+  def cave_hexes
+    @terrain_source.respond_to?(:cave_hexes) ? Array(@terrain_source.cave_hexes) : []
+  end
+
+  # Every hex next to any Cave (Caves decree).
+  def cave_shore
+    cave_hexes.flat_map { |r, c| neighbors(r, c) }.uniq - cave_hexes
+  end
+
   def ferry_hex
     @terrain_source.ferry_hex if @terrain_source.respond_to?(:ferry_hex)
   end
