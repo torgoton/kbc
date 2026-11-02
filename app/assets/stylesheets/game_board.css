@@ -816,6 +816,12 @@ ul li .hex:hover .hex-bg {
     background-position: center 50%;
 }
 
+.tile-container.spynetwork {
+    background-image: url("permanent/spynetwork.svg");
+    background-size: 75%;
+    background-position: center 50%;
+}
+
 .tile-container.mandatory {
     background-image: url("permanent/mandatory.svg");
     background-size: 80%;

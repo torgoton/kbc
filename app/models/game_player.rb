@@ -222,13 +222,20 @@ class GamePlayer < ApplicationRecord
   # so the copied action checks and uses up the Bazaar and leaves the original alone. The
   # marker is cleared when the Bazaar is used up (mark_tile_used!) or the action ends
   # (TurnEngine#reset_to_mandatory).
+  # Spy Network does the same, standing in for the Bazaar ("copy_via" names the tile it uses up).
   def bazaar_copy = supply["bazaar_copy"]
+  def copy_tile = supply["copy_via"] || "BazaarTile"
+
+  def clear_copy!
+    supply.delete("bazaar_copy")
+    supply.delete("copy_via")
+  end
   def extra_cards = supply["extra_cards"].to_i
 
   def mark_tile_used!(klass)
     if copying_through_bazaar?(klass)
-      klass = "BazaarTile"
-      supply.delete("bazaar_copy")
+      klass = copy_tile
+      clear_copy!
     end
     idx = (tiles || []).find_index { |t| t["klass"] == klass && !t["used"] }
     return unless idx
@@ -271,12 +278,12 @@ class GamePlayer < ApplicationRecord
   end
 
   def find_unused_tile(klass)
-    klass = "BazaarTile" if copying_through_bazaar?(klass)
+    klass = copy_tile if copying_through_bazaar?(klass)
     (tiles || []).find { |t| t["klass"] == klass && !t["used"] }
   end
 
   def copying_through_bazaar?(klass)
-    klass == bazaar_copy && (tiles || []).any? { |t| t["klass"] == "BazaarTile" && !t["used"] }
+    klass == bazaar_copy && (tiles || []).any? { |t| t["klass"] == copy_tile && !t["used"] }
   end
 
   def mark_tile_unused!(klass)

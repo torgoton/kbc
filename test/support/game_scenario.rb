@@ -88,6 +88,11 @@ class GameScenario
     perform { |engine| engine.activate_bazaar(klass, mode) }
   end
 
+  # Spy Network: use a tile of the opponent to the right (via: "BazaarTile" to go through their Bazaar).
+  def activate_spy(klass, mode = nil, via: nil)
+    perform { |engine| engine.activate_spy(klass, mode, via) }
+  end
+
   def give_cathedral_count(player, count)
     gp = game_player(player)
     gp.supply["cathedral"] = count
@@ -108,6 +113,13 @@ class GameScenario
   def bazaar_entries(player)
     fresh_board
     TurnEngine.new(@game).bazaar_entries(game_player(player)).map { |e| [ e[:klass], e[:mode] ] }
+  end
+
+  # The Spy Network popup's entries as [klass, mode, via] triples.
+  def spy_entries(player)
+    @game.reload
+    fresh_board
+    TurnEngine.new(@game).spy_entries(game_player(player)).map { |e| [ e[:klass], e[:mode], e[:via] ] }
   end
 
   # --- Silo ---

@@ -79,12 +79,18 @@ class Game < ApplicationRecord
       description: "On boards 2, 7 and 21 a Castle becomes a Capitol (or one random Castle, if none of them is in play). " \
                    "Capitol is a scoring goal: 1 point for each of your settlements 1 or 2 hexes away from a Capitol."
     },
+    "spy_network" => {
+      label: "Spy Network",
+      description: "Use one location tile of the opponent to your right."
+    },
     "native_soil" => {
       label: "Native Soil",
       description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
                    "each player may play that terrain as if it were in their hand."
     }
   }.freeze
+  # The permanent tile each of these decrees gives every player.
+  DECREE_TILES = { "ferry" => "FerryTile", "caves" => "CaveTile", "spy_network" => "SpyNetworkTile" }.freeze
   DEFAULT_OPTIONS = { "expansions" => %w[nomads crossroads], "nomads_sword" => true }.freeze
 
   has_many :game_players, dependent: :destroy
@@ -920,8 +926,8 @@ class Game < ApplicationRecord
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
       tiles = [ { "klass" => "MandatoryTile", "used" => true } ]
       tiles << { "klass" => "FarmlandTile", "used" => false } if any_harvest_board?
-      tiles << { "klass" => "FerryTile", "used" => false } if ferry?
-      tiles << { "klass" => "CaveTile", "used" => false } if caves?
+      decree_tile = DECREE_TILES[decree&.dig("name")]
+      tiles << { "klass" => decree_tile, "used" => false } if decree_tile
       p.update(tiles:)
     end
     # save no change to the game object

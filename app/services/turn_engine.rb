@@ -164,20 +164,80 @@ class TurnEngine
   # choice). Any other location tile you hold that could act now, used or not, except tiles
   # acquired this turn.
   def bazaar_entries(game_player)
+    copy_entries(game_player, game_player.tiles || [], prefix: "Copy")
+  end
+
+  # The entries for copying the action of any of +tiles+, performed with game_player's own pieces.
+  def copy_entries(game_player, tiles, prefix:, fresh_blocks: true)
     @game.instantiate
-    (game_player.tiles || []).uniq { |t| t["klass"] }.flat_map do |tile|
+    tiles.uniq { |t| t["klass"] }.flat_map do |tile|
       tile_obj = Tiles::Tile.for_klass(tile["klass"])&.new(0)
-      next [] unless tile_obj&.bazaar_copyable? && !tile["fresh"]
+      next [] unless tile_obj&.bazaar_copyable? && !(fresh_blocks && tile["fresh"])
       next [] unless tile_obj.passive_effect? || tile_actionable?(tile)
       name = tile["klass"].delete_suffix("Tile").titleize
       if tile_obj.cathedral_tile?
-        entries = [ { klass: tile["klass"], mode: "add", label: "Copy #{name}: Add 1 to Count" } ]
-        entries << { klass: tile["klass"], mode: "build", label: "Copy #{name}: Build (#{game_player.cathedral_count} left)" } if game_player.cathedral_count.positive?
+        entries = [ { klass: tile["klass"], mode: "add", label: "#{prefix} #{name}: Add 1 to Count" } ]
+        entries << { klass: tile["klass"], mode: "build", label: "#{prefix} #{name}: Build (#{game_player.cathedral_count} left)" } if game_player.cathedral_count.positive?
         entries
       else
-        [ { klass: tile["klass"], mode: nil, label: "Copy #{name}#{" (cannot be undone)" if tile_obj.fort_tile?}" } ]
+        [ { klass: tile["klass"], mode: nil, label: "#{prefix} #{name}#{" (cannot be undone)" if tile_obj.fort_tile?}" } ]
       end
     end
+  end
+
+  # The player who plays just before game_player (their right-hand opponent), skipping resigned players.
+  def right_opponent(game_player)
+    seated = @game.game_players.sort_by(&:order)
+    index = seated.index(game_player)
+    (1...seated.size).map { |i| seated[(index - i) % seated.size] }.find { |gp| !gp.resigned? }
+  end
+
+  # Spy Network: the opponent to the right's location tiles (held, used or not), plus, if they hold a
+  # Bazaar, your own tiles it could copy. Entries add `via: "BazaarTile"` for the latter.
+  def spy_entries(game_player)
+    opponent = right_opponent(game_player)
+    return [] unless opponent
+    held = opponent.tiles || []
+    direct = copy_entries(game_player, held, prefix: "Spy on", fresh_blocks: false)
+    return direct unless held.any? { |t| t["klass"] == "BazaarTile" }
+    via_bazaar = copy_entries(game_player, game_player.tiles || [], prefix: "Spy via Bazaar:")
+      .reject { |e| direct.any? { |d| d[:klass] == e[:klass] && d[:mode] == e[:mode] } }
+      .map { |e| e.merge(via: "BazaarTile") }
+    direct + via_bazaar
+  end
+
+  # Spy Network acts like the tile it uses, as Bazaar does, but uses up the Spy Network tile.
+  def activate_spy(target_klass, mode = nil, via = nil)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    spy = game_player.find_unused_tile("SpyNetworkTile")
+    return "Not available" unless spy && tile_activatable?(spy)
+    return "Not available" unless spy_entries(game_player).any? { |e| e[:klass] == target_klass && e[:mode] == mode && e[:via] == via }
+
+    handle = game_player.player.handle
+    name = target_klass.delete_suffix("Tile").titleize
+    record_move(
+      action: "select_action",
+      deliberate: true,
+      reversible: true,
+      to: "spynetwork",
+      payload: { "klass" => "SpyNetworkTile" },
+      message: "#{handle} selected the spy network action"
+    )
+    record_move(
+      action: "spy_copy",
+      deliberate: false,
+      reversible: true,
+      payload: { "klass" => target_klass, "mode" => mode, "via" => via },
+      message: "#{handle} chose to use the #{name} action with Spy Network"
+    )
+    game_player.supply["bazaar_copy"] = target_klass
+    game_player.supply["copy_via"] = "SpyNetworkTile"
+    begin_copied_action(game_player, target_klass, mode)
+    game_player.clear_copy! if @game.turn_phase.mandatory_build? # nothing left to do
+    game_player.save
+    @game.save
   end
 
   # Bazaar acts like the tile it copies: its name stands for the Bazaar tile while that action
@@ -210,7 +270,7 @@ class TurnEngine
     )
     game_player.supply["bazaar_copy"] = target_klass
     begin_copied_action(game_player, target_klass, mode)
-    game_player.supply.delete("bazaar_copy") if @game.turn_phase.mandatory_build? # nothing left to do
+    game_player.clear_copy! if @game.turn_phase.mandatory_build? # nothing left to do
     game_player.save
     @game.save
   end
@@ -352,6 +412,7 @@ class TurnEngine
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return bazaar_entries(@game.current_player).any? if tile_obj.bazaar_tile?
+    return spy_entries(@game.current_player).any? if tile_obj.spy_network_tile?
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     player = @game.current_player
@@ -507,7 +568,7 @@ class TurnEngine
     new_cards << @game.next_card if has_crossroads_tile?(game_player)
     game_player.extra_cards.times { new_cards << @game.next_card }
     game_player.supply.delete("extra_cards")
-    game_player.supply.delete("bazaar_copy")
+    game_player.clear_copy!
     game_player.supply.delete("rovers")
     game_player.hand = new_cards
     card_drawn = game_player.hand
@@ -1256,7 +1317,7 @@ class TurnEngine
   def reset_to_mandatory
     current_phase = @game.turn_phase
     ct = current_phase.chosen_terrain
-    @game.current_player.supply.delete("bazaar_copy")
+    @game.current_player.clear_copy!
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
   end
 

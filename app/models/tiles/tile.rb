@@ -129,6 +129,11 @@ module Tiles
       false
     end
 
+    # Spy Network uses a location tile of the opponent to the right.
+    def spy_network_tile?
+      false
+    end
+
     def bazaar_copyable?
       is_a?(Tiles::Location)
     end

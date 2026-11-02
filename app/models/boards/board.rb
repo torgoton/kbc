@@ -66,6 +66,7 @@ module Boards
       "FarmlandTile"         => Tiles::Permanent::FarmlandTile,
       "FerryTile"            => Tiles::Permanent::FerryTile,
       "CaveTile"             => Tiles::Permanent::CaveTile,
+      "SpyNetworkTile"       => Tiles::Permanent::SpyNetworkTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
       "DonationFlowerTile"   => Tiles::Nomad::DonationFlowerTile,
