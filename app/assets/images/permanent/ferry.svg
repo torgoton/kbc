@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" fill="#000">
+  <!-- mast, pennant, sail -->
+  <path d="M24 3h2v24h-2z"/>
+  <path d="M26 4l10 3-10 3z"/>
+  <path d="M26 13h10l-2 10H26z"/>
+  <!-- steering pole -->
+  <path d="M40 17l1.8.8L36 38l-1.8-.8z"/>
+  <!-- logs -->
+  <rect x="7" y="28" width="36" height="5" rx="2.5"/>
+  <rect x="5" y="34" width="40" height="5" rx="2.5"/>
+  <rect x="7" y="40" width="36" height="5" rx="2.5"/>
+  <!-- lashings, cut through the logs -->
+  <path d="M15 27h2v19h-2zM33 27h2v19h-2z" fill="#fff"/>
+  <path d="M2 47c3 0 4 2 7 2s4-2 7-2 4 2 7 2 4-2 7-2 4 2 7 2 4-2 7-2v2c-3 0-4 2-7 2s-4-2-7-2-4 2-7 2-4-2-7-2-4 2-7 2-4-2-7-2z"/>
+</svg>

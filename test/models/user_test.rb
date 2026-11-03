@@ -51,6 +51,18 @@ class UserTest < ActiveSupport::TestCase
     assert_includes users(:chris).my_games, games(:chris_waiting_game)
   end
 
+  test "my_games and waiting_games list the oldest first, completed_games the most recently updated first" do
+    user = users(:chris)
+    assert_equal user.my_games.sort_by { |g| [ g.created_at, g.id ] }.map(&:id), user.my_games.map(&:id)
+    assert_equal user.waiting_games.sort_by { |g| [ g.created_at, g.id ] }.map(&:id), user.waiting_games.map(&:id)
+    older = Game.create!(state: "completed", updated_at: 2.days.ago).tap { |g| g.add_player(user); g.save! }
+    newer = Game.create!(state: "completed").tap { |g| g.add_player(user); g.save! }
+    older.update_column(:updated_at, 2.days.ago)
+    ids = user.completed_games.map(&:id)
+    assert ids.index(newer.id) < ids.index(older.id)
+    assert_equal user.completed_games.sort_by { |g| [ g.updated_at, g.id ] }.reverse.map(&:id), ids
+  end
+
   test "completed games do not appear in my_games" do
     refute_includes users(:chris).my_games, games(:completed_game)
   end

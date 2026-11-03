@@ -41,11 +41,7 @@ module Tiles
           end
         end.uniq
         return adjacent unless adjacent.empty?
-        (0..19).flat_map do |r|
-          (0..19).filter_map do |c|
-            [ r, c ] if board_contents.empty?(r, c) && SUITABLE_TERRAIN.include?(board_contents.terrain_at(r, c))
-          end
-        end
+        board_contents.cells.select { |r, c| board_contents.empty?(r, c) && SUITABLE_TERRAIN.include?(board_contents.terrain_at(r, c)) }
       end
     end
   end

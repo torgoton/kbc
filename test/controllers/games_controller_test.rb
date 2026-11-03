@@ -126,6 +126,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#common-resources .removed-terrain .player-card.card-T"
   end
 
+  test "common resources lead with the Emperor's Decree and its rule text when one is drawn" do
+    game = games(:game2player)
+    get game_url(game)
+    assert_select "#common-resources .decree-item", count: 0
+
+    game.update!(decree: { "name" => "native_soil", "terrain" => "G" })
+    get game_url(game)
+    assert_select "#common-resources .decree-item .goal-name", text: /Emperor's Decree: Native Soil/
+    assert_select "#common-resources .decree-item .goal-tooltip", text: /play that terrain/
+  end
+
   test "select_action sets current_action type on the game" do
     game = games(:game2player)
     post select_action_game_url(game), params: { action_type: "paddock" }
@@ -458,11 +469,14 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "GET new renders expansion options with all expansions enabled" do
     get new_game_url
-    assert_select "input[name='game[options][expansions][]'][value=nomads][checked]:not([disabled])"
-    assert_select "input[name='game[options][expansions][]'][value=crossroads][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=nomads]:not([checked]):not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=crossroads]:not([checked]):not([disabled])"
     assert_select "input[name='game[options][expansions][]'][value=marshlands]:not([checked]):not([disabled])"
     assert_select "input[name='game[options][expansions][]'][value=harvest]:not([checked]):not([disabled])"
-    assert_select "input[name='game[options][queenies][]'][disabled]", 4
+    assert_select "select#game_options_decree[name='game[options][decree]']"
+    options = css_select("select#game_options_decree option")
+    assert_equal [ "None", "" ], [ options.first.text, options.first["value"] ], "None is the default"
+    assert_equal Game::DECREES.values.map { |d| d[:label] }.sort, options.drop(1).map(&:text), "decrees alphabetically"
     assert_select "input#game_options_nomads_sword[checked]"
   end
 
@@ -474,6 +488,28 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   test "POST create without nomads omits sword option" do
     post games_url, params: { game: { options: { expansions: %w[crossroads], nomads_sword: "1" } } }
     assert_equal({ "expansions" => %w[crossroads] }, Game.last.options)
+  end
+
+  test "POST create stores the chosen decree in the game's options, and ignores unknown or empty ones" do
+    post games_url, params: { game: { options: { decree: "ferry" } } }
+    assert_equal "ferry", Game.last.options["decree"]
+
+    post games_url, params: { game: { options: { decree: "bogus" } } }
+    assert_nil Game.last.options["decree"]
+
+    post games_url, params: { game: { options: { decree: "" } } }
+    assert_nil Game.last.options["decree"]
+  end
+
+  test "a game started with a chosen decree puts that decree in play, every time" do
+    Game::DECREES.each_key do |name|
+      game = Game.new(state: "waiting", options: { "decree" => name })
+      game.add_player(users(:chris))
+      game.add_player(users(:jules))
+      game.save!
+      game.start
+      assert_equal name, game.decree["name"]
+    end
   end
 
   test "GET new renders a help dialog explaining timed games" do
@@ -576,10 +612,12 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_equal chris.order, game.reload.board_contents.player_at(0, 0)
   end
 
-  test "GET show as turbo_stream renders without error" do
-    get game_url(games(:game2player)), as: :turbo_stream
+  test "GET show answers a Turbo form's redirect (turbo-stream Accept) with the HTML page, not a stream" do
+    get game_url(games(:game2player)), headers: { "Accept" => "text/vnd.turbo-stream.html, text/html, application/xhtml+xml" }
 
     assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_select "#game-area"
   end
 
   test "POST join adds the current user to the game" do

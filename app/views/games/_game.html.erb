@@ -26,6 +26,7 @@
 <% end %>
 
 <div id="game-area">
+    <div id="island-control"><%= render "games/island_tab", game: %></div>
     <main>
       <%= render partial: "games/scoring", locals: { game: } %>
       <div id="board-viewport">

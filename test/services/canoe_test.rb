@@ -301,4 +301,48 @@ class CanoeTest < ActiveSupport::TestCase
 
     assert_nil @paula.reload.bonus_scores["rovers"]
   end
+
+  # With Plateaus, a reactor's Canoe build may move to a mountain; the reactions wait for that choice.
+  def plateau_canoe_build
+    @game.update!(decree: { "name" => "plateaus" })
+    empty_the_location
+    engine.confirm_canoe
+    reload
+    contents = @game.board_contents
+    @water = engine.legal_targets.find { |c| contents.neighbors(*c).any? { |n| contents.terrain_at(*n) == "M" } }
+    @mountain = contents.neighbors(*@water).find { |n| contents.terrain_at(*n) == "M" }
+    engine.click(Coordinate.new(*@water))
+    reload
+  end
+
+  test "with Plateaus a Canoe build pauses for the move, before the reactor's confirmation" do
+    plateau_canoe_build
+
+    assert_equal @paula, @game.current_player
+    assert_equal "canoe", @game.turn_phase.type
+    assert_match(/move to mountain or click again/, engine.turn_state)
+    assert_includes engine.legal_targets, @mountain
+    assert_equal "Not allowed", engine.skip_canoe
+
+    engine.click(Coordinate.new(*@mountain))
+    reload
+
+    assert_equal @paula.order, @game.board_contents.player_at(*@mountain)
+    assert_nil @game.board_contents.player_at(*@water)
+    assert_equal "canoe_confirm", @game.turn_phase.type
+    assert_equal "plateau_move", @game.moves.where(action: "plateau_move").last.action
+  end
+
+  test "with Plateaus a Canoe build can stay put, and then the reactions finish as usual" do
+    plateau_canoe_build
+    engine.click(Coordinate.new(*@water))
+    reload
+
+    assert_equal @paula.order, @game.board_contents.player_at(*@water)
+    assert_equal "canoe_confirm", @game.turn_phase.type
+    assert_equal 0, @game.moves.where(action: "plateau_move").count
+    engine.confirm_canoe
+    reload
+    assert_equal @chris, @game.current_player
+  end
 end

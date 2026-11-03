@@ -20,6 +20,8 @@ class Scoring::Goals::ScoutsTest < Scoring::Goals::GoalTestCase
     game.goals = [ "scouts" ]
     game.move_count = 0
     game.send(:initialize_terrain_deck)
+    game.send(:remove_scouts_terrain)
+    game.save
 
     assert_includes %w[C D F G T], game.removed_terrain
     all = game.deck + game.discard

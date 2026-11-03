@@ -15,6 +15,12 @@ class BoardState
   # game.instantiate so BoardState can answer both occupancy and terrain.
   attr_writer :terrain_source
 
+  MAIN = (0..19)
+  MAIN_CELLS = MAIN.flat_map { |r| MAIN.map { |c| [ r, c ] } }.freeze
+  # The Island decree's board lives below the main map; see Boards::Island.
+  ISLAND_ROWS = (Boards::Island::ROW..Boards::Island::ROW + 6)
+  ISLAND_COLS = (Boards::Island::COL..Boards::Island::COL + 8)
+
   def initialize
     @cells = {}
   end
@@ -22,6 +28,21 @@ class BoardState
   def initialize_copy(original)
     @cells = original.instance_variable_get(:@cells).transform_values(&:dup)
     @terrain_source = original.instance_variable_get(:@terrain_source)
+  end
+
+  # Every hex that can be played on: the main map plus the Island, when the game has one.
+  def cells
+    island = @terrain_source.respond_to?(:island_cells) ? @terrain_source.island_cells : []
+    MAIN_CELLS + island
+  end
+
+  def occupied = @cells.keys
+
+  # The main map and the Island are separate boards: from a hex, `from` is a row in the board
+  # being walked, and a step that crosses to the other board is out of bounds.
+  def in_bounds?(row, col, from: row)
+    return false unless (row >= Boards::Island::ROW) == (from >= Boards::Island::ROW)
+    row >= Boards::Island::ROW ? ISLAND_ROWS.cover?(row) && ISLAND_COLS.cover?(col) : MAIN.cover?(row) && MAIN.cover?(col)
   end
 
   def terrain_at(row, col)
@@ -155,11 +176,7 @@ class BoardState
   # `terrains`, row-major. The "anywhere on this terrain" set used by the
   # Outpost power (ADR-0001's "all buildable terrain cells" primitive).
   def available_cells_of(terrains)
-    (0..19).flat_map do |row|
-      (0..19).filter_map do |col|
-        [ row, col ] if available_for_building?(row, col) && terrains.include?(terrain_at(row, col))
-      end
-    end
+    cells.select { |row, col| available_for_building?(row, col) && terrains.include?(terrain_at(row, col)) }
   end
 
   def move_settlement(from_row, from_col, to_row, to_col)
@@ -224,8 +241,62 @@ class BoardState
   def neighbors(row, col)
     ADJACENCIES[row % 2].filter_map do |dr, dc|
       nr, nc = row + dr, col + dc
-      [ nr, nc ] if (0..19).cover?(nr) && (0..19).cover?(nc)
+      [ nr, nc ] if in_bounds?(nr, nc, from: row)
     end
+  end
+
+  # Each connected body of water on the main map, as a set of cells.
+  def water_bodies
+    seen = Set.new
+    MAIN_CELLS.filter_map do |cell|
+      next if seen.include?(cell) || terrain_at(*cell) != "W"
+      water_body(*cell).tap { |body| seen.merge(body) }
+    end
+  end
+
+  def water_body(row, col)
+    body = Set[[ row, col ]]
+    queue = [ [ row, col ] ]
+    until queue.empty?
+      neighbors_where(*queue.shift) { |nr, nc| terrain_at(nr, nc) == "W" }.each { |n| queue << n if body.add?(n) }
+    end
+    body
+  end
+
+  # The cell of `cells` nearest their centroid, on the hex grid's real (offset-row) geometry.
+  def self.center_of(cells)
+    point = ->(r, c) { [ c + 0.5 * (r % 2), r * Math.sqrt(3) / 2 ] }
+    points = cells.map { |r, c| point.(r, c) }
+    cx = points.sum(&:first) / points.size
+    cy = points.sum(&:last) / points.size
+    cells.min_by { |r, c| x, y = point.(r, c); (x - cx)**2 + (y - cy)**2 }
+  end
+
+  # Hex distance between two [row, col] cells (odd rows are shifted right).
+  def self.distance(a, b)
+    cube = ->((r, c)) { [ c - (r - (r & 1)) / 2, r ] }
+    (ax, az), (bx, bz) = cube.(a), cube.(b)
+    [ (ax - bx).abs, (az - bz).abs, ((ax + az) - (bx + bz)).abs ].max
+  end
+
+  def cave_hexes
+    @terrain_source.respond_to?(:cave_hexes) ? Array(@terrain_source.cave_hexes) : []
+  end
+
+  # Every hex next to any Cave (Caves decree).
+  def cave_shore
+    cave_hexes.flat_map { |r, c| neighbors(r, c) }.uniq - cave_hexes
+  end
+
+  def ferry_hex
+    @terrain_source.ferry_hex if @terrain_source.respond_to?(:ferry_hex)
+  end
+
+  # Every hex next to the ferry's body of water (Ferry decree); empty without a ferry.
+  def ferry_shore
+    return [] unless ferry_hex
+    body = water_body(*ferry_hex)
+    body.flat_map { |r, c| neighbors(r, c) }.uniq.reject { |cell| body.include?(cell) }
   end
 
   def neighbors_where(row, col, &block)

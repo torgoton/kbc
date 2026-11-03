@@ -1,0 +1,36 @@
+<%# The Island decree: a sea layer (blurred shoreline) under a land layer, same grid. %>
+<% island = game.board.island %>
+<% if island %>
+  <div id="island">
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <filter id="island-shore" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="3" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="14"/>
+        <feGaussianBlur stdDeviation="1.2"/>
+      </filter>
+    </svg>
+    <% %w[sea land].each do |layer| %>
+      <div class="island-<%= layer %>">
+        <% island.rows.times do |r| %>
+          <% if r.odd? %><div class="spacer"></div><% end %>
+          <% island.cols.times do |c| %>
+            <% ch = island.map[r][c] %>
+            <% board_row = Boards::Island::ROW + r %>
+            <% board_col = Boards::Island::COL + c %>
+            <% if layer == "sea" %>
+              <div class="<%= ch == "X" ? "sea-hex" : "no-hex" %>"></div>
+            <% elsif ch == " " || ch == "X" %>
+              <div class="no-hex"></div>
+            <% else %>
+              <% terrain = ch.downcase %>
+              <%= render "games/hex", game:, board_row:, board_col:, terrain:, top_row: r.zero?, side: "right",
+                    silver_css: (island.silver_hex_css_class(board_row, board_col) if terrain == "s"),
+                    silver_desc: (island.silver_hex_description(board_row, board_col) if terrain == "s") %>
+            <% end %>
+          <% end %>
+          <% if r.even? %><div class="spacer"></div><% end %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

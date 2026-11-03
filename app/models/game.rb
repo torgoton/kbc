@@ -8,6 +8,7 @@
 #  completed_at      :datetime
 #  current_action    :json
 #  deck              :json
+#  decree            :json
 #  discard           :json
 #  end_trigger_count :integer          default(0), not null
 #  goals             :json
@@ -50,13 +51,49 @@ class Game < ApplicationRecord
     "marshlands" => { label: "Marshlands", enabled: true },
     "harvest" => { label: "Harvest", enabled: true }
   }.freeze
-  QUEENIES = {
-    "capitol" => "Capitol",
-    "caves" => "Caves",
-    "island" => "The Island",
-    "emperors_choice" => "Emperor's Choice"
+  # The Emperor's Choice decrees: `description` is the player-facing rule text shown in the game.
+  DECREES = {
+    "island" => {
+      label: "Island",
+      description: "A second, separate board sits beside the map. Settlements can be built on it, " \
+                   "and moved to and from it, like any other hex. Its sea rim counts as water."
+    },
+    "volcano" => {
+      label: "Volcano",
+      description: "At the end of the game before final scoring, each player in turn order removes one third " \
+                   "(rounding up) of their settlements from the game board section with the volcano."
+    },
+    "ferry" => {
+      label: "Ferry",
+      description: "Move one of your settlements adjacent to the body of water with the ferry token to any " \
+                   "empty hex adjacent to that same body of water."
+    },
+    "caves" => {
+      label: "Caves",
+      description: "Move a settlement adjacent to a Cave to any eligible hex adjacent to any Cave."
+    },
+    "capitol" => {
+      label: "Capitol",
+      description: "On boards 2, 7 and 21 a Castle becomes a Capitol (or one random Castle, if none of them is in play). " \
+                   "Capitol is a scoring goal: 1 point for each of your settlements 1 or 2 hexes away from a Capitol."
+    },
+    "spy_network" => {
+      label: "Spy Network",
+      description: "Use one location tile of the opponent to your right."
+    },
+    "plateaus" => {
+      label: "Plateaus",
+      description: "You may move every build to an empty adjacent mountain hex."
+    },
+    "native_soil" => {
+      label: "Native Soil",
+      description: "At the start of the game one terrain was taken out of the deck. Every turn, " \
+                   "each player may play that terrain as if it were in their hand."
+    }
   }.freeze
-  DEFAULT_OPTIONS = { "expansions" => %w[nomads crossroads], "nomads_sword" => true }.freeze
+  # The permanent tile each of these decrees gives every player.
+  DECREE_TILES = { "ferry" => "FerryTile", "caves" => "CaveTile", "spy_network" => "SpyNetworkTile" }.freeze
+  DEFAULT_OPTIONS = { "expansions" => [], "nomads_sword" => true }.freeze
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -104,6 +141,60 @@ class Game < ApplicationRecord
     order ? game_players.find { |g| g.order == order }&.id : current_player_id
   end
 
+  def island?
+    decree&.dig("name") == "island"
+  end
+
+  def decree_info = DECREES[decree&.dig("name")]
+
+  def volcano? = decree&.dig("name") == "volcano"
+
+  def ferry? = decree&.dig("name") == "ferry"
+
+  def caves? = decree&.dig("name") == "caves"
+
+  def plateaus? = decree&.dig("name") == "plateaus"
+
+  def capitol? = decree&.dig("name") == "capitol"
+
+  def capitol_hexes
+    decree["hexes"] if capitol?
+  end
+
+  def cave_hexes
+    decree["hexes"] if caves?
+  end
+
+  def ferry_hex
+    decree["hex"] if ferry?
+  end
+
+  def volcano_hex
+    decree["hex"] if volcano?
+  end
+
+  # What the player has in the volcano's board section: settlements, meeples and City Hall hexes.
+  def volcano_pieces_for(order)
+    vr, vc = volcano_hex
+    board_contents.settlements_for(order).select { |r, c| r / 10 == vr / 10 && c / 10 == vc / 10 }
+  end
+
+  # City Hall hexes count towards the third but cannot be removed.
+  def volcano_removable_for(order)
+    volcano_pieces_for(order).reject { |r, c| board_contents.city_hall_at?(r, c) }
+  end
+
+  def volcano_due_for(order)
+    [ (volcano_pieces_for(order).size + 2) / 3, volcano_removable_for(order).size ].min
+  end
+
+  def native_soil? = decree&.dig("name") == "native_soil"
+
+  # The terrain every player may play, in addition to their hand (Native Soil decree).
+  def native_soil
+    decree["terrain"] if native_soil?
+  end
+
   def waiting?
     state.to_s == "waiting"
   end
@@ -139,9 +230,11 @@ class Game < ApplicationRecord
     moves.build(order: move_count, action: "start_game", message: "Game started.", deliberate: false, reversible: false)
     self.mandatory_count = MANDATORY_COUNT
     select_boards(options)
+    initialize_terrain_deck
+    select_decree
     populate_boards(options)
     select_goals
-    initialize_terrain_deck
+    remove_scouts_terrain if Array(goals).include?("scouts")
     select_tasks
     populate_player_supplies
     deal_terrain_cards
@@ -262,6 +355,12 @@ class Game < ApplicationRecord
     "Expansions: #{labels.presence&.join(', ') || 'None'}"
   end
 
+  # The game-options line shown on the dashboard: expansions, then the chosen decree if any.
+  # e.g. "Expansions: Nomads (Maybe Sword) · Decree: Ferry"
+  def options_label
+    [ expansions_label, (decree_label = DECREES.dig(options["decree"], :label)) && "Decree: #{decree_label}" ].compact.join(" · ")
+  end
+
   def player_handles
     game_players.map { |gp| gp.player.handle }.join(", ")
   end
@@ -275,11 +374,8 @@ class Game < ApplicationRecord
   def legal_builds(game_player, terrain: nil)
     terrain ||= game_player.hand_terrains.first
     instantiate
-    list = TurnEngine.new(self).available_list(game_player.order, terrain)
-    return [] unless list
-    list.each_with_index.flat_map do |row_cells, row|
-      row_cells.each_index.select { |col| row_cells[col] }.map { |col| [ row, col ] }
-    end
+    return [] unless playing?
+    board_contents.buildable_cells_for(game_player.order, terrain).sort
   end
 
   # Stable domain query: the held tiles game_player could activate right now
@@ -378,6 +474,13 @@ class Game < ApplicationRecord
       "game_#{id}",
       target: "board",
       partial: "games/board",
+      locals: { game: self }
+    )
+    # - Island pull-tab (the decree is drawn when the game starts)
+    broadcast_update_to(
+      "game_#{id}",
+      target: "island-control",
+      partial: "games/island_tab",
       locals: { game: self }
     )
     # - game log
@@ -575,6 +678,99 @@ class Game < ApplicationRecord
     save
   end
 
+  # The Emperor's Choice: the decree the table chose (options["decree"]) is put in play before any
+  # turn, and stays visible to everyone. Unlike `options` (what the table chose), `decree` is what
+  # is in play, with whatever was placed for it.
+  def select_decree
+    self.decree = nil
+    return unless DECREES.key?(options["decree"])
+    self.decree = { "name" => options["decree"] }
+    decree["map"] = rand(Boards::Island::SECTIONS.size) if island?
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "select_decree",
+      message: "Decree: #{decree_info[:label]}",
+      payload: { "decree" => decree },
+      deliberate: false,
+      reversible: false
+    )
+    decree["terrain"] = remove_terrain("native_soil_terrain", "Native Soil") if native_soil?
+    decree["hex"] = place_volcano if volcano?
+    decree["hex"] = place_ferry if ferry?
+    place_caves_and_log if caves?
+    place_capitols_and_log if capitol?
+  end
+
+  # A random Mountain hex of the main map (the Island is not a board section).
+  def place_volcano
+    instantiate
+    BoardState::MAIN_CELLS.select { |r, c| @board.terrain_at(r, c) == "M" }.sample
+  end
+
+  # The ferry sits in the middle of the largest body of water (a random one if several tie).
+  def place_ferry
+    instantiate
+    bodies = board_contents.water_bodies
+    largest = bodies.map(&:size).max
+    body = bodies.select { |b| b.size == largest }.sample
+    BoardState.center_of(body)
+  end
+
+  CAPITOL_BOARD_IDS = [ 2, 7, 21 ].freeze
+
+  # Each of boards 2, 7 and 21 in play turns one of its Castles into a Capitol; with none of them,
+  # one random Castle does. No Castles, no Capitol.
+  def place_capitols_and_log
+    instantiate
+    castles_by_board = @board.map.each_with_index.map do |section, i|
+      [ section.id, section.silver_hexes.select { |h| h[:k] == "Castle" }.map { |h| overall_location(i, h[:r], h[:c]) } ]
+    end
+    chosen = castles_by_board.select { |id, _| CAPITOL_BOARD_IDS.include?(id) }.map { |_, castles| castles.sample }.compact
+    chosen = [ castles_by_board.flat_map(&:last).sample ].compact if chosen.empty? && castles_by_board.none? { |id, _| CAPITOL_BOARD_IDS.include?(id) }
+    decree["hexes"] = chosen
+    @board = nil
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "place_capitols",
+      message: "Capitol placed: #{chosen.map { |r, c| "[#{r},#{c}]" }.join(", ").presence || "none"}",
+      payload: { "hexes" => chosen },
+      deliberate: false,
+      reversible: false
+    )
+  end
+
+  CAVE_MIN_DISTANCE = 3
+
+  def place_caves_and_log
+    decree["hexes"] = place_caves
+    self.move_count += 1
+    moves.build(
+      order: move_count,
+      action: "place_caves",
+      message: "Caves placed: #{decree["hexes"].map { |r, c| "[#{r},#{c}]" }.join(", ").presence || "none"}",
+      payload: { "hexes" => decree["hexes"] },
+      deliberate: false,
+      reversible: false
+    )
+  end
+
+  # One Cave per quadrant, on the Mountain hex with the most buildable neighbors (random among
+  # ties) that is at least CAVE_MIN_DISTANCE from every Silver and Location hex. A quadrant with
+  # no such Mountain gets no Cave.
+  def place_caves
+    instantiate
+    special = BoardState::MAIN_CELLS.select { |r, c| %w[S L].include?(@board.terrain_at(r, c)) }
+    BoardState::MAIN_CELLS.group_by { |r, c| [ r / 10, c / 10 ] }.values.filter_map do |quadrant|
+      candidates = quadrant.select do |cell|
+        @board.terrain_at(*cell) == "M" && special.all? { |s| BoardState.distance(cell, s) >= CAVE_MIN_DISTANCE }
+      end
+      best = candidates.group_by { |cell| board_contents.neighbors(*cell).count { |n| Tiles::Tile::BUILDABLE_TERRAIN.include?(@board.terrain_at(*n)) } }
+      best.max_by(&:first)&.last&.sample
+    end
+  end
+
   def populate_boards(options = {})
     state = BoardState.new
     instantiate
@@ -591,6 +787,11 @@ class Game < ApplicationRecord
     nomad_pool = Boards::Board::NOMAD_TILE_POOL.shuffle
     if options[:no_swords] || self.options["nomads_sword"] == false
       nomad_pool.reject! { |t| t.include?("SwordTile") }
+    end
+    @board.island&.location_hexes&.each do |loc|
+      klass = "#{loc[:k]}Tile"
+      state.place_tile(loc[:r], loc[:c], klass, 2)
+      placements << { row: loc[:r], col: loc[:c], klass:, qty: 2 }
     end
     @board.map.each_with_index do |board_section, i|
       board_section.silver_hexes.select { |h| h[:k] == "Nomad" }.each do |nomad_hex|
@@ -618,7 +819,6 @@ class Game < ApplicationRecord
   def initialize_terrain_deck
     self.discard = terrain_cards
     self.removed_terrain = nil
-    remove_scouts_terrain if Array(goals).include?("scouts")
     shuffle_terrain_deck
   end
 
@@ -626,19 +826,26 @@ class Game < ApplicationRecord
     DECK.chars + (expansion?("marshlands") ? MARSHLANDS_CARDS : [])
   end
 
-  # Scouts: draw a terrain at random and take every card offering it (dual cards too) out of the deck.
+  # Scouts: a terrain is taken out of the deck, and the Scouts goal scores next to it.
   def remove_scouts_terrain
-    self.removed_terrain = DECK.chars.uniq.sample
-    discard.reject! { |card| card.include?(removed_terrain) }
+    self.removed_terrain = remove_terrain("scouts_terrain", "Scouts")
+  end
+
+  # Draw a random terrain still in the deck and take every card offering it (dual cards too) out
+  # of the deck, so Scouts and Native Soil never take the same one. Returns the terrain.
+  def remove_terrain(action, label)
+    terrain = (DECK.chars.uniq & deck.flat_map(&:chars)).sample
+    deck.reject! { |card| card.include?(terrain) }
     self.move_count = (move_count || 0) + 1
     moves.build(
       order: move_count,
-      action: "scouts_terrain",
-      message: "Scouts: #{Boards::Board::TERRAIN_NAMES[removed_terrain]} cards removed from the deck",
-      payload: { "terrain" => removed_terrain },
+      action:,
+      message: "#{label}: #{Boards::Board::TERRAIN_NAMES[terrain]} cards removed from the deck",
+      payload: { "terrain" => terrain },
       deliberate: false,
       reversible: false
     )
+    terrain
   end
 
   OPTIONAL_GOALS = %w[ambassadors citizens discoverers families farmers fishermen hermits knights merchants miners shepherds workers].freeze
@@ -657,7 +864,8 @@ class Game < ApplicationRecord
     instantiate
     castle_goal = board_has_castles? ? [ "castles" ] : []
     palace_goal = board_has_palaces? ? [ "palaces" ] : []
-    self.goals = castle_goal + palace_goal + goal_pool.sample(3)
+    capitol_goal = board.silver_hexes_of("Capitol").any? ? [ "capitol" ] : []
+    self.goals = capitol_goal + castle_goal + palace_goal + goal_pool.sample(3)
     @board = nil
     self.move_count = (move_count || 0) + 1
     moves.build(
@@ -708,7 +916,7 @@ class Game < ApplicationRecord
   end
 
   def board_has_castles?
-    board.map.any? { |s| s.silver_hexes.any? { |h| h[:k] == "Castle" } }
+    board.silver_hexes_of("Castle").any?
   end
 
   def board_has_palaces?
@@ -727,6 +935,8 @@ class Game < ApplicationRecord
       p.update(supply: { settlements: SETTLEMENTS_PER_PLAYER })
       tiles = [ { "klass" => "MandatoryTile", "used" => true } ]
       tiles << { "klass" => "FarmlandTile", "used" => false } if any_harvest_board?
+      decree_tile = DECREE_TILES[decree&.dig("name")]
+      tiles << { "klass" => decree_tile, "used" => false } if decree_tile
       p.update(tiles:)
     end
     # save no change to the game object

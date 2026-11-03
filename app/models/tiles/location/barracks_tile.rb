@@ -24,10 +24,8 @@ module Tiles
       private
 
       def placement_hexes(board_contents:, player_order:)
-        all_valid = (0..19).flat_map do |r|
-          (0..19).filter_map do |c|
-            [ r, c ] if BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c)) && board_contents.available_for_building?(r, c)
-          end
+        all_valid = board_contents.cells.select do |r, c|
+          BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c)) && board_contents.available_for_building?(r, c)
         end
 
         own = board_contents.adjacency_sources_for(player_order)

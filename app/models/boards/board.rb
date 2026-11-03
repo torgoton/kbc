@@ -1,6 +1,6 @@
 module Boards
   class Board
-    attr_reader :map
+    attr_reader :map, :island, :ferry_hex, :cave_hexes
     attr_reader :content
 
     TERRAIN_NAMES = {
@@ -56,12 +56,17 @@ module Boards
       "WatchtowerTile"       => Tiles::Location::WatchtowerTile,
       "UniversityTile"       => Tiles::Location::UniversityTile,
       "PalisadeTile"         => Tiles::Location::PalisadeTile,
+      "RopeBridgeTile"       => Tiles::Location::RopeBridgeTile,
+      "TreeHouseTile"        => Tiles::Location::TreeHouseTile,
       "FountainBonusTile"    => Tiles::Bonus::FountainBonusTile,
       "TempleBonusTile"      => Tiles::Bonus::TempleBonusTile,
       "CanoeBonusTile"       => Tiles::Bonus::CanoeBonusTile,
       "RefugeBonusTile"      => Tiles::Bonus::RefugeBonusTile,
       "MandatoryTile"        => Tiles::Permanent::MandatoryTile,
       "FarmlandTile"         => Tiles::Permanent::FarmlandTile,
+      "FerryTile"            => Tiles::Permanent::FerryTile,
+      "CaveTile"             => Tiles::Permanent::CaveTile,
+      "SpyNetworkTile"       => Tiles::Permanent::SpyNetworkTile,
       "DonationCanyonTile"   => Tiles::Nomad::DonationCanyonTile,
       "DonationDesertTile"   => Tiles::Nomad::DonationDesertTile,
       "DonationFlowerTile"   => Tiles::Nomad::DonationFlowerTile,
@@ -82,38 +87,44 @@ module Boards
       SwordTile SwordTile TreasureTile TreasureTile
     ].freeze
 
+    # Terrains that count as water for "next to water" rules; X is the Island's sea rim.
+    WATER = %w[W X].freeze
+
     def initialize(game)
       @map = []
+      @island = Island.new(game.decree["map"]) if game.island?
+      @ferry_hex = game.ferry_hex
+      @cave_hexes = game.cave_hexes
       game.boards.each do |section|
         @map << BoardSection.new(section[0], section[1])
       end
+      game.capitol_hexes&.each { |r, c| @map[2 * (r / 10) + c / 10].change_silver_hex(r % 10, c % 10, "Capitol") }
       # This fills in the in-memory content of the board from board_contents, which is the source of
       # truth for what's on the board. We need to do this to properly instantiate tile objects with
       # their qty, and to properly instantiate settlements with their player.
-      @content = Array.new(20) { Array.new(20) }
-      20.times do |row|
-        20.times do |col|
-          next if game.board_contents.empty?(row, col)
-          klass = game.board_contents.tile_klass(row, col)
+      @content = {}
+      game.board_contents.occupied.each do |row, col|
+        klass = game.board_contents.tile_klass(row, col)
+        @content[[ row, col ]] =
           if klass == "Wall"
-            @content[row][col] = Wall.new
+            Wall.new
           elsif klass == "Scout"
-            @content[row][col] = Scout.new(game.board_contents.scout_owner(row, col))
+            Scout.new(game.board_contents.scout_owner(row, col))
           elsif klass
             tile_class = TILE_CLASSES.fetch(klass) { raise ArgumentError, "Unknown tile class: #{klass}" }
-            @content[row][col] = tile_class.new(game.board_contents.tile_qty(row, col))
+            tile_class.new(game.board_contents.tile_qty(row, col))
           elsif (player = game.board_contents.player_at(row, col))
-            @content[row][col] = Settlement.new(player,
+            Settlement.new(player,
               meeple_type: game.board_contents.meeple_at(row, col),
               city_hall: game.board_contents.city_hall_at?(row, col))
           else
             raise "Unknown board content type at [#{row}, #{col}]"
           end
-        end
       end
     end
 
     def terrain_at(row, col)
+      return @island ? @island.terrain_at(row, col) : "" if row >= Island::ROW
       section = 2 * (row / 10) + col / 10
       return "" unless (0..3).include? section
       return "" unless @map[section] # some tests have no boards
@@ -121,7 +132,19 @@ module Boards
     end
 
     def content_at(row, col)
-      @content[row][col]
+      @content[[ row, col ]]
     end
+
+    # Board [row, col] of every silver hex of `kind`, Island included.
+    def silver_hexes_of(kind)
+      main = @map.each_with_index.flat_map do |section, i|
+        section.silver_hexes.select { |h| h[:k] == kind }.map { |h| [ i / 2 * 10 + h[:r], i % 2 * 10 + h[:c] ] }
+      end
+      main + island_silver_hexes.select { |h| h[:k] == kind }.map { |h| [ h[:r], h[:c] ] }
+    end
+
+    def island_silver_hexes = @island ? @island.silver_hexes : []
+
+    def island_cells = @island ? @island.cells : []
   end
 end

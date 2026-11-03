@@ -1,0 +1,9 @@
+<%# Pull-tab on the seam between the board and the sidebars; toggles map/Island view. %>
+<% if game.island? %>
+  <button type="button" id="island-tab" aria-controls="game-area" aria-pressed="false" title="Show the Island (I)">
+    <span class="island-tab-grip"></span>
+    <svg class="island-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 18c3 0 3-2 6-2s3 2 6 2 3-2 6-2v3c-3 0-3 2-6 2s-3-2-6-2-3 2-6 2zM12 3l1 2.5 2.5.5-2 1.7.6 2.6L12 9l-2.1 1.3.6-2.6-2-1.7 2.5-.5zM8 15c1-3 2.5-4.500 4-4.500S15 12 16 15z"/></svg>
+    <span class="island-tab-label"><span class="to-island">Island ›</span><span class="to-map">‹ Map</span></span>
+    <span class="island-tab-grip"></span>
+  </button>
+<% end %>

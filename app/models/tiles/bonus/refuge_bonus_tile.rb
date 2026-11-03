@@ -17,9 +17,10 @@ module Tiles
           r, c = from_row, from_col
           loop do
             dr, dc = steps[r % 2]
+            prev = r
             r += dr
             c += dc
-            break nil unless (0..19).cover?(r) && (0..19).cover?(c)
+            break nil unless board_contents.in_bounds?(r, c, from: prev)
             break [ r, c ] if board_contents.available_for_building?(r, c) &&
               BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r, c))
           end

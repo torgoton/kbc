@@ -17,9 +17,7 @@ class Scoring
       private
 
       def special_hexes
-        20.times.flat_map do |r|
-          20.times.filter_map { |c| [ r, c ] if SPECIAL_TERRAINS.include?(board_contents.terrain_at(r, c)) }
-        end
+        board_contents.cells.select { |r, c| SPECIAL_TERRAINS.include?(board_contents.terrain_at(r, c)) }
       end
     end
   end

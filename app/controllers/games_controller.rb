@@ -1,7 +1,7 @@
 class GamesController < ApplicationController
   GAME_ACTIONS = %i[
     action select_action end_turn undo_move undo_max_moves end_tile_action activate_outpost
-    remove_meeple select_meeple activate_fort activate_cathedral activate_bazaar silo_choice skip_canoe confirm_canoe
+    remove_meeple select_meeple activate_fort activate_cathedral activate_bazaar activate_spy silo_choice skip_canoe confirm_canoe
   ].freeze
 
   before_action :require_game_playing, only: GAME_ACTIONS
@@ -33,7 +33,9 @@ class GamesController < ApplicationController
     @game = Game.find(params[:id])
     @game.instantiate
     @my_player = @game.game_players.find { |gp| gp.player == Current.user }
-    render :show, locals: { game: @game, my_player: @my_player }
+    # Always HTML: a Turbo form's redirect to here carries its turbo-stream Accept header, and a
+    # stream response would be appended to the page the form was on (the dashboard).
+    render :show, formats: :html, locals: { game: @game, my_player: @my_player }
   end
 
   # ACTION - do a part of a turn by a player. Either
@@ -160,6 +162,14 @@ class GamesController < ApplicationController
 
   def activate_bazaar
     TurnEngine.new(@game).activate_bazaar(params[:klass], params[:mode].presence)
+    respond_to do |format|
+      format.html { head :no_content }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
+  def activate_spy
+    TurnEngine.new(@game).activate_spy(params[:klass], params[:mode].presence, params[:via].presence)
     respond_to do |format|
       format.html { head :no_content }
       format.turbo_stream { head :no_content }
@@ -305,6 +315,7 @@ class GamesController < ApplicationController
     expansions = Array(raw.permit(expansions: [])[:expansions]) & allowed
     options = { "expansions" => expansions }
     options["nomads_sword"] = raw[:nomads_sword] == "1" if expansions.include?("nomads")
+    options["decree"] = raw[:decree] if Game::DECREES.key?(raw[:decree])
     options
   end
 end

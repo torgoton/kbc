@@ -52,13 +52,10 @@
           </label><br>
         <% end %>
       <% end %>
-  </fieldset>
-
-  <fieldset>
-    <legend>Queenies</legend>
-    <% Game::QUEENIES.each do |key, label| %>
-      <label><%= check_box_tag "game[options][queenies][]", key, false, disabled: true, id: "game_options_queenies_#{key}" %> <%= label %></label><br>
-    <% end %>
+    <label for="game_options_decree">The Emperor's Choice</label>
+    <%= select_tag "game[options][decree]",
+          options_for_select([ [ "None", "" ] ] + Game::DECREES.map { |key, d| [ d[:label], key ] }.sort_by(&:first)),
+          id: "game_options_decree" %>
   </fieldset>
 
   <div>

@@ -14,11 +14,11 @@ module Tiles
           dr1, dc1 = steps[from_row % 2]
           r1 = from_row + dr1
           c1 = from_col + dc1
-          next unless (0..19).cover?(r1) && (0..19).cover?(c1)
+          next unless board_contents.in_bounds?(r1, c1, from: from_row)
           dr2, dc2 = steps[r1 % 2]
           r2 = r1 + dr2
           c2 = c1 + dc2
-          next unless (0..19).cover?(r2) && (0..19).cover?(c2)
+          next unless board_contents.in_bounds?(r2, c2, from: r1)
           next unless board_contents.available_for_building?(r2, c2)
           next unless BUILDABLE_TERRAIN.include?(board_contents.terrain_at(r2, c2))
           [ r2, c2 ]

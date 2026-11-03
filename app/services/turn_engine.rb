@@ -9,9 +9,76 @@ class TurnEngine
   end
 
   def click(coordinate)
+    return resolve_plateau(coordinate) if plateau_pending?
+    before = @game.board_contents.settlements_for(@game.current_player.order)
     result = @game.turn_phase.click(coordinate, self)
+    return result if !result.is_a?(String) && offer_plateau(before) # reactions wait for the choice
     open_reactions!
     result
+  end
+
+  # --- Plateaus decree -------------------------------------------------------
+  # Any build (a settlement, warrior, ship or wagon placed, nothing moved or removed) next to empty
+  # mountains pauses for a choice: click a highlighted mountain to move the piece there, or click
+  # the piece again to leave it. The pending build's hex is kept in the builder's supply, so undo
+  # (which restores the supply) takes back the whole build. Pickups and goals were decided at the
+  # build hex: moving is a plain relocation. Any Canoe reactions the build set off (and a Canoe
+  # build's own end) wait, remembered in the pending entry, until the choice is made.
+
+  def plateau_pending? = @game.playing? && plateau_from.present?
+
+  def plateau_from = @game.current_player&.supply&.dig("plateau", "from")
+
+  def plateau_options(row, col)
+    @game.instantiate
+    # Without the piece itself, so a warrior doesn't block the hexes it could move to.
+    contents = @game.board_contents.dup.tap { |c| c.remove(row, col) }
+    contents.neighbors_where(row, col) { |nr, nc| contents.terrain_at(nr, nc) == "M" && contents.available_for_building?(nr, nc) }
+  end
+
+  # Starts the choice if the click was such a build; true when it did.
+  def offer_plateau(before)
+    return false unless @game.plateaus?
+    player = @game.current_player
+    after = @game.board_contents.settlements_for(player.order)
+    added = after - before
+    return false unless added.one? && (before - after).empty? && !@game.board_contents.city_hall_at?(*added.first)
+    return false if plateau_options(*added.first).empty?
+    player.supply["plateau"] = { "from" => added.first, "reaction_done" => @reaction_done, "emptied" => @emptied.any? }
+    @reaction_done = false
+    @emptied.clear
+    player.save
+    true
+  end
+
+  def resolve_plateau(coordinate)
+    player = @game.current_player
+    from = plateau_from
+    target = [ coordinate.row, coordinate.col ]
+    unless target == from
+      return "Not available" unless plateau_options(*from).include?(target)
+      @game.board_contents_will_change!
+      @game.board_contents.move_settlement(*from, *target)
+      record_move(
+        action: "plateau_move",
+        deliberate: false,
+        reversible: true,
+        game_player: player,
+        from: "[#{from[0]}, #{from[1]}]",
+        to: "[#{target[0]}, #{target[1]}]",
+        message: "#{player.player.handle} moved the settlement from [#{from[0]}, #{from[1]}] to the mountain at [#{target[0]}, #{target[1]}]"
+      )
+    end
+    pending = player.supply.delete("plateau")
+    @reaction_done = pending["reaction_done"]
+    @emptied << :deferred if pending["emptied"]
+    player.save
+    @game.save
+    open_reactions!
+  end
+
+  def plateau_turn_state
+    "#{@game.current_player.player.handle}: move to mountain or click again"
   end
 
   # --- Canoe reactions -------------------------------------------------------
@@ -24,7 +91,7 @@ class TurnEngine
   # The confirmation is only needed when control passes to another player.
 
   def skip_canoe
-    return "Not allowed" unless @game.turn_phase.type == "canoe"
+    return "Not allowed" unless @game.turn_phase.type == "canoe" && !plateau_pending?
     capture_undo_snapshot
     record_move(
       action: "skip_canoe",
@@ -50,17 +117,6 @@ class TurnEngine
     @reaction_done = true
   end
 
-  # A 20x20 boolean grid of the cells legal for a mandatory-style build of
-  # `terrain` (used for 2-card terrain disambiguation and view highlighting).
-  # A grid view of BoardState#buildable_cells_for — the adjacent-if-possible
-  # rule lives there, not here.
-  def available_list(active_player, terrain)
-    return nil unless @game.playing?
-    grid = Array.new(20) { Array.new(20, false) }
-    @game.board_contents.buildable_cells_for(active_player, terrain).each { |row, col| grid[row][col] = true }
-    grid
-  end
-
   def activate_outpost
     capture_undo_snapshot
     @game.instantiate
@@ -81,6 +137,7 @@ class TurnEngine
   end
 
   def activate_fort_tile
+    return "Not available" if plateau_pending?
     capture_undo_snapshot
     @game.instantiate
     game_player = @game.current_player
@@ -175,20 +232,80 @@ class TurnEngine
   # choice). Any other location tile you hold that could act now, used or not, except tiles
   # acquired this turn.
   def bazaar_entries(game_player)
+    copy_entries(game_player, game_player.tiles || [], prefix: "Copy")
+  end
+
+  # The entries for copying the action of any of +tiles+, performed with game_player's own pieces.
+  def copy_entries(game_player, tiles, prefix:, fresh_blocks: true)
     @game.instantiate
-    (game_player.tiles || []).uniq { |t| t["klass"] }.flat_map do |tile|
+    tiles.uniq { |t| t["klass"] }.flat_map do |tile|
       tile_obj = Tiles::Tile.for_klass(tile["klass"])&.new(0)
-      next [] unless tile_obj&.bazaar_copyable? && !tile["fresh"]
+      next [] unless tile_obj&.bazaar_copyable? && !(fresh_blocks && tile["fresh"])
       next [] unless tile_obj.passive_effect? || tile_actionable?(tile)
       name = tile["klass"].delete_suffix("Tile").titleize
       if tile_obj.cathedral_tile?
-        entries = [ { klass: tile["klass"], mode: "add", label: "Copy #{name}: Add 1 to Count" } ]
-        entries << { klass: tile["klass"], mode: "build", label: "Copy #{name}: Build (#{game_player.cathedral_count} left)" } if game_player.cathedral_count.positive?
+        entries = [ { klass: tile["klass"], mode: "add", label: "#{prefix} #{name}: Add 1 to Count" } ]
+        entries << { klass: tile["klass"], mode: "build", label: "#{prefix} #{name}: Build (#{game_player.cathedral_count} left)" } if game_player.cathedral_count.positive?
         entries
       else
-        [ { klass: tile["klass"], mode: nil, label: "Copy #{name}#{" (cannot be undone)" if tile_obj.fort_tile?}" } ]
+        [ { klass: tile["klass"], mode: nil, label: "#{prefix} #{name}#{" (cannot be undone)" if tile_obj.fort_tile?}" } ]
       end
     end
+  end
+
+  # The player who plays just before game_player (their right-hand opponent), skipping resigned players.
+  def right_opponent(game_player)
+    seated = @game.game_players.sort_by(&:order)
+    index = seated.index(game_player)
+    (1...seated.size).map { |i| seated[(index - i) % seated.size] }.find { |gp| !gp.resigned? }
+  end
+
+  # Spy Network: the opponent to the right's location tiles (held, used or not), plus, if they hold a
+  # Bazaar, your own tiles it could copy. Entries add `via: "BazaarTile"` for the latter.
+  def spy_entries(game_player)
+    opponent = right_opponent(game_player)
+    return [] unless opponent
+    held = opponent.tiles || []
+    direct = copy_entries(game_player, held, prefix: "Spy on", fresh_blocks: false)
+    return direct unless held.any? { |t| t["klass"] == "BazaarTile" }
+    via_bazaar = copy_entries(game_player, game_player.tiles || [], prefix: "Spy via Bazaar:")
+      .reject { |e| direct.any? { |d| d[:klass] == e[:klass] && d[:mode] == e[:mode] } }
+      .map { |e| e.merge(via: "BazaarTile") }
+    direct + via_bazaar
+  end
+
+  # Spy Network acts like the tile it uses, as Bazaar does, but uses up the Spy Network tile.
+  def activate_spy(target_klass, mode = nil, via = nil)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    spy = game_player.find_unused_tile("SpyNetworkTile")
+    return "Not available" unless spy && tile_activatable?(spy)
+    return "Not available" unless spy_entries(game_player).any? { |e| e[:klass] == target_klass && e[:mode] == mode && e[:via] == via }
+
+    handle = game_player.player.handle
+    name = target_klass.delete_suffix("Tile").titleize
+    record_move(
+      action: "select_action",
+      deliberate: true,
+      reversible: true,
+      to: "spynetwork",
+      payload: { "klass" => "SpyNetworkTile" },
+      message: "#{handle} selected the spy network action"
+    )
+    record_move(
+      action: "spy_copy",
+      deliberate: false,
+      reversible: true,
+      payload: { "klass" => target_klass, "mode" => mode, "via" => via },
+      message: "#{handle} chose to use the #{name} action with Spy Network"
+    )
+    game_player.supply["bazaar_copy"] = target_klass
+    game_player.supply["copy_via"] = "SpyNetworkTile"
+    begin_copied_action(game_player, target_klass, mode)
+    game_player.clear_copy! if @game.turn_phase.mandatory_build? # nothing left to do
+    game_player.save
+    @game.save
   end
 
   # Bazaar acts like the tile it copies: its name stands for the Bazaar tile while that action
@@ -221,12 +338,13 @@ class TurnEngine
     )
     game_player.supply["bazaar_copy"] = target_klass
     begin_copied_action(game_player, target_klass, mode)
-    game_player.supply.delete("bazaar_copy") if @game.turn_phase.mandatory_build? # nothing left to do
+    game_player.clear_copy! if @game.turn_phase.mandatory_build? # nothing left to do
     game_player.save
     @game.save
   end
 
   def select_action(type)
+    return "Not available" if plateau_pending?
     capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
     payload = { "klass" => klass_name }
@@ -315,6 +433,7 @@ class TurnEngine
   end
 
   def end_tile_action
+    return "Not available" if plateau_pending?
     @game.instantiate
     game_player = @game.current_player
     return end_silo_choice(game_player) if @game.turn_phase.type == "silo"
@@ -357,12 +476,14 @@ class TurnEngine
   # Everything about a tile being usable this turn except whether it is already used, which
   # Bazaar ignores when copying.
   def tile_actionable?(tile)
+    return false if plateau_pending?
     return false unless Tiles::Tile.for_klass(tile["klass"])
     return false unless @game.turn_phase.mandatory_build? &&
       (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return bazaar_entries(@game.current_player).any? if tile_obj.bazaar_tile?
+    return spy_entries(@game.current_player).any? if tile_obj.spy_network_tile?
     return false if tile_obj.places_wall? && @game.stone_walls <= 0
     return false if tile_obj.builds_settlement? && !@game.current_player.settlements_remaining?
     player = @game.current_player
@@ -373,14 +494,15 @@ class TurnEngine
   end
 
   def turn_endable?
-    return true if @game.playing? && @game.turn_phase.type == "silo" && @game.turn_phase.action_spent?
+    return false if plateau_pending?
+    return true if @game.playing? && %w[silo volcano].include?(@game.turn_phase.type) && @game.turn_phase.action_spent?
     @game.playing? &&
       @game.turn_phase.mandatory_build? &&
       !@game.can_build_mandatory?(@game.current_player)
   end
 
   def outpost_activatable?(tile)
-    return false if tile["used"]
+    return false if tile["used"] || plateau_pending?
     return false unless build_action?
     return false if @game.turn_phase.outpost_active?
     @game.current_player.settlements_remaining?
@@ -409,6 +531,12 @@ class TurnEngine
     end
   end
 
+  def volcano_turn_state(phase)
+    handle = @game.current_player.player.handle
+    return "Volcano: #{handle} must end the turn" if phase.action_spent?
+    "Volcano: #{handle} must remove #{phase.remaining} more #{phase.remaining == 1 ? 'piece' : 'pieces'}"
+  end
+
   def tile_action_endable?
     @game.playing? && @game.turn_phase.tile_action_endable?
   end
@@ -433,6 +561,7 @@ class TurnEngine
 
   def turn_state
     return "Game over" unless @game.current_player_id
+    return plateau_turn_state if plateau_pending?
     current_phase = @game.turn_phase
     case current_phase.type
     when "canoe_confirm"
@@ -441,6 +570,8 @@ class TurnEngine
       return "#{@game.current_player.player.handle} may build on Water or Swamp (Canoe), or skip"
     when "silo"
       return silo_turn_state(current_phase)
+    when "volcano"
+      return volcano_turn_state(current_phase)
     end
     action_type = current_phase.type
     tile_klass = Tiles::Tile.for_klass(current_action_tile_klass) if action_type != "mandatory"
@@ -496,7 +627,9 @@ class TurnEngine
   end
 
   def end_turn
+    return "Not available" if plateau_pending?
     return end_silo_turn(@game.current_player) if @game.turn_phase.type == "silo"
+    return end_volcano_turn(@game.current_player) if @game.turn_phase.type == "volcano"
     capture_undo_snapshot
     Rails.logger.debug("END TURN REQUESTED on GAME #{@game.id}")
     Rails.logger.debug(" - current player #{@game.current_player.inspect}")
@@ -509,7 +642,7 @@ class TurnEngine
     new_cards << @game.next_card if has_crossroads_tile?(game_player)
     game_player.extra_cards.times { new_cards << @game.next_card }
     game_player.supply.delete("extra_cards")
-    game_player.supply.delete("bazaar_copy")
+    game_player.clear_copy!
     game_player.supply.delete("rovers")
     game_player.hand = new_cards
     card_drawn = game_player.hand
@@ -547,7 +680,7 @@ class TurnEngine
     end
     max_order = @game.game_players.count - 1
     if @game.ending? && game_player.order == max_order
-      begin_silo_round(game_player) || finish_game(game_player)
+      begin_silo_round(game_player) || begin_volcano_round(game_player) || finish_game(game_player)
     end
   end
 
@@ -610,15 +743,60 @@ class TurnEngine
     nxt = @game.game_players.in_player_order.find do |gp|
       gp.order > current.order && !gp.resigned? && gp.supply["silos"].to_i.positive?
     end
-    return finish_game(current) unless nxt
+    return (begin_volcano_round(current, pass_clock: true) || finish_game(current)) unless nxt
 
-    if @game.timed?
-      apply_clock!(current, credit: false)
-      current.save
-      @game.turn_started_at = Time.current
-    end
+    pass_clock(current)
     @game.current_player = nxt
     @game.turn_phase = TurnPhase::SiloPhase.new(silo: 1, of: nxt.supply["silos"])
+    @game.save
+  end
+
+  # Closes the clock of an end-of-game player handing the round on (no increment).
+  def pass_clock(from)
+    return unless @game.timed?
+    apply_clock!(from, credit: false)
+    from.save
+    @game.turn_started_at = Time.current
+  end
+
+  # After the Silo round, the Volcano decree has each player remove a third of their pieces from
+  # the volcano's section, in turn order. Counted now so removing pieces doesn't change the others.
+  def begin_volcano_round(game_player, pass_clock: false)
+    return false unless @game.volcano?
+    @game.instantiate
+    players = @game.game_players.in_player_order.reject(&:resigned?)
+    players.each { |gp| gp.update!(supply: gp.supply.merge("volcano" => @game.volcano_due_for(gp.order))) }
+    first = players.find { |gp| gp.supply["volcano"].positive? }
+    return false unless first
+
+    pass_clock(game_player) if pass_clock
+    record_move(
+      action: "begin_volcano_round",
+      deliberate: false,
+      reversible: false,
+      game_player: game_player,
+      message: "Volcano"
+    )
+    @game.current_player = first
+    @game.turn_phase = TurnPhase::VolcanoPhase.new(remaining: first.supply["volcano"])
+    @game.save
+    true
+  end
+
+  # End turn: next player in order with pieces to remove, else the game ends.
+  def end_volcano_turn(game_player)
+    return "Not allowed" unless @game.turn_phase.action_spent?
+    capture_undo_snapshot
+    record_move(action: "volcano_end_turn", deliberate: true, reversible: true,
+                message: "#{game_player.player.handle} ended their Volcano turn")
+    nxt = @game.game_players.in_player_order.find do |gp|
+      gp.order > game_player.order && !gp.resigned? && gp.supply["volcano"].to_i.positive?
+    end
+    return finish_game(game_player) unless nxt
+
+    pass_clock(game_player)
+    @game.current_player = nxt
+    @game.turn_phase = TurnPhase::VolcanoPhase.new(remaining: nxt.supply["volcano"])
     @game.save
   end
 
@@ -663,6 +841,7 @@ class TurnEngine
   def buildable_cells
     return [] unless @game.playing?
     @game.instantiate
+    return [ plateau_from ] + plateau_options(*plateau_from) if plateau_pending?
     @game.turn_phase.legal_targets(
       board_contents: @game.board_contents, player: @game.current_player, game: @game
     )
@@ -1213,7 +1392,7 @@ class TurnEngine
   def reset_to_mandatory
     current_phase = @game.turn_phase
     ct = current_phase.chosen_terrain
-    @game.current_player.supply.delete("bazaar_copy")
+    @game.current_player.clear_copy!
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
   end
 

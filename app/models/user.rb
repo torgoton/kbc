@@ -32,15 +32,15 @@ class User < ApplicationRecord
   validates :password, presence: true, on: :create
 
   def my_games
-    games.where(state: [ "playing", "waiting" ])
+    games.where(state: [ "playing", "waiting" ]).order(created_at: :asc, id: :asc)
   end
 
   def waiting_games
-    Game.waiting.where.not(id: game_players.select(:game_id))
+    Game.waiting.where.not(id: game_players.select(:game_id)).order(created_at: :asc, id: :asc)
   end
 
   def completed_games
-    games.completed
+    games.completed.order(updated_at: :desc, id: :desc)
   end
 
   def rated_games_count
