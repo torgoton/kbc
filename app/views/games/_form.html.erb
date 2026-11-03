@@ -54,7 +54,7 @@
       <% end %>
     <label for="game_options_decree">The Emperor's Choice</label>
     <%= select_tag "game[options][decree]",
-          options_for_select([ [ "None", "" ] ] + Game::DECREES.map { |key, d| [ d[:label], key ] }.sort_by(&:first)),
+          options_for_select([ [ "None", "" ], [ "Random", "random" ] ] + Game::DECREES.map { |key, d| [ d[:label], key ] }.sort_by(&:first), ""),
           id: "game_options_decree" %>
   </fieldset>
 

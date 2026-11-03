@@ -51,6 +51,7 @@ class Game < ApplicationRecord
     "marshlands" => { label: "Marshlands", enabled: true },
     "harvest" => { label: "Harvest", enabled: true }
   }.freeze
+  RANDOM_DECREE = "random".freeze
   # The Emperor's Choice decrees: `description` is the player-facing rule text shown in the game.
   DECREES = {
     "island" => {
@@ -358,7 +359,7 @@ class Game < ApplicationRecord
   # The game-options line shown on the dashboard: expansions, then the chosen decree if any.
   # e.g. "Expansions: Nomads (Maybe Sword) · Decree: Ferry"
   def options_label
-    [ expansions_label, (decree_label = DECREES.dig(options["decree"], :label)) && "Decree: #{decree_label}" ].compact.join(" · ")
+    [ expansions_label, (decree_label = options["decree"] == RANDOM_DECREE ? "Random" : DECREES.dig(options["decree"], :label)) && "Decree: #{decree_label}" ].compact.join(" · ")
   end
 
   def player_handles
@@ -683,8 +684,9 @@ class Game < ApplicationRecord
   # is in play, with whatever was placed for it.
   def select_decree
     self.decree = nil
-    return unless DECREES.key?(options["decree"])
-    self.decree = { "name" => options["decree"] }
+    name = options["decree"] == RANDOM_DECREE ? DECREES.keys.sample : options["decree"]
+    return unless DECREES.key?(name)
+    self.decree = { "name" => name }
     decree["map"] = rand(Boards::Island::SECTIONS.size) if island?
     self.move_count += 1
     moves.build(
