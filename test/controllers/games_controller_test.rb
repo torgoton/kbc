@@ -475,8 +475,10 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='game[options][expansions][]'][value=harvest]:not([checked]):not([disabled])"
     assert_select "select#game_options_decree[name='game[options][decree]']"
     options = css_select("select#game_options_decree option")
-    assert_equal [ "None", "" ], [ options.first.text, options.first["value"] ], "None is the default"
-    assert_equal Game::DECREES.values.map { |d| d[:label] }.sort, options.drop(1).map(&:text), "decrees alphabetically"
+    assert_equal [ "None", "" ], [ options.first.text, options.first["value"] ]
+    assert_equal [ "Random", "random" ], [ options[1].text, options[1]["value"] ]
+    assert_select "select#game_options_decree option[selected]", count: 1, text: "None"
+    assert_equal Game::DECREES.values.map { |d| d[:label] }.sort, options.drop(2).map(&:text), "decrees alphabetically"
     assert_select "input#game_options_nomads_sword[checked]"
   end
 
@@ -494,6 +496,9 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     post games_url, params: { game: { options: { decree: "ferry" } } }
     assert_equal "ferry", Game.last.options["decree"]
 
+    post games_url, params: { game: { options: { decree: "random" } } }
+    assert_equal "random", Game.last.options["decree"]
+
     post games_url, params: { game: { options: { decree: "bogus" } } }
     assert_nil Game.last.options["decree"]
 
@@ -510,6 +515,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
       game.start
       assert_equal name, game.decree["name"]
     end
+  end
+
+  test "a Random decree is resolved to one of the decrees when the game starts" do
+    game = Game.new(state: "waiting", options: { "decree" => "random" })
+    game.add_player(users(:chris))
+    game.add_player(users(:jules))
+    game.save!
+    game.start
+    assert_includes Game::DECREES.keys, game.decree["name"]
+    assert_equal "Decree: #{Game::DECREES[game.decree["name"]][:label]}", game.moves.find_by!(action: "select_decree").message
+    assert_equal "random", game.options["decree"]
   end
 
   test "GET new renders a help dialog explaining timed games" do

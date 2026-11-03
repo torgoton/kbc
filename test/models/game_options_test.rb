@@ -28,6 +28,7 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_equal "Expansions: None", Game.new(options: {}).options_label
     assert_equal "Expansions: None · Decree: Native Soil", Game.new(options: { "decree" => "native_soil" }).options_label
     assert_equal "Expansions: Crossroads", Game.new(options: { "expansions" => %w[crossroads], "decree" => "bogus" }).options_label
+    assert_equal "Expansions: None · Decree: Random", Game.new(options: { "decree" => "random" }).options_label
   end
 
   test "expansions_label lists included expansions or None" do
