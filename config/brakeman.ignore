@@ -3,14 +3,45 @@
     {
       "warning_type": "Cross-Site Scripting",
       "warning_code": 2,
-      "fingerprint": "b9330dadeffdaab3d869917999d414d3d0d2f032806531ce432312995ea0c80c",
+      "fingerprint": "c397f3a5dde84efcf19e9f956da3164b2ca1c5931c50d7eef96390a49d6dfda4",
       "check_name": "CrossSiteScripting",
       "message": "Unescaped model attribute",
-      "file": "app/views/games/_quadrant.html.erb",
-      "line": 48,
+      "file": "app/views/games/_hex.html.erb",
+      "line": 52,
       "link": "https://brakemanscanner.org/docs/warning_types/cross_site_scripting",
       "code": "Tiles::Tile.description",
       "render_path": [
+        {
+          "type": "controller",
+          "class": "GamesController",
+          "method": "create",
+          "line": 24,
+          "file": "app/controllers/games_controller.rb",
+          "rendered": {
+            "name": "games/show",
+            "file": "app/views/games/show.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/show",
+          "line": 4,
+          "file": "app/views/games/show.html.erb",
+          "rendered": {
+            "name": "games/_game",
+            "file": "app/views/games/_game.html.erb"
+          }
+        },
+        {
+          "type": "template",
+          "name": "games/_game",
+          "line": 34,
+          "file": "app/views/games/_game.html.erb",
+          "rendered": {
+            "name": "games/_board",
+            "file": "app/views/games/_board.html.erb"
+          }
+        },
         {
           "type": "template",
           "name": "games/_board",
@@ -20,11 +51,21 @@
             "name": "games/_quadrant",
             "file": "app/views/games/_quadrant.html.erb"
           }
+        },
+        {
+          "type": "template",
+          "name": "games/_quadrant",
+          "line": 14,
+          "file": "app/views/games/_quadrant.html.erb",
+          "rendered": {
+            "name": "games/_hex",
+            "file": "app/views/games/_hex.html.erb"
+          }
         }
       ],
       "location": {
         "type": "template",
-        "template": "games/_quadrant"
+        "template": "games/_hex"
       },
       "user_input": null,
       "confidence": "Medium",
