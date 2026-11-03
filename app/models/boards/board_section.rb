@@ -666,11 +666,26 @@ module Boards
     HIDDEN_SECTIONS = (24..27).to_a.freeze
 
     SILVER_HEX_KINDS = {
-      "Castle" => { css_class: "terrain-castlehex", description: "Castle - 3 points if you have an adjacent settlement" },
-      "Capitol" => { css_class: "terrain-capitolhex", description: "Capitol - 1 point for each of your settlements 1 or 2 hexes away" },
-      "Nomad"  => { css_class: "terrain-nomad", description: nil },
-      "Palace" => { css_class: "terrain-palacehex", description: "Palace - 5 points for the most adjacent settlements" },
-      "Silo"   => { css_class: "terrain-silo", description: "Silo" }
+      "Castle" => {
+        css_class: "terrain-castlehex",
+        description: "Castle - 3 points if you have an adjacent settlement"
+      },
+      "Capitol" => {
+        css_class: "terrain-capitolhex",
+        description: "Capitol - 1 point for each of your settlements 1 or 2 hexes away"
+      },
+      "Nomad"  => {
+        css_class: "terrain-nomad",
+        description: nil # populated by a tile
+      },
+      "Palace" => {
+        css_class: "terrain-palacehex",
+        description: "Palace - 5 points for the most adjacent settlements"
+      },
+      "Silo"   => {
+        css_class: "terrain-silo",
+        description: "Silo - if adjacent, build or move 3 pieces after all normal turns"
+      }
     }.freeze
 
     attr_accessor :terrain
