@@ -302,6 +302,16 @@ class CanoeTest < ActiveSupport::TestCase
     assert_nil @paula.reload.bonus_scores["rovers"]
   end
 
+  test "emptying two locations with one build gives every Canoe a reaction for each" do
+    @game.instantiate
+    other = @game.board_contents.neighbors(1, 7).find { |n| n != [ 2, 7 ] && @game.board_contents.terrain_at(*n) != "W" }
+    @game.board_contents.place_tile(*other, "FarmTile", 1)
+    @game.save!
+    empty_the_location
+
+    assert_equal [ @paula.order, @paula.order ], @game.turn_phase.holders
+  end
+
   # With Plateaus, a reactor's Canoe build may move to a mountain; the reactions wait for that choice.
   def plateau_canoe_build
     @game.update!(decree: { "name" => "plateaus" })
