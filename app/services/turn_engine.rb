@@ -21,9 +21,9 @@ class TurnEngine
   # Any build (a settlement, warrior, ship or wagon placed, nothing moved or removed) next to empty
   # mountains pauses for a choice: click a highlighted mountain to move the piece there, or click
   # the piece again to leave it. The pending build's hex is kept in the builder's supply, so undo
-  # (which restores the supply) takes back the whole build. Pickups and goals were decided at the
-  # build hex: moving is a plain relocation. Any Canoe reactions the build set off (and a Canoe
-  # build's own end) wait, remembered in the pending entry, until the choice is made.
+  # (which restores the supply) takes back the whole build. The build and the move are separate
+  # log entries, each followed by its own tile forfeit/pickup check (all goals but Mayors are decided at the build hex).
+  # Any Canoe reactions the build set off (and a Canoe build's own end) wait, remembered in the pending entry, until the choice is made.
 
   def plateau_pending? = @game.playing? && plateau_from.present?
 
@@ -68,6 +68,9 @@ class TurnEngine
         to: "[#{target[0]}, #{target[1]}]",
         message: "#{player.player.handle} moved the settlement from [#{from[0]}, #{from[1]}] to the mountain at [#{target[0]}, #{target[1]}]"
       )
+      apply_tile_forfeit(player)
+      apply_tile_pickup(player, *target)
+      check_mayors_goal(player, target.first) # the only goal checked again: Mayors counts the build and the move
     end
     pending = player.supply.delete("plateau")
     @reaction_done = pending["reaction_done"]
@@ -1199,24 +1202,24 @@ class TurnEngine
     )
   end
 
-  def find_tile_pickup(game_player, row, col)
+  # One tile from every adjacent location hex that still has tiles and isn't already held/taken from.
+  def find_tile_pickups(game_player, row, col)
     held_locations = game_player.held_tile_locations
     taken_from = game_player.taken_from || []
-    @game.board_contents.neighbors(row, col).each do |adj_r, adj_c|
+    @game.board_contents.neighbors(row, col).filter_map do |adj_r, adj_c|
       klass = @game.board_contents.tile_klass(adj_r, adj_c)
       next unless klass && @game.board_contents.tile_qty(adj_r, adj_c) > 0
       tile_key = Coordinate.new(adj_r, adj_c).to_key
-      next if held_locations.include?(tile_key)
-      next if taken_from.include?(tile_key)
-      return { key: tile_key, klass: klass }
+      next if held_locations.include?(tile_key) || taken_from.include?(tile_key)
+      { key: tile_key, klass: klass }
     end
-    nil
   end
 
   def apply_tile_pickup(game_player, row, col)
-    tile = find_tile_pickup(game_player, row, col)
-    return unless tile
+    find_tile_pickups(game_player, row, col).each { |tile| pick_up_tile(game_player, tile) }
+  end
 
+  def pick_up_tile(game_player, tile)
     qty_before = @game.board_contents.tile_qty(*Coordinate.from_key(tile[:key]))
     record_move(
       action: "pick_up_tile",
@@ -1339,15 +1342,12 @@ class TurnEngine
   def check_families_goal(game_player)
     return unless Array(@game.goals).include?("families")
     builds = @game.turn_phase.builds
-    # Any 3 of the mandatory builds (more than 3 with Temple pieces), scored once: when
-    # this build completes the first line.
-    return if builds.size < 3 || line_among?(builds[0...-1])
-    return unless line_among?(builds)
+    # Only the first 3 mandatory builds count (Temple builds never do), where each was built, not
+    # where Plateaus moved it.
+    return unless builds.size == 3 && straight_line?(builds)
     score_goal(game_player, "families", 2,
       "#{game_player.player.handle} scored 2 points (Families)")
   end
-
-  def line_among?(positions) = positions.combination(3).any? { |trio| straight_line?(trio) }
 
   def straight_line?(positions)
     a, b, c = positions

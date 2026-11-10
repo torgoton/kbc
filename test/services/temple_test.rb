@@ -91,32 +91,15 @@ class TempleTest < ActiveSupport::TestCase
     assert_equal 1, @game.end_trigger_count
   end
 
-  test "with a Temple piece, any 3 of the mandatory builds in a line score Families, once" do
+  test "with a Temple piece, only the first 3 mandatory builds count for Families" do
     @game.update!(goals: [ "families" ], mandatory_count: Game::MANDATORY_COUNT + 1, board_contents: BoardState.new)
     @chris.update!(supply: { "settlements" => 10, "temple_due" => 1 })
 
     build(1, 9)
     build(0, 9)
     build(0, 8)
-    assert_nil @chris.bonus_scores&.dig("families"), "the first 3 are not in a line"
-
-    build(0, 7)
-    assert_equal 2, @chris.bonus_scores["families"], "(0,7) (0,8) (0,9) are"
-  end
-
-  test "Families scores once even when a later build makes another line" do
-    @game.update!(goals: [ "families" ], mandatory_count: Game::MANDATORY_COUNT + 2, board_contents: BoardState.new)
-    @chris.update!(supply: { "settlements" => 10, "temple_due" => 2 })
-
-    build(0, 7)
-    build(0, 8)
-    build(0, 9)
-    assert_equal 2, @chris.bonus_scores["families"]
-
-    build(1, 8)
-    build(2, 9)
-    assert TurnEngine.new(@game).send(:straight_line?, [ [ 0, 8 ], [ 1, 8 ], [ 2, 9 ] ]), "a second line"
-    assert_equal 2, @chris.bonus_scores["families"]
+    build(0, 7) # (0,7) (0,8) (0,9) are a line, but this is the 4th build
+    assert_nil @chris.bonus_scores&.dig("families")
   end
 
   test "the build message says how many of the mandatory settlements come from Temple" do
