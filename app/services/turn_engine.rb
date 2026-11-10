@@ -44,7 +44,7 @@ class TurnEngine
     added = after - before
     return false unless added.one? && (before - after).empty? && !@game.board_contents.city_hall_at?(*added.first)
     return false if plateau_options(*added.first).empty?
-    player.supply["plateau"] = { "from" => added.first, "reaction_done" => @reaction_done, "emptied" => @emptied.any? }
+    player.supply["plateau"] = { "from" => added.first, "reaction_done" => @reaction_done, "emptied" => @emptied.size }
     @reaction_done = false
     @emptied.clear
     player.save
@@ -74,7 +74,8 @@ class TurnEngine
     end
     pending = player.supply.delete("plateau")
     @reaction_done = pending["reaction_done"]
-    @emptied << :deferred if pending["emptied"]
+    emptied = pending["emptied"] == true ? 1 : pending["emptied"].to_i # true: saved before the count was kept
+    emptied.times { @emptied << :deferred }
     player.save
     @game.save
     open_reactions!
@@ -1004,7 +1005,7 @@ class TurnEngine
   def open_reactions!
     reacting = @reaction_done
     @reaction_done = false
-    holders = @emptied.any? ? canoe_holders : []
+    holders = canoe_holders * @emptied.size # a full round of reactions for each location emptied
     @emptied.clear
     return unless holders.any? || reacting
 

@@ -196,6 +196,17 @@ class PlateausScenarioTest < ActiveSupport::TestCase
     assert_equal %w[forfeit_tile forfeit_tile], scenario.moves.last(2).pluck(:action)
   end
 
+  test "emptying one location by the build and another by the move gives each Canoe two reactions" do
+    scenario = board_21_scenario
+    scenario.place_tile("MountainStationTile", at: [ 2, 3 ], qty: 1)
+    scenario.place_tile("ScoutCabinTile", at: [ 4, 3 ], qty: 1)
+    scenario.give_tile(1, "CanoeTile", from: [ 0, 0 ])
+    scenario.build_settlement(at: [ 2, 4 ])
+    scenario.build_settlement(at: [ 3, 3 ])
+
+    assert_equal [ 1, 1 ], scenario.game.reload.turn_phase.holders
+  end
+
   # Goals are decided where the piece is built. Only Mayors is checked again after the move.
 
   test "Ambassadors counts at the build even if the settlement moves away" do
