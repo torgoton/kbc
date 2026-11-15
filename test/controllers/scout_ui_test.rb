@@ -5,7 +5,7 @@ class ScoutUiTest < ActionDispatch::IntegrationTest
     post session_url, params: { email_address: "chris@example.com", password: "password" }
   end
 
-  test "a scout renders as a person token in its player's colour, not as a settlement" do
+  test "a scout renders as a person token in its player's color, not as a settlement" do
     game = games(:game2player)
     game.board_contents = BoardState.new.tap { |s| s.place_scout(5, 4, 0) }
     game.save!

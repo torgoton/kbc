@@ -100,12 +100,12 @@ class GamesController < ApplicationController
   # Opener withdraws a table nobody has joined yet.
   def cancel
     game = Game.find(params[:id])
-    cancelled = game.with_lock do
+    canceled = game.with_lock do
       game.waiting? && game.opener == Current.user && game.destroy
     end
-    if cancelled
+    if canceled
       game.broadcast_dashboard_update
-      redirect_to dashboard_path, notice: "Table cancelled"
+      redirect_to dashboard_path, notice: "Table canceled"
     else
       redirect_to dashboard_path, alert: "Unable to cancel table"
     end

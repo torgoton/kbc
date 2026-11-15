@@ -147,7 +147,7 @@ module Tiles
       false
     end
 
-    # A tile whose action can be cancelled before it does anything, and once begun is ended
+    # A tile whose action can be canceled before it does anything, and once begun is ended
     # with End action as a move of its own (Cathedral, Scout Cabin).
     def cancellable_action?
       false

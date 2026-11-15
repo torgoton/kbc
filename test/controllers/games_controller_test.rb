@@ -1107,7 +1107,7 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "playing game cannot be cancelled" do
+  test "playing game cannot be canceled" do
     assert_no_difference -> { Game.count } do
       post cancel_game_url(games(:game2player))
     end
