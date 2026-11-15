@@ -1204,11 +1204,21 @@ ul li .hex:hover .hex-bg {
 #turn-state-bar {
     background-color: black;
     display: grid;
-    grid-template-columns: auto auto 1fr auto;
+    grid-template-columns: auto auto auto 1fr auto;
     align-items: center;
     height: 2.5rem;
     position: relative;
     z-index: 2;
+}
+
+.presence-dot { font-size: 0.7em; vertical-align: middle; }
+.presence-dot.online { color: #3c3; }
+.presence-dot.offline { color: #777; }
+.invite-badge { font-size: 0.8em; border: 1px solid currentColor; border-radius: 3px; padding: 0 0.3em; }
+
+#app-name {
+    font-weight: bold;
+    padding: 0 0.5rem 0 1rem;
 }
 
 #dashboard-link-area {

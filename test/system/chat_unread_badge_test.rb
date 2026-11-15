@@ -8,7 +8,7 @@ class ChatUnreadBadgeTest < ApplicationSystemTestCase
 
   test "unread badge counts chat messages but ignores other game broadcasts" do
     sign_in(email_address: "chris@example.com")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
 
     visit game_path(@game)
     # Reset any chat panel state (minimized/split) left over in this browser

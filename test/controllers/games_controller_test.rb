@@ -758,17 +758,15 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "join broadcasts dashboard update to the joining user" do
-    post session_url, params: { email_address: "paula@example.com", password: "password" }
-    paula = users(:paula)
+    chris = users(:chris)
 
-    assert_turbo_stream_broadcasts("user_#{paula.id}") do
+    assert_turbo_stream_broadcasts("user_#{chris.id}") do
       post join_game_url(games(:waiting_game))
     end
   end
 
   test "join broadcasts game update so waiting players see the game start" do
     game = games(:waiting_game)
-    post session_url, params: { email_address: "paula@example.com", password: "password" }
 
     assert_turbo_stream_broadcasts("game_#{game.id}") do
       post join_game_url(game)
@@ -1092,6 +1090,146 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
     game.add_player(users(:paula))
     game.start
     game.reload
+  end
+
+  test "opener can cancel a waiting table" do
+    game = games(:chris_waiting_game)
+
+    assert_difference -> { Game.count }, -1 do
+      post cancel_game_url(game)
+    end
+    assert_redirected_to dashboard_path
+  end
+
+  test "non-opener cannot cancel a waiting table" do
+    assert_no_difference -> { Game.count } do
+      post cancel_game_url(games(:waiting_game))
+    end
+  end
+
+  test "playing game cannot be cancelled" do
+    assert_no_difference -> { Game.count } do
+      post cancel_game_url(games(:game2player))
+    end
+  end
+
+  test "my games shows a cancel button only on my waiting tables" do
+    get dashboard_url
+    assert_select "form[action=?]", cancel_game_path(games(:chris_waiting_game))
+    assert_select "form[action=?]", cancel_game_path(games(:game2player)), count: 0
+  end
+
+  # --- real time, invites ---
+
+  def presence_for(user, kind, id = kind)
+    Presence.create!(user: user, kind: kind, connection_id: "#{id}-#{user.id}", last_ping_at: Time.current)
+  end
+
+  test "creating a Real Time table sets realtime and no clock" do
+    post games_url, params: { game: { speed: "realtime" } }
+
+    game = Game.order(:id).last
+    assert game.realtime?
+    assert_nil game.speed
+  end
+
+  test "creating a table can reserve the spot for an approved player" do
+    post games_url, params: { game: { speed: "", invited_user_id: users(:paula).id } }
+    assert_equal users(:paula).id, Game.order(:id).last.invited_user_id
+  end
+
+  test "inviting yourself is ignored" do
+    post games_url, params: { game: { speed: "", invited_user_id: users(:chris).id } }
+    assert_nil Game.order(:id).last.invited_user_id
+  end
+
+  test "cannot open a real-time table while in a playing real-time game" do
+    busy = Game.create!(state: "playing", realtime: true)
+    busy.add_player(users(:chris))
+    busy.add_player(users(:jules))
+
+    assert_no_difference -> { Game.count } do
+      post games_url, params: { game: { speed: "realtime" } }
+    end
+    assert_response :unprocessable_content
+  end
+
+  test "join is rejected for a table reserved for someone else" do
+    game = Game.create!(state: "waiting", invited_user: users(:jules))
+    game.add_player(users(:paula))
+
+    post join_game_url(game)
+
+    assert_redirected_to dashboard_path
+    assert_not_includes game.reload.players, users(:chris)
+  end
+
+  test "reserved table can be joined by the invitee" do
+    game = Game.create!(state: "waiting", invited_user: users(:chris))
+    game.add_player(users(:paula))
+
+    post join_game_url(game)
+
+    assert_redirected_to game_path(game)
+    assert game.reload.playing?
+  end
+
+  test "real-time join is rejected when the opener is off the dashboard" do
+    game = Game.create!(state: "waiting", realtime: true)
+    game.add_player(users(:paula))
+
+    post join_game_url(game)
+
+    assert_redirected_to dashboard_path
+    assert game.reload.waiting?
+  end
+
+  test "real-time join works with the opener on the dashboard and redirects the opener" do
+    game = Game.create!(state: "waiting", realtime: true)
+    game.add_player(users(:paula))
+    presence_for(users(:paula), "dashboard")
+
+    broadcasts = capture_turbo_stream_broadcasts("user_#{users(:paula).id}") do
+      post join_game_url(game)
+    end
+
+    assert_redirected_to game_path(game)
+    assert broadcasts.any? { |b| b.to_s.include?(%(action="redirect")) && b.to_s.include?(game_path(game)) },
+      "expected a redirect stream to the opener"
+  end
+
+  test "you cannot join a table you opened" do
+    game = games(:chris_waiting_game)
+    post join_game_url(game)
+    assert_redirected_to dashboard_path
+    assert game.reload.waiting?
+  end
+
+  test "dashboard lists real-time tables whose opener is on the dashboard" do
+    game = Game.create!(state: "waiting", realtime: true)
+    game.add_player(users(:paula))
+
+    get dashboard_url
+    assert_select "#dashboard-realtime-games form[action=?]", join_game_path(game), count: 0
+
+    presence_for(users(:paula), "dashboard")
+    get dashboard_url
+    assert_select "#dashboard-realtime-games form[action=?]", join_game_path(game)
+    assert_select "#dashboard-waiting-games form[action=?]", join_game_path(game), count: 0
+  end
+
+  test "dashboard shows online dots next to handles" do
+    presence_for(users(:paula), "site")
+    get dashboard_url
+    assert_select "#dashboard-waiting-games .presence-#{users(:paula).id}.online"
+  end
+
+  test "invited table shows an invitation label to the invitee only" do
+    game = Game.create!(state: "waiting", invited_user: users(:chris))
+    game.add_player(users(:paula))
+
+    get dashboard_url
+    assert_select "#dashboard-waiting-games .invite-badge", text: /Invitation from Paula/
   end
 end
 

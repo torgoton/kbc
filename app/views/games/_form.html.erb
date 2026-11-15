@@ -15,6 +15,7 @@
     <label for="game_speed">Speed</label>
     <%= form.select :speed, [
       [ "Untimed", "" ],
+      [ "Real Time — both of you online now, no clock", "realtime" ],
       [ "Blitz — 5 min + 20 s/turn", "blitz" ],
       [ "Normal — 10 min + 30 s/turn", "normal" ]
     ] %>
@@ -26,12 +27,20 @@
       <p>If your bank runs out, you're <strong>flagged</strong>: any opponent can claim victory right away. If nobody does and the game goes quiet for 10 more minutes, you're auto-resigned — but as long as either player keeps making moves, that won't happen.</p>
       <p>Unstarted and abandoned timed tables are cleaned up automatically after a period of inactivity; untimed tables are never removed.</p>
       <p>If you open a timed table and leave, the game will be cleaned up with no penalty to you. If you open a timed table and make a move, your clock starts and you must play to avoid being flagged.</p>
+      <p><strong>Real Time</strong> tables have no clock. They are listed only while you are on the dashboard, so an opponent can sit down right away; if you leave the dashboard the table is hidden, and it is removed if you stay away for 10 minutes.</p>
       <p>In short: timed games are for players who want to play quickly, and untimed games are for players who want to play slowly.</p>
       <%# No <form method="dialog"> here: it would nest inside the game form,
           nested forms are invalid HTML, and the parser drops the inner tag —
           making Close submit the game form. Plain type="button" instead. %>
       <button type="button" onclick="this.closest('dialog').close()">Close</button>
     </dialog>
+  </div>
+
+  <div>
+    <label for="game_invited_user_id">Invite a player</label>
+    <%= form.select :invited_user_id,
+          [ [ "Anyone (open table)", "" ] ] + User.where(approved: true).where.not(id: Current.user.id).order(:handle).map { |u| [ "#{'● ' if u.online?}#{u.handle}", u.id ] } %>
+    <small>Only the invited player will see the table.</small>
   </div>
 
   <fieldset>

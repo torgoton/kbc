@@ -8,6 +8,7 @@
         <% end %>
       <% end %>
       <%= player.player.handle %>
+      <%= render "shared/presence_dot", user: player.player %>
       <span class="rating-badge">(<%= rating_badge(player.player) %>)</span>
       <% if player.order == 0 %>
         <%= content_tag :span, class: "first-player-marker", title: "First player" do %>

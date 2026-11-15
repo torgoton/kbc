@@ -10,6 +10,9 @@
           <% if game.speed_label %>
             <span class="speed-badge"><%= game.speed_label %></span>
           <% end %>
+          <% if game.invited_user_id == viewer.id %>
+            <span class="invite-badge">Invitation from <%= game.opener.handle %></span>
+          <% end %>
           <div class="game-options"><%= game.options_label %></div>
         </td>
       </tr>

@@ -9,7 +9,7 @@ class TimedGameTest < ApplicationSystemTestCase
     set_field(email_field, email_address)
     set_field(password_field, password)
     submit_form sign_in_panel.find("form")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
   end
 
   test "blitz game shows per-player clocks and lets an opponent claim victory once flagged" do
@@ -74,7 +74,7 @@ class TimedGameTest < ApplicationSystemTestCase
     set_field(select_el, "blitz")
     submit_form find("form[action='#{games_path}']")
 
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
     game = Game.order(:id).last
     assert_equal "blitz", game.speed
     options_move = game.moves.find_by(action: "game_options")
@@ -86,7 +86,7 @@ class TimedGameTest < ApplicationSystemTestCase
     visit new_game_path
     submit_form find("form[action='#{games_path}']")
 
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
     game = Game.order(:id).last
     assert_nil game.speed
     options_move = game.moves.find_by(action: "game_options")

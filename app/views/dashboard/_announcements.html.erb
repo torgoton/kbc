@@ -1,8 +1,9 @@
-<div id="dashboard-announcements">
+<div id="dashboard-announcements" class="dashboard-section">
   <h2>Announcements</h2>
-  <%= render partial: "announcements/announcement", collection: pinned, as: :announcement %>
-  <% if latest_unpinned %>
-    <%= render "announcements/announcement", announcement: latest_unpinned %>
+  <% [ *pinned, latest_unpinned ].compact.each do |announcement| %>
+    <div class="announcement-headline">
+      <%= link_to announcement.title, announcements_path(anchor: dom_id(announcement)) %> (read more)
+    </div>
   <% end %>
   <%= link_to "All announcements", announcements_path %>
 </div>

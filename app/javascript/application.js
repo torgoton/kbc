@@ -2,6 +2,11 @@
 import "@hotwired/turbo-rails"
 import "controllers"
 
+// Sent when someone joins a table I opened: go to the game.
+window.Turbo.StreamActions.redirect = function () {
+  window.Turbo.visit(this.getAttribute("url"))
+}
+
 window.Turbo.StreamActions.play_sound = function () {
   window.SoundManager?.play(this.getAttribute("key"))
 }

@@ -20,7 +20,7 @@ class FortTileSystemTest < ApplicationSystemTestCase
 
   test "current player can open the Fort warning and activate the tile" do
     sign_in(email_address: "chris@example.com")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
 
     visit game_path(@game)
 

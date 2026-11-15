@@ -11,11 +11,11 @@ class GameTablesTest < ApplicationSystemTestCase
     assert_equal email_address, email_field.value
     assert_equal password, password_field.value
     submit_form sign_in_panel.find("form")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
   end
 
   def sign_out
-    submit_form find("#logout_btn form")
+    submit_form find("#logout_btn form", visible: :all)
     assert_selector "h2", text: "Sign in"
   end
 
@@ -28,7 +28,7 @@ class GameTablesTest < ApplicationSystemTestCase
     assert_selector "h1", text: "New Game"
     submit_form find("form")
 
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
     created_game = Game.where.not(id: existing_game_ids).sole
     assert_text "Game #{created_game.id}"
     assert_text "Waiting for players"

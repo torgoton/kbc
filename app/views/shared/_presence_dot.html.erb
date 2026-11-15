@@ -1,0 +1,2 @@
+<% online = user.online? %>
+<span class="presence-dot presence-<%= user.id %> <%= online ? "online" : "offline" %>" title="<%= online ? "Online" : "Offline" %>" aria-label="<%= online ? "online" : "offline" %>">●</span>

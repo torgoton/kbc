@@ -3,20 +3,25 @@
 <% end %>
 <%= turbo_stream_from "user_#{current_user.id}" %>
 <%= render "fancy" %>
+<div data-controller="presence" data-presence-kind-value="dashboard"></div>
 
 <div class="dashboard-box">
-  <h1>KBC Dashboard</h1>
-  <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete, data: { turbo: false } %></div>
-  <%= link_to "Credits", credits_path %>
+  <h1>Dashboard</h1>
+  <%= tag.div(flash[:alert], class: "flash-alert") if flash[:alert] %>
+  <%= tag.div(flash[:notice], class: "flash-notice") if flash[:notice] %>
 
   <%= render "announcements", pinned: @pinned_announcements, latest_unpinned: @latest_unpinned %>
 
+  <div id="dashboard-realtime-games" class="dashboard-section">
+    <%= render "dashboard/realtime_games", games: @realtime_games, viewer: Current.user %>
+  </div>
+
   <div id="dashboard-my-games" class="dashboard-section">
-    <%= render "dashboard/my_games", games: @my_games %>
+    <%= render "dashboard/my_games", games: @my_games, viewer: Current.user %>
   </div>
 
   <div id="dashboard-waiting-games" class="dashboard-section">
-    <%= render "dashboard/waiting_games", games: @waiting_games %>
+    <%= render "dashboard/waiting_games", games: @waiting_games, viewer: Current.user %>
   </div>
 
   <div id="dashboard-completed-games" class="dashboard-section">

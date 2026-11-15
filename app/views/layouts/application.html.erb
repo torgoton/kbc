@@ -25,7 +25,9 @@
   <%= tag.body(class: content_for?(:body_class) ? yield(:body_class) : "default") do %>
     <% if Current.user %>
       <div data-controller="presence"></div>
+      <%= turbo_stream_from "presence" %>
       <div id="turn-state-bar" data-controller="menu">
+        <span id="app-name">KBC</span>
         <div id="dashboard-link-area">
           <button type="button" data-action="click->menu#toggle" class="hamburger-btn" aria-label="Menu">
             &#9776; <%= Current.user.handle %> (<%= rating_badge(Current.user) %>)
@@ -35,6 +37,7 @@
             <% if Current.user.admin? %>
               <li><%= link_to "Admin", admin_path, data: { action: "click->menu#close" } %></li>
             <% end %>
+            <li><%= link_to "Credits", credits_path, data: { action: "click->menu#close" } %></li>
             <%= yield :menu_items %>
             <hr>
             <div id="logout_btn"><%= button_to "Log out", session_path, method: :delete, data: { turbo: false } %></div>

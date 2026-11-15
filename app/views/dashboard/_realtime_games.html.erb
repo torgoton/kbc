@@ -1,0 +1,22 @@
+<h2>Real-Time Tables</h2>
+<% if games.any? %>
+  <table>
+    <% games.each do |game| %>
+      <tr>
+        <td><%= button_to "Join", join_game_path(game) %></td>
+        <td>
+          Game <%= game.id %>:
+          <%= rated_list(game) %>
+          <span class="speed-badge"><%= game.speed_label %></span>
+          <% if game.invited_user_id == viewer.id %>
+            <span class="invite-badge">Invitation from <%= game.opener.handle %></span>
+          <% end %>
+          <div class="game-options"><%= game.options_label %></div>
+        </td>
+      </tr>
+    <% end %>
+  </table>
+<% else %>
+  <p>No one is waiting to play right now. <%= link_to "Open a real-time table", new_game_path %>
+  then stay on this page.</p>
+<% end %>
