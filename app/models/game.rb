@@ -16,6 +16,7 @@
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
+#  realtime          :boolean          default(FALSE), not null
 #  removed_terrain   :string
 #  scores            :json
 #  speed             :string
@@ -27,10 +28,16 @@
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  current_player_id :integer
+#  invited_user_id   :bigint
 #
 # Indexes
 #
 #  index_games_on_current_player_id  (current_player_id)
+#  index_games_on_invited_user_id    (invited_user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (invited_user_id => users.id)
 #
 class Game < ApplicationRecord
   STATES = [ "waiting", "playing", "completed" ]
@@ -101,6 +108,7 @@ class Game < ApplicationRecord
   has_many :moves, dependent: :destroy
   has_many :chat_messages, dependent: :destroy
   belongs_to :current_player, class_name: "GamePlayer", optional: true
+  belongs_to :invited_user, class_name: "User", optional: true
 
   serialize :board_contents, coder: BoardState
 
@@ -115,6 +123,20 @@ class Game < ApplicationRecord
 
   def expansion?(name)
     options.fetch("expansions", []).include?(name)
+  end
+
+  # The player who opened the table: the first one seated.
+  def opener
+    game_players.min_by(&:id)&.player
+  end
+
+  # Whether `user` may take the second seat at this table right now. Single
+  # source of truth for join checks and the real-time listing.
+  def joinable_by?(user)
+    return false unless waiting? && opener && opener != user
+    return false if invited_user_id && invited_user_id != user.id
+    return true unless realtime?
+    opener.on_dashboard? && !opener.in_realtime_game? && !user.in_realtime_game?
   end
 
   def add_player(user)
@@ -340,6 +362,7 @@ class Game < ApplicationRecord
   # Short badge for dashboard listings, e.g. "⚡ Blitz 3+15", so nobody joins
   # a timed table unknowingly.
   def speed_label
+    return "Real Time" if realtime?
     return nil unless timed?
     bank_min = SPEEDS[speed][:bank_ms] / 60_000
     increment_sec = SPEEDS[speed][:increment_ms] / 1_000
@@ -438,13 +461,15 @@ class Game < ApplicationRecord
     game_players.each do |gp|
       user = gp.player
       broadcast_update_to("user_#{user.id}", target: "dashboard-my-games",
-        partial: "dashboard/my_games", locals: { games: user.my_games.includes(game_players: :player) })
+        partial: "dashboard/my_games", locals: { games: user.my_games.includes(game_players: :player), viewer: user })
       broadcast_update_to("user_#{user.id}", target: "dashboard-completed-games",
         partial: "dashboard/completed_games", locals: { games: user.completed_games.includes(game_players: :player) })
     end
     User.where(approved: true).each do |user|
       broadcast_update_to("user_#{user.id}", target: "dashboard-waiting-games",
-        partial: "dashboard/waiting_games", locals: { games: user.waiting_games.includes(game_players: :player) })
+        partial: "dashboard/waiting_games", locals: { games: user.waiting_games, viewer: user })
+      broadcast_update_to("user_#{user.id}", target: "dashboard-realtime-games",
+        partial: "dashboard/realtime_games", locals: { games: user.realtime_waiting_games, viewer: user })
     end
   end
 
@@ -590,6 +615,14 @@ class Game < ApplicationRecord
   end
 
   SOUND_KEY_FORMAT = /\A[a-z_]+\z/
+
+  # Tell `user`'s open dashboard to jump into this game (a table they opened was joined).
+  def broadcast_redirect(user)
+    Turbo::StreamsChannel.broadcast_render_to(
+      "user_#{user.id}",
+      inline: %(<turbo-stream action="redirect" url="#{Rails.application.routes.url_helpers.game_path(self)}"></turbo-stream>)
+    )
+  end
 
   def broadcast_sound(key)
     return unless key&.match?(SOUND_KEY_FORMAT)

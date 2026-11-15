@@ -3,7 +3,7 @@ require "application_system_test_case"
 class UsersTest < ApplicationSystemTestCase
   test "user can sign in and reach the dashboard" do
     sign_in(email_address: "chris@example.com", password: "password")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
   end
 
   test "invalid credentials show an alert" do
@@ -30,6 +30,6 @@ class UsersTest < ApplicationSystemTestCase
     User.find_by!(email_address: email_address).update!(approved: true)
 
     sign_in(email_address: email_address, password: "secret123")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
   end
 end

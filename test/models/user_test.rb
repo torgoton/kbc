@@ -2,16 +2,17 @@
 #
 # Table name: users
 #
-#  id              :bigint           not null, primary key
-#  admin           :boolean          default(FALSE), not null
-#  approved        :boolean          default(FALSE)
-#  email_address   :string           not null
-#  handle          :string           not null
-#  last_seen_at    :datetime
-#  password_digest :string           not null
-#  rating          :integer          default(1500), not null
-#  created_at      :datetime         not null
-#  updated_at      :datetime         not null
+#  id                :bigint           not null, primary key
+#  admin             :boolean          default(FALSE), not null
+#  approved          :boolean          default(FALSE)
+#  dashboard_seen_at :datetime
+#  email_address     :string           not null
+#  handle            :string           not null
+#  last_seen_at      :datetime
+#  password_digest   :string           not null
+#  rating            :integer          default(1500), not null
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
 #
 # Indexes
 #
@@ -103,24 +104,32 @@ class UserTest < ActiveSupport::TestCase
 
   # --- online? ---
 
-  test "online? is false when last_seen_at has never been set" do
-    users(:chris).update!(last_seen_at: nil)
+  test "online? is false with no site presence" do
     assert_not users(:chris).online?
   end
 
-  test "online? is true immediately after a heartbeat" do
-    users(:chris).update!(last_seen_at: Time.current)
+  test "online? is true while any site connection is fresh" do
+    Presence.create!(user: users(:chris), kind: "site", connection_id: "a", last_ping_at: Time.current)
     assert users(:chris).online?
   end
 
-  test "online? is true just inside the one minute window" do
-    users(:chris).update!(last_seen_at: 59.seconds.ago)
+  test "online? survives closing one of two tabs" do
+    Presence.create!(user: users(:chris), kind: "site", connection_id: "a", last_ping_at: Time.current)
+    Presence.create!(user: users(:chris), kind: "site", connection_id: "b", last_ping_at: Time.current)
+    Presence.find_by(connection_id: "a").destroy
     assert users(:chris).online?
   end
 
-  test "online? is false once the one minute window has elapsed" do
-    users(:chris).update!(last_seen_at: 61.seconds.ago)
+  test "online? is false once connections go stale" do
+    Presence.create!(user: users(:chris), kind: "site", connection_id: "a", last_ping_at: 2.minutes.ago)
     assert_not users(:chris).online?
+  end
+
+  test "on_dashboard? only counts dashboard connections" do
+    Presence.create!(user: users(:chris), kind: "site", connection_id: "a", last_ping_at: Time.current)
+    assert_not users(:chris).on_dashboard?
+    Presence.create!(user: users(:chris), kind: "dashboard", connection_id: "a", last_ping_at: Time.current)
+    assert users(:chris).on_dashboard?
   end
 
   # --- admin? ---

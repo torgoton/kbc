@@ -16,6 +16,7 @@
 #  mandatory_count   :integer
 #  move_count        :integer
 #  options           :json             not null
+#  realtime          :boolean          default(FALSE), not null
 #  removed_terrain   :string
 #  scores            :json
 #  speed             :string
@@ -27,10 +28,16 @@
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
 #  current_player_id :integer
+#  invited_user_id   :bigint
 #
 # Indexes
 #
 #  index_games_on_current_player_id  (current_player_id)
+#  index_games_on_invited_user_id    (invited_user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (invited_user_id => users.id)
 #
 require "test_helper"
 

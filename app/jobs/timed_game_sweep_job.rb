@@ -12,7 +12,7 @@
 # 2. A waiting table whose opener has been offline 10+ minutes is deleted;
 #    nobody can join a table with no one to start it.
 # 3. A playing game whose current player never started their clock and has
-#    been offline 10+ minutes is cancelled (no penalty) — a hostage game
+#    been offline 10+ minutes is canceled (no penalty) — a hostage game
 #    the flag rule can't reach, since their clock was never running.
 class TimedGameSweepJob < ApplicationJob
   queue_as :default

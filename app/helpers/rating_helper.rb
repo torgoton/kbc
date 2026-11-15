@@ -5,6 +5,8 @@ module RatingHelper
   end
 
   def rated_list(game)
-    game.players.map { |player| "#{player.handle} (#{rating_badge(player)})" }.join(", ")
+    safe_join(game.players.map { |player|
+      safe_join([ "#{player.handle} (#{rating_badge(player)}) ", render("shared/presence_dot", user: player) ])
+    }, ", ")
   end
 end

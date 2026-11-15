@@ -73,6 +73,7 @@ Rails.application.routes.draw do
   resources :games do
     member do
       post :join
+      post :cancel
       post :action
       post :end_turn
       post :undo_move

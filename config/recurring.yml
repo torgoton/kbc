@@ -14,9 +14,17 @@ production:
     class: TimedGameSweepJob
     queue: default
     schedule: every minute
+  realtime_table_sweep:
+    class: RealtimeTableSweepJob
+    queue: default
+    schedule: every minute
 
 development:
   timed_game_sweep:
     class: TimedGameSweepJob
+    queue: default
+    schedule: every minute
+  realtime_table_sweep:
+    class: RealtimeTableSweepJob
     queue: default
     schedule: every minute

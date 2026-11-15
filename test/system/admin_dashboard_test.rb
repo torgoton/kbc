@@ -7,7 +7,7 @@ class AdminDashboardTest < ApplicationSystemTestCase
     set_field(panel.find("input[name='email_address']"), email_address)
     set_field(panel.find("input[name='password']"), password)
     submit_form panel.find("form")
-    assert_selector "h1", text: "KBC Dashboard"
+    assert_selector "h1", text: "Dashboard"
   end
 
   test "admin sees the Admin menu link and can open the admin page" do

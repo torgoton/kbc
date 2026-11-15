@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_01_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -115,7 +115,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_000000) do
     t.string "removed_terrain"
     t.json "interrupts", default: [], null: false
     t.json "decree"
+    t.boolean "realtime", default: false, null: false
+    t.bigint "invited_user_id"
     t.index ["current_player_id"], name: "index_games_on_current_player_id"
+    t.index ["invited_user_id"], name: "index_games_on_invited_user_id"
   end
 
   create_table "moves", force: :cascade do |t|
@@ -134,6 +137,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_000000) do
     t.jsonb "snapshot_before"
     t.index ["game_id"], name: "index_moves_on_game_id"
     t.index ["game_player_id"], name: "index_moves_on_game_player_id"
+  end
+
+  create_table "presences", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "kind", null: false
+    t.string "connection_id", null: false
+    t.datetime "last_ping_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["connection_id", "kind"], name: "index_presences_on_connection_id_and_kind", unique: true
+    t.index ["user_id"], name: "index_presences_on_user_id"
   end
 
   create_table "sessions", force: :cascade do |t|
@@ -297,6 +311,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_000000) do
     t.integer "rating", default: 1500, null: false
     t.datetime "last_seen_at"
     t.boolean "admin", default: false, null: false
+    t.datetime "dashboard_seen_at"
     t.index ["email_address"], name: "index_users_on_email_address", unique: true
     t.index ["handle"], name: "index_users_on_handle", unique: true
   end
@@ -307,8 +322,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_01_000000) do
   add_foreign_key "chat_messages", "games"
   add_foreign_key "game_players", "games"
   add_foreign_key "game_players", "users"
+  add_foreign_key "games", "users", column: "invited_user_id"
   add_foreign_key "moves", "game_players"
   add_foreign_key "moves", "games"
+  add_foreign_key "presences", "users"
   add_foreign_key "sessions", "users"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

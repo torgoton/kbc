@@ -1,7 +1,7 @@
 require "test_helper"
 
 # Tests for the Tile base class interface.
-# Does not reference any subclass — subclass-specific behaviour lives in subclass tests.
+# Does not reference any subclass — subclass-specific behavior lives in subclass tests.
 
 class Tiles::TileTest < ActiveSupport::TestCase
   test "valid_destinations returns empty array" do

@@ -15,6 +15,10 @@ class GamesController < ApplicationController
 
   def create
     @game = Game.new(create_game_params)
+    if @game.realtime? && Current.user.in_realtime_game?
+      @game.errors.add(:base, "You are already in a real-time game")
+      return render :new, status: :unprocessable_content
+    end
     @game.add_player(Current.user)
     respond_to do |format|
       if @game.save
@@ -72,22 +76,39 @@ class GamesController < ApplicationController
 
   def join
     @game = Game.find(params[:id])
-    unless @game
-      redirect_to dashboard_path, notice: "Game not found"
-      return
+    # Locked so two joiners (or a join and a cancel) can't both win.
+    error = @game.with_lock do
+      if !@game.joinable_by?(Current.user)
+        "That table is no longer available"
+      else
+        @game.add_player(Current.user)
+        "Unable to join game" unless @game.save
+      end
     end
-    # Join the game
-    @game.add_player(Current.user)
-    unless @game.save
-      redirect_to dashboard_path, error: "Unable to join game"
-      Rails.logger.error "ERROR saving game: #{@game.errors.inspect}"
+    if error
+      redirect_to dashboard_path, alert: error
       return
     end
     log_table_joined
     # MVP: 2 players every game, so just start it now
     @game.start
     @game.broadcast_game_update
+    @game.broadcast_redirect(@game.opener)
     redirect_to game_path(@game)
+  end
+
+  # Opener withdraws a table nobody has joined yet.
+  def cancel
+    game = Game.find(params[:id])
+    canceled = game.with_lock do
+      game.waiting? && game.opener == Current.user && game.destroy
+    end
+    if canceled
+      game.broadcast_dashboard_update
+      redirect_to dashboard_path, notice: "Table canceled"
+    else
+      redirect_to dashboard_path, alert: "Unable to cancel table"
+    end
   end
 
   def undo_move
@@ -307,7 +328,19 @@ class GamesController < ApplicationController
 
   def create_game_params
     game = params.fetch(:game, {})
-    { state: "waiting", speed: game.permit(:speed)[:speed].presence, options: create_options(game.fetch(:options, {})) }
+    speed = game.permit(:speed)[:speed].presence
+    {
+      state: "waiting",
+      realtime: speed == "realtime",
+      speed: speed == "realtime" ? nil : speed,
+      invited_user_id: invitee_id(game.permit(:invited_user_id)[:invited_user_id]),
+      options: create_options(game.fetch(:options, {}))
+    }
+  end
+
+  # Only an approved user other than the opener can be invited; anything else means an open table.
+  def invitee_id(raw)
+    User.where(approved: true).where.not(id: Current.user.id).find_by(id: raw)&.id
   end
 
   def create_options(raw)
