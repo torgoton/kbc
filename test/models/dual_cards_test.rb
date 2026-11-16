@@ -60,7 +60,7 @@ class DualCardsTest < ActiveSupport::TestCase
   end
 
   test "marshlands adds 5 dual cards to the terrain deck" do
-    game = Game.new(options: { "expansions" => %w[marshlands] })
+    game = Game.new(options: { "expansions" => %w[marshlands] }, boards: [ [ 17, 0 ], [ 0, 0 ] ])
     game.send(:initialize_terrain_deck)
 
     cards = game.deck + game.discard
@@ -76,7 +76,7 @@ class DualCardsTest < ActiveSupport::TestCase
   end
 
   test "Scouts also removes dual cards offering the removed terrain" do
-    game = Game.new(options: { "expansions" => %w[marshlands] }, goals: [ "scouts" ])
+    game = Game.new(options: { "expansions" => %w[marshlands] }, boards: [ [ 17, 0 ], [ 0, 0 ] ], goals: [ "scouts" ])
     game.send(:initialize_terrain_deck)
     game.send(:remove_scouts_terrain)
 

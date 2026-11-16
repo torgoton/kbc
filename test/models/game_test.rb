@@ -45,6 +45,14 @@ require "turbo/broadcastable/test_helper"
 
 class GameTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
+  test "terrain_cards excludes Swamp cards unless a Marshlands board is in play" do
+    opts = { "expansions" => [ "marshlands" ] }
+    without = Game.new(options: opts, boards: [ [ 0, 0 ], [ 1, 0 ] ])
+    assert_equal Game::DECK.chars, without.send(:terrain_cards)
+    with = Game.new(options: opts, boards: [ [ 0, 0 ], [ 16, 0 ] ])
+    assert_equal Game::DECK.chars + Game::MARSHLANDS_CARDS, with.send(:terrain_cards)
+  end
+
   test "end turn with low deck should shuffle discard pile" do
     game = games(:game2player)
     game.deck = [ "A" ]
