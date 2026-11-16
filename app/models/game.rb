@@ -858,7 +858,12 @@ class Game < ApplicationRecord
   end
 
   def terrain_cards
-    DECK.chars + (expansion?("marshlands") ? MARSHLANDS_CARDS : [])
+    DECK.chars + (any_marshlands_board? ? MARSHLANDS_CARDS : [])
+  end
+
+  # Swamp cards only matter if a Marshlands board (with Swamp hexes) is in play.
+  def any_marshlands_board?
+    Array(boards).any? { |id, _| MARSHLANDS_BOARD_IDS.include?(id) }
   end
 
   # Scouts: a terrain is taken out of the deck, and the Scouts goal scores next to it.
