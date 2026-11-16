@@ -11,17 +11,12 @@ Improvements to make the game...
 ### Front page
 
 - Explanation
-- Announcements?
 
 ### Header
 
-- Logout
 - Profile/Settings
 
 ### Dashboard
-
-- Needs to show my handle
-- Announcements
 
 ### Notifications
 
@@ -33,24 +28,14 @@ Use Pushover to notify when things happen:
 
 ### Open a table
 
-- Create some options
-  - Enable/disable expansions
-  - Disable sword?
+- Possible options
   - Pick specific boards?
   - Pick specific goals?
 
 ### Game view
 
-- Restore hexagon shape of cells
-- Show the same board state to all players
-- Play same sounds to all players
 - Don't play sounds all at once
-- Terrain needs a signifier besides color
-- Game log needs details for serious analysis
-  - Given starting options
-  - Chosen boards
-  - Chosen goals
-  - Detailed locations
+- Replay
 
 ### Scoring
 
@@ -59,7 +44,6 @@ Use Pushover to notify when things happen:
 ### System design and other features
 
 - Feedback/help form
-- Have some player options
 - Have accout settings
   . Have a way to change password
   - Have a way to delete account?
@@ -68,27 +52,18 @@ Use Pushover to notify when things happen:
   - Have an avatar?
   - Have a way to change notification settings?
   - Blocked user list to allow unblock
+- Profile page
+  - Rating over time
 
 ### "Better" code
-### Player ratings
 ### Blocked opponents list
-### Time limit options
 ### Chat
-  - in-game
   - lobby
 ### Rematch
-
-### More content
-
-#### Marshlands
-#### Harvest
-#### Queenies
 
 ### Premium features
 
 - Vote on change priorities
-- Start game with expansions
 - Game log export
 
 ### Connect/login with Patreon
-
