@@ -598,14 +598,16 @@ end
 
 class TurnPhase::FortPhase < TurnPhase
   include TurnPhase::TileBuildOrchestration
-  attr_reader :fort_terrain_value, :outpost_active_value
+  attr_reader :fort_terrain_value, :outpost_active_value, :chosen_terrain
 
   def self.from_hash(hash)
-    new(fort_terrain: hash.fetch("fort_terrain"), outpost_active: hash["outpost_active"] == true)
+    new(fort_terrain: hash.fetch("fort_terrain"), chosen_terrain: hash["chosen_terrain"], outpost_active: hash["outpost_active"] == true)
   end
 
-  def initialize(fort_terrain:, outpost_active: false)
+  # chosen_terrain: the mandatory-build lock carried through Fort, so the turn resumes with it.
+  def initialize(fort_terrain:, chosen_terrain: nil, outpost_active: false)
     @fort_terrain_value = fort_terrain
+    @chosen_terrain = chosen_terrain
     @outpost_active_value = outpost_active
   end
 
@@ -615,7 +617,7 @@ class TurnPhase::FortPhase < TurnPhase
 
   # Outpost waives adjacency; the build stays on the drawn card's terrain.
   def with_outpost_active
-    self.class.new(fort_terrain: fort_terrain, outpost_active: true)
+    self.class.new(fort_terrain: fort_terrain, chosen_terrain: chosen_terrain, outpost_active: true)
   end
 
   def type
@@ -646,7 +648,10 @@ class TurnPhase::FortPhase < TurnPhase
       "type" => "fort",
       "klass" => "FortTile",
       "fort_terrain" => fort_terrain
-    }.tap { |hash| hash["outpost_active"] = true if outpost_active? }
+    }.tap do |hash|
+      hash["chosen_terrain"] = chosen_terrain if chosen_terrain
+      hash["outpost_active"] = true if outpost_active?
+    end
   end
 end
 
