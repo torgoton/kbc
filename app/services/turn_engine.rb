@@ -177,7 +177,7 @@ class TurnEngine
       message: "#{game_player.player.handle} drew a #{Boards::Board.card_name(drawn_card)} card"
     )
 
-    @game.turn_phase = TurnPhase::FortPhase.new(fort_terrain: drawn_card)
+    @game.turn_phase = TurnPhase::FortPhase.new(fort_terrain: drawn_card, chosen_terrain: @game.turn_phase.chosen_terrain)
     @game.save
   end
 
