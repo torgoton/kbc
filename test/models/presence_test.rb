@@ -1,5 +1,26 @@
 require "test_helper"
 
+# == Schema Information
+#
+# Table name: presences
+#
+#  id            :bigint           not null, primary key
+#  kind          :string           not null
+#  last_ping_at  :datetime         not null
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  connection_id :string           not null
+#  user_id       :bigint           not null
+#
+# Indexes
+#
+#  index_presences_on_connection_id_and_kind  (connection_id,kind) UNIQUE
+#  index_presences_on_user_id                 (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#
 class PresenceTest < ActiveSupport::TestCase
   def row(user, kind, id, at: Time.current)
     Presence.create!(user: user, kind: kind, connection_id: id, last_ping_at: at)
