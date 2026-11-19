@@ -80,11 +80,9 @@
     <div class="supply-display">
       <div class="supply-settlements">
         <%= content_tag :span, player.supply["settlements"], class: "settlement-count" %>
-        <% if player.set_aside_count.positive? %>
-          <%= content_tag :span, "+#{player.set_aside_count}", class: "set-aside", title: "Set aside by Temple, built next turn" %>
-        <% end %>
         <%= render "games/settlement", color: player_color(player.order), css_class: "settlement-icon" %>
       </div>
+      <%= render "games/temple_pieces", player:, game:, engine:, is_me:, my_turn: %>
       <% if player.cathedral_count.positive? || player.holds_tile?(klass: "CathedralTile") %>
         <span class="cathedral-count" title="Cathedral count: settlements you can build with the Cathedral tile">
           <span class="cathedral-count-icon"></span><%= player.cathedral_count %>
