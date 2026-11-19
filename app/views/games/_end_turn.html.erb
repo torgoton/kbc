@@ -14,6 +14,12 @@
 <% elsif my_turn && engine.turn_endable? %>
   <%= button_to "End turn", end_turn_game_path(game) %>
 <% end %>
+<% if my_turn && (piece_choices = engine.temple_piece_choices).size > 1 %>
+  <% piece_choices.each do |piece| %>
+    <%= button_to piece.capitalize, choose_temple_piece_game_path(game, piece:),
+        class: ("selected" if my_player&.next_temple_piece(game.mandatory_count) == piece), form_class: "temple-choice" %>
+  <% end %>
+<% end %>
 <% if my_player && game.potential_claimant?(my_player.player) %>
   <div data-controller="claim-victory"<%= " hidden" unless game.claimable_by?(my_player.player) %>>
     <%= button_to "Claim victory", claim_victory_game_path(game), class: "claim-victory-btn",

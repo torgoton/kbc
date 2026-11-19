@@ -47,21 +47,61 @@ class GamePlayer < ApplicationRecord
 
   # Temple: settlements taken off the board wait here (outside the supply) until next turn,
   # when they return to the supply as "due" extra mandatory builds.
-  def set_aside_count = supply["set_aside"].to_i
-  def temple_due = supply["temple_due"].to_i
+  # Both are ordered lists of piece types ("settlement" or "wagon"); older saves stored a count.
+  def set_aside_count = temple_pieces("set_aside").size
+  def temple_due = temple_pieces("temple_due").size
 
-  def set_aside_settlement!
-    supply["set_aside"] = set_aside_count + 1
+  # Only set-aside settlements hold the game ending off; meeples never do.
+  def set_aside_settlements_count = temple_pieces("set_aside").count("settlement")
+
+  def set_aside_settlement!(piece = "settlement")
+    supply["set_aside"] = temple_pieces("set_aside") + [ piece ]
   end
 
+  # Set-aside pieces never rejoin the supply: they stay owed until the mandatory action builds them.
   def start_temple_turn!
-    supply["settlements"] = settlements_remaining + set_aside_count
-    supply["temple_due"] = set_aside_count
-    supply["set_aside"] = 0
+    supply["temple_due"] = temple_pieces("set_aside")
+    supply["set_aside"] = []
+    supply.delete("temple_built")
+    supply.delete("temple_pick")
   end
 
   def end_temple_turn!
-    supply["temple_due"] = 0
+    supply["temple_due"] = []
+    supply.delete("mandatory_start")
+    supply.delete("temple_built")
+    supply.delete("temple_pick")
+  end
+
+  # Temple pieces still owed this turn: those due, less those already built.
+  def owed_temple_pieces
+    owed = temple_pieces("temple_due")
+    Array(supply["temple_built"]).each { |piece| (i = owed.index(piece)) && owed.delete_at(i) }
+    owed
+  end
+
+  # Once only owed pieces are left (they come after the regular builds), they may be built in
+  # any order: the piece types to choose between.
+  def temple_piece_choices(remaining)
+    owed = owed_temple_pieces
+    remaining.positive? && remaining <= owed.size ? owed.uniq : []
+  end
+
+  # The piece the next mandatory build places, if it is an owed one: the chosen type, else the
+  # earliest set aside.
+  def next_temple_piece(remaining)
+    choices = temple_piece_choices(remaining)
+    choices.include?(supply["temple_pick"]) ? supply["temple_pick"] : choices.first
+  end
+
+  def temple_piece_built!(piece)
+    supply["temple_built"] = Array(supply["temple_built"]) + [ piece ]
+    supply.delete("temple_pick")
+  end
+
+  def temple_pieces(key)
+    value = supply[key]
+    value.is_a?(Array) ? value : Array.new(value.to_i, "settlement")
   end
 
   # Cathedral: a stock of settlements to build with the tile. It starts at 1 when the tile is

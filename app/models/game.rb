@@ -661,12 +661,22 @@ class Game < ApplicationRecord
   # No mandatory settlement has been built yet this turn. Locking Swamp (possibly via a
   # tile, before the mandatory action) lowers the full count by one without building.
   def mandatory_untouched?(game_player)
-    swamp = turn_phase.chosen_terrain == "B" ? 1 : 0
-    mandatory_count == MANDATORY_COUNT + game_player.temple_due - swamp
+    start = game_player.supply["mandatory_start"] || MANDATORY_COUNT + game_player.temple_due
+    swamp = turn_phase.chosen_terrain == "B" && start > game_player.temple_due ? 1 : 0
+    mandatory_count == start - swamp
+  end
+
+  # With no settlements left, the regular mandatory builds can't happen, but Temple pieces
+  # still owed must be built.
+  def clamp_mandatory_to_supply!(game_player)
+    owed = game_player.owed_temple_pieces.size
+    return unless game_player.settlements_remaining.zero? && mandatory_count > owed
+    self.mandatory_count = owed
   end
 
   def can_build_mandatory?(game_player)
-    mandatory_count.positive? && game_player.settlements_remaining?
+    mandatory_count.positive? &&
+      (game_player.settlements_remaining? || game_player.next_temple_piece(mandatory_count).present?)
   end
 
   private
