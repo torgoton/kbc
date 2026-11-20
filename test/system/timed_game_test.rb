@@ -37,8 +37,9 @@ class TimedGameTest < ApplicationSystemTestCase
       document.querySelector("form[action='#{claim_victory_game_path(game)}']").requestSubmit()
     JS
 
-    assert_selector "#game-area"
-    assert_equal "completed", game.reload.state
+    # #game-area is already on the page before the request lands, so wait on
+    # the DB state itself (Capybara retries until the server completes the game).
+    page.document.synchronize { raise Capybara::ExpectationNotMet, "game not completed" unless game.reload.completed? }
     assert current.reload.resigned?
   end
 
