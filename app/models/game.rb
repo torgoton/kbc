@@ -717,11 +717,8 @@ class Game < ApplicationRecord
       board_pool
     end
     self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
-    # "always": keep drawing until the Temple board is in play
-    while self.options["temple"] == "always" && pool.include?(TEMPLE_BOARD_ID) && boards.none? { |bid, _| bid == TEMPLE_BOARD_ID }
-      self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
-    end
-    while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
+    required = Array(options[:include_boards]) + (self.options["temple"] == "always" ? [ TEMPLE_BOARD_ID ] : [])
+    until required.all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
     end
     self.move_count += 1
