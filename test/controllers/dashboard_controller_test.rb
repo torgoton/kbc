@@ -41,4 +41,16 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
 
     assert_select ".speed-badge", text: /Normal/
   end
+
+  test "other games in progress lists playing games I am not in" do
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:paula))
+    game.update!(state: "playing")
+    post session_url, params: { email_address: "chris@example.com", password: "password" }
+
+    get dashboard_url
+
+    assert_select "#dashboard-other-games a", text: /Game #{game.id} /
+    assert_select "#dashboard-my-games a", text: /Game #{game.id} /, count: 0
+  end
 end

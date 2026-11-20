@@ -24,6 +24,10 @@
     <%= render "dashboard/waiting_games", games: @waiting_games, viewer: Current.user %>
   </div>
 
+  <div id="dashboard-other-games" class="dashboard-section">
+    <%= render "dashboard/my_games", title: "Other Games in Progress", games: @other_games, viewer: Current.user %>
+  </div>
+
   <div id="dashboard-completed-games" class="dashboard-section">
     <%= render "dashboard/completed_games", games: @completed_games %>
   </div>
