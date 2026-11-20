@@ -39,7 +39,7 @@
   <div>
     <label for="game_invited_user_id">Invite a player</label>
     <%= form.select :invited_user_id,
-          [ [ "Anyone (open table)", "" ] ] + User.where(approved: true).where.not(id: Current.user.id).order(:handle).map { |u| [ "#{'● ' if u.online?}#{u.handle}", u.id ] } %>
+          [ [ "Anyone (open table)", "" ] ] + User.where(approved: true).where.not(id: Current.user.id).order(:handle).map { |u| [ "#{'● ' if u.online?}#{u.handle} (#{rating_badge(u)})", u.id ] } %>
     <small>Only the invited player will see the table.</small>
   </div>
 
