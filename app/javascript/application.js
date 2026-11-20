@@ -27,7 +27,7 @@ function fancy_dance() {
 
   console.log('onpageshow', fancy);
   if (fancy) {
-    const colors = ['#a52a2a', '#ffd700', 'darkorchid', 'chartreuse', '#444', 'forestgreen', 'royalblue'];
+    const colors = ['#a52a2a', '#ffd700', 'darkorchid', 'chartreuse', '#444', 'forestgreen', 'royalblue', '#ff7310', '#ff10a3'];
 
     let cells = document.querySelectorAll('.fancy-hexfield div');
     cells.forEach((cell, index) => {
