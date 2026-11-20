@@ -469,15 +469,17 @@ class GamesControllerTest < ActionDispatch::IntegrationTest
 
   test "GET new renders expansion options with all expansions enabled" do
     get new_game_url
-    assert_select "input[name='game[options][expansions][]'][value=nomads]:not([checked]):not([disabled])"
-    assert_select "input[name='game[options][expansions][]'][value=crossroads]:not([checked]):not([disabled])"
-    assert_select "input[name='game[options][expansions][]'][value=marshlands]:not([checked]):not([disabled])"
-    assert_select "input[name='game[options][expansions][]'][value=harvest]:not([checked]):not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=nomads][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=crossroads][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=marshlands][checked]:not([disabled])"
+    assert_select "input[name='game[options][expansions][]'][value=harvest][checked]:not([disabled])"
     assert_select "select#game_options_decree[name='game[options][decree]']"
+    assert_select "input[type=radio][name='game[options][temple]']", 3
+    assert_select "input#game_options_temple_allowed[checked]"
     options = css_select("select#game_options_decree option")
     assert_equal [ "None", "" ], [ options.first.text, options.first["value"] ]
     assert_equal [ "Random", "random" ], [ options[1].text, options[1]["value"] ]
-    assert_select "select#game_options_decree option[selected]", count: 1, text: "None"
+    assert_select "select#game_options_decree option[selected]", count: 1, text: "Random"
     assert_equal Game::DECREES.values.map { |d| d[:label] }.sort, options.drop(2).map(&:text), "decrees alphabetically"
     assert_select "input#game_options_nomads_sword[checked]"
   end

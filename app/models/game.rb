@@ -101,7 +101,13 @@ class Game < ApplicationRecord
   }.freeze
   # The permanent tile each of these decrees gives every player.
   DECREE_TILES = { "ferry" => "FerryTile", "caves" => "CaveTile", "spy_network" => "SpyNetworkTile" }.freeze
-  DEFAULT_OPTIONS = { "expansions" => [], "nomads_sword" => true }.freeze
+  TEMPLE_BOARD_ID = 16
+  TEMPLE_CHOICES = %w[never allowed always].freeze
+  DEFAULT_OPTIONS = {
+    "expansions" => EXPANSIONS.keys,
+    "nomads_sword" => true,
+    "temple" => "allowed"
+  }.freeze
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -373,8 +379,12 @@ class Game < ApplicationRecord
   def expansions_label
     labels = EXPANSIONS.filter_map do |key, exp|
       next unless expansion?(key)
-      # ponytail: only Nomads has an option; generalize if another expansion gains one
-      key == "nomads" ? "#{exp[:label]} (#{options['nomads_sword'] == false ? 'No Sword' : 'Maybe Sword'})" : exp[:label]
+      # ponytail: only Nomads and Marshlands have options; generalize if another expansion gains one
+      case key
+      when "nomads" then "#{exp[:label]} (#{options['nomads_sword'] == false ? 'No Sword' : 'Maybe Sword'})"
+      when "marshlands" then "#{exp[:label]} (Temple #{(options['temple'] || DEFAULT_OPTIONS['temple']).capitalize})"
+      else exp[:label]
+      end
     end
     "Expansions: #{labels.presence&.join(', ') || 'None'}"
   end
@@ -707,6 +717,10 @@ class Game < ApplicationRecord
       board_pool
     end
     self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
+    # "always": keep drawing until the Temple board is in play
+    while self.options["temple"] == "always" && pool.include?(TEMPLE_BOARD_ID) && boards.none? { |bid, _| bid == TEMPLE_BOARD_ID }
+      self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
+    end
     while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
     end
@@ -954,6 +968,15 @@ class Game < ApplicationRecord
   end
 
   def board_pool
+    pool = base_board_pool
+    case options["temple"]
+    when "never" then pool - [ TEMPLE_BOARD_ID ]
+    when "always" then pool | [ TEMPLE_BOARD_ID ]
+    else pool
+    end
+  end
+
+  def base_board_pool
     BASE_BOARD_IDS +
       (expansion?("nomads") ? NOMAD_BOARD_IDS : []) +
       (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +

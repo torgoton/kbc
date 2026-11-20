@@ -356,6 +356,7 @@ class GamesController < ApplicationController
     expansions = Array(raw.permit(expansions: [])[:expansions]) & allowed
     options = { "expansions" => expansions }
     options["nomads_sword"] = raw[:nomads_sword] == "1" if expansions.include?("nomads")
+    options["temple"] = raw[:temple] if expansions.include?("marshlands") && Game::TEMPLE_CHOICES.include?(raw[:temple])
     options["decree"] = raw[:decree] if Game::DECREES.key?(raw[:decree]) || raw[:decree] == Game::RANDOM_DECREE
     options
   end

@@ -50,7 +50,8 @@
         <label>
           <%= check_box_tag "game[options][expansions][]", key, exp[:enabled] && Game::DEFAULT_OPTIONS["expansions"].include?(key),
                 disabled: !exp[:enabled], id: "game_options_expansions_#{key}",
-                onchange: (key == "nomads" ? "document.getElementById('game_options_nomads_sword').disabled = !this.checked" : nil) %>
+                onchange: { "nomads" => "document.getElementById('game_options_nomads_sword').disabled = !this.checked",
+                            "marshlands" => "document.querySelectorAll('input[name=\\'game[options][temple]\\']').forEach(r => r.disabled = !this.checked)" }[key] %>
           <%= exp[:label] %>
         </label><br>
         <% if key == "nomads" %>
@@ -60,10 +61,17 @@
             Include Sword
           </label><br>
         <% end %>
+        <% if key == "marshlands" %>
+          <span style="margin-left: 1.5em">Temple:
+            <% Game::TEMPLE_CHOICES.each do |choice| %>
+              <label><%= radio_button_tag "game[options][temple]", choice, choice == Game::DEFAULT_OPTIONS["temple"], disabled: !Game::DEFAULT_OPTIONS["expansions"].include?("marshlands"), id: "game_options_temple_#{choice}" %> <%= choice.capitalize %></label>
+            <% end %>
+          </span><br>
+        <% end %>
       <% end %>
     <label for="game_options_decree">The Emperor's Choice</label>
     <%= select_tag "game[options][decree]",
-          options_for_select([ [ "None", "" ], [ "Random", "random" ] ] + Game::DECREES.map { |key, d| [ d[:label], key ] }.sort_by(&:first), ""),
+          options_for_select([ [ "None", "" ], [ "Random", "random" ] ] + Game::DECREES.map { |key, d| [ d[:label], key ] }.sort_by(&:first), "random"),
           id: "game_options_decree" %>
   </fieldset>
 
