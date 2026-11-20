@@ -1,10 +1,10 @@
 # Keep this in sync with .ruby-version.
-FROM ruby:3.4.8
+FROM ruby:4.0.10
 
 WORKDIR /usr/src/app
 
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git pkg-config libpq-dev && \
+    apt-get install --no-install-recommends -y build-essential git pkg-config libpq-dev libyaml-dev libvips && \
     rm -rf /var/lib/apt/lists/*
 
 COPY Gemfile* .
