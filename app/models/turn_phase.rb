@@ -275,7 +275,8 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
       return "Not available" unless engine.legal_targets.include?([ row, col ])
       card_terrain ||= game_player.hand_terrains.find { |t| game.board_contents.terrain_at(row, col) == t }
       engine.lock_terrain!(card_terrain, chosen_terrain_before) unless chosen_terrain_before
-      engine.build_on_terrain(card_terrain, row, col, game_player)
+      piece = game_player.next_temple_piece(game.mandatory_count)
+      engine.build_on_terrain(card_terrain, row, col, game_player, piece: piece)
       game.mandatory_count -= 1
       phase_result = transition(
         TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
@@ -291,7 +292,8 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
         card_terrain = game_player.hand_terrains.find { |t| game.board_contents.terrain_at(row, col) == t }
         engine.lock_terrain!(card_terrain, chosen_terrain_before)
       end
-      engine.build_on_terrain(card_terrain, row, col, game_player)
+      piece = game_player.next_temple_piece(game.mandatory_count)
+      engine.build_on_terrain(card_terrain, row, col, game_player, piece: piece)
       game.mandatory_count -= 1
       phase_result = transition(
         TurnPhase::Events::BuildChosen.new(coordinate: [ row, col ]),
@@ -300,6 +302,7 @@ class TurnPhase::MandatoryBuildPhase < TurnPhase
       game.turn_phase = phase_result.next_phase
     end
 
+    game.clamp_mandatory_to_supply!(game_player)
     builds = game.turn_phase.builds || []
     # Swamp (2 settlements) cannot score Families, even with a Temple piece making a 3rd build.
     engine.check_families_goal(game_player) if builds.size >= 3 && game.turn_phase.chosen_terrain != "B"
@@ -1575,14 +1578,15 @@ class TurnPhase::SetAsidePhase < TurnPhase
       to: "set_aside",
       message: "#{game_player.player.handle} set aside a settlement from [#{row}, #{col}]"
     )
+    piece = %w[wagon ship warrior].find { |kind| game.board_contents.public_send("#{kind}_at?", row, col) } || "settlement"
     game.board_contents_will_change!
     game.board_contents.remove(row, col)
-    # An empty supply with nothing set aside means this player triggered the ending; the
-    # set-aside piece withdraws that trigger until it is built.
-    if game_player.settlements_remaining.zero? && game_player.set_aside_count.zero? && game.end_trigger_count.positive?
+    # An empty supply with nothing set aside means this player triggered the ending; a set-aside
+    # settlement withdraws that trigger until it is built.
+    if piece == "settlement" && game_player.settlements_remaining.zero? && game_player.set_aside_settlements_count.zero? && game.end_trigger_count.positive?
       game.end_trigger_count -= 1
     end
-    game_player.set_aside_settlement!
+    game_player.set_aside_settlement!(piece)
     engine.apply_tile_forfeit(game_player)
     game_player.mark_tile_used!(tile_klass_name)
     engine.reset_to_mandatory

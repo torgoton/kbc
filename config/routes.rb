@@ -88,6 +88,7 @@ Rails.application.routes.draw do
       post :activate_bazaar
       post :activate_spy
       post :silo_choice
+      post :choose_temple_piece
       post :skip_canoe
       post :confirm_canoe
       post :resign

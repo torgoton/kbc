@@ -35,6 +35,8 @@ class GameOptionsTest < ActiveSupport::TestCase
     assert_equal "Expansions: Crossroads, Harvest", Game.new(options: { "expansions" => %w[harvest crossroads] }).expansions_label
     assert_equal "Expansions: Nomads (Maybe Sword)", Game.new(options: { "expansions" => %w[nomads] }).expansions_label
     assert_equal "Expansions: Nomads (No Sword)", Game.new(options: { "expansions" => %w[nomads], "nomads_sword" => false }).expansions_label
+    assert_equal "Expansions: Marshlands (Temple Allowed)", Game.new(options: { "expansions" => %w[marshlands] }).expansions_label
+    assert_equal "Expansions: Marshlands (Temple Never)", Game.new(options: { "expansions" => %w[marshlands], "temple" => "never" }).expansions_label
     assert_equal "Expansions: None", Game.new(options: {}).expansions_label
   end
 

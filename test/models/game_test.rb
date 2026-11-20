@@ -1710,4 +1710,14 @@ class GameTest < ActiveSupport::TestCase
     chris.save
     game
   end
+
+  test "Temple option never drops board 16 from the pool, always forces it in" do
+    g = Game.new(options: { "expansions" => %w[marshlands], "temple" => "never" }, move_count: 0)
+    assert_not_includes g.send(:board_pool), 16
+    g.options = { "expansions" => [], "temple" => "always" }
+    g.send(:select_boards)
+    assert_includes g.boards.map(&:first), 16
+    g.options = { "expansions" => %w[marshlands], "temple" => "allowed" }
+    assert_includes g.send(:board_pool), 16
+  end
 end

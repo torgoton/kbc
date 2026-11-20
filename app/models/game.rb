@@ -101,7 +101,13 @@ class Game < ApplicationRecord
   }.freeze
   # The permanent tile each of these decrees gives every player.
   DECREE_TILES = { "ferry" => "FerryTile", "caves" => "CaveTile", "spy_network" => "SpyNetworkTile" }.freeze
-  DEFAULT_OPTIONS = { "expansions" => [], "nomads_sword" => true }.freeze
+  TEMPLE_BOARD_ID = 16
+  TEMPLE_CHOICES = %w[never allowed always].freeze
+  DEFAULT_OPTIONS = {
+    "expansions" => EXPANSIONS.keys,
+    "nomads_sword" => true,
+    "temple" => "allowed"
+  }.freeze
 
   has_many :game_players, dependent: :destroy
   has_many :players, through: :game_players, dependent: :delete_all
@@ -373,8 +379,12 @@ class Game < ApplicationRecord
   def expansions_label
     labels = EXPANSIONS.filter_map do |key, exp|
       next unless expansion?(key)
-      # ponytail: only Nomads has an option; generalize if another expansion gains one
-      key == "nomads" ? "#{exp[:label]} (#{options['nomads_sword'] == false ? 'No Sword' : 'Maybe Sword'})" : exp[:label]
+      # ponytail: only Nomads and Marshlands have options; generalize if another expansion gains one
+      case key
+      when "nomads" then "#{exp[:label]} (#{options['nomads_sword'] == false ? 'No Sword' : 'Maybe Sword'})"
+      when "marshlands" then "#{exp[:label]} (Temple #{(options['temple'] || DEFAULT_OPTIONS['temple']).capitalize})"
+      else exp[:label]
+      end
     end
     "Expansions: #{labels.presence&.join(', ') || 'None'}"
   end
@@ -661,12 +671,22 @@ class Game < ApplicationRecord
   # No mandatory settlement has been built yet this turn. Locking Swamp (possibly via a
   # tile, before the mandatory action) lowers the full count by one without building.
   def mandatory_untouched?(game_player)
-    swamp = turn_phase.chosen_terrain == "B" ? 1 : 0
-    mandatory_count == MANDATORY_COUNT + game_player.temple_due - swamp
+    start = game_player.supply["mandatory_start"] || MANDATORY_COUNT + game_player.temple_due
+    swamp = turn_phase.chosen_terrain == "B" && start > game_player.temple_due ? 1 : 0
+    mandatory_count == start - swamp
+  end
+
+  # With no settlements left, the regular mandatory builds can't happen, but Temple pieces
+  # still owed must be built.
+  def clamp_mandatory_to_supply!(game_player)
+    owed = game_player.owed_temple_pieces.size
+    return unless game_player.settlements_remaining.zero? && mandatory_count > owed
+    self.mandatory_count = owed
   end
 
   def can_build_mandatory?(game_player)
-    mandatory_count.positive? && game_player.settlements_remaining?
+    mandatory_count.positive? &&
+      (game_player.settlements_remaining? || game_player.next_temple_piece(mandatory_count).present?)
   end
 
   private
@@ -697,7 +717,8 @@ class Game < ApplicationRecord
       board_pool
     end
     self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
-    while options[:include_boards] && !options[:include_boards].all? { |b| boards.any? { |bid, _| bid == b } }
+    required = Array(options[:include_boards]) + (self.options["temple"] == "always" ? [ TEMPLE_BOARD_ID ] : [])
+    until required.all? { |b| boards.any? { |bid, _| bid == b } }
       self.boards = pool.sample(4).map { |id| [ id, rand(2) ] }
     end
     self.move_count += 1
@@ -944,6 +965,15 @@ class Game < ApplicationRecord
   end
 
   def board_pool
+    pool = base_board_pool
+    case options["temple"]
+    when "never" then pool - [ TEMPLE_BOARD_ID ]
+    when "always" then pool | [ TEMPLE_BOARD_ID ]
+    else pool
+    end
+  end
+
+  def base_board_pool
     BASE_BOARD_IDS +
       (expansion?("nomads") ? NOMAD_BOARD_IDS : []) +
       (expansion?("crossroads") ? CROSSROADS_BOARD_IDS : []) +

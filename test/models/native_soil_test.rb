@@ -24,7 +24,7 @@ class NativeSoilTest < ActiveSupport::TestCase
   end
 
   test "with Marshlands the dual card goes too: 6 cards" do
-    game = native_soil_game("expansions" => %w[marshlands])
+    game = started_game("expansions" => %w[marshlands]).tap { |g| g.start(true, include_boards: [ 16 ]) } # Swamp cards need a Marshlands board
     scouts_cards = game.removed_terrain ? 6 : 0 # the Marshlands Scouts goal may also have drawn
     assert_equal 30 - 6 - scouts_cards - 2, game.deck.size + game.discard.size
   end

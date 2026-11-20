@@ -1,7 +1,7 @@
 class GamesController < ApplicationController
   GAME_ACTIONS = %i[
     action select_action end_turn undo_move undo_max_moves end_tile_action activate_outpost
-    remove_meeple select_meeple activate_fort activate_cathedral activate_bazaar activate_spy silo_choice skip_canoe confirm_canoe
+    remove_meeple select_meeple activate_fort activate_cathedral activate_bazaar activate_spy silo_choice choose_temple_piece skip_canoe confirm_canoe
   ].freeze
 
   before_action :require_game_playing, only: GAME_ACTIONS
@@ -205,6 +205,14 @@ class GamesController < ApplicationController
     end
   end
 
+  def choose_temple_piece
+    TurnEngine.new(@game).choose_temple_piece(params[:piece])
+    respond_to do |format|
+      format.html { head :no_content }
+      format.turbo_stream { head :no_content }
+    end
+  end
+
   def remove_meeple
     coord = Coordinate.new(params[:row], params[:col])
     engine = TurnEngine.new(@game)
@@ -348,6 +356,7 @@ class GamesController < ApplicationController
     expansions = Array(raw.permit(expansions: [])[:expansions]) & allowed
     options = { "expansions" => expansions }
     options["nomads_sword"] = raw[:nomads_sword] == "1" if expansions.include?("nomads")
+    options["temple"] = raw[:temple] if expansions.include?("marshlands") && Game::TEMPLE_CHOICES.include?(raw[:temple])
     options["decree"] = raw[:decree] if Game::DECREES.key?(raw[:decree]) || raw[:decree] == Game::RANDOM_DECREE
     options
   end

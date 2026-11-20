@@ -912,10 +912,49 @@ ul li .hex:hover .hex-bg {
     background-position: center 75%;
 }
 
-.set-aside {
+.temple-pieces {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border: 2px solid #0008;
+    border-radius: 8px;
+    padding: 0 4px;
+}
+
+.temple-pieces.set-aside {
     font-size: 1.5rem;
     font-weight: 700;
     opacity: 0.9;
+}
+
+.temple-piece-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.temple-piece {
+    display: inline-block;
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    padding: 0;
+    line-height: 0;
+}
+
+button.temple-piece {
+    cursor: pointer;
+}
+
+button.temple-piece.selected {
+    border-color: gold;
+    background: #ffd70055;
+    box-shadow: 0 0 6px 2px gold;
+}
+
+.temple-piece-icon {
+    display: inline-block;
+    width: 32px;
+    height: 34px;
 }
 
 .cathedral-count {

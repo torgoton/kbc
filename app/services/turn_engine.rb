@@ -605,7 +605,7 @@ class TurnEngine
         options = []
         options << "#{helpers.pluralize(@game.mandatory_count, "settlement")} on #{others.map { |t| names[t] }.join(" or ")}" if others.any?
         options << "#{helpers.pluralize(@game.mandatory_count - 1, "settlement")} on #{names["B"]}" if swamp.any?
-        from_temple = [ player.temple_due, @game.mandatory_count ].min
+        from_temple = [ player.owed_temple_pieces.size, @game.mandatory_count ].min
         options[-1] += " (#{from_temple} from Temple)" if from_temple.positive?
         options << "select a tile" if has_activatable
         "#{player.player.handle} must build #{options.to_sentence(two_words_connector: " or ", last_word_connector: ", or ")}"
@@ -662,6 +662,8 @@ class TurnEngine
     @game.current_player.reset_tiles!
     @game.current_player.start_temple_turn!
     @game.mandatory_count = Game::MANDATORY_COUNT + @game.current_player.temple_due
+    @game.clamp_mandatory_to_supply!(@game.current_player)
+    @game.current_player.supply["mandatory_start"] = @game.mandatory_count
     # Forfeit expired nomad tiles
     game_player.tiles = (game_player.tiles || []).reject do |tile|
       tile["expires_on_turn"] && tile["expires_on_turn"] == @game.turn_number
@@ -686,6 +688,26 @@ class TurnEngine
     if @game.ending? && game_player.order == max_order
       begin_silo_round(game_player) || begin_volcano_round(game_player) || finish_game(game_player)
     end
+  end
+
+  # Owed Temple pieces of different types may be built in either order: the types on offer.
+  def temple_piece_choices
+    return [] unless @game.playing? && @game.turn_phase.mandatory_build?
+    @game.current_player.temple_piece_choices(@game.mandatory_count)
+  end
+
+  def choose_temple_piece(piece)
+    choices = temple_piece_choices
+    return "Not available" unless choices.size > 1 && choices.include?(piece)
+    capture_undo_snapshot
+    @game.instantiate
+    game_player = @game.current_player
+    record_move(action: "choose_temple_piece", deliberate: true, reversible: true, payload: { "piece" => piece },
+                message: "#{game_player.player.handle} will build a #{piece} from Temple next")
+    game_player.supply["temple_pick"] = piece
+    game_player.save
+    @game.save
+    nil
   end
 
   # The Silo prompt's answer: "build" or "move" opens that mode, "skip" gives up this Silo.
@@ -969,11 +991,16 @@ class TurnEngine
     tile&.dig("klass") || "#{type.capitalize}Tile"
   end
 
-  def build_on_terrain(terrain, row, col, game_player, tile_klass: nil)
+  def build_on_terrain(terrain, row, col, game_player, tile_klass: nil, piece: nil)
+    owed = piece.present? # a set-aside Temple piece is not drawn from the settlement supply
     payload = { "card" => terrain }
     payload["tile_klass"] = tile_klass if tile_klass
-    game_player.decrement_supply!
-    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player)
+    unless owed
+      game_player.decrement_supply!
+    end
+    game_player.temple_piece_built!(piece) if owed
+    still_owed = game_player.owed_temple_pieces
+    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player, still_owed)
     record_move(
       action: "build",
       deliberate: true,
@@ -982,10 +1009,10 @@ class TurnEngine
       from: "supply",
       to: "[#{row}, #{col}]",
       payload: payload,
-      message: "#{game_player.player.handle} built a settlement on #{Boards::Board::TERRAIN_NAMES[terrain]} at [#{row}, #{col}]"
+      message: "#{game_player.player.handle} built a #{owed ? piece : "settlement"} on #{Boards::Board::TERRAIN_NAMES[terrain]} at [#{row}, #{col}]"
     )
     @game.board_contents_will_change!
-    @game.board_contents.place_settlement(row, col, game_player.order)
+    @game.board_contents.restore_piece(piece, row, col, game_player.order)
     check_ambassadors_goal(game_player, row, col)
     check_shepherds_goal(game_player, row, col, terrain)
     check_rovers_goal(game_player, row, col)
@@ -994,8 +1021,9 @@ class TurnEngine
   end
 
   # A settlement set aside by Temple holds the ending off until it is built.
-  def trigger_ending_if_supply_empty(game_player)
-    return false unless game_player.settlements_remaining == 0 && game_player.set_aside_count.zero?
+  def trigger_ending_if_supply_empty(game_player, still_owed = [])
+    return false unless game_player.settlements_remaining == 0 && game_player.set_aside_settlements_count.zero? &&
+      still_owed.exclude?("settlement")
     @game.end_trigger_count += 1
     true
   end
@@ -1333,7 +1361,7 @@ class TurnEngine
     game_player.supply["mayors"] = Array(game_player.supply["mayors"]) + [ row ]
     game_player.decrement_supply!
     payload = { "row" => row }
-    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player)
+    payload["triggered_ending"] = true if trigger_ending_if_supply_empty(game_player, game_player.owed_temple_pieces)
     record_move(
       action: "claim_mayor", deliberate: false, reversible: true, game_player: game_player, payload: payload,
       message: "#{game_player.player.handle} claims Mayor of row #{row}"
@@ -1387,7 +1415,9 @@ class TurnEngine
     return if phase.chosen_terrain
     @game.turn_phase = phase.with_chosen_terrain(terrain)
     # Choosing Swamp on a dual card costs one of the mandatory settlements.
-    @game.mandatory_count = [ @game.mandatory_count - 1, 0 ].max if terrain == "B"
+    # Only the regular builds are cut; Temple pieces still owed are not.
+    owed_only = @game.mandatory_count <= @game.current_player.owed_temple_pieces.size
+    @game.mandatory_count = [ @game.mandatory_count - 1, 0 ].max if terrain == "B" && !owed_only
   end
 
   def reset_to_mandatory
@@ -1395,6 +1425,7 @@ class TurnEngine
     ct = current_phase.chosen_terrain
     @game.current_player.clear_copy!
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
+    @game.clamp_mandatory_to_supply!(@game.current_player)
   end
 
   def begin_copied_action(game_player, klass_name, mode)
