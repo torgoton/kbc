@@ -49,6 +49,27 @@ class QuarryTileTest < ActiveSupport::TestCase
     destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
   end
 
+  test "keeps the locked terrain after a Sword action in the same turn" do
+    scenario = GameScenario.new(hands: { 0 => %w[G T] })
+    scenario.place_settlement(0, at: [ 0, 6 ]) # next to empty G ([0, 7]) and T ([0, 5]) hexes
+    scenario.place_settlement(1, at: [ 10, 10 ])
+    scenario.give_tile(0, "SwordTile", from: [ 0, 0 ])
+    scenario.give_tile(0, "QuarryTile", from: [ 0, 0 ])
+    scenario.set_mandatory(1)
+
+    build_spot = scenario.buildable_cells.find { |spot| scenario.terrain_at(spot) == "G" }
+    scenario.build_settlement(at: build_spot)
+    scenario.activate_tile(:sword)
+    scenario.remove_settlement(at: [ 10, 10 ])
+
+    scenario.activate_tile(:quarry)
+    destinations = scenario.buildable_cells
+
+    assert destinations.any?
+    assert_not_includes destinations, [ 0, 5 ], "T hex offered although G was played"
+    destinations.each { |dest| assert_equal "G", scenario.terrain_at(dest) }
+  end
+
   test "activating before the mandatory build locks the terrain for the rest of the turn" do
     scenario = GameScenario.new(hands: { 0 => %w[G T] })
     scenario.place_settlement(0, at: SETTLEMENT)

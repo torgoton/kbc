@@ -1421,8 +1421,7 @@ class TurnEngine
   end
 
   def reset_to_mandatory
-    current_phase = @game.turn_phase
-    ct = current_phase.chosen_terrain
+    ct = @game.current_action["chosen_terrain"]
     @game.current_player.clear_copy!
     @game.turn_phase = TurnPhase::MandatoryBuildPhase.new(chosen_terrain: ct)
     @game.clamp_mandatory_to_supply!(@game.current_player)
