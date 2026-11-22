@@ -11,6 +11,7 @@ class RealTimeGamesTest < ApplicationSystemTestCase
 
     sign_in_as "chris@example.com"
     click_on "Open a new table"
+    assert_selector "h1", text: "New Game"
     select "Real Time — both of you online now, no clock", from: "game_speed"
     submit_form find("form")
     assert_selector "h1", text: "Dashboard"
@@ -31,6 +32,7 @@ class RealTimeGamesTest < ApplicationSystemTestCase
 
     sign_in_as "chris@example.com"
     click_on "Open a new table"
+    assert_selector "h1", text: "New Game"
     select "Real Time — both of you online now, no clock", from: "game_speed"
     submit_form find("form")
     assert_selector "h1", text: "Dashboard"
