@@ -313,8 +313,13 @@ class Game < ApplicationRecord
     TurnPhase.deserialize(current_action)
   end
 
+  # Phases that don't track the locked terrain (Sword, Resettlement, ...) would drop it;
+  # carry it in current_action so reset_to_mandatory can restore it.
   def turn_phase=(phase)
-    self.current_action = phase.serialize
+    data = phase.serialize
+    locked = current_action&.dig("chosen_terrain")
+    data = data.merge("chosen_terrain" => locked) if locked && !data.key?("chosen_terrain")
+    self.current_action = data
   end
 
   def my_turn?(user)
