@@ -47,8 +47,8 @@ class Game < ApplicationRecord
   MANDATORY_COUNT = 3
   SETTLEMENTS_PER_PLAYER = 40
   SPEEDS = {
-    "blitz" => { bank_ms: 300_000, increment_ms: 20_000 },
-    "normal" => { bank_ms: 600_000, increment_ms: 30_000 }
+    "blitz" => { bank_ms: 300_000, increment_ms: 30_000 },
+    "normal" => { bank_ms: 600_000, increment_ms: 60_000 }
   }.freeze
 
   # Expansions offered on the new-game form. Only `enabled` ones can be chosen.

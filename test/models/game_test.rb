@@ -1662,7 +1662,7 @@ class GameTest < ActiveSupport::TestCase
 
   test "speed_label describes the bank and increment for a timed game" do
     game = Game.create!(state: "waiting", speed: "blitz")
-    assert_equal "⚡ Blitz 5+20", game.speed_label
+    assert_equal "⚡ Blitz 5+30", game.speed_label
   end
 
   test "speed_label is nil for an untimed game" do
