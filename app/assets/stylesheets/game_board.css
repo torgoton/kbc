@@ -921,7 +921,15 @@ ul li .hex:hover .hex-bg {
     padding: 0 4px;
 }
 
+.temple-count {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-right: 2px;
+}
+
 .temple-pieces.set-aside {
+    margin-left: 6px;
+    border-style: dashed;
     font-size: 1.5rem;
     font-weight: 700;
     opacity: 0.9;

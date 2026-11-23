@@ -1,27 +1,30 @@
 <%# Temple pieces: owed ones to build this turn (clickable to pick which is next when the types differ),
     then ones set aside this turn. One icon per type. %>
 <% color = player_color(player.order) %>
-<% owed = player.owed_temple_pieces.uniq %>
-<% aside = player.temple_pieces("set_aside").uniq %>
+<% owed = player.owed_temple_pieces.tally %>
+<% aside = player.temple_pieces("set_aside").tally %>
 <% pickable = is_me && my_turn && engine.temple_piece_choices.size > 1 %>
 <% next_piece = player.next_temple_piece(game.mandatory_count) if pickable %>
 <% if owed.any? %>
   <span class="temple-pieces owed" title="Owed from Temple: built in the mandatory action">
-    <% owed.each do |piece| %>
+    <% owed.each do |piece, n| %>
       <% icon = render("games/#{piece}", color:, css_class: "temple-piece-icon") %>
       <% if pickable %>
         <%= button_to choose_temple_piece_game_path(game, piece:), title: "Build the #{piece} from Temple next",
             class: ["temple-piece", ("selected" if piece == next_piece)], form_class: "temple-piece-form" do %><%= icon %><% end %>
+        <%= tag.span "×#{n}", class: "temple-count" if n > 1 %>
       <% else %>
         <span class="temple-piece" title="<%= piece.capitalize %> owed from Temple"><%= icon %></span>
+        <%= tag.span "×#{n}", class: "temple-count" if n > 1 %>
       <% end %>
     <% end %>
   </span>
 <% end %>
 <% if aside.any? %>
   <span class="temple-pieces set-aside" title="Set aside by Temple, built next turn">+
-    <% aside.each do |piece| %>
+    <% aside.each do |piece, n| %>
       <span class="temple-piece" title="<%= piece.capitalize %> set aside"><%= render("games/#{piece}", color:, css_class: "temple-piece-icon") %></span>
+      <%= tag.span "×#{n}", class: "temple-count" if n > 1 %>
     <% end %>
   </span>
 <% end %>
