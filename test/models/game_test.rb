@@ -1720,4 +1720,68 @@ class GameTest < ActiveSupport::TestCase
     g.options = { "expansions" => %w[marshlands], "temple" => "allowed" }
     assert_includes g.send(:board_pool), 16
   end
+
+  def started_two_player_game
+    game = Game.create!(state: "waiting")
+    game.add_player(users(:chris))
+    game.add_player(users(:paula))
+    game.start
+    game.reload
+  end
+
+  test "scores_at scores a snapshot in memory without touching the game" do
+    game = started_two_player_game
+    snapshot = game.capture_snapshot
+    snapshot["players"].find { |p| p["order"] == 0 }["bonus_scores"] = { "bonus" => 5 }
+
+    assert_equal 5, game.scores_at(snapshot)["0"]["total"]
+    assert_equal 0, game.live_scores["0"]["total"]
+    assert_equal({}, game.reload.game_players.find { |gp| gp.order == 0 }.bonus_scores)
+  end
+
+  # Plays one full round by hand: both players end their turns, with the
+  # second player's bonus_scores set so scores differ from zero.
+  def end_round_with_snapshots(game)
+    last_order = game.game_players.map(&:order).max
+    game.game_players.sort_by(&:order).each do |gp|
+      game.moves.create!(order: game.move_count += 1, game_player: gp, action: "build",
+                         deliberate: true, reversible: true, snapshot_before: game.capture_snapshot)
+      gp.update!(bonus_scores: { "bonus" => 3 }) if gp.order == last_order
+      game.moves.create!(order: game.move_count += 1, game_player: gp, action: "end_turn",
+                         deliberate: true, reversible: false, snapshot_before: game.capture_snapshot)
+    end
+  end
+
+  test "score_history is empty before the first round ends" do
+    game = started_two_player_game
+    first_seat = game.game_players.find { |gp| gp.order == 0 }
+    game.moves.create!(order: 1, game_player: first_seat, action: "end_turn", deliberate: true, reversible: false)
+
+    assert_equal [], game.score_history
+  end
+
+  test "score_history lazily backfills and stores scores for finished rounds" do
+    game = started_two_player_game
+    end_round_with_snapshots(game)
+
+    assert_equal [ { "0" => 0, "1" => 3 } ], game.score_history
+    stored = game.moves.where(action: "end_turn").order(:order).last.scores_after
+    assert_equal({ "0" => 0, "1" => 3 }, stored)
+  end
+
+  test "score_history uses stored scores_after without recomputing" do
+    game = started_two_player_game
+    end_round_with_snapshots(game)
+    game.moves.where(action: "end_turn").order(:order).last.update!(scores_after: { "0" => 9, "1" => 9 })
+
+    assert_equal [ { "0" => 9, "1" => 9 } ], game.score_history
+  end
+
+  test "score_history appends final scores for a completed game" do
+    game = started_two_player_game
+    end_round_with_snapshots(game)
+    game.update!(state: "completed", scores: { "0" => { "total" => 4 }, "1" => { "total" => 7 } })
+
+    assert_equal({ "0" => 4, "1" => 7 }, game.score_history.last)
+  end
 end

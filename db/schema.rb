@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_24_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -135,6 +135,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_000002) do
     t.datetime "updated_at", null: false
     t.jsonb "payload"
     t.jsonb "snapshot_before"
+    t.jsonb "scores_after"
     t.index ["game_id"], name: "index_moves_on_game_id"
     t.index ["game_player_id"], name: "index_moves_on_game_player_id"
   end

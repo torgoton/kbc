@@ -1352,6 +1352,29 @@ button.temple-piece.selected {
     border-left: 3px solid transparent;
 }
 
+.score-sparkline {
+    display: block;
+    width: 100%;
+    height: 48px;
+    margin-top: auto;
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.player-area:has(#common-resources) {
+    display: flex;
+    flex-direction: column;
+}
+
+#common-resources {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+#common-resources > .side-card {
+    align-self: flex-start;
+}
+
 .player-area:has(.player-spinner) {
     background-color: #5a8f5ae0;
     border-left-color: var(--clr-g-link);

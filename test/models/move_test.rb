@@ -10,6 +10,7 @@
 #  order           :integer
 #  payload         :jsonb
 #  reversible      :boolean
+#  scores_after    :jsonb
 #  snapshot_before :jsonb
 #  to              :string
 #  created_at      :datetime         not null

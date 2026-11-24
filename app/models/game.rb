@@ -604,7 +604,33 @@ class Game < ApplicationRecord
     }
   end
 
+  # Per-round score totals ({ "0" => 12, ... }), one entry per completed round.
+  # Missing ones are derived from move snapshots on first call and stored.
+  def score_history
+    last_order = game_players.map(&:order).max
+    round_ends = moves.where(action: "end_turn").includes(:game_player).order(:order)
+                      .select { |m| m.game_player&.order == last_order }
+    round_ends.each { |m| m.update_column(:scores_after, totals_after(m)) if m.scores_after.nil? }
+    history = round_ends.map(&:scores_after)
+    history << scores.transform_values { |s| s["total"] } if state == "completed" && scores.present?
+    history
+  end
+
   def restore_snapshot!(snapshot)
+    assign_snapshot(snapshot)
+    game_players.each(&:save!)
+    save!
+  end
+
+  # Scores `snapshot` on a throwaway copy of this game; nothing is persisted.
+  def scores_at(snapshot)
+    copy = Game.find(id)
+    copy.assign_snapshot(snapshot)
+    Scoring.new(copy).compute
+  end
+
+  # Applies a snapshot to this instance and its loaded players, in memory only.
+  def assign_snapshot(snapshot)
     self.board_contents = BoardState.load(snapshot["board_contents"])
     self.deck = snapshot["deck"]
     self.discard = snapshot["discard"]
@@ -619,14 +645,20 @@ class Game < ApplicationRecord
 
     snapshot["players"].each do |ps|
       gp = game_players.find { |g| g.order == ps["order"] }
-      gp.update!(
+      gp.assign_attributes(
         hand: ps["hand"], supply: ps["supply"], tiles: ps["tiles"],
         taken_from: ps["taken_from"], bonus_scores: ps["bonus_scores"]
       )
     end
 
     @board = nil # force re-instantiation of the read model
-    save!
+  end
+
+  # State after move `m` is the next recorded snapshot, or the live game if none follows.
+  def totals_after(m)
+    nxt = moves.where(Move.arel_table[:order].gt(m.order)).where.not(snapshot_before: nil).order(:order).first
+    result = nxt ? scores_at(nxt.snapshot_before) : live_scores
+    result.transform_values { |s| s["total"] }
   end
 
   SOUND_KEY_FORMAT = /\A[a-z_]+\z/
