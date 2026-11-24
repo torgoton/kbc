@@ -685,6 +685,7 @@ class TurnEngine
       @game.save
     end
     max_order = @game.game_players.count - 1
+    @game.score_history if game_player.order == max_order # store this round's scores now
     if @game.ending? && game_player.order == max_order
       begin_silo_round(game_player) || begin_volcano_round(game_player) || finish_game(game_player)
     end

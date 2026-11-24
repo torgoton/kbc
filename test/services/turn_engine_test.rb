@@ -139,6 +139,19 @@ class TurnEngineTest < ActiveSupport::TestCase
     assert_nil @engine.undo_last_move
   end
 
+  test "end_turn by the last seat stores that round's scores on the move" do
+    2.times do
+      @game.reload
+      @game.instantiate
+      @game.update!(mandatory_count: 0)
+      TurnEngine.new(@game).end_turn
+    end
+
+    stored = @game.moves.where(action: "end_turn").order(:order).map(&:scores_after)
+    assert_nil stored.first
+    assert_equal %w[0 1], stored.last.keys.sort
+  end
+
   test "end_turn draws 1 card when player does not hold CrossroadsTile" do
     player = @game.current_player
     @engine.end_turn
