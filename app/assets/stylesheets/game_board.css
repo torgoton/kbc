@@ -1371,6 +1371,10 @@ button.temple-piece.selected {
     flex: 1;
 }
 
+#common-resources > .side-card {
+    align-self: flex-start;
+}
+
 .player-area:has(.player-spinner) {
     background-color: #5a8f5ae0;
     border-left-color: var(--clr-g-link);
