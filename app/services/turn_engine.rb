@@ -349,8 +349,9 @@ class TurnEngine
 
   def select_action(type)
     return "Not available" if plateau_pending?
-    capture_undo_snapshot
     klass_name = tile_klass_name_for_type(type)
+    return "Not available" unless tile_phase_open?
+    capture_undo_snapshot
     payload = { "klass" => klass_name }
     tile_klass = Tiles::Tile.for_klass(klass_name)
     tile_obj = tile_klass&.new(0)
@@ -479,11 +480,16 @@ class TurnEngine
 
   # Everything about a tile being usable this turn except whether it is already used, which
   # Bazaar ignores when copying.
+  # Tiles are only usable before the first mandatory build, or once none can be built.
+  def tile_phase_open?
+    @game.turn_phase.mandatory_build? &&
+      (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
+  end
+
   def tile_actionable?(tile)
     return false if plateau_pending?
     return false unless Tiles::Tile.for_klass(tile["klass"])
-    return false unless @game.turn_phase.mandatory_build? &&
-      (@game.mandatory_untouched?(@game.current_player) || !@game.can_build_mandatory?(@game.current_player))
+    return false unless tile_phase_open?
     @game.instantiate
     tile_obj = Tiles::Tile.from_hash(tile).with_player(@game.current_player)
     return bazaar_entries(@game.current_player).any? if tile_obj.bazaar_tile?

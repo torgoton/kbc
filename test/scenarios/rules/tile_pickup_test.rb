@@ -85,6 +85,8 @@ class TilePickupScenarioTest < ActiveSupport::TestCase
     scenario.build_settlement(at: seize) # picks up an OasisTile from the location
     assert scenario.holds_tile?(0, klass: "OasisTile", from: location)
 
+    # Tiles are barred mid-mandatory; this test is about the pickup forfeit, so reopen the phase.
+    scenario.game_player(0).tap { |gp| gp.supply["mandatory_start"] = scenario.game.mandatory_count; gp.save! }
     scenario.activate_tile(:paddock) # jump the settlement off the location, forfeiting the tile
     scenario.select_settlement(at: seize)
     scenario.move_step(to: away)

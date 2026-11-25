@@ -23,6 +23,17 @@ module BroadcastRace
 end
 Capybara::Node::Base.prepend(BroadcastRace::RetryStaleNode)
 
+# Chrome 158 rejects the wildcard origin Capybara 3.40's reset! sends to Storage.clearDataForOrigin
+# ("* is not a valid URL"). Skip that call; the teardown below clears cookies/storage itself.
+# ponytail: drop once a Capybara release fixes it.
+module SkipWildcardStorageClear
+  def execute_cdp(cmd, params = {})
+    return if cmd == "Storage.clearDataForOrigin" && params[:origin] == "*"
+    super
+  end
+end
+Capybara::Selenium::Driver::ChromeDriver.prepend(SkipWildcardStorageClear)
+
 class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # The game page is heavy (a full SVG board) and much of it re-renders via
   # Turbo broadcasts; late in the single-process suite the browser gets slow, so
@@ -37,6 +48,14 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   end
 
   teardown do
+    if Capybara.current_session.driver.respond_to?(:browser)
+      begin
+        Capybara.current_session.driver.browser.manage.delete_all_cookies
+        Capybara.current_session.execute_script("localStorage.clear(); sessionStorage.clear()")
+      rescue StandardError
+        nil # blank page / no session: nothing to clear
+      end
+    end
     Capybara.reset_sessions!
     Current.reset
   end
