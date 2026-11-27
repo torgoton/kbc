@@ -20,3 +20,6 @@ production:
       writing: primary
   polling_interval: 0.5.seconds
   message_retention: 1.day
+  # Default is one immediate retry, after which the listener thread exits silently
+  # and live updates stop until restart. This rides out ~5 min of DB downtime.
+  reconnect_attempts: [0, 1, 2, 5, 10, 30, 60, 60, 60, 60]
