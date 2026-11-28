@@ -310,4 +310,11 @@ class GamePlayerTest < ActiveSupport::TestCase
 
     assert game.moves.exists?(action: "resign", deliberate: false)
   end
+
+  test "owed_temple_pieces does not consume stored due pieces, however often it is asked" do
+    gp = GamePlayer.new(supply: { "temple_due" => %w[settlement settlement], "temple_built" => %w[settlement] })
+
+    2.times { assert_equal %w[settlement], gp.owed_temple_pieces }
+    assert_equal 2, gp.temple_due
+  end
 end

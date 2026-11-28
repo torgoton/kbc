@@ -75,7 +75,7 @@ class GamePlayer < ApplicationRecord
 
   # Temple pieces still owed this turn: those due, less those already built.
   def owed_temple_pieces
-    owed = temple_pieces("temple_due")
+    owed = temple_pieces("temple_due").dup
     Array(supply["temple_built"]).each { |piece| (i = owed.index(piece)) && owed.delete_at(i) }
     owed
   end
